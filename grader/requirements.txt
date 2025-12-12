@@ -1,6 +1,0 @@
-streamlit
-pandas
-openpyxl
-xlsxwriter
-python-docx
-PyPDF2
