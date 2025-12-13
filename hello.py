@@ -7,7 +7,14 @@ st.set_page_config(
     layout="wide"
 )
 
-# 2. 样式优化
+# 2. 添加必要的字体CSS
+st.markdown("""
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&display=swap');
+</style>
+""", unsafe_allow_html=True)
+
 st.write("")
 st.write("")
 st.write("")
@@ -15,12 +22,11 @@ st.write("")
 # ==============================================================
 # 🎨 字体配置
 # ==============================================================
-sub_font = "'Comic Sans MS', 'Chalkboard SE', 'NoteWorthy', sans-serif"
-quote_font = "'KaiTi', 'STKaiti', 'BiauKai', cursive"
+sub_font = "'Comic Neue', 'Comic Sans MS', cursive"
+quote_font = "'Ma Shan Zheng', 'KaiTi', 'STKaiti', cursive"
 # ==============================================================
 
 # 3. 核心内容区 (标题)
-# ✅ 这里的开关你之前加对了，所以标题是好的
 st.markdown(f"""
     <h1 style='text-align: center; font-size: 5rem; margin-bottom: 0; letter-spacing: 5px; font-weight: 900;'>
         🐾 行政狗
@@ -40,7 +46,6 @@ st.markdown(f"""
 st.divider()
 
 # 5. 底部文案 (里尔克时刻)
-# 🚨 凶手就在这里！请确保最后一行有 unsafe_allow_html=True
 st.markdown(f"""
     <div style='text-align: center; padding: 40px;'>
         <p style='font-size: 1rem; color: #999; margin-bottom: 30px;'>
@@ -64,4 +69,4 @@ st.markdown(f"""
             </span>
         </div>
     </div>
-""", unsafe_allow_html=True) # <--- 就是这个小尾巴，这次一定一定要带上它！
+""", unsafe_allow_html=True)
