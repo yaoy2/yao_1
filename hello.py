@@ -32,12 +32,10 @@ st.markdown(f"""
 
 st.divider()
 
-# 4. 底部文案 (固定在屏幕右下角)
-# position: fixed -> 强制固定在浏览器窗口
-# bottom: 30px; right: 30px -> 距离右下角的距离
-# z-index: 999 -> 保证它浮在最上面
+# 4. 底部文案 (右下角悬浮，已避让 Manage app 按钮)
+# 修改点：bottom: 100px -> 向上抬高，不被按钮遮挡
 st.markdown(f"""
-<div style="position: fixed; bottom: 30px; right: 30px; z-index: 999; text-align: right;">
+<div style="position: fixed; bottom: 100px; right: 30px; z-index: 999; text-align: right;">
 <span style="font-size: 1.2rem; color: #333; font-weight: 600; letter-spacing: 1px; font-family: {quote_font};">
 “ 前方没有胜利，挺住意味一切。”
 </span>
