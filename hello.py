@@ -54,7 +54,7 @@ st.markdown(f"""
 # 4. 分割线
 st.divider()
 
-# 5. 底部文案 (里尔克时刻)
+# ✅ 正确代码：直接复制这整段覆盖你原来的第5部分
 st.markdown(f"""
     <div style='text-align: center; padding: 40px;'>
         <p style='font-size: 1rem; color: #999; margin-bottom: 30px;'>
@@ -78,4 +78,4 @@ st.markdown(f"""
             </span>
         </div>
     </div>
-""", unsafe_allow_html=True)
+""", unsafe_allow_html=True)  # <--- 凶手就是这句！一定要加上它！
