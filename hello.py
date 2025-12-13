@@ -32,13 +32,12 @@ st.markdown(f"""
 
 st.divider()
 
-# 4. 底部文案 (右下角极简风)
-# 样式逻辑：
-# text-align: right -> 右对齐
-# padding-right: 10% -> 距离右边框留出 10% 的空隙，不贴边
-# padding-top: 80px -> 距离分割线往下推一点，不要太挤
+# 4. 底部文案 (固定在屏幕右下角)
+# position: fixed -> 强制固定在浏览器窗口
+# bottom: 30px; right: 30px -> 距离右下角的距离
+# z-index: 999 -> 保证它浮在最上面
 st.markdown(f"""
-<div style="text-align: right; padding-right: 10%; padding-top: 80px; padding-bottom: 40px;">
+<div style="position: fixed; bottom: 30px; right: 30px; z-index: 999; text-align: right;">
 <span style="font-size: 1.2rem; color: #333; font-weight: 600; letter-spacing: 1px; font-family: {quote_font};">
 “ 前方没有胜利，挺住意味一切。”
 </span>
