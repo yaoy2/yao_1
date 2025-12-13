@@ -7,7 +7,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# 2. 样式优化
+# 2. 样式优化 (顶部留白)
 st.write("")
 st.write("")
 st.write("")
@@ -19,10 +19,10 @@ sub_font = "'Comic Sans MS', 'Chalkboard SE', 'NoteWorthy', sans-serif"
 quote_font = "'Songti SC', 'SimSun', 'Times New Roman', serif"
 # ==============================================================
 
-# 3. 核心内容区
+# 3. 核心内容区 (标题)
 st.markdown(f"""
     <h1 style='text-align: center; font-size: 5rem; margin-bottom: 0; letter-spacing: 5px; font-weight: 900;'>
-        🐾 行政狗 v3.0
+        🐾 行政狗
     </h1>
     <p style='
         text-align: center;
@@ -38,6 +38,7 @@ st.markdown(f"""
 st.divider()
 
 # 4. 底部文案 (博物馆铭牌风格)
+# 修复核心：这里必须有 unsafe_allow_html=True 才能显示样式
 st.markdown(f"""
     <div style='text-align: center; padding: 40px;'>
         <p style='font-size: 1rem; color: #999; margin-bottom: 30px;'>
