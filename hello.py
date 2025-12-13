@@ -20,7 +20,7 @@ quote_font = "'Songti SC', 'SimSun', 'Times New Roman', serif"
 # ==============================================================
 
 # 3. 核心内容区 (标题)
-# 保持顶格，防止缩进错误
+# 保持顶格写 HTML，防止缩进报错
 st.markdown(f"""
 <h1 style="text-align: center; font-size: 5rem; margin-bottom: 0; letter-spacing: 5px; font-weight: 900;">
 🐾 行政狗
@@ -32,31 +32,15 @@ st.markdown(f"""
 
 st.divider()
 
-# 4. 底部文案 (石碑风格)
-# 已删除欢迎语，仅保留石碑名言
-# 样式特点：白底、黑字、粗黑框、硬阴影(box-shadow)、直角
+# 4. 底部文案 (右下角极简风)
+# 样式逻辑：
+# text-align: right -> 右对齐
+# padding-right: 10% -> 距离右边框留出 10% 的空隙，不贴边
+# padding-top: 80px -> 距离分割线往下推一点，不要太挤
 st.markdown(f"""
-<div style="text-align: center; padding: 40px;">
-<div style="display: inline-block;">
-<div style="
-background-color: #ffffff; 
-color: #000000;
-padding: 20px 40px; 
-border: 3px solid #000000; 
-box-shadow: 6px 6px 0px #000000; 
-border-radius: 0px; 
-max-width: 800px;
-">
-<span style="
-font-size: 1.3rem; 
-font-weight: 600; 
-letter-spacing: 2px; 
-line-height: 1.8; 
-font-family: {quote_font};
-">
+<div style="text-align: right; padding-right: 10%; padding-top: 80px; padding-bottom: 40px;">
+<span style="font-size: 1.2rem; color: #333; font-weight: 600; letter-spacing: 1px; font-family: {quote_font};">
 “ 前方没有胜利，挺住意味一切。”
 </span>
-</div>
-</div>
 </div>
 """, unsafe_allow_html=True)
