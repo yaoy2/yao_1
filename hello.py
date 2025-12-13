@@ -13,21 +13,16 @@ st.write("")
 st.write("")
 
 # ==============================================================
-# 🎨 字体配置：现代简约版
+# 🎨 字体配置：现代博物馆风格 (Museum Style)
 # ==============================================================
-
-# 英文副标题：手写风 (保留一点可爱)
 sub_font = "'Comic Sans MS', 'Chalkboard SE', 'NoteWorthy', sans-serif"
-
-# 中文名言：宋体/衬线体 (更正式、更有力量感，拒绝软绵绵)
 quote_font = "'Songti SC', 'SimSun', 'Times New Roman', serif"
-
 # ==============================================================
 
 # 3. 核心内容区
 st.markdown(f"""
     <h1 style='text-align: center; font-size: 5rem; margin-bottom: 0; letter-spacing: 5px; font-weight: 900;'>
-        🐾 行政狗
+        🐾 行政狗 v3.0
     </h1>
     <p style='
         text-align: center;
@@ -53,14 +48,14 @@ st.markdown(f"""
             <div style='
                 padding: 20px 30px;
                 background-color: #f8f9fa; 
-                border-left: 5px solid #444; /* 左侧深色竖条，增加设计感 */
+                border-left: 5px solid #444; 
                 border-radius: 0 4px 4px 0;
-                text-align: left; /* 文字内部左对齐 */
+                text-align: left; 
             '>
                 <span style='
                     font-size: 1.4rem; 
                     color: #333; 
-                    font-weight: 600; /*稍微加粗*/
+                    font-weight: 600; 
                     letter-spacing: 1px;
                     line-height: 1.6;
                     font-family: {quote_font}; 
