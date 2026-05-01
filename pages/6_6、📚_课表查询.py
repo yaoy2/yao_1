@@ -143,6 +143,7 @@ def _parse_entry(entry: str, day: str, sheet_name: str) -> list[dict]:
         tail = stripped[first_period_match.end() :].strip()
 
     teachers, course = _parse_teachers_and_course(head)
+    teachers = sorted(list(set(teachers)))  # 去重并排序，确保姓名顺序一致
     classroom_match = CLASSROOM_PATTERN.search(tail)
     classroom = classroom_match.group(1) if classroom_match else ""
     class_group = tail[classroom_match.end() :].strip() if classroom_match else tail
@@ -190,22 +191,36 @@ def load_schedule_records(excel_path: str) -> list[dict]:
 
     unique_records: dict[tuple, dict] = {}
     for rec in all_records:
+        # 更加宽松的去重 Key：只要 星期、节次、教师列表、课程 相同，就视为同一条记录
+        # 教师列表转为 sorted tuple 以处理顺序不一致的情况
         key = (
             rec["weekday"],
             rec["start_period"],
             rec["end_period"],
-            rec["teacher_label"],
+            tuple(sorted(rec["teachers"])),
             rec["course"],
-            rec["classroom"],
-            rec["class_group"],
         )
         if key not in unique_records:
             unique_records[key] = rec
         else:
-            existing_sheet = str(unique_records[key].get("sheet", "")).strip()
-            new_sheet = str(rec.get("sheet", "")).strip()
-            merged = {s for s in [existing_sheet, new_sheet] if s}
-            unique_records[key]["sheet"] = "、".join(sorted(merged))
+            # 如果 Key 已存在，则合并 教室、班级 和 来源
+            existing = unique_records[key]
+
+            # 合并来源 Sheet
+            existing_sheets = set(str(existing.get("sheet", "")).split("、"))
+            new_sheets = set(str(rec.get("sheet", "")).split("、"))
+            existing["sheet"] = "、".join(sorted({s.strip() for s in (existing_sheets | new_sheets) if s.strip()}))
+
+            # 合并教室
+            existing_rooms = set(str(existing.get("classroom", "")).split("、"))
+            new_rooms = set(str(rec.get("classroom", "")).split("、"))
+            existing["classroom"] = "、".join(sorted({r.strip() for r in (existing_rooms | new_rooms) if r.strip()}))
+
+            # 合并班级
+            existing_groups = set(str(existing.get("class_group", "")).split("、"))
+            new_groups = set(str(rec.get("class_group", "")).split("、"))
+            existing["class_group"] = "、".join(sorted({g.strip() for g in (existing_groups | new_groups) if g.strip()}))
+
     return list(unique_records.values())
 
 
@@ -328,8 +343,23 @@ def render_grid(grid: dict[str, dict[int, list[dict]]], teacher_category_map: di
             if not items:
                 row.append("<td style='color:#94a3b8;'>-</td>")
             else:
-                grouped = defaultdict(list)
+                # 在格子渲染前进行最后一次去重合并，处理因原始记录时段跨度不同导致的重复显示
+                cell_unique: dict[tuple, dict] = {}
                 for rec in items:
+                    # 以教师列表和课程作为格子内的唯一标识
+                    ckey = (tuple(sorted(rec["teachers"])), rec["course"])
+                    if ckey not in cell_unique:
+                        cell_unique[ckey] = rec.copy()
+                    else:
+                        # 合并元数据
+                        existing = cell_unique[ckey]
+                        for field in ["classroom", "class_group", "sheet"]:
+                            v1 = set(str(existing.get(field, "")).split("、"))
+                            v2 = set(str(rec.get(field, "")).split("、"))
+                            existing[field] = "、".join(sorted({x.strip() for x in (v1 | v2) if x.strip()}))
+
+                grouped = defaultdict(list)
+                for rec in cell_unique.values():
                     # 多教师记录时，按第一个可识别教师归类；没有则归“院内其余老师”
                     cat = "院内其余老师"
                     for t in rec["teachers"]:
