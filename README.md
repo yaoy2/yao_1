@@ -1,6 +1,6 @@
 # thebeginning 🎓 | 学院行政与教学科研效率工具箱
 
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_svg.svg)](https://your-streamlit-app-link.streamlit.app)
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_svg.svg)](https://whatsuppp.streamlit.app/)
 > **“把繁琐交给代码，把时间还给教育。”**
 
 这是一个专为**高校教师、辅导员及行政人员**打造的综合性效率工具箱。它针对高校工作中常见的材料审核、成绩汇总、文档合并、课表查询等痛点，提供了一套基于 Python 和 Streamlit 的自动化解决方案。
@@ -33,7 +33,8 @@
 
 ### 6. 📚 课表查询系统 (Schedule Browser)
 - **场景**：学院内部课表快速检索。
-- **功能**：基于原始 Excel 课表，支持按教师姓名、系部、星期等多维度查询，自动解析复杂的周次与节次信息。
+- **功能**：基于 JSON 缓存的课表数据，支持按教师姓名、系部、星期等多维度查询，自动解析复杂的周次与节次信息。
+- **数据更新**：将新 Excel 放入 `data/` 目录后刷新页面，自动重新解析并更新缓存。
 
 ### 7. 📥 微信归档工具 (WeChat Archiver)
 - **场景**：优质公众号教学案例、竞赛信息本地永久保存。
@@ -48,14 +49,14 @@
 ## 🚀 快速开始
 
 ### 线上体验
-直接访问 [Streamlit Cloud 演示地址](https://your-streamlit-app-link.streamlit.app) 即可使用大部分工具（无需安装）。
+直接访问 [Streamlit Cloud 演示地址](https://whatsuppp.streamlit.app/) 即可使用大部分工具（无需安装）。
 
 ### 本地部署 (推荐)
 如需使用 **微信归档** 或处理**大批量私密数据**，建议本地运行：
 
 1. **克隆仓库**
    ```bash
-   git clone https://github.com/your-username/thebeginning.git
+   git clone https://github.com/yaoy2/thebeginning.git
    cd thebeginning
    ```
 
