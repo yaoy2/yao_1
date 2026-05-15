@@ -1,4 +1,5 @@
 import html
+import json
 import re
 from pathlib import Path
 from collections import defaultdict
@@ -9,15 +10,19 @@ import streamlit as st
 
 st.set_page_config(page_title="课表查询", page_icon="📚", layout="wide")
 
-EXCEL_PATH = Path(
-    r"E:\GoogleDrive\Ding2026\健康医疗科技学院2025-2026学年第二学期（理论）课表汇总表(1).xlsx"
-)
+# ── 路径配置（相对于项目根目录）───────────────────────────
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DATA_DIR = PROJECT_ROOT / "data"
+DATA_DIR.mkdir(exist_ok=True)
+
+EXCEL_PATH = DATA_DIR / "健康医疗科技学院2025-2026学年第二学期（理论）课表汇总表(1).xlsx"
+TEACHER_CATEGORY_EXCEL_PATH = DATA_DIR / "健康医疗科技学院2025-2026学年第二学期（理论）课表汇总表.xlsx"
+SCHEDULE_CACHE_PATH = DATA_DIR / "schedule_cache.json"
+CATEGORY_CACHE_PATH = DATA_DIR / "teacher_category_cache.json"
+
 WEEKDAYS = ["星期一", "星期二", "星期三", "星期四", "星期五"]
 PERIODS = list(range(1, 11))
 CATEGORY_ORDER = ["医学信息工程系", "健康服务与管理系", "医学影像技术系", "院内其余老师"]
-TEACHER_CATEGORY_EXCEL_PATH = Path(
-    r"E:\GoogleDrive\Ding2026\健康医疗科技学院2025-2026学年第二学期（理论）课表汇总表.xlsx"
-)
 COUNCIL_MEMBERS = {
     "郭洋",
     "张勇",
@@ -54,8 +59,26 @@ COURSE_HINT_PATTERN = re.compile(
 )
 
 
+# ── 缓存工具 ──────────────────────────────────────────────
+def _save_cache(path: Path, data) -> None:
+    try:
+        path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception:
+        pass
+
+
+def _load_cache(path: Path):
+    if not path.exists():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+
+# ── 文本解析 ──────────────────────────────────────────────
 def _normalize_text(value: object) -> str:
-    text = str(value).replace("\r", "\n").replace("\u3000", " ").strip()
+    text = str(value).replace("\r", "\n").replace("　", " ").strip()
     text = re.sub(r"[ \t]+", " ", text)
     text = re.sub(r"\n+", "\n", text)
     return text
@@ -113,7 +136,7 @@ def _parse_teachers_and_course(head_text: str) -> tuple[list[str], str]:
         token = tokens[idx].strip()
         if _looks_like_course_token(token):
             break
-        if re.fullmatch(r"[\u4e00-\u9fa5]{2,4}", token):
+        if re.fullmatch(r"[一-龥]{2,4}", token):
             teachers.append(token)
             idx += 1
             continue
@@ -143,7 +166,7 @@ def _parse_entry(entry: str, day: str, sheet_name: str) -> list[dict]:
         tail = stripped[first_period_match.end() :].strip()
 
     teachers, course = _parse_teachers_and_course(head)
-    teachers = sorted(list(set(teachers)))  # 去重并排序，确保姓名顺序一致
+    teachers = sorted(list(set(teachers)))
     classroom_match = CLASSROOM_PATTERN.search(tail)
     classroom = classroom_match.group(1) if classroom_match else ""
     class_group = tail[classroom_match.end() :].strip() if classroom_match else tail
@@ -171,8 +194,9 @@ def _parse_entry(entry: str, day: str, sheet_name: str) -> list[dict]:
     return records
 
 
-@st.cache_data(show_spinner=False)
-def load_schedule_records(excel_path: str) -> list[dict]:
+# ── 数据加载（支持缓存）──────────────────────────────────
+def _parse_excel(excel_path: str) -> list[dict]:
+    """从 Excel 解析课表记录（原始逻辑）。"""
     xls = pd.ExcelFile(excel_path)
     all_records: list[dict] = []
     for sheet_name in xls.sheet_names:
@@ -191,8 +215,6 @@ def load_schedule_records(excel_path: str) -> list[dict]:
 
     unique_records: dict[tuple, dict] = {}
     for rec in all_records:
-        # 更加宽松的去重 Key：只要 星期、节次、教师列表、课程 相同，就视为同一条记录
-        # 教师列表转为 sorted tuple 以处理顺序不一致的情况
         key = (
             rec["weekday"],
             rec["start_period"],
@@ -203,25 +225,33 @@ def load_schedule_records(excel_path: str) -> list[dict]:
         if key not in unique_records:
             unique_records[key] = rec
         else:
-            # 如果 Key 已存在，则合并 教室、班级 和 来源
             existing = unique_records[key]
-
-            # 合并来源 Sheet
             existing_sheets = set(str(existing.get("sheet", "")).split("、"))
             new_sheets = set(str(rec.get("sheet", "")).split("、"))
             existing["sheet"] = "、".join(sorted({s.strip() for s in (existing_sheets | new_sheets) if s.strip()}))
-
-            # 合并教室
             existing_rooms = set(str(existing.get("classroom", "")).split("、"))
             new_rooms = set(str(rec.get("classroom", "")).split("、"))
             existing["classroom"] = "、".join(sorted({r.strip() for r in (existing_rooms | new_rooms) if r.strip()}))
-
-            # 合并班级
             existing_groups = set(str(existing.get("class_group", "")).split("、"))
             new_groups = set(str(rec.get("class_group", "")).split("、"))
             existing["class_group"] = "、".join(sorted({g.strip() for g in (existing_groups | new_groups) if g.strip()}))
 
     return list(unique_records.values())
+
+
+def load_schedule_records() -> list[dict]:
+    """加载课表：优先读 Excel 并缓存，否则读缓存。"""
+    if EXCEL_PATH.exists():
+        records = _parse_excel(str(EXCEL_PATH))
+        if records:
+            _save_cache(SCHEDULE_CACHE_PATH, records)
+            return records
+
+    cached = _load_cache(SCHEDULE_CACHE_PATH)
+    if cached:
+        return cached
+
+    return []
 
 
 def record_matches_filter(rec: dict, selected_filter: str) -> bool:
@@ -239,39 +269,48 @@ def _category_from_sheet_name(sheet_name: str) -> str | None:
     return None
 
 
-@st.cache_data(show_spinner=False)
-def build_teacher_category_map(records: list[dict], category_excel_path: str) -> dict[str, str]:
-    teacher_set = sorted({t for rec in records for t in rec["teachers"] if t.strip()})
-    score: dict[str, dict[str, int]] = {t: {c: 0 for c in CATEGORY_ORDER} for t in teacher_set}
+def build_teacher_category_map(records: list[dict]) -> dict[str, str]:
+    """构建教师-系部映射：优先读 Excel 并缓存，否则读缓存。"""
+    # 如果有 Excel，从 Excel 构建并缓存
+    if TEACHER_CATEGORY_EXCEL_PATH.exists():
+        teacher_set = sorted({t for rec in records for t in rec["teachers"] if t.strip()})
+        score: dict[str, dict[str, int]] = {t: {c: 0 for c in CATEGORY_ORDER} for t in teacher_set}
 
-    # 优先用已解析课表中的来源sheet做一次归类打分
-    for rec in records:
-        cat = _category_from_sheet_name(str(rec.get("sheet", "")))
-        if not cat:
-            continue
-        for t in rec["teachers"]:
-            if t in score:
-                score[t][cat] += 2
-
-    # 再从“教师系部分类”Excel中做精确匹配加权
-    category_file = Path(category_excel_path)
-    if category_file.exists():
-        xls = pd.ExcelFile(str(category_file))
-        for sheet_name in xls.sheet_names:
-            cat = _category_from_sheet_name(sheet_name)
+        for rec in records:
+            cat = _category_from_sheet_name(str(rec.get("sheet", "")))
             if not cat:
                 continue
-            df = pd.read_excel(str(category_file), sheet_name=sheet_name, header=None, dtype=str).fillna("")
-            text_blob = " ".join(df.astype(str).values.flatten().tolist())
-            for teacher in teacher_set:
-                if teacher and teacher in text_blob:
-                    score[teacher][cat] += 5
+            for t in rec["teachers"]:
+                if t in score:
+                    score[t][cat] += 2
 
-    teacher_category: dict[str, str] = {}
-    for teacher in teacher_set:
-        best = max(score[teacher], key=score[teacher].get)
-        teacher_category[teacher] = best if score[teacher][best] > 0 else "院内其余老师"
-    return teacher_category
+        category_file = TEACHER_CATEGORY_EXCEL_PATH
+        if category_file.exists():
+            xls = pd.ExcelFile(str(category_file))
+            for sheet_name in xls.sheet_names:
+                cat = _category_from_sheet_name(sheet_name)
+                if not cat:
+                    continue
+                df = pd.read_excel(str(category_file), sheet_name=sheet_name, header=None, dtype=str).fillna("")
+                text_blob = " ".join(df.astype(str).values.flatten().tolist())
+                for teacher in teacher_set:
+                    if teacher and teacher in text_blob:
+                        score[teacher][cat] += 5
+
+        teacher_category: dict[str, str] = {}
+        for teacher in teacher_set:
+            best = max(score[teacher], key=score[teacher].get)
+            teacher_category[teacher] = best if score[teacher][best] > 0 else "院内其余老师"
+
+        _save_cache(CATEGORY_CACHE_PATH, teacher_category)
+        return teacher_category
+
+    # 没有 Excel，尝试读缓存
+    cached = _load_cache(CATEGORY_CACHE_PATH)
+    if cached:
+        return cached
+
+    return {}
 
 
 def build_period_grid(records: list[dict], selected_filter: str) -> dict[str, dict[int, list[dict]]]:
@@ -343,15 +382,12 @@ def render_grid(grid: dict[str, dict[int, list[dict]]], teacher_category_map: di
             if not items:
                 row.append("<td style='color:#94a3b8;'>-</td>")
             else:
-                # 在格子渲染前进行最后一次去重合并，处理因原始记录时段跨度不同导致的重复显示
                 cell_unique: dict[tuple, dict] = {}
                 for rec in items:
-                    # 以教师列表和课程作为格子内的唯一标识
                     ckey = (tuple(sorted(rec["teachers"])), rec["course"])
                     if ckey not in cell_unique:
                         cell_unique[ckey] = rec.copy()
                     else:
-                        # 合并元数据
                         existing = cell_unique[ckey]
                         for field in ["classroom", "class_group", "sheet"]:
                             v1 = set(str(existing.get(field, "")).split("、"))
@@ -360,7 +396,6 @@ def render_grid(grid: dict[str, dict[int, list[dict]]], teacher_category_map: di
 
                 grouped = defaultdict(list)
                 for rec in cell_unique.values():
-                    # 多教师记录时，按第一个可识别教师归类；没有则归“院内其余老师”
                     cat = "院内其余老师"
                     for t in rec["teachers"]:
                         if t in teacher_category_map:
@@ -388,26 +423,22 @@ def render_grid(grid: dict[str, dict[int, list[dict]]], teacher_category_map: di
     st.markdown(html_table, unsafe_allow_html=True)
 
 
+# ── 主页面 ────────────────────────────────────────────────
 st.title("📚 健康医疗科技学院课表查询")
-st.caption("固定读取本学期课表文件（全部工作表），支持全院总课表与按教师查询。")
+st.caption("固定读取本学期课表数据，支持全院总课表与按教师查询。")
 
-if not EXCEL_PATH.exists():
-    st.error(f"未找到课表文件：{EXCEL_PATH}")
-    st.stop()
-
-try:
-    records = load_schedule_records(str(EXCEL_PATH))
-except Exception as exc:
-    st.error(f"读取课表失败：{exc}")
-    st.stop()
+records = load_schedule_records()
 
 if not records:
-    st.warning("未从 Excel 中识别到有效课程记录，请检查原始表格结构。")
+    st.error(
+        "未找到课表数据。请将课表 Excel 文件放到项目 `data/` 目录下，然后刷新页面。\n\n"
+        f"期望路径：`{EXCEL_PATH.name}`"
+    )
     st.stop()
 
 teacher_set = sorted({t for rec in records for t in rec["teachers"] if t.strip()})
 selected_filter = st.selectbox("按教师查询", ["全部教师", "院务会"] + teacher_set, index=0)
-teacher_category_map = build_teacher_category_map(records, str(TEACHER_CATEGORY_EXCEL_PATH))
+teacher_category_map = build_teacher_category_map(records)
 
 col1, col2, col3 = st.columns(3)
 with col1:

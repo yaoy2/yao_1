@@ -1,0 +1,2 @@
+# 忽略原始 Excel 文件（已缓存为 JSON）
+*.xlsx
