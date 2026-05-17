@@ -1,6 +1,8 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import re
 import os
+from html import escape
 
 st.set_page_config(page_title="配色方案预览", page_icon="🎨", layout="wide")
 
@@ -57,18 +59,232 @@ def color_text(hex_code: str) -> str:
     return f'<span style="background:{hex_code};color:{fg};padding:6px 14px;margin:2px;border-radius:4px;font-family:monospace;font-weight:bold">{hex_code}</span>'
 
 
+def get_contrast_color(hex_code: str) -> str:
+    r, g, b = int(hex_code[1:3], 16), int(hex_code[3:5], 16), int(hex_code[5:7], 16)
+    lum = 0.299 * r + 0.587 * g + 0.114 * b
+    return "#ffffff" if lum < 140 else "#172033"
+
+
+def role_for_color(index: int) -> tuple[str, str]:
+    roles = [
+        ("主色", "标题 / 大面积背景 / 高级感主体"),
+        ("辅助色", "分割线 / 标签 / 次级区块"),
+        ("背景色", "正文底色 / 留白 / PPT 页面背景"),
+    ]
+    if index < len(roles):
+        return roles[index]
+    return (f"点缀色{index - 2}", "强调数字 / 图标 / 小面积提示")
+
+
+def render_palette_showcase(pal: dict) -> str:
+    pairs = pal.get("pairs", [])
+    colors = pal.get("colors", [])
+    if not colors:
+        return '<div style="padding:24px;border:1px solid #ddd;border-radius:12px;">暂无颜色数据</div>'
+
+    main = colors[0]
+    secondary = colors[1] if len(colors) > 1 else colors[0]
+    background = colors[2] if len(colors) > 2 else "#F8F6F2"
+    main_name = pairs[0]["name"] if pairs and pairs[0].get("name") else "主色"
+    scene = escape(pal.get("scene") or "PPT、海报、视觉参考")
+    palette_name = escape(pal.get("name") or "未命名配色")
+    fg_main = get_contrast_color(main)
+    fg_secondary = get_contrast_color(secondary)
+    fg_background = get_contrast_color(background)
+
+    color_rows = ""
+    for i, color in enumerate(colors):
+        role, usage = role_for_color(i)
+        cname = pairs[i]["name"] if i < len(pairs) and pairs[i].get("name") else role
+        fg = get_contrast_color(color)
+        color_rows += f"""
+        <div class="palette-row" style="background:{color};color:{fg};">
+          <div>
+            <div class="palette-role">{escape(role)}</div>
+            <div class="palette-name">{escape(cname)}</div>
+          </div>
+          <div class="palette-meta">
+            <div class="palette-hex">{escape(color)}</div>
+            <div class="palette-usage">{escape(usage)}</div>
+          </div>
+        </div>
+        """
+
+    return f"""
+    <style>
+      .palette-showcase {{
+        max-width: 500px;
+        margin: 0 auto 10px;
+        padding: 9px;
+        border-radius: 22px;
+        background: #050505;
+        box-shadow: 0 10px 28px rgba(15, 23, 42, .18);
+      }}
+      .palette-hero {{
+        position: relative;
+        min-height: 168px;
+        overflow: hidden;
+        border-radius: 18px;
+        padding: 18px 22px;
+        background: {main};
+        color: {fg_main};
+      }}
+      .palette-kicker {{
+        display: inline-flex;
+        padding: 4px 10px;
+        border: 1.5px solid currentColor;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 800;
+        opacity: .86;
+      }}
+      .palette-title {{
+        margin-top: 16px;
+        font-size: clamp(27px, 4.2vw, 40px);
+        line-height: 1.05;
+        font-weight: 900;
+        letter-spacing: 0;
+      }}
+      .palette-subtitle {{
+        margin-top: 7px;
+        font-size: 14px;
+        font-weight: 800;
+      }}
+      .palette-script {{
+        position: absolute;
+        right: 22px;
+        top: 66px;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: clamp(44px, 7vw, 68px);
+        font-style: italic;
+        line-height: 1;
+        color: {background};
+        opacity: .96;
+      }}
+      .palette-main-code {{
+        position: absolute;
+        right: 23px;
+        bottom: 18px;
+        text-align: right;
+        font-size: 15px;
+        font-weight: 900;
+      }}
+      .palette-scene {{
+        position: absolute;
+        left: 22px;
+        bottom: 19px;
+        max-width: 55%;
+        font-size: 12px;
+        font-weight: 800;
+      }}
+      .palette-row {{
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        min-height: 54px;
+        margin-top: 7px;
+        padding: 10px 18px;
+        border-radius: 14px;
+      }}
+      .palette-role {{
+        font-size: 10px;
+        font-weight: 900;
+        opacity: .72;
+      }}
+      .palette-name {{
+        margin-top: 1px;
+        font-size: 17px;
+        font-weight: 900;
+      }}
+      .palette-meta {{
+        text-align: right;
+      }}
+      .palette-hex {{
+        font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+        font-size: 16px;
+        font-weight: 900;
+      }}
+      .palette-usage {{
+        margin-top: 2px;
+        font-size: 10px;
+        font-weight: 800;
+        opacity: .82;
+      }}
+      .palette-application {{
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 6px;
+        margin-top: 7px;
+        padding: 8px;
+        border-radius: 14px;
+        background: {background};
+        color: {fg_background};
+      }}
+      .palette-app-item {{
+        min-height: 38px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 10px;
+        text-align: center;
+        font-size: 11px;
+        font-weight: 900;
+      }}
+      @media (max-width: 700px) {{
+        .palette-showcase {{ padding: 8px; border-radius: 20px; }}
+        .palette-hero {{ min-height: 210px; padding: 20px 18px; }}
+        .palette-script {{ right: 16px; top: 92px; }}
+        .palette-main-code {{ right: 18px; bottom: 18px; font-size: 16px; }}
+        .palette-scene {{ left: 18px; bottom: 20px; max-width: 58%; font-size: 12px; }}
+        .palette-row {{ align-items: flex-start; flex-direction: column; padding: 14px 16px; }}
+        .palette-meta {{ text-align: left; }}
+        .palette-application {{ grid-template-columns: 1fr; }}
+      }}
+    </style>
+
+    <div class="palette-showcase">
+      <div class="palette-hero">
+        <div class="palette-kicker">配色灵感 · 审美参考</div>
+        <div class="palette-title">高级感配色</div>
+        <div class="palette-subtitle">（{palette_name}）</div>
+        <div class="palette-script">Color</div>
+        <div class="palette-scene">{scene}</div>
+        <div class="palette-main-code">{escape(main)}<br>{escape(main_name)}</div>
+      </div>
+      {color_rows}
+      <div class="palette-application">
+        <div class="palette-app-item" style="background:{main};color:{fg_main};">PPT 标题条</div>
+        <div class="palette-app-item" style="background:{secondary};color:{fg_secondary};">图表强调</div>
+        <div class="palette-app-item" style="background:{background};color:{fg_background};border:1px solid rgba(23,32,51,.14);">正文背景</div>
+      </div>
+    </div>
+    """
+
+
+def render_palette_code(parts: list[str]) -> str:
+    code_text = " + ".join(parts)
+    return f"""
+    <div style="max-width:500px;margin:0 auto;">
+      <pre style="box-sizing:border-box;width:100%;margin:0;padding:12px 14px;border-radius:10px;
+        background:#f6f8fa;color:#172033;border:1px solid #e5e7eb;white-space:pre-wrap;
+        overflow-wrap:anywhere;font-size:13px;line-height:1.45;
+        font-family:ui-monospace,SFMono-Regular,Consolas,monospace;">{escape(code_text)}</pre>
+    </div>
+    """
+
+
 # 读取数据
 with open(PALETTES_PATH, "r", encoding="utf-8") as f:
     raw_text = f.read()
 
 palettes = parse_palettes(raw_text)
 
-st.title("🎨 配色方案预览")
-
 # ── 左侧选择 + 右侧预览 ──
 col_sel, col_preview = st.columns([1, 2])
 
 with col_sel:
+    st.title("🎨 配色方案预览")
     st.subheader("选择方案")
     options = [f"{p['id']}、{p['name']}" for p in palettes]
     selected = st.selectbox("编号", options, label_visibility="collapsed")
@@ -91,27 +307,7 @@ with col_sel:
             st.color_picker(label, c, disabled=True, key=f"cp_{sel_id}_{i}")
 
 with col_preview:
-    st.subheader("色卡预览")
-
-    # ── 公众号同款竖条色卡 ──
-    strips = ""
-    for i, c in enumerate(pal["colors"]):
-        cname = pal["pairs"][i]["name"] if i < len(pal["pairs"]) else ""
-        r, g, b = int(c[1:3], 16), int(c[3:5], 16), int(c[5:7], 16)
-        lum = 0.299 * r + 0.587 * g + 0.114 * b
-        fg = "#ffffff" if lum < 140 else "#222222"
-        label = f"{cname}<br>{c}" if cname else c
-        strips += (
-            f'<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;'
-            f"padding-bottom:14px;background:{c};min-height:220px;"
-            f'font-size:12px;font-weight:600;color:{fg};line-height:1.6;text-align:center">'
-            f"{label}</div>"
-        )
-    st.markdown(
-        f'<div style="display:flex;gap:4px;border-radius:12px;overflow:hidden;'
-        f"box-shadow:0 2px 12px rgba(0,0,0,.15);margin:12px 0\">{strips}</div>",
-        unsafe_allow_html=True,
-    )
+    components.html(render_palette_showcase(pal), height=470, scrolling=False)
 
     # ── 色号文字区 ──
     parts = []
@@ -120,7 +316,7 @@ with col_preview:
             parts.append(f"{pal['pairs'][i]['name']} {c}")
         else:
             parts.append(c)
-    st.code(" + ".join(parts), language=None)
+    st.markdown(render_palette_code(parts), unsafe_allow_html=True)
 
 # ── 底部：原始 Markdown ──
 st.markdown("---")
