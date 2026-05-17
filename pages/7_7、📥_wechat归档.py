@@ -35,10 +35,22 @@ def apply_custom_styling():
         border: 1px solid #e9ecef;
         margin-bottom: 1.5rem;
     }
-    .highlight {
-        color: #667eea;
-        font-weight: 600;
+    .route-header {
+        font-size: 1.3rem !important;
+        font-weight: 700 !important;
+        color: #667eea !important;
+        margin-bottom: 0.5rem !important;
     }
+    .tag {
+        display: inline-block;
+        padding: 2px 10px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin-right: 4px;
+    }
+    .tag-link { background: #e8f0fe; color: #1a73e8; }
+    .tag-file { background: #fef3e0; color: #e67e22; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -46,76 +58,163 @@ apply_custom_styling()
 
 # --- 页面标题 ---
 st.markdown('<p class="main-title">📥 微信公众号文章归档工具</p>', unsafe_allow_html=True)
-st.markdown('<p class="sub-title">解决高校教师资料归档难题的本地化方案</p>', unsafe_allow_html=True)
+st.markdown('<p class="sub-title">统一归档技能 — 覆盖公众号链接抓取归档（raw / 课题 / 竞赛）和本地文件上传 IMA 知识库</p>', unsafe_allow_html=True)
 
-# --- 核心内容 ---
-col1, col2 = st.columns([2, 1])
+# --- 工具简介 ---
+st.markdown("### 🌟 工具简介")
+st.info("""
+这是一个专为高校教师和科研人员设计的**本地化归档工具**。
+它能将微信公众号文章一键转换为 Markdown 存入 Obsidian，也能将本地文件上传到 IMA 知识库，按 **raw / 学院 / 课题 / 竞赛** 四个类别智能归档。
+""")
 
-with col1:
-    st.markdown("### 🌟 工具简介")
-    st.info("""
-    这是一个专门为高校教师和科研人员设计的**本地化微信文章抓取与归档工具**。
-    它能够将分散在微信公众号中的优质教学案例、竞赛信息和科研动态，一键转换为标准的 **Markdown** 格式，并自动整理到 **Obsidian** 等知识管理库中。
-    """)
+# --- 触发词与路由总表 ---
+st.markdown("### 📋 触发词与路由总表")
 
-    st.markdown("### 🎯 解决什么问题？")
+route_data = [
+    {"触发词": "归档raw", "输入类型": "公众号链接", "处理方式": "Playwright 抓取", "存储目标": "Obsidian raw 目录"},
+    {"触发词": "归档课题", "输入类型": "公众号链接", "处理方式": "Playwright + IMA 上传", "存储目标": "GoogleDrive 课题目录 + IMA 竞赛&课题"},
+    {"触发词": "归档竞赛", "输入类型": "公众号链接", "处理方式": "Playwright + IMA 上传", "存储目标": "GoogleDrive 竞赛目录 + IMA 竞赛&课题"},
+    {"触发词": "归档学院", "输入类型": "本地文件", "处理方式": "IMA 上传", "存储目标": "IMA 健康学院-2026 根目录"},
+    {"触发词": "归档课题", "输入类型": "本地文件", "处理方式": "复制 + IMA 上传", "存储目标": "GoogleDrive 课题目录 + IMA 竞赛&课题"},
+    {"触发词": "归档竞赛", "输入类型": "本地文件", "处理方式": "复制 + IMA 上传", "存储目标": "GoogleDrive 竞赛目录 + IMA 竞赛&课题"},
+]
+
+st.dataframe(route_data, use_container_width=True, hide_index=True)
+
+st.divider()
+
+# --- 四条路线分区介绍 ---
+st.markdown("### 🛤️ 四条归档路线")
+
+col_a, col_b = st.columns(2)
+
+with col_a:
+    # 路线 A
+    st.markdown("#### 路线 A：归档 raw（公众号链接）")
+    st.markdown('<span class="tag tag-link">公众号链接</span>', unsafe_allow_html=True)
     st.write("""
-    在日常工作中，高校教师经常会遇到以下痛点：
-    - **资料易失联**：微信文章可能随时被删除或公众号迁移。
-    - **碎片化严重**：好的教学案例分散在各个订阅号，难以统一检索。
-    - **整理效率低**：手动复制文字、下载图片并排版极其耗时。
-    - **图片防盗链**：直接复制的微信图片在其他软件中往往无法正常显示。
+    **触发词：** `归档raw`
+    **流程：** Playwright 动态渲染 → 提取正文 → 转 Markdown → 保存到 Obsidian raw 目录
+    **存储目标：**
+    `E:\\GoogleDrive\\Obsidian Vault\\00\\LLM_WIKI\\raw\\`
     """)
 
-    st.markdown("### 🚀 核心能力")
-    st.markdown("""
-    - **深度解析**：基于 Playwright 动态渲染技术，精准提取微信文章正文内容。
-    - **图片本地化**：自动下载所有图片到本地，绕过微信防盗链，确保永久可见。
-    - **结构化转换**：将 HTML 转换为适合 Obsidian 保存的 Markdown，尽量保留标题、段落、链接和图片位置
-    - **智能归档**：支持按“教学课题”和“学生竞赛”等类别自动归档到指定 Obsidian Vault 目录。
-    - **合规安全**：全程本地运行，不消耗 AI token，不上传任何隐私数据。
+    st.info("raw 归档不做分类，直接存入 raw 目录，适合需要原始留存的通用文章。")
+
+    # 路线 B
+    st.markdown("#### 路线 B：归档课题 / 竞赛（公众号链接）")
+    st.markdown('<span class="tag tag-link">公众号链接</span>', unsafe_allow_html=True)
+    st.write("""
+    **触发词：** `归档课题` / `归档竞赛`
+    **流程：** Playwright 抓取 → 存入 GoogleDrive → 上传 IMA 竞赛&课题知识库
+    **存储目标：**
+    - 课题 → `E:\\GoogleDrive\\Obsidian Vault (1)\\ChatGPT\\50_教学_课题\\`
+    - 竞赛 → `E:\\GoogleDrive\\Obsidian Vault (1)\\ChatGPT\\40_学生_竞赛\\`
+    - IMA「竞赛&课题」知识库对应文件夹
     """)
 
-with col2:
-    st.markdown("### 🛠️ 技术方案")
-    with st.container():
-        st.markdown("""
-        <div class="custom-card">
-            <b>编程语言:</b> Python 3.x<br>
-            <b>动态渲染:</b> Playwright (Edge)<br>
-            <b>内容解析:</b> BeautifulSoup4 + LXML<br>
-            <b>归档目标:</b> Obsidian / Markdown
-        </div>
-        """, unsafe_allow_html=True)
+with col_b:
+    # 路线 C
+    st.markdown("#### 路线 C：归档学院（本地文件）")
+    st.markdown('<span class="tag tag-file">本地文件</span>', unsafe_allow_html=True)
+    st.write("""
+    **触发词：** `归档学院`
+    **输入：** 本地文件路径（截图、PDF、Word、Excel 等）
+    **流程：** IMA 上传 → 健康学院-2026 知识库根目录
+    **存储目标：**
+    IMA「健康学院-2026」知识库根目录
+    """)
 
-    st.markdown("### 🔒 为什么 Streamlit 线上版不能执行？")
-    st.warning("""
-    出于**安全和技术限制**，本页面仅作为项目展示。
-    
-    1. **沙箱限制**: Streamlit Cloud 运行在云端服务器，无法调用用户本机 Edge，也无法写入用户本机 Obsidian Vault。。
-    2. **文件系统**: 线上版无法访问您电脑上的 E 盘或本地 Obsidian 库。
-    3. **反爬机制**: 微信对公有云 IP 极其敏感，必须在本地网络环境下运行以降低封禁风险。
+    st.info("学院归档只上传到 IMA，不做 GoogleDrive 备份。")
+
+    # 路线 D
+    st.markdown("#### 路线 D：归档课题 / 竞赛（本地文件）")
+    st.markdown('<span class="tag tag-file">本地文件</span>', unsafe_allow_html=True)
+    st.write("""
+    **触发词：** `归档课题` / `归档竞赛`
+    **输入：** 本地文件路径
+    **流程：** 复制到 GoogleDrive 对应目录 → 上传 IMA 竞赛&课题知识库
+    **存储目标：**
+    - 课题 → `E:\\GoogleDrive\\Obsidian Vault (1)\\ChatGPT\\50_教学_课题\\`
+    - 竞赛 → `E:\\GoogleDrive\\Obsidian Vault (1)\\ChatGPT\\40_学生_竞赛\\`
+    - IMA「竞赛&课题」知识库对应文件夹
     """)
 
 st.divider()
 
-# --- 运行逻辑与价值 ---
+# --- ⚠️ Streamlit 线上版能做到哪些 ---
+st.markdown("### ⚠️ Streamlit 版 vs. WorkBuddy 版能做到哪些")
+
+st.warning("""
+**为什么有些路线 Streamlit 做不了？**
+
+IMA 知识库的上传功能依赖 `preflight-check.cjs`、`cos-upload.cjs` 等 **Node.js 脚本**，
+本项目是纯 Python 仓库，没有这些脚本，所以涉及 IMA 上传的路线（B/C/D 的 IMA 部分）无法在 Streamlit 中执行。
+
+| 路线 | Streamlit 能做 | 需要 WorkBuddy |
+|------|:---:|:---:|
+| A: 归档 raw（链接） | ✅ Playwright 抓取 | — |
+| B: 归档课题/竞赛（链接） | ✅ Playwright 抓取 | ✅ IMA 上传部分 |
+| C: 归档学院（本地文件） | ❌ 无 Playwright 意义 | ✅ IMA 上传 |
+| D: 归档课题/竞赛（本地文件） | ✅ 文件复制到 GoogleDrive | ✅ IMA 上传部分 |
+
+**结论：** Streamlit 版负责 Playwright 抓取 + 本地存储，IMA 上传统一走 WorkBuddy 的 AI 助手执行。
+""")
+
+st.divider()
+
+# --- IMA 知识库信息 ---
+st.markdown("### 🗄️ IMA 知识库信息")
+
+ima_col1, ima_col2 = st.columns(2)
+
+with ima_col1:
+    st.markdown("#### 「健康学院-2026」（归档学院用）")
+    st.code("kb_id: odi6DH7ugdn-dRgcBkGDhogEgRykbRDxNH46UCYsdRc=")
+    st.code("根目录 folder_id: 7442846495830267")
+    st.caption("不传 folder_id 即为根目录")
+
+with ima_col2:
+    st.markdown("#### 「竞赛&课题」（归档课题/竞赛用）")
+    st.code("kb_id: -ZgVWGtAdFEZQCtt_P04OHZgfDdUIDptPtUCdEpyBsY=")
+    st.code("课题 folder_id: folder_7457623423078090")
+    st.code("竞赛 folder_id: folder_7457623402114290")
+
+st.divider()
+
+# --- 输入识别规则 ---
+st.markdown("### 🔍 输入识别规则")
+
+st.write("""
+- 包含 `https://mp.weixin.qq.com/` → 走**路线 A 或 B**（公众号链接）
+- 包含本地文件路径（如 `C:\\` `D:\\` `E:\\` 或文件扩展名）→ 走**路线 C 或 D**（本地文件）
+- 触发词优先级：说了"归档学院" → 路线 C；说了"归档课题/竞赛" → 路线 B 或 D
+- 链接和归档类型都没说清楚 → 直接询问：归档到哪里（raw / 学院 / 课题 / 竞赛）？
+""")
+
+st.divider()
+
+# --- 本地运行流程 ---
 st.markdown("### 💻 本地运行流程")
 steps = [
     "**环境激活**: 使用项目内置的虚拟环境 `.venv`。",
-    "**配置路径**: 在脚本中设置您的 Obsidian Vault 存储位置。",
-    "**一键启动**: 双击 install_first.bat 完成首次安装,双击 start_wechat_archiver.bat 启动本地归档窗口,在窗口中输入“归档课题”或“归档竞赛”加微信文章链接",
-    "**自动归档**: 工具将自动完成文章下载、图片本地化、Markdown 生成并存入指定目录。"
+    "**启动工具**: 双击 `start_wechat_archiver.bat` 启动本地归档窗口。",
+    "**输入指令**: 在输入框中输入触发词（如“归档课题”）+ 链接或文件路径。",
+    "**自动归档**: 工具自动完成抓取、转换、存档，部分路线会同步上传 IMA。",
 ]
 for i, step in enumerate(steps):
     st.write(f"{i+1}. {step}")
 
+st.divider()
+
+# --- 项目价值 ---
 st.markdown("### 💎 项目价值")
 st.success("""
-- **建立个人知识库**: 真正实现“所见即所得，所得即所有”。
-- **提升教学科研效率**: 资料整理时间从分钟级缩短至秒级。
-- **本地化安全保障**: 数据资产完全由自己掌控，不依赖第三方云服务。
+- **多路线覆盖**: 公众号链接归档（raw / 课题 / 竞赛）+ 本地文件归档（学院 / 课题 / 竞赛）
+- **双通道存储**: Obsidian 本地知识库 + IMA 云知识库，重要资料双重保障
+- **智能识别**: 根据触发词和输入内容自动判断走哪条路线
+- **本地化安全**: 数据资产完全由自己掌控，不依赖第三方云服务
 """)
 
 # --- 页脚 ---
-st.caption("注：本页面仅用于展示项目功能与逻辑。如需使用，请在本地环境下运行相关脚本。")
+st.caption("注：本页面仅用于展示归档工具的功能与逻辑。如需使用，请在本地环境下运行相关脚本。")

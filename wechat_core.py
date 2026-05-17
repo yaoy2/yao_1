@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import datetime as dt
 import re
+import shutil
 import sys
 import time
 from pathlib import Path
@@ -23,11 +24,20 @@ from slugify import slugify
 
 
 TARGET_DIRS = {
+    "raw": r"E:\GoogleDrive\Obsidian Vault\00\LLM_WIKI\raw",
     "course": r"E:\GoogleDrive\Obsidian Vault (1)\ChatGPT\50_教学_课题",
     "competition": r"E:\GoogleDrive\Obsidian Vault (1)\ChatGPT\40_学生_竞赛",
 }
 
 TYPE_ALIASES = {
+    "academy": "academy",
+    "学院": "academy",
+    "健康学院": "academy",
+    "归档学院": "academy",
+
+    "raw": "raw",
+    "归档raw": "raw",
+
     "course": "course",
     "课题": "course",
     "教学": "course",
@@ -37,6 +47,51 @@ TYPE_ALIASES = {
     "竞赛": "competition",
     "比赛": "competition",
     "学生竞赛": "competition",
+}
+
+ARCHIVE_TYPE_LABELS = {
+    "raw": "raw 原始留存",
+    "academy": "学院资料",
+    "course": "教学课题",
+    "competition": "学生竞赛",
+}
+
+ROUTE_DEFINITIONS = {
+    "link_raw": {
+        "title": "路线 A：归档 raw（公众号链接）",
+        "streamlit_supported": True,
+        "description": "Playwright 抓取公众号文章，转 Markdown 后保存到 Obsidian raw 目录。",
+    },
+    "link_course": {
+        "title": "路线 B：归档课题（公众号链接）",
+        "streamlit_supported": True,
+        "description": "Playwright 抓取公众号文章，保存到课题目录；IMA 上传部分交给 WorkBuddy。",
+    },
+    "link_competition": {
+        "title": "路线 B：归档竞赛（公众号链接）",
+        "streamlit_supported": True,
+        "description": "Playwright 抓取公众号文章，保存到竞赛目录；IMA 上传部分交给 WorkBuddy。",
+    },
+    "file_academy": {
+        "title": "路线 C：归档学院（本地文件）",
+        "streamlit_supported": False,
+        "description": "本路线需要 IMA 上传到健康学院-2026，当前 Python 窗口只做识别与提示。",
+    },
+    "file_course": {
+        "title": "路线 D：归档课题（本地文件）",
+        "streamlit_supported": True,
+        "description": "复制本地文件到课题 GoogleDrive 目录；IMA 上传部分交给 WorkBuddy。",
+    },
+    "file_competition": {
+        "title": "路线 D：归档竞赛（本地文件）",
+        "streamlit_supported": True,
+        "description": "复制本地文件到竞赛 GoogleDrive 目录；IMA 上传部分交给 WorkBuddy。",
+    },
+    "unknown": {
+        "title": "尚未识别路线",
+        "streamlit_supported": False,
+        "description": "请提供公众号链接或本地文件路径，并写明 raw / 学院 / 课题 / 竞赛。",
+    },
 }
 
 USER_AGENT = (
@@ -113,12 +168,106 @@ def extract_urls(text: str) -> List[str]:
     return cleaned
 
 
+def extract_local_paths(text: str) -> List[str]:
+    if not text:
+        return []
+
+    quoted = re.findall(r'"([A-Za-z]:\\[^"]+)"', text)
+    extensions = r"pdf|docx?|xlsx?|pptx?|png|jpe?g|gif|webp|txt|md|csv"
+    unquoted = re.findall(rf"([A-Za-z]:\\[^\r\n\"<>|]+\.(?:{extensions}))", text, flags=re.IGNORECASE)
+
+    paths: List[str] = []
+    seen = set()
+    for raw in quoted + unquoted:
+        path = raw.strip().rstrip("，。；;)")
+        if path and path not in seen:
+            seen.add(path)
+            paths.append(path)
+    return paths
+
+
 def detect_archive_type(text: str, fallback: Optional[str] = None) -> Optional[str]:
     text = (text or "").lower()
     for key, val in TYPE_ALIASES.items():
         if key.lower() in text:
             return val
     return fallback
+
+
+def classify_archive_request(text: str, fallback: Optional[str] = "course") -> Dict[str, object]:
+    urls = extract_urls(text)
+    local_paths = extract_local_paths(text)
+    archive_type = detect_archive_type(text, fallback=fallback)
+
+    if urls:
+        input_kind = "link"
+    elif local_paths:
+        input_kind = "file"
+    else:
+        input_kind = "unknown"
+
+    route_id = "unknown"
+    if input_kind == "link" and archive_type in {"raw", "course", "competition"}:
+        route_id = f"link_{archive_type}"
+    elif input_kind == "file" and archive_type in {"academy", "course", "competition"}:
+        route_id = f"file_{archive_type}"
+
+    route_def = ROUTE_DEFINITIONS.get(route_id, ROUTE_DEFINITIONS["unknown"])
+    return {
+        "route_id": route_id,
+        "input_kind": input_kind,
+        "archive_type": archive_type,
+        "archive_label": ARCHIVE_TYPE_LABELS.get(archive_type or "", "未识别"),
+        "urls": urls,
+        "local_paths": local_paths,
+        "title": route_def["title"],
+        "description": route_def["description"],
+        "streamlit_supported": route_def["streamlit_supported"],
+    }
+
+
+def archive_local_files(paths: List[str], archive_type: str, progress_callback=None) -> List[Dict[str, object]]:
+    results: List[Dict[str, object]] = []
+    if archive_type not in {"course", "competition"}:
+        return [
+            {
+                "ok": False,
+                "path": path,
+                "message": f"{ARCHIVE_TYPE_LABELS.get(archive_type, archive_type)} 本地文件归档需要 WorkBuddy/IMA 执行。",
+            }
+            for path in paths
+        ]
+
+    target_root = Path(TARGET_DIRS[archive_type])
+    ensure_dir(target_root)
+
+    for idx, raw_path in enumerate(paths, start=1):
+        source = Path(raw_path)
+        result = {"ok": False, "source": raw_path, "path": "", "message": ""}
+        if progress_callback:
+            progress_callback(f"[{idx}/{len(paths)}] 正在复制：{raw_path}")
+
+        if not source.exists() or not source.is_file():
+            result["message"] = f"文件不存在或不是文件：{raw_path}"
+            results.append(result)
+            if progress_callback:
+                progress_callback(f"✗ {result['message']}")
+            continue
+
+        try:
+            target = unique_file_path(target_root / source.name)
+            shutil.copy2(source, target)
+            result.update({"ok": True, "path": str(target), "message": f"OK | {source} -> {target}"})
+            if progress_callback:
+                progress_callback(f"✓ 已复制：{target}")
+        except Exception as e:
+            result["message"] = f"{type(e).__name__}: {e}"
+            if progress_callback:
+                progress_callback(f"✗ 复制失败：{result['message']}")
+
+        results.append(result)
+
+    return results
 
 
 def extract_meta(page, url: str) -> Dict[str, str]:
