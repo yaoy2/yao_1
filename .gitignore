@@ -9,6 +9,12 @@ __pycache__/
 .agents/
 .codex/
 skills-lock.json
+AGENTS.md
+CLAUDE.md
+CONVERSATION_LOG.md
 
 # Data
 *.db
+
+# Local run logs
+logs/*.log
