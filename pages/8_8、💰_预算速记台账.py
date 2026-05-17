@@ -6,8 +6,8 @@ import io
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from config.budget_config import BUDGET_YEAR, TOTAL_BUDGET, BUDGET_CATEGORIES, REIMBURSEMENT_STATUSES, UNITS
-from utils.budget_db import init_db, add_record, get_filtered_records, get_category_summary, get_total_summary, set_status, update_record, get_all_records, get_unit_summary_by_category, get_category_unit_pivot
+from config.budget_config import BUDGET_YEAR, BUDGET_CATEGORIES, REIMBURSEMENT_STATUSES, UNITS
+from utils.budget_db import init_db, add_record, get_filtered_records, get_category_summary, set_status, update_record, get_all_records, get_unit_summary_by_category, get_category_unit_pivot
 
 st.set_page_config(page_title="预算速记台账", page_icon="💰", layout="wide")
 init_db()
@@ -41,25 +41,6 @@ with st.form("quick_add", clear_on_submit=True):
             add_record(str(record_date), category, unit, description, amount, status)
             st.success(f"已保存：{category} · {unit} · {amount} 元")
             st.rerun()
-
-st.divider()
-
-# ── 预算总览 ──
-st.subheader("📊 预算总览")
-totals = get_total_summary()
-total_reimbursed = totals["total_reimbursed"]
-total_unreimbursed = totals["total_unreimbursed"]
-total_used = total_reimbursed + total_unreimbursed
-remaining = TOTAL_BUDGET - total_used
-usage_pct = total_used / TOTAL_BUDGET if TOTAL_BUDGET > 0 else 0
-
-c1, c2, c3, c4, c5, c6 = st.columns(6)
-c1.metric("年度总预算", f"{TOTAL_BUDGET:,.0f} 元")
-c2.metric("已报销", f"{total_reimbursed:,.0f} 元")
-c3.metric("未报销", f"{total_unreimbursed:,.0f} 元")
-c4.metric("合计占用", f"{total_used:,.0f} 元")
-c5.metric("剩余额度", f"{remaining:,.0f} 元")
-c6.metric("预算使用率", f"{usage_pct:.1%}")
 
 st.divider()
 
