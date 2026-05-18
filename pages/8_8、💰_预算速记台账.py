@@ -7,7 +7,17 @@ import io
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from config.budget_config import BUDGET_YEAR, BUDGET_CATEGORIES, REIMBURSEMENT_STATUSES, UNITS
-from utils.budget_db import init_db, add_record, get_filtered_records, get_category_summary, update_record, get_all_records, get_unit_summary_by_category, get_category_unit_pivot, replace_all_records
+from utils import budget_db
+
+init_db = budget_db.init_db
+add_record = budget_db.add_record
+get_filtered_records = budget_db.get_filtered_records
+get_category_summary = budget_db.get_category_summary
+update_record = budget_db.update_record
+get_all_records = budget_db.get_all_records
+get_unit_summary_by_category = budget_db.get_unit_summary_by_category
+get_category_unit_pivot = budget_db.get_category_unit_pivot
+replace_all_records = getattr(budget_db, "replace_all_records", None)
 
 st.set_page_config(page_title="预算速记台账", page_icon="💰", layout="wide")
 init_db()
@@ -384,6 +394,8 @@ with st.expander("♻️ 从 Excel 备份恢复"):
 
     if st.button("覆盖恢复台账", type="primary", disabled=not uploaded_backup or not confirm_restore):
         try:
+            if replace_all_records is None:
+                raise RuntimeError("当前线上环境还没有加载到恢复函数，请在 Streamlit Cloud 重新部署后再试。")
             restore_records = _records_from_excel(uploaded_backup)
             replace_all_records(restore_records)
         except Exception as exc:
