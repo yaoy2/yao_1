@@ -7,12 +7,55 @@ import io
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from config.budget_config import BUDGET_YEAR, BUDGET_CATEGORIES, REIMBURSEMENT_STATUSES, UNITS
-from utils.budget_db import init_db, add_record, get_filtered_records, get_category_summary, set_status, update_record, get_all_records, get_unit_summary_by_category, get_category_unit_pivot
+from utils.budget_db import init_db, add_record, get_filtered_records, get_category_summary, update_record, get_all_records, get_unit_summary_by_category, get_category_unit_pivot, replace_all_records
 
 st.set_page_config(page_title="预算速记台账", page_icon="💰", layout="wide")
 init_db()
 
 st.title(f"💰 {BUDGET_YEAR}年度预算速记台账")
+
+st.markdown(
+    """
+    <style>
+    div[data-testid="stVerticalBlockBorderWrapper"] {
+        padding: 0.25rem 0.85rem;
+    }
+    div[data-testid="stVerticalBlockBorderWrapper"] [data-testid="stHorizontalBlock"] {
+        gap: 0.65rem;
+        align-items: center;
+    }
+    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlock"] {
+        gap: 0;
+    }
+    div[data-testid="stVerticalBlockBorderWrapper"] [data-testid="stSelectbox"] {
+        margin-bottom: 0;
+    }
+    div[data-testid="stVerticalBlockBorderWrapper"] [data-testid="stSelectbox"] [data-baseweb="select"] > div {
+        min-height: 2.35rem;
+        padding-top: 0;
+        padding-bottom: 0;
+    }
+    div[data-testid="stVerticalBlockBorderWrapper"] details {
+        margin-bottom: 0;
+    }
+    div[data-testid="stVerticalBlockBorderWrapper"] details summary {
+        min-height: 2.35rem;
+        padding-top: 0.35rem;
+        padding-bottom: 0.35rem;
+    }
+    .budget-record-line {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        line-height: 2.35rem;
+    }
+    .budget-record-line strong {
+        font-weight: 700;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 # ── 顶部速记区 ──
 st.subheader("✍️ 快速录入")
@@ -141,40 +184,81 @@ records = get_filtered_records(
 )
 
 if records:
+    table_rows = []
     for rec in records:
-        rid = rec["id"]
-        status = rec["reimbursement_status"]
-        status_icon = {"未报销": "🟡", "已报销": "🟢", "作废": "⚫"}.get(status, "")
-        with st.container(border=True):
-            rc1, rc2, rc3 = st.columns([4, 2, 2])
-            with rc1:
-                st.markdown(f"**{rec['record_date']}** · {rec['category']} · {rec.get('unit', '')} · {rec['amount']:,.0f} 元")
-                if rec["description"]:
-                    st.caption(rec["description"])
-            with rc2:
-                st.markdown(f"{status_icon} **{status}**")
-                new_status = st.selectbox(
-                    "变更状态",
-                    REIMBURSEMENT_STATUSES,
-                    index=REIMBURSEMENT_STATUSES.index(status),
-                    key=f"status_{rid}",
-                    label_visibility="collapsed",
-                )
-                if new_status != status:
-                    set_status(rid, new_status)
-                    st.rerun()
-            with rc3:
-                with st.expander("✏️ 编辑"):
-                    with st.form(f"edit_{rid}", border=False):
-                        e_date = st.date_input("日期", value=pd.to_datetime(rec["record_date"]))
-                        e_cat = st.selectbox("类别", list(BUDGET_CATEGORIES.keys()), index=list(BUDGET_CATEGORIES.keys()).index(rec["category"]) if rec["category"] in BUDGET_CATEGORIES else 0)
-                        cur_unit = rec.get("unit", "")
-                        e_unit = st.selectbox("使用单位", UNITS, index=UNITS.index(cur_unit) if cur_unit in UNITS else 0)
-                        e_desc = st.text_input("支出明细", value=rec["description"])
-                        e_amt = st.number_input("金额", value=rec["amount"], min_value=0.0, step=100.0)
-                        if st.form_submit_button("保存"):
-                            update_record(rid, record_date=str(e_date), category=e_cat, unit=e_unit, description=e_desc, amount=e_amt)
-                            st.rerun()
+        table_rows.append({
+            "ID": rec["id"],
+            "日期": pd.to_datetime(rec["record_date"]).date(),
+            "费用类别": rec["category"],
+            "使用单位": rec.get("unit", ""),
+            "金额": float(rec["amount"]),
+            "支出明细": rec.get("description", ""),
+            "报销状态": rec["reimbursement_status"],
+        })
+
+    df_records = pd.DataFrame(table_rows)
+    edited_records = st.data_editor(
+        df_records,
+        hide_index=True,
+        use_container_width=True,
+        num_rows="fixed",
+        height=min(560, 38 * (len(df_records) + 1) + 4),
+        column_config={
+            "ID": None,
+            "日期": st.column_config.DateColumn("日期", format="YYYY-MM-DD", required=True, width="small"),
+            "费用类别": st.column_config.SelectboxColumn("费用类别", options=list(BUDGET_CATEGORIES.keys()), required=True, width="medium"),
+            "使用单位": st.column_config.SelectboxColumn("使用单位", options=UNITS, width="medium"),
+            "金额": st.column_config.NumberColumn("金额", min_value=0.01, step=100.0, format="%.2f", width="small"),
+            "支出明细": st.column_config.TextColumn("支出明细", width="large"),
+            "报销状态": st.column_config.SelectboxColumn("报销状态", options=REIMBURSEMENT_STATUSES, required=True, width="small"),
+        },
+        key="budget_records_editor",
+    )
+
+    if st.button("💾 保存表格修改", type="primary"):
+        original_records = {rec["id"]: rec for rec in records}
+        changed_count = 0
+        try:
+            for _, row in edited_records.iterrows():
+                rid = int(row["ID"])
+                original = original_records[rid]
+                record_date = pd.to_datetime(row["日期"]).strftime("%Y-%m-%d")
+                category = str(row["费用类别"]).strip()
+                unit = "" if pd.isna(row["使用单位"]) else str(row["使用单位"]).strip()
+                description = "" if pd.isna(row["支出明细"]) else str(row["支出明细"]).strip()
+                amount = float(row["金额"])
+                status = str(row["报销状态"]).strip()
+
+                if category not in BUDGET_CATEGORIES:
+                    raise ValueError(f"ID {rid} 的费用类别无效：{category}")
+                if status not in REIMBURSEMENT_STATUSES:
+                    raise ValueError(f"ID {rid} 的报销状态无效：{status}")
+                if amount <= 0:
+                    raise ValueError(f"ID {rid} 的金额必须大于 0")
+
+                if (
+                    record_date != original["record_date"]
+                    or category != original["category"]
+                    or unit != original.get("unit", "")
+                    or description != original.get("description", "")
+                    or amount != float(original["amount"])
+                    or status != original["reimbursement_status"]
+                ):
+                    update_record(
+                        rid,
+                        record_date=record_date,
+                        category=category,
+                        unit=unit,
+                        description=description,
+                        amount=amount,
+                        status=status,
+                    )
+                    changed_count += 1
+        except Exception as exc:
+            st.error(f"保存失败：{exc}")
+        else:
+            st.success(f"已保存 {changed_count} 条修改。")
+            st.rerun()
 else:
     st.info("暂无记录，请在上方录入第一笔费用。")
 
@@ -193,6 +277,68 @@ COL_RENAME = {
     "description": "支出明细", "amount": "金额",
     "reimbursement_status": "报销状态", "created_at": "创建时间", "updated_at": "更新时间",
 }
+
+
+def _clean_excel_text(value):
+    if pd.isna(value):
+        return ""
+    return str(value).strip()
+
+
+def _clean_excel_date(value):
+    if pd.isna(value):
+        return ""
+    if isinstance(value, pd.Timestamp):
+        return value.strftime("%Y-%m-%d")
+    parsed = pd.to_datetime(value, errors="coerce")
+    if not pd.isna(parsed):
+        return parsed.strftime("%Y-%m-%d")
+    return str(value).strip()
+
+
+def _records_from_excel(uploaded_file):
+    df = pd.read_excel(uploaded_file)
+    if df.empty:
+        raise ValueError("Excel 里没有可恢复的流水记录。")
+
+    reverse_columns = {v: k for k, v in COL_RENAME.items()}
+    df = df.rename(columns=reverse_columns)
+    required = ["record_date", "category", "amount"]
+    missing = [col for col in required if col not in df.columns]
+    if missing:
+        readable = "、".join(COL_RENAME.get(col, col) for col in missing)
+        raise ValueError(f"Excel 缺少必要列：{readable}")
+
+    records = []
+    for row_index, row in df.iterrows():
+        line_no = row_index + 2
+        record_date = _clean_excel_date(row.get("record_date"))
+        category = _clean_excel_text(row.get("category"))
+        unit = _clean_excel_text(row.get("unit"))
+        description = _clean_excel_text(row.get("description"))
+        status = _clean_excel_text(row.get("reimbursement_status")) or "未报销"
+        amount = pd.to_numeric(row.get("amount"), errors="coerce")
+
+        if not record_date:
+            raise ValueError(f"第 {line_no} 行缺少日期。")
+        if category not in BUDGET_CATEGORIES:
+            raise ValueError(f"第 {line_no} 行费用类别不在配置中：{category}")
+        if pd.isna(amount) or amount <= 0:
+            raise ValueError(f"第 {line_no} 行金额无效：{row.get('amount')}")
+        if status not in REIMBURSEMENT_STATUSES:
+            raise ValueError(f"第 {line_no} 行报销状态无效：{status}")
+
+        records.append({
+            "record_date": record_date,
+            "category": category,
+            "unit": unit,
+            "description": description,
+            "amount": float(amount),
+            "reimbursement_status": status,
+            "created_at": _clean_excel_text(row.get("created_at")),
+            "updated_at": _clean_excel_text(row.get("updated_at")),
+        })
+    return records
 
 
 # ── 导出功能 ──
@@ -224,3 +370,24 @@ with ex_col2:
         )
     else:
         st.button("导出当前筛选结果", disabled=True)
+
+st.divider()
+
+# ── Excel 备份恢复 ──
+with st.expander("♻️ 从 Excel 备份恢复"):
+    uploaded_backup = st.file_uploader(
+        "上传之前导出的预算流水 Excel",
+        type=["xlsx"],
+        accept_multiple_files=False,
+    )
+    confirm_restore = st.checkbox("我确认用这个 Excel 覆盖当前台账")
+
+    if st.button("覆盖恢复台账", type="primary", disabled=not uploaded_backup or not confirm_restore):
+        try:
+            restore_records = _records_from_excel(uploaded_backup)
+            replace_all_records(restore_records)
+        except Exception as exc:
+            st.error(f"恢复失败：{exc}")
+        else:
+            st.success(f"已从 Excel 恢复 {len(restore_records)} 条流水。")
+            st.rerun()

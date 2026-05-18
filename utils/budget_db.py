@@ -88,6 +88,43 @@ def get_all_records():
     return [dict(r) for r in rows]
 
 
+def replace_all_records(records):
+    conn = get_connection()
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    try:
+        conn.execute("BEGIN")
+        conn.execute("DELETE FROM expense_records")
+        for record in records:
+            amount = float(record["amount"])
+            if amount <= 0:
+                raise ValueError("amount must be greater than 0")
+            created_at = record.get("created_at") or now
+            updated_at = record.get("updated_at") or now
+            conn.execute(
+                """
+                INSERT INTO expense_records
+                    (record_date, category, unit, description, amount, reimbursement_status, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    str(record["record_date"]),
+                    str(record["category"]),
+                    str(record.get("unit", "")),
+                    str(record.get("description", "")),
+                    amount,
+                    str(record.get("reimbursement_status", "未报销")),
+                    str(created_at),
+                    str(updated_at),
+                ),
+            )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
 def get_filtered_records(month=None, category=None, status=None, keyword=None):
     conn = get_connection()
     conditions = []
