@@ -113,49 +113,52 @@ def render_palette_showcase(pal: dict) -> str:
     return f"""
     <style>
       .palette-showcase {{
-        max-width: 500px;
+        max-width: 460px;
         margin: 0 auto 10px;
-        padding: 9px;
-        border-radius: 22px;
+        padding: 7px;
+        border-radius: 20px;
         background: #050505;
         box-shadow: 0 10px 28px rgba(15, 23, 42, .18);
       }}
+      .palette-showcase * {{
+        box-sizing: border-box;
+      }}
       .palette-hero {{
         position: relative;
-        min-height: 168px;
+        height: 146px;
         overflow: hidden;
-        border-radius: 18px;
-        padding: 18px 22px;
+        border-radius: 16px;
+        padding: 14px 18px;
         background: {main};
         color: {fg_main};
       }}
       .palette-kicker {{
         display: inline-flex;
-        padding: 4px 10px;
+        padding: 3px 9px;
         border: 1.5px solid currentColor;
-        border-radius: 12px;
-        font-size: 11px;
+        border-radius: 11px;
+        font-size: 10px;
         font-weight: 800;
         opacity: .86;
       }}
       .palette-title {{
-        margin-top: 16px;
-        font-size: clamp(27px, 4.2vw, 40px);
+        margin-top: 12px;
+        font-size: clamp(22px, 3.4vw, 31px);
         line-height: 1.05;
         font-weight: 900;
         letter-spacing: 0;
       }}
       .palette-subtitle {{
-        margin-top: 7px;
-        font-size: 14px;
+        margin-top: 5px;
+        font-size: 12px;
         font-weight: 800;
       }}
       .palette-script {{
         position: absolute;
-        right: 22px;
-        top: 66px;
+        right: 18px;
+        top: 56px;
         font-family: Georgia, "Times New Roman", serif;
-        font-size: clamp(44px, 7vw, 68px);
+        font-size: clamp(36px, 5.4vw, 50px);
         font-style: italic;
         line-height: 1;
         color: {background};
@@ -163,29 +166,29 @@ def render_palette_showcase(pal: dict) -> str:
       }}
       .palette-main-code {{
         position: absolute;
-        right: 23px;
-        bottom: 18px;
+        right: 18px;
+        bottom: 14px;
         text-align: right;
-        font-size: 15px;
+        font-size: 13px;
         font-weight: 900;
       }}
       .palette-scene {{
         position: absolute;
-        left: 22px;
-        bottom: 19px;
+        left: 18px;
+        bottom: 15px;
         max-width: 55%;
-        font-size: 12px;
+        font-size: 10px;
         font-weight: 800;
       }}
       .palette-row {{
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 10px;
-        min-height: 54px;
-        margin-top: 7px;
-        padding: 10px 18px;
-        border-radius: 14px;
+        gap: 8px;
+        height: 46px;
+        margin-top: 6px;
+        padding: 7px 16px;
+        border-radius: 12px;
       }}
       .palette-role {{
         font-size: 10px;
@@ -194,7 +197,7 @@ def render_palette_showcase(pal: dict) -> str:
       }}
       .palette-name {{
         margin-top: 1px;
-        font-size: 17px;
+        font-size: 15px;
         font-weight: 900;
       }}
       .palette-meta {{
@@ -202,12 +205,12 @@ def render_palette_showcase(pal: dict) -> str:
       }}
       .palette-hex {{
         font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-        font-size: 16px;
+        font-size: 14px;
         font-weight: 900;
       }}
       .palette-usage {{
-        margin-top: 2px;
-        font-size: 10px;
+        margin-top: 1px;
+        font-size: 9px;
         font-weight: 800;
         opacity: .82;
       }}
@@ -215,31 +218,35 @@ def render_palette_showcase(pal: dict) -> str:
         display: grid;
         grid-template-columns: 1fr 1fr 1fr;
         gap: 6px;
-        margin-top: 7px;
-        padding: 8px;
-        border-radius: 14px;
+        margin-top: 6px;
+        padding: 7px;
+        border-radius: 12px;
         background: {background};
         color: {fg_background};
       }}
       .palette-app-item {{
-        min-height: 38px;
+        height: 34px;
         display: flex;
         align-items: center;
         justify-content: center;
-        border-radius: 10px;
+        border-radius: 9px;
         text-align: center;
-        font-size: 11px;
+        font-size: 10px;
         font-weight: 900;
       }}
       @media (max-width: 700px) {{
-        .palette-showcase {{ padding: 8px; border-radius: 20px; }}
-        .palette-hero {{ min-height: 210px; padding: 20px 18px; }}
-        .palette-script {{ right: 16px; top: 92px; }}
-        .palette-main-code {{ right: 18px; bottom: 18px; font-size: 16px; }}
-        .palette-scene {{ left: 18px; bottom: 20px; max-width: 58%; font-size: 12px; }}
-        .palette-row {{ align-items: flex-start; flex-direction: column; padding: 14px 16px; }}
-        .palette-meta {{ text-align: left; }}
+        .palette-showcase {{ max-width: 430px; padding: 7px; border-radius: 19px; }}
+        .palette-hero {{ height: 142px; padding: 14px 16px; }}
+        .palette-script {{ right: 16px; top: 56px; }}
+        .palette-main-code {{ right: 16px; bottom: 14px; font-size: 13px; }}
+        .palette-scene {{ left: 16px; bottom: 15px; max-width: 58%; font-size: 10px; }}
+        .palette-row {{ height: 46px; padding: 7px 14px; }}
+        .palette-meta {{ text-align: right; }}
         .palette-application {{ grid-template-columns: 1fr; }}
+      }}
+      @media (max-width: 420px) {{
+        .palette-row {{ height: 56px; align-items: flex-start; flex-direction: column; }}
+        .palette-meta {{ text-align: left; }}
       }}
     </style>
 
