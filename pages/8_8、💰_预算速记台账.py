@@ -7,7 +7,7 @@ import io
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from config.budget_config import BUDGET_YEAR, BUDGET_CATEGORIES, REIMBURSEMENT_STATUSES, UNITS
-from utils import budget_db
+from utils import budget_auth, budget_db
 
 init_db = budget_db.init_db
 add_record = budget_db.add_record
@@ -20,6 +20,35 @@ get_category_unit_pivot = budget_db.get_category_unit_pivot
 replace_all_records = getattr(budget_db, "replace_all_records", None)
 
 st.set_page_config(page_title="预算速记台账", page_icon="💰", layout="wide")
+
+
+def require_budget_auth():
+    configured_password = budget_auth.get_budget_password(st.secrets, os.environ)
+    if not configured_password:
+        st.title("💰 预算速记台账")
+        st.warning("预算台账密码还没有配置。请在 Streamlit secrets 中设置 budget_password，或在本机设置 BUDGET_PASSWORD。")
+        st.stop()
+
+    if st.session_state.get("budget_authenticated"):
+        return
+
+    st.title("💰 预算速记台账")
+    st.info("请输入密码后查看和操作预算台账。")
+    with st.form("budget_auth_form"):
+        input_password = st.text_input("预算台账密码", type="password")
+        submitted = st.form_submit_button("进入台账", use_container_width=True)
+
+    if submitted:
+        if budget_auth.is_budget_password_valid(input_password, configured_password):
+            st.session_state["budget_authenticated"] = True
+            st.rerun()
+        else:
+            st.error("密码不正确，请重新输入。")
+
+    st.stop()
+
+
+require_budget_auth()
 init_db()
 
 st.title(f"💰 {BUDGET_YEAR}年度预算速记台账")
