@@ -224,12 +224,19 @@ st.markdown(
         align-items: center;
         flex-wrap: wrap;
         gap: 0;
-        margin: .2rem 0 1rem;
-        border: 1px solid rgba(74, 144, 217, .36);
+        margin: .1rem 0 .75rem auto;
+        border: 1px solid rgba(71, 205, 190, .32);
         border-radius: 8px;
-        background: rgba(255,255,255,.86);
-        box-shadow: 0 12px 26px rgba(13, 27, 42, .12);
+        background: rgba(8, 22, 36, .76);
+        box-shadow: 0 18px 36px rgba(3, 10, 18, .28), inset 0 1px 0 rgba(255,255,255,.07);
         overflow: hidden;
+        backdrop-filter: blur(10px);
+    }
+    .pagination-dock {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: .25rem;
+        margin-bottom: .15rem;
     }
     .pagination-item,
     .pagination-counter {
@@ -239,8 +246,8 @@ st.markdown(
         align-items: center;
         justify-content: center;
         padding: 0 .72rem;
-        border-right: 1px solid rgba(74, 144, 217, .24);
-        color: #1B3A5C;
+        border-right: 1px solid rgba(119, 176, 212, .18);
+        color: #D6E4F0;
         font-size: .92rem;
         font-weight: 750;
         text-decoration: none !important;
@@ -248,27 +255,27 @@ st.markdown(
     }
     .pagination-item:hover {
         color: #ffffff;
-        background: #1B3A5C;
+        background: rgba(74, 144, 217, .28);
     }
     .pagination-item.active {
         color: #ffffff;
-        background: #2D6A4F;
-        box-shadow: inset 0 -3px 0 rgba(255,255,255,.22);
+        background: linear-gradient(180deg, #2D6A4F, #22533E);
+        box-shadow: inset 0 -3px 0 rgba(71, 205, 190, .58);
     }
     .pagination-item.disabled {
-        color: #98A2B3;
-        background: rgba(248,250,252,.82);
+        color: rgba(214, 228, 240, .36);
+        background: rgba(255,255,255,.035);
         pointer-events: none;
     }
     .pagination-item.text {
         min-width: 4.6rem;
-        color: #344054;
+        color: #D6E4F0;
         font-weight: 700;
     }
     .pagination-counter {
         min-width: 5.4rem;
-        color: #0D1B2A;
-        background: rgba(232,240,254,.88);
+        color: #F8FAFC;
+        background: rgba(27, 58, 92, .45);
         font-weight: 850;
     }
     .pagination-bar > :last-child {
@@ -282,9 +289,9 @@ st.markdown(
 total_pages = math.ceil(len(TOOLS) / 9)
 if total_pages > 1:
     current_page = coerce_page_number(st.query_params.get("module_page", "1"), total_pages)
-    st.markdown(build_pagination_html(current_page, total_pages), unsafe_allow_html=True)
     page_index = current_page - 1
 else:
+    current_page = 1
     page_index = 0
 
 page_tools = TOOLS[page_index * 9 : page_index * 9 + 9]
@@ -309,6 +316,12 @@ for row_start in range(0, 9, 3):
                 """,
                 unsafe_allow_html=True,
             )
+
+if total_pages > 1:
+    st.markdown(
+        f'<div class="pagination-dock">{build_pagination_html(current_page, total_pages)}</div>',
+        unsafe_allow_html=True,
+    )
 
 st.markdown(
     """
