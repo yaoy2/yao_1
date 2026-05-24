@@ -140,6 +140,14 @@ def apply_style():
         div[data-testid="stForm"] input {
             min-height: 52px !important;
         }
+        .inline-field-label {
+            min-height: 52px;
+            display: flex;
+            align-items: center;
+            color: #182230;
+            font-weight: 700;
+            white-space: nowrap;
+        }
         .memo-card {
             position: relative;
             width: 100%;
@@ -271,11 +279,25 @@ with st.container(border=True):
         with entry_col:
             content = st.text_area("内容", placeholder="请输入", label_visibility="collapsed", height=88)
         with tag_col:
-            tag_pick_col, tag_new_col = st.columns(2, gap="small")
-            with tag_pick_col:
-                selected_tags = st.multiselect("标签", available_tags, placeholder="选择已有标签")
-            with tag_new_col:
-                new_tags = st.text_input("新增标签", placeholder="用顿号或逗号分隔")
+            tag_label_col, tag_input_col = st.columns([0.22, 0.78], gap="small")
+            with tag_label_col:
+                st.markdown('<div class="inline-field-label">标签</div>', unsafe_allow_html=True)
+            with tag_input_col:
+                selected_tags = st.multiselect(
+                    "标签",
+                    available_tags,
+                    placeholder="选择已有标签",
+                    label_visibility="collapsed",
+                )
+            new_label_col, new_input_col = st.columns([0.22, 0.78], gap="small")
+            with new_label_col:
+                st.markdown('<div class="inline-field-label">新增标签</div>', unsafe_allow_html=True)
+            with new_input_col:
+                new_tags = st.text_input(
+                    "新增标签",
+                    placeholder="用顿号或逗号分隔",
+                    label_visibility="collapsed",
+                )
         col_save, col_plain = st.columns(2)
         save_classified = col_save.form_submit_button("保存并打标签", use_container_width=True)
         save_plain = col_plain.form_submit_button("只保存", use_container_width=True)

@@ -204,8 +204,10 @@ class WebMemoDbTest(unittest.TestCase):
         page_path = Path(__file__).resolve().parents[1] / "pages" / "01_10、🧾_灵感便签盒.py"
         page_source = page_path.read_text(encoding="utf-8")
 
-        self.assertIn("st.multiselect(\"标签\"", page_source)
-        self.assertIn("st.text_input(\"新增标签\"", page_source)
+        self.assertIn("st.multiselect(", page_source)
+        self.assertIn("\"标签\",", page_source)
+        self.assertIn("st.text_input(", page_source)
+        self.assertIn("\"新增标签\",", page_source)
         self.assertIn("manual_tags=manual_tags", page_source)
 
 
