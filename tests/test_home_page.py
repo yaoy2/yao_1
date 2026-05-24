@@ -8,7 +8,9 @@ class HomePageTest(unittest.TestCase):
     def test_home_page_uses_command_center_copy_and_pagination(self):
         page_source = (Path(__file__).resolve().parents[1] / "hello.py").read_text(encoding="utf-8")
 
-        self.assertIn("干他妈的", page_source)
+        self.assertNotIn("干他妈的", page_source)
+        self.assertNotIn("principle-chip", page_source)
+        self.assertNotIn("十一个工具，分页进入", page_source)
         self.assertIn("前方没有胜利，挺住意味一切", page_source)
         self.assertIn("page_tools = TOOLS[page_index * 9 : page_index * 9 + 9]", page_source)
         self.assertIn("for row_start in range(0, 9, 3)", page_source)

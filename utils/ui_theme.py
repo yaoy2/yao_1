@@ -101,11 +101,11 @@ def apply_global_theme() -> None:
         .command-hero {
             position: relative;
             display: grid;
-            grid-template-columns: minmax(0, 1.08fr) minmax(360px, .92fr);
-            gap: 1.25rem;
-            min-height: 438px;
+            grid-template-columns: minmax(0, 1.22fr) minmax(320px, .78fr);
+            gap: 1rem;
+            min-height: 360px;
             overflow: hidden;
-            padding: 1.35rem;
+            padding: 1.15rem 1.25rem;
             border: 1px solid rgba(57, 223, 247, .28);
             border-radius: 8px;
             background:
@@ -130,7 +130,7 @@ def apply_global_theme() -> None:
             flex-direction: column;
             justify-content: center;
             min-width: 0;
-            padding: 1.25rem .8rem 1.25rem .6rem;
+            padding: .85rem .8rem .85rem .55rem;
         }
 
         .hero-kicker {
@@ -148,21 +148,22 @@ def apply_global_theme() -> None:
         }
 
         .hero-title {
-            max-width: 760px;
-            margin-top: .9rem;
+            max-width: 900px;
+            margin-top: .72rem;
             color: #f7fbff;
-            font-size: clamp(2.35rem, 5vw, 5rem);
-            line-height: 1.02;
+            font-size: clamp(2.45rem, 4.8vw, 4.55rem);
+            line-height: 1;
             font-weight: 920;
+            white-space: nowrap;
             text-shadow: 0 0 34px rgba(57, 223, 247, .22);
         }
 
         .hero-copy {
             max-width: 660px;
-            margin-top: .95rem;
+            margin-top: .85rem;
             color: rgba(234, 247, 255, .76);
-            font-size: 1.02rem;
-            line-height: 1.8;
+            font-size: .98rem;
+            line-height: 1.72;
         }
 
         .hero-visual {
@@ -170,8 +171,11 @@ def apply_global_theme() -> None:
             z-index: 1;
             align-self: center;
             min-width: 0;
-            min-height: 318px;
-            padding: 1.1rem;
+            min-height: 236px;
+            max-width: 520px;
+            width: 100%;
+            justify-self: end;
+            padding: .85rem;
             border: 1px solid rgba(57, 223, 247, .24);
             border-radius: 8px;
             background:
@@ -181,21 +185,9 @@ def apply_global_theme() -> None:
             box-shadow: inset 0 0 30px rgba(57, 223, 247, .06), 0 18px 46px rgba(0, 0, 0, .32);
         }
 
-        .principle-chip {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            padding: .48rem .7rem;
-            border: 1px solid rgba(245, 184, 75, .42);
-            border-radius: 999px;
-            color: var(--amber);
-            background: rgba(245, 184, 75, .08);
-            font-weight: 860;
-        }
-
         .visual-orbit {
             position: absolute;
-            inset: 3.8rem 2rem 2rem;
+            inset: 2.1rem 1.55rem 1.55rem;
             border: 1px solid rgba(57, 223, 247, .18);
             border-radius: 8px;
             background:
@@ -212,8 +204,8 @@ def apply_global_theme() -> None:
             display: flex;
             align-items: center;
             justify-content: center;
-            width: 128px;
-            height: 128px;
+            width: 104px;
+            height: 104px;
             border: 1px solid rgba(57, 223, 247, .44);
             border-radius: 50%;
             color: var(--cyan);
@@ -227,8 +219,8 @@ def apply_global_theme() -> None:
 
         .orbit-node {
             position: absolute;
-            width: 42px;
-            height: 42px;
+            width: 34px;
+            height: 34px;
             border-radius: 50%;
             background: var(--cyan);
             box-shadow: 0 0 28px rgba(57, 223, 247, .38);
@@ -404,6 +396,14 @@ def apply_global_theme() -> None:
             .command-hero {
                 grid-template-columns: 1fr;
                 min-height: auto;
+            }
+            .hero-title {
+                white-space: normal;
+            }
+            .hero-visual {
+                justify-self: stretch;
+                max-width: none;
+                min-height: 240px;
             }
             .section-heading {
                 align-items: flex-start;

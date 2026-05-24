@@ -120,7 +120,6 @@ TOOLS = [
 def build_hero_visual_html() -> str:
     return (
         '<div class="hero-visual" aria-label="首页视觉">'
-        '<div class="principle-chip">干他妈的</div>'
         '<div class="visual-orbit">'
         '<span class="orbit-node node-a"></span>'
         '<span class="orbit-node node-b"></span>'
@@ -209,7 +208,6 @@ st.markdown(
     <div class="section-heading">
       <div>
         <div class="section-label">MISSION MODULES</div>
-        <h2>十一个工具，分页进入</h2>
       </div>
     </div>
     """,
