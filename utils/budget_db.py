@@ -1,8 +1,24 @@
 import sqlite3
 import os
 from datetime import datetime
+from openpyxl import Workbook
 
 DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "budget.db")
+BACKUP_MD_PATH = os.path.join(os.path.dirname(DB_PATH), "budget_ledger_backup.md")
+BACKUP_XLSX_PATH = os.path.join(os.path.dirname(DB_PATH), "budget_ledger_backup.xlsx")
+
+BACKUP_COLUMNS = [
+    ("id", "ID"),
+    ("record_date", "日期"),
+    ("category", "类别"),
+    ("unit", "使用单位"),
+    ("spender", "支出人"),
+    ("description", "支出明细"),
+    ("amount", "金额"),
+    ("reimbursement_status", "报销状态"),
+    ("created_at", "创建时间"),
+    ("updated_at", "更新时间"),
+]
 
 
 def get_connection():
@@ -36,6 +52,7 @@ def init_db():
         conn.execute("ALTER TABLE expense_records ADD COLUMN spender TEXT NOT NULL DEFAULT ''")
     conn.commit()
     conn.close()
+    sync_backup_files()
 
 
 def add_record(record_date, category, unit, spender, description, amount, status="未报销"):
@@ -51,6 +68,7 @@ def add_record(record_date, category, unit, spender, description, amount, status
     )
     conn.commit()
     conn.close()
+    sync_backup_files()
 
 
 def update_record(record_id, record_date=None, category=None, unit=None, spender=None, description=None, amount=None, status=None):
@@ -85,6 +103,7 @@ def update_record(record_id, record_date=None, category=None, unit=None, spender
     conn.execute(f"UPDATE expense_records SET {', '.join(fields)} WHERE id = ?", values)
     conn.commit()
     conn.close()
+    sync_backup_files()
 
 
 def set_status(record_id, status):
@@ -134,6 +153,82 @@ def replace_all_records(records):
         raise
     finally:
         conn.close()
+    sync_backup_files()
+
+
+def _format_backup_value(value):
+    if value is None:
+        return ""
+    if isinstance(value, float):
+        return f"{value:.2f}"
+    return str(value)
+
+
+def _escape_markdown_table_value(value):
+    return _format_backup_value(value).replace("|", "\\|").replace("\n", " ")
+
+
+def _fetch_backup_records():
+    conn = get_connection()
+    rows = conn.execute("SELECT * FROM expense_records ORDER BY record_date DESC, id DESC").fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def build_markdown_backup(records=None):
+    records = _fetch_backup_records() if records is None else records
+    generated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    headers = [label for _, label in BACKUP_COLUMNS]
+    lines = [
+        "# 预算速记台账备份",
+        "",
+        f"- 生成时间：{generated_at}",
+        f"- 记录数量：{len(records)}",
+        "",
+        "| " + " | ".join(headers) + " |",
+        "| " + " | ".join(["---"] * len(headers)) + " |",
+    ]
+    for record in records:
+        values = [_escape_markdown_table_value(record.get(key, "")) for key, _ in BACKUP_COLUMNS]
+        lines.append("| " + " | ".join(values) + " |")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def write_markdown_backup(records=None, path=None):
+    path = BACKUP_MD_PATH if path is None else path
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    content = build_markdown_backup(records)
+    with open(path, "w", encoding="utf-8", newline="\n") as backup_file:
+        backup_file.write(content)
+    return path
+
+
+def write_excel_backup(records=None, path=None):
+    path = BACKUP_XLSX_PATH if path is None else path
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    records = _fetch_backup_records() if records is None else records
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "预算流水"
+    sheet.append([label for _, label in BACKUP_COLUMNS])
+    for record in records:
+        row = []
+        for key, _ in BACKUP_COLUMNS:
+            value = record.get(key, "")
+            if key == "amount" and value not in ("", None):
+                value = float(value)
+            row.append(value)
+        sheet.append(row)
+    workbook.save(path)
+    return path
+
+
+def sync_backup_files():
+    records = _fetch_backup_records()
+    write_markdown_backup(records)
+    write_excel_backup(records)
+    return {"markdown": BACKUP_MD_PATH, "excel": BACKUP_XLSX_PATH}
 
 
 def get_filtered_records(month=None, category=None, status=None, keyword=None):

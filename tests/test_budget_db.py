@@ -1,16 +1,57 @@
 import tempfile
 import unittest
+from contextlib import contextmanager
 from pathlib import Path
 from unittest.mock import patch
+
+from openpyxl import load_workbook
 
 from utils import budget_db
 
 
+@contextmanager
+def patched_budget_storage(tmpdir):
+    tmp_path = Path(tmpdir)
+    with (
+        patch.object(budget_db, "DB_PATH", str(tmp_path / "budget.db")),
+        patch.object(budget_db, "BACKUP_MD_PATH", str(tmp_path / "budget_ledger_backup.md")),
+        patch.object(budget_db, "BACKUP_XLSX_PATH", str(tmp_path / "budget_ledger_backup.xlsx")),
+    ):
+        yield tmp_path
+
+
 class BudgetDbReplaceAllRecordsTest(unittest.TestCase):
+    def test_add_record_writes_markdown_and_excel_backups(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patched_budget_storage(tmpdir) as tmp_path:
+                md_path = tmp_path / "budget_ledger_backup.md"
+                xlsx_path = tmp_path / "budget_ledger_backup.xlsx"
+                budget_db.init_db()
+                budget_db.add_record("2026-05-01", "学生实践费", "护理系", "张三", "耗材", 100)
+
+                self.assertTrue(md_path.exists())
+                self.assertTrue(xlsx_path.exists())
+                backup_text = md_path.read_text(encoding="utf-8")
+                workbook = load_workbook(xlsx_path)
+                sheet = workbook["预算流水"]
+                excel_headers = [cell.value for cell in sheet[1]]
+                excel_values = [cell.value for cell in sheet[2]]
+
+        self.assertIn("预算速记台账备份", backup_text)
+        self.assertIn("2026-05-01", backup_text)
+        self.assertIn("学生实践费", backup_text)
+        self.assertIn("护理系", backup_text)
+        self.assertIn("张三", backup_text)
+        self.assertIn("耗材", backup_text)
+        self.assertIn("100.00", backup_text)
+        self.assertIn("未报销", backup_text)
+        self.assertIn("支出人", excel_headers)
+        self.assertIn("张三", excel_values)
+        self.assertIn("耗材", excel_values)
+
     def test_add_record_saves_spender(self):
         with tempfile.TemporaryDirectory() as tmpdir:
-            db_path = str(Path(tmpdir) / "budget.db")
-            with patch.object(budget_db, "DB_PATH", db_path):
+            with patched_budget_storage(tmpdir):
                 budget_db.init_db()
                 budget_db.add_record("2026-05-01", "学生实践费", "护理系", "张三", "耗材", 100)
 
@@ -21,8 +62,7 @@ class BudgetDbReplaceAllRecordsTest(unittest.TestCase):
 
     def test_init_db_adds_spender_column_to_existing_database(self):
         with tempfile.TemporaryDirectory() as tmpdir:
-            db_path = str(Path(tmpdir) / "budget.db")
-            with patch.object(budget_db, "DB_PATH", db_path):
+            with patched_budget_storage(tmpdir):
                 conn = budget_db.get_connection()
                 conn.execute("""
                     CREATE TABLE expense_records (
@@ -49,8 +89,7 @@ class BudgetDbReplaceAllRecordsTest(unittest.TestCase):
 
     def test_replace_all_records_overwrites_existing_records(self):
         with tempfile.TemporaryDirectory() as tmpdir:
-            db_path = str(Path(tmpdir) / "budget.db")
-            with patch.object(budget_db, "DB_PATH", db_path):
+            with patched_budget_storage(tmpdir):
                 budget_db.init_db()
                 budget_db.add_record("2026-05-01", "学生实践费", "护理系", "李四", "旧记录", 100)
 
@@ -80,8 +119,7 @@ class BudgetDbReplaceAllRecordsTest(unittest.TestCase):
 
     def test_replace_all_records_rolls_back_if_any_record_is_invalid(self):
         with tempfile.TemporaryDirectory() as tmpdir:
-            db_path = str(Path(tmpdir) / "budget.db")
-            with patch.object(budget_db, "DB_PATH", db_path):
+            with patched_budget_storage(tmpdir):
                 budget_db.init_db()
                 budget_db.add_record("2026-05-01", "学生实践费", "护理系", "赵六", "保留记录", 100)
 
