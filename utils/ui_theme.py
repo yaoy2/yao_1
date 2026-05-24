@@ -328,9 +328,29 @@ def apply_global_theme() -> None:
         }
 
         .tool-title {
+            display: flex;
+            align-items: center;
+            gap: .42rem;
             margin-top: .72rem;
             color: var(--ink) !important;
             font-size: 1.16rem;
+            font-weight: 860;
+        }
+
+        .tool-lock {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 1.28rem;
+            height: 1.28rem;
+            padding: 0 .32rem;
+            border: 1px solid rgba(245, 184, 75, .42);
+            border-radius: 999px;
+            color: #F8D78C;
+            background: rgba(245, 184, 75, .1);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08);
+            font-size: .68rem;
+            line-height: 1;
             font-weight: 860;
         }
 

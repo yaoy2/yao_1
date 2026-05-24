@@ -23,6 +23,7 @@ TOOLS = [
         "page": "pages/00_11、🎙️_Recorder_笔记.py",
         "code": "M11",
         "accent": "green",
+        "locked": True,
     },
     {
         "title": "灵感便签盒",
@@ -50,6 +51,7 @@ TOOLS = [
         "page": "pages/03_8、💰_预算速记台账.py",
         "code": "M08",
         "accent": "magenta",
+        "locked": True,
     },
     {
         "title": "微信归档",
@@ -185,6 +187,11 @@ def build_pagination_html(current_page, total_pages):
     )
 
 
+def build_tool_title_html(tool):
+    lock_html = '<span class="tool-lock" title="需要密码访问">锁</span>' if tool.get("locked") else ""
+    return f'<div class="tool-title"><span>{escape(tool["title"])}</span>{lock_html}</div>'
+
+
 st.markdown(
     f"""
 <section class="command-hero">
@@ -304,7 +311,7 @@ for row_start in range(0, 9, 3):
                     <div class="tool-code">{tool["code"]}</div>
                     <div class="tool-date">{tool["created"]}</div>
                   </div>
-                  <div class="tool-title">{tool["title"]}</div>
+                  {build_tool_title_html(tool)}
                   <div class="tool-meta">{tool["desc"]}</div>
                   <div class="tool-footer">
                     <span class="tool-tag">{tool["tag"]}</span>
