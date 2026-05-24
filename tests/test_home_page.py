@@ -25,9 +25,10 @@ class HomePageTest(unittest.TestCase):
 
         tools = ast.literal_eval(match.group(1))
 
-        self.assertEqual("灵感便签盒", tools[0]["title"])
+        self.assertEqual("钉钉纪要登记", tools[0]["title"])
+        self.assertEqual("灵感便签盒", tools[1]["title"])
         self.assertEqual("报告评分", tools[-1]["title"])
-        self.assertEqual(10, len(tools))
+        self.assertEqual(11, len(tools))
         self.assertEqual(9, len(tools[:9]))
 
 

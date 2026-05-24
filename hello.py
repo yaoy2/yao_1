@@ -15,6 +15,15 @@ apply_global_theme()
 
 TOOLS = [
     {
+        "title": "钉钉纪要登记",
+        "desc": "每天扫描钉钉导出的 Word 转写，保留原文并生成可归档、可复盘的 AI 整理稿。",
+        "tag": "纪要整理",
+        "created": "2026_05_24",
+        "page": "pages/00_11、🎙️_钉钉纪要登记.py",
+        "code": "M11",
+        "accent": "green",
+    },
+    {
         "title": "灵感便签盒",
         "desc": "快速记录灵感、摘录、待办和写作素材，支持标签、色卡和 Markdown 硬备份。",
         "tag": "知识管理",
@@ -145,7 +154,7 @@ st.markdown(
     <div class="section-heading">
       <div>
         <div class="section-label">MISSION MODULES</div>
-        <h2>九个工具，一屏进入</h2>
+        <h2>十一个工具，分页进入</h2>
       </div>
     </div>
     """,
