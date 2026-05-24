@@ -103,9 +103,9 @@ def apply_global_theme() -> None:
             display: grid;
             grid-template-columns: minmax(0, 1.22fr) minmax(320px, .78fr);
             gap: 1rem;
-            min-height: 360px;
+            min-height: 310px;
             overflow: hidden;
-            padding: 1.15rem 1.25rem;
+            padding: 1rem 1.15rem .85rem;
             border: 1px solid rgba(57, 223, 247, .28);
             border-radius: 8px;
             background:
@@ -128,9 +128,9 @@ def apply_global_theme() -> None:
             z-index: 1;
             display: flex;
             flex-direction: column;
-            justify-content: center;
+            justify-content: flex-start;
             min-width: 0;
-            padding: .85rem .8rem .85rem .55rem;
+            padding: .65rem .8rem .55rem .55rem;
         }
 
         .hero-kicker {
@@ -149,9 +149,9 @@ def apply_global_theme() -> None:
 
         .hero-title {
             max-width: 900px;
-            margin-top: .72rem;
+            margin-top: .56rem;
             color: #f7fbff;
-            font-size: clamp(2.45rem, 4.8vw, 4.55rem);
+            font-size: clamp(2.35rem, 4.4vw, 4.15rem);
             line-height: 1;
             font-weight: 920;
             white-space: nowrap;
@@ -160,7 +160,7 @@ def apply_global_theme() -> None:
 
         .hero-copy {
             max-width: 660px;
-            margin-top: .85rem;
+            margin-top: .68rem;
             color: rgba(234, 247, 255, .76);
             font-size: .98rem;
             line-height: 1.72;
@@ -171,8 +171,8 @@ def apply_global_theme() -> None:
             z-index: 1;
             align-self: center;
             min-width: 0;
-            min-height: 236px;
-            max-width: 520px;
+            min-height: 214px;
+            max-width: 470px;
             width: 100%;
             justify-self: end;
             padding: .85rem;
@@ -187,7 +187,7 @@ def apply_global_theme() -> None:
 
         .visual-orbit {
             position: absolute;
-            inset: 2.1rem 1.55rem 1.55rem;
+            inset: 1.65rem 1.35rem 1.35rem;
             border: 1px solid rgba(57, 223, 247, .18);
             border-radius: 8px;
             background:
@@ -204,8 +204,8 @@ def apply_global_theme() -> None:
             display: flex;
             align-items: center;
             justify-content: center;
-            width: 104px;
-            height: 104px;
+            width: 92px;
+            height: 92px;
             border: 1px solid rgba(57, 223, 247, .44);
             border-radius: 50%;
             color: var(--cyan);
@@ -219,8 +219,8 @@ def apply_global_theme() -> None:
 
         .orbit-node {
             position: absolute;
-            width: 34px;
-            height: 34px;
+            width: 30px;
+            height: 30px;
             border-radius: 50%;
             background: var(--cyan);
             box-shadow: 0 0 28px rgba(57, 223, 247, .38);
@@ -341,15 +341,15 @@ def apply_global_theme() -> None:
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            min-width: 1.28rem;
+            width: 1.28rem;
             height: 1.28rem;
-            padding: 0 .32rem;
+            padding: 0;
             border: 1px solid rgba(245, 184, 75, .42);
             border-radius: 999px;
             color: #F8D78C;
             background: rgba(245, 184, 75, .1);
             box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08);
-            font-size: .68rem;
+            font-size: .78rem;
             line-height: 1;
             font-weight: 860;
         }

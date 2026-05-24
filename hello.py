@@ -188,7 +188,7 @@ def build_pagination_html(current_page, total_pages):
 
 
 def build_tool_title_html(tool):
-    lock_html = '<span class="tool-lock" title="需要密码访问">锁</span>' if tool.get("locked") else ""
+    lock_html = '<span class="tool-lock" title="需要密码访问" aria-label="需要密码访问">🔒</span>' if tool.get("locked") else ""
     return f'<div class="tool-title"><span>{escape(tool["title"])}</span>{lock_html}</div>'
 
 

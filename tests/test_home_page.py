@@ -21,6 +21,8 @@ class HomePageTest(unittest.TestCase):
         self.assertIn("locked", page_source)
         self.assertIn("build_tool_title_html", page_source)
         self.assertIn("tool-lock", page_source)
+        self.assertIn("🔒", page_source)
+        self.assertNotIn(">锁</span>", page_source)
         pagination_render = page_source.index("f'<div class=\"pagination-dock\">")
         self.assertLess(page_source.index("for row_start in range(0, 9, 3)"), pagination_render)
         self.assertLess(pagination_render, page_source.index("quote-strip"))
