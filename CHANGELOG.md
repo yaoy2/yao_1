@@ -1,6 +1,12 @@
 # 更新日志 (CHANGELOG)
 
 ## 2026-05-24
+- **新增模块：Recorder_笔记**：新增上锁板块 `🎙️ Recorder_笔记`，用于登记钉钉导出的 Word 转写文件，保留原文并生成 AI 整理稿。
+- **Recorder 自动扫描**：新增 `scripts/scan_ding_minutes.py` 和 `config/ding_minutes.ini`，支持每天 19:00 扫描前一天 19:00 到当天 19:00 新建的 `export_*.docx`、`dt*.docx`。
+- **DeepSeek 整理接入**：新增 DeepSeek 调用层，API key 只从本机 `DEEPSEEK_API_KEY` 环境变量读取，不写入代码、配置、日志或数据库。
+- **Recorder 备注与重试**：记录页支持备注、状态筛选、原文查看、AI 整理稿查看、失败提示和单条重新整理。
+- **Recorder 密码保护**：`Recorder_笔记` 复用预算速记台账同一套密码，读取 `budget_password` / `[budget].password` 或本机 `BUDGET_PASSWORD`。
+- **L 电脑迁移指南**：新增 `docs/ding_minutes_L_setup.md`，说明在 `E:\github\yao_1` 下 `git pull`、配置环境变量和设置 Windows 任务计划的步骤。
 - **首页改版**：首页改为 Command Center 深色封面，工具入口按时间倒序展示；首页每页固定 3 x 3，超过 9 个工具时进入下一页。
 - **导航顺序调整**：Streamlit 侧边栏页面文件统一改为倒序前缀，越晚完成的工具越靠上，全部工具仍保留在导航中。
 - **新增模块：灵感便签盒**：新增 `🧾 灵感便签盒` 页面，支持快速记录灵感、摘录、待办、写作素材和工具想法。

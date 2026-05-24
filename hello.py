@@ -1,4 +1,5 @@
 import math
+from html import escape
 
 import streamlit as st
 
@@ -131,6 +132,60 @@ def build_hero_visual_html() -> str:
     )
 
 
+def coerce_page_number(raw_value, total_pages):
+    if isinstance(raw_value, list):
+        raw_value = raw_value[0] if raw_value else "1"
+    try:
+        page_number = int(raw_value)
+    except (TypeError, ValueError):
+        page_number = 1
+    return min(max(page_number, 1), total_pages)
+
+
+def build_page_href(page_number):
+    return f"?module_page={page_number}"
+
+
+def build_pagination_html(current_page, total_pages):
+    if total_pages <= 1:
+        return ""
+
+    def page_item(page_number):
+        if page_number == current_page:
+            return f'<span class="pagination-item active">{page_number}</span>'
+        return f'<a class="pagination-item" href="{build_page_href(page_number)}">{page_number}</a>'
+
+    prev_html = (
+        '<span class="pagination-item disabled">&lt;</span>'
+        if current_page <= 1
+        else f'<a class="pagination-item nav" href="{build_page_href(current_page - 1)}">&lt;</a>'
+    )
+    next_html = (
+        '<span class="pagination-item disabled">&gt;</span>'
+        if current_page >= total_pages
+        else f'<a class="pagination-item nav" href="{build_page_href(current_page + 1)}">&gt;</a>'
+    )
+    prev_text = (
+        '<span class="pagination-item text disabled">上一页</span>'
+        if current_page <= 1
+        else f'<a class="pagination-item text" href="{build_page_href(current_page - 1)}">上一页</a>'
+    )
+    next_text = (
+        '<span class="pagination-item text disabled">下一页</span>'
+        if current_page >= total_pages
+        else f'<a class="pagination-item text" href="{build_page_href(current_page + 1)}">下一页</a>'
+    )
+    pages_html = "".join(page_item(index) for index in range(1, total_pages + 1))
+    counter = escape(f"{current_page}/{total_pages}")
+    return (
+        '<nav class="pagination-bar" aria-label="工具分页">'
+        f"{prev_html}{prev_text}{pages_html}"
+        f'<span class="pagination-counter">{counter}</span>'
+        f"{next_text}{next_html}"
+        "</nav>"
+    )
+
+
 st.markdown(
     f"""
 <section class="command-hero">
@@ -161,11 +216,74 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+st.markdown(
+    """
+    <style>
+    .pagination-bar {
+        display: inline-flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0;
+        margin: .2rem 0 1rem;
+        border: 1px solid rgba(74, 144, 217, .36);
+        border-radius: 8px;
+        background: rgba(255,255,255,.86);
+        box-shadow: 0 12px 26px rgba(13, 27, 42, .12);
+        overflow: hidden;
+    }
+    .pagination-item,
+    .pagination-counter {
+        min-width: 2.35rem;
+        height: 2.15rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 .72rem;
+        border-right: 1px solid rgba(74, 144, 217, .24);
+        color: #1B3A5C;
+        font-size: .92rem;
+        font-weight: 750;
+        text-decoration: none !important;
+        letter-spacing: 0;
+    }
+    .pagination-item:hover {
+        color: #ffffff;
+        background: #1B3A5C;
+    }
+    .pagination-item.active {
+        color: #ffffff;
+        background: #2D6A4F;
+        box-shadow: inset 0 -3px 0 rgba(255,255,255,.22);
+    }
+    .pagination-item.disabled {
+        color: #98A2B3;
+        background: rgba(248,250,252,.82);
+        pointer-events: none;
+    }
+    .pagination-item.text {
+        min-width: 4.6rem;
+        color: #344054;
+        font-weight: 700;
+    }
+    .pagination-counter {
+        min-width: 5.4rem;
+        color: #0D1B2A;
+        background: rgba(232,240,254,.88);
+        font-weight: 850;
+    }
+    .pagination-bar > :last-child {
+        border-right: 0;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 total_pages = math.ceil(len(TOOLS) / 9)
 if total_pages > 1:
-    page_options = [f"第 {index + 1} 页" for index in range(total_pages)]
-    selected_page = st.radio("工具分页", page_options, horizontal=True, label_visibility="collapsed")
-    page_index = page_options.index(selected_page)
+    current_page = coerce_page_number(st.query_params.get("module_page", "1"), total_pages)
+    st.markdown(build_pagination_html(current_page, total_pages), unsafe_allow_html=True)
+    page_index = current_page - 1
 else:
     page_index = 0
 
