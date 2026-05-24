@@ -103,9 +103,9 @@ def apply_global_theme() -> None:
             display: grid;
             grid-template-columns: minmax(0, 1.22fr) minmax(320px, .78fr);
             gap: 1rem;
-            min-height: 310px;
+            min-height: 0;
             overflow: hidden;
-            padding: 1rem 1.15rem .85rem;
+            padding: .85rem 1rem .62rem;
             border: 1px solid rgba(57, 223, 247, .28);
             border-radius: 8px;
             background:
@@ -130,7 +130,7 @@ def apply_global_theme() -> None:
             flex-direction: column;
             justify-content: flex-start;
             min-width: 0;
-            padding: .65rem .8rem .55rem .55rem;
+            padding: .48rem .72rem .38rem .5rem;
         }
 
         .hero-kicker {
@@ -149,9 +149,9 @@ def apply_global_theme() -> None:
 
         .hero-title {
             max-width: 900px;
-            margin-top: .56rem;
+            margin-top: .46rem;
             color: #f7fbff;
-            font-size: clamp(2.35rem, 4.4vw, 4.15rem);
+            font-size: clamp(2.25rem, 4.1vw, 3.85rem);
             line-height: 1;
             font-weight: 920;
             white-space: nowrap;
@@ -160,10 +160,10 @@ def apply_global_theme() -> None:
 
         .hero-copy {
             max-width: 660px;
-            margin-top: .68rem;
+            margin-top: .58rem;
             color: rgba(234, 247, 255, .76);
             font-size: .98rem;
-            line-height: 1.72;
+            line-height: 1.62;
         }
 
         .hero-visual {
@@ -171,11 +171,11 @@ def apply_global_theme() -> None:
             z-index: 1;
             align-self: center;
             min-width: 0;
-            min-height: 214px;
-            max-width: 470px;
+            min-height: 190px;
+            max-width: 420px;
             width: 100%;
             justify-self: end;
-            padding: .85rem;
+            padding: .7rem;
             border: 1px solid rgba(57, 223, 247, .24);
             border-radius: 8px;
             background:
@@ -187,7 +187,7 @@ def apply_global_theme() -> None:
 
         .visual-orbit {
             position: absolute;
-            inset: 1.65rem 1.35rem 1.35rem;
+            inset: 1.1rem 1.1rem 1.1rem;
             border: 1px solid rgba(57, 223, 247, .18);
             border-radius: 8px;
             background:
