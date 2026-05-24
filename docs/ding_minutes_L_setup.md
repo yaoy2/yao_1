@@ -94,7 +94,7 @@ scripts\scan_ding_minutes.py
 - 起始于：填写项目目录，例如：
 
 ```text
-E:\ai_1\github\yao_1
+E:\github\yao_1
 ```
 
 如果 L 电脑项目目录不同，就填 L 电脑实际目录。
