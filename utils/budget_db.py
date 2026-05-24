@@ -20,6 +20,7 @@ def init_db():
             record_date TEXT NOT NULL,
             category TEXT NOT NULL,
             unit TEXT NOT NULL DEFAULT '',
+            spender TEXT NOT NULL DEFAULT '',
             description TEXT NOT NULL DEFAULT '',
             amount REAL NOT NULL,
             reimbursement_status TEXT NOT NULL DEFAULT '未报销',
@@ -31,22 +32,28 @@ def init_db():
     cols = [r[1] for r in conn.execute("PRAGMA table_info(expense_records)").fetchall()]
     if "unit" not in cols:
         conn.execute("ALTER TABLE expense_records ADD COLUMN unit TEXT NOT NULL DEFAULT ''")
+    if "spender" not in cols:
+        conn.execute("ALTER TABLE expense_records ADD COLUMN spender TEXT NOT NULL DEFAULT ''")
     conn.commit()
     conn.close()
 
 
-def add_record(record_date, category, unit, description, amount, status="未报销"):
+def add_record(record_date, category, unit, spender, description, amount, status="未报销"):
     conn = get_connection()
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     conn.execute(
-        "INSERT INTO expense_records (record_date, category, unit, description, amount, reimbursement_status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-        (record_date, category, unit, description, amount, status, now, now),
+        """
+        INSERT INTO expense_records
+            (record_date, category, unit, spender, description, amount, reimbursement_status, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (record_date, category, unit, spender, description, amount, status, now, now),
     )
     conn.commit()
     conn.close()
 
 
-def update_record(record_id, record_date=None, category=None, unit=None, description=None, amount=None, status=None):
+def update_record(record_id, record_date=None, category=None, unit=None, spender=None, description=None, amount=None, status=None):
     conn = get_connection()
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     fields = []
@@ -60,6 +67,9 @@ def update_record(record_id, record_date=None, category=None, unit=None, descrip
     if unit is not None:
         fields.append("unit = ?")
         values.append(unit)
+    if spender is not None:
+        fields.append("spender = ?")
+        values.append(spender)
     if description is not None:
         fields.append("description = ?")
         values.append(description)
@@ -103,13 +113,14 @@ def replace_all_records(records):
             conn.execute(
                 """
                 INSERT INTO expense_records
-                    (record_date, category, unit, description, amount, reimbursement_status, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    (record_date, category, unit, spender, description, amount, reimbursement_status, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     str(record["record_date"]),
                     str(record["category"]),
                     str(record.get("unit", "")),
+                    str(record.get("spender", "")),
                     str(record.get("description", "")),
                     amount,
                     str(record.get("reimbursement_status", "未报销")),
@@ -139,8 +150,8 @@ def get_filtered_records(month=None, category=None, status=None, keyword=None):
         conditions.append("reimbursement_status = ?")
         values.append(status)
     if keyword:
-        conditions.append("description LIKE ?")
-        values.append(f"%{keyword}%")
+        conditions.append("(description LIKE ? OR spender LIKE ?)")
+        values.extend([f"%{keyword}%", f"%{keyword}%"])
     where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
     rows = conn.execute(
         f"SELECT * FROM expense_records {where} ORDER BY record_date DESC, id DESC", values

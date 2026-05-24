@@ -109,10 +109,12 @@ with st.form("quick_add", clear_on_submit=True):
     with col4:
         record_date = st.date_input("发生日期")
     description = st.text_input("支出明细")
-    col5, col6 = st.columns([1, 3])
+    col5, col6, col7 = st.columns([1, 1, 2])
     with col5:
         amount = st.number_input("金额（元）", min_value=0.0, step=100.0, format="%.2f")
     with col6:
+        spender = st.text_input("支出人")
+    with col7:
         st.write("")
         st.write("")
         submitted = st.form_submit_button("💾 保存记录", use_container_width=True)
@@ -120,8 +122,8 @@ with st.form("quick_add", clear_on_submit=True):
         if amount <= 0:
             st.error("金额必须大于 0")
         else:
-            add_record(str(record_date), category, unit, description, amount, status)
-            st.success(f"已保存：{category} · {unit} · {amount} 元")
+            add_record(str(record_date), category, unit, spender.strip(), description, amount, status)
+            st.success(f"已保存：{category} · {unit} · {spender.strip()} · {amount} 元")
             st.rerun()
 
 st.divider()
@@ -231,6 +233,7 @@ if records:
             "费用类别": rec["category"],
             "使用单位": rec.get("unit", ""),
             "金额": float(rec["amount"]),
+            "支出人": rec.get("spender", ""),
             "支出明细": rec.get("description", ""),
             "报销状态": rec["reimbursement_status"],
         })
@@ -248,6 +251,7 @@ if records:
             "费用类别": st.column_config.SelectboxColumn("费用类别", options=list(BUDGET_CATEGORIES.keys()), required=True, width="medium"),
             "使用单位": st.column_config.SelectboxColumn("使用单位", options=UNITS, width="medium"),
             "金额": st.column_config.NumberColumn("金额", min_value=0.01, step=100.0, format="%.2f", width="small"),
+            "支出人": st.column_config.TextColumn("支出人", width="small"),
             "支出明细": st.column_config.TextColumn("支出明细", width="large"),
             "报销状态": st.column_config.SelectboxColumn("报销状态", options=REIMBURSEMENT_STATUSES, required=True, width="small"),
         },
@@ -264,6 +268,7 @@ if records:
                 record_date = pd.to_datetime(row["日期"]).strftime("%Y-%m-%d")
                 category = str(row["费用类别"]).strip()
                 unit = "" if pd.isna(row["使用单位"]) else str(row["使用单位"]).strip()
+                spender = "" if pd.isna(row["支出人"]) else str(row["支出人"]).strip()
                 description = "" if pd.isna(row["支出明细"]) else str(row["支出明细"]).strip()
                 amount = float(row["金额"])
                 status = str(row["报销状态"]).strip()
@@ -279,6 +284,7 @@ if records:
                     record_date != original["record_date"]
                     or category != original["category"]
                     or unit != original.get("unit", "")
+                    or spender != original.get("spender", "")
                     or description != original.get("description", "")
                     or amount != float(original["amount"])
                     or status != original["reimbursement_status"]
@@ -288,6 +294,7 @@ if records:
                         record_date=record_date,
                         category=category,
                         unit=unit,
+                        spender=spender,
                         description=description,
                         amount=amount,
                         status=status,
@@ -313,7 +320,7 @@ def _to_excel_bytes(df):
 
 COL_RENAME = {
     "id": "ID", "record_date": "日期", "category": "类别", "unit": "使用单位",
-    "description": "支出明细", "amount": "金额",
+    "spender": "支出人", "description": "支出明细", "amount": "金额",
     "reimbursement_status": "报销状态", "created_at": "创建时间", "updated_at": "更新时间",
 }
 
@@ -354,6 +361,7 @@ def _records_from_excel(uploaded_file):
         record_date = _clean_excel_date(row.get("record_date"))
         category = _clean_excel_text(row.get("category"))
         unit = _clean_excel_text(row.get("unit"))
+        spender = _clean_excel_text(row.get("spender"))
         description = _clean_excel_text(row.get("description"))
         status = _clean_excel_text(row.get("reimbursement_status")) or "未报销"
         amount = pd.to_numeric(row.get("amount"), errors="coerce")
@@ -371,6 +379,7 @@ def _records_from_excel(uploaded_file):
             "record_date": record_date,
             "category": category,
             "unit": unit,
+            "spender": spender,
             "description": description,
             "amount": float(amount),
             "reimbursement_status": status,
