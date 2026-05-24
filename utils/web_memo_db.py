@@ -270,7 +270,13 @@ def build_memo_card_html(record):
 
 
 def build_memo_cards_html(records):
-    cards = "".join(build_memo_card_html(record) for record in records)
+    columns = _split_records_into_columns(records, 3)
+    column_html = "".join(
+        '<div class="memo-card-column">'
+        + "".join(build_memo_card_html(record) for record in column)
+        + "</div>"
+        for column in columns
+    )
     return f"""
     <style>
     body {{
@@ -279,23 +285,27 @@ def build_memo_cards_html(records):
         color: #182230;
     }}
     .memo-card-grid {{
-        column-count: 3;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         column-gap: .82rem;
+        align-items: start;
+    }}
+    .memo-card-column {{
+        display: flex;
+        flex-direction: column;
+        gap: .82rem;
     }}
     .memo-card {{
         position: relative;
-        display: inline-block;
         width: 100%;
         box-sizing: border-box;
         min-height: 168px;
         padding: .95rem .95rem .85rem 1.08rem;
-        margin: 0 0 .82rem;
+        margin: 0;
         border: 1px solid rgba(24,34,48,.1);
         border-radius: 8px;
         box-shadow: 0 10px 24px rgba(24,34,48,.055);
         overflow: hidden;
-        break-inside: avoid;
-        page-break-inside: avoid;
     }}
     .memo-card::before {{
         content: "";
@@ -364,22 +374,37 @@ def build_memo_cards_html(records):
     }}
     @media (max-width: 980px) {{
         .memo-card-grid {{
-            column-count: 1;
-        }}
-    }}
-    @media (min-width: 981px) and (max-width: 1320px) {{
-        .memo-card-grid {{
-            column-count: 2;
+            grid-template-columns: 1fr;
         }}
     }}
     </style>
-    <div class="memo-card-grid">{cards}</div>
+    <div class="memo-card-grid">{column_html}</div>
     """
 
 
 def estimate_memo_cards_height(records):
-    rows = max(1, (len(records) + 2) // 3)
-    return min(2200, max(320, rows * 300 + 40))
+    columns = _split_records_into_columns(records, 3)
+    tallest_column = max(
+        (sum(_estimate_memo_card_height(record) for record in column) + max(0, len(column) - 1) * 14)
+        for column in columns
+    )
+    return min(2400, max(260, tallest_column + 34))
+
+
+def _split_records_into_columns(records, column_count):
+    columns = [[] for _ in range(column_count)]
+    for index, record in enumerate(records):
+        columns[index % column_count].append(record)
+    return columns
+
+
+def _estimate_memo_card_height(record):
+    content = str(record.get("content", ""))
+    visual_lines = 0
+    for line in content.splitlines() or [""]:
+        visual_lines += max(1, (len(line) + 17) // 18)
+    tag_rows = 1 if record.get("tags") else 0
+    return 122 + visual_lines * 28 + tag_rows * 30
 
 
 def build_printable_html(records):

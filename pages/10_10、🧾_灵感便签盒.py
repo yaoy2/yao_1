@@ -99,7 +99,7 @@ def apply_style():
             box-shadow: 0 12px 30px rgba(24,34,48,.06);
         }
         textarea {
-            min-height: 252px !important;
+            min-height: 82px !important;
             line-height: 1.8 !important;
         }
         .memo-card-grid {
@@ -205,11 +205,6 @@ def apply_style():
                 column-count: 1;
             }
         }
-        @media (min-width: 981px) and (max-width: 1320px) {
-            .memo-card-grid {
-                column-count: 2;
-            }
-        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -243,7 +238,7 @@ st.markdown(
 with st.container(border=True):
     st.subheader("快速记录")
     with st.form("web_memo_form", clear_on_submit=True):
-        content = st.text_area("内容", placeholder="请输入", label_visibility="collapsed")
+        content = st.text_area("内容", placeholder="请输入", label_visibility="collapsed", height=88)
         memo_date = st.date_input("日期", value=date.today())
         col_save, col_plain = st.columns(2)
         save_classified = col_save.form_submit_button("保存并打标签", use_container_width=True)
@@ -272,7 +267,7 @@ with st.container(border=True):
         components.html(
             web_memo_db.build_memo_cards_html(display_records),
             height=web_memo_db.estimate_memo_cards_height(display_records),
-            scrolling=True,
+            scrolling=False,
         )
 
 st.markdown('<section class="export-strip">', unsafe_allow_html=True)

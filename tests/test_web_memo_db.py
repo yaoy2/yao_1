@@ -125,8 +125,20 @@ class WebMemoDbTest(unittest.TestCase):
 
         self.assertEqual(2, html.count('<article class="memo-card"'))
         self.assertIn("memo-card-grid", html)
+        self.assertEqual(3, html.count('class="memo-card-column"'))
+        self.assertIn("grid-template-columns: repeat(3, minmax(0, 1fr));", html)
+        self.assertNotIn("max-width: 1320px", html)
         self.assertIn("&lt;article class=&quot;memo-card&quot;&gt;", html)
         self.assertNotIn('<article class="memo-card">不该变成结构</article>', html)
+
+    def test_estimate_memo_cards_height_accounts_for_content_length(self):
+        short_records = [{"content": "短句", "tags": []}]
+        long_records = [{"content": "第一行\n第二行\n第三行\n第四行\n第五行", "tags": ["摘录"]}]
+
+        self.assertGreater(
+            web_memo_db.estimate_memo_cards_height(long_records),
+            web_memo_db.estimate_memo_cards_height(short_records),
+        )
 
 
 if __name__ == "__main__":
