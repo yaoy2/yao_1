@@ -46,7 +46,10 @@ def init_db():
     )
     conn.commit()
     conn.close()
-    sync_backup_file()
+    if get_memo_count() > 0:
+        sync_backup_file()
+    else:
+        restore_from_markdown_backup()
 
 
 def parse_palettes(text=None):
@@ -166,6 +169,34 @@ def add_memo(memo_date, content, classify=True):
     sync_backup_file()
 
 
+def _insert_memo_record(record):
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    palette = pick_palette(get_memo_count())
+    colors = palette.get("colors") or DEFAULT_PALETTE["colors"]
+    tags = record.get("tags") or []
+    conn = get_connection()
+    conn.execute(
+        """
+        INSERT INTO web_memos
+            (memo_date, content, category, tags_json, palette_id, palette_name, palette_colors_json, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            str(record.get("memo_date", "")),
+            str(record.get("content", "")).strip(),
+            str(record.get("category", "待整理") or "待整理"),
+            json.dumps(tags, ensure_ascii=False),
+            int(palette.get("id", 0)),
+            str(record.get("palette_name") or palette.get("name", "")),
+            json.dumps(colors[:3], ensure_ascii=False),
+            now,
+            now,
+        ),
+    )
+    conn.commit()
+    conn.close()
+
+
 def get_memos(category=None, keyword=None):
     conn = get_connection()
     conditions = []
@@ -239,6 +270,53 @@ def write_markdown_backup(records=None, path=None):
 def sync_backup_file():
     write_markdown_backup(get_memos())
     return BACKUP_MD_PATH
+
+
+def parse_markdown_backup(text):
+    records = []
+    chunks = re.split(r"\n##\s+", "\n" + text)
+    for chunk in chunks[1:]:
+        lines = chunk.splitlines()
+        if not lines:
+            continue
+        memo_date = lines[0].strip()
+        content_lines = []
+        category = "待整理"
+        tags = []
+        palette_name = ""
+        for line in lines[1:]:
+            if line.startswith("- 分类："):
+                category = line.replace("- 分类：", "", 1).strip() or "待整理"
+            elif line.startswith("- 标签："):
+                tag_text = line.replace("- 标签：", "", 1).strip()
+                tags = [] if tag_text == "无" else [tag.strip() for tag in tag_text.split("、") if tag.strip()]
+            elif line.startswith("- 色卡："):
+                palette_name = line.replace("- 色卡：", "", 1).strip()
+            elif not line.startswith("- "):
+                content_lines.append(line)
+        content = "\n".join(content_lines).strip()
+        if memo_date and content:
+            records.append(
+                {
+                    "memo_date": memo_date,
+                    "content": content,
+                    "category": category,
+                    "tags": tags,
+                    "palette_name": palette_name,
+                }
+            )
+    return records
+
+
+def restore_from_markdown_backup(path=None):
+    path = BACKUP_MD_PATH if path is None else path
+    if not os.path.exists(path):
+        return 0
+    with open(path, "r", encoding="utf-8") as backup_file:
+        records = parse_markdown_backup(backup_file.read())
+    for record in reversed(records):
+        _insert_memo_record(record)
+    return len(records)
 
 
 def _normalize_palette_colors(record):

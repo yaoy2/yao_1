@@ -57,6 +57,38 @@ class WebMemoDbTest(unittest.TestCase):
         self.assertIn("记录数量：1", backup_text)
         self.assertIn("这是一条需要留下硬备份的内容", backup_text)
 
+    def test_init_db_restores_records_from_markdown_backup_when_database_is_empty(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patched_web_memo_storage(tmpdir) as tmp_path:
+                backup_path = tmp_path / "web_memos_backup.md"
+                backup_path.write_text(
+                    "\n".join(
+                        [
+                            "# 灵感便签盒备份",
+                            "",
+                            "# 灵感便签盒",
+                            "## 2026-05-24",
+                            "",
+                            "从备份恢复的一条。",
+                            "",
+                            "- 分类：摘录",
+                            "- 标签：摘录、测试",
+                            "- 色卡：商务蓝",
+                            "",
+                        ]
+                    ),
+                    encoding="utf-8",
+                )
+
+                web_memo_db.init_db()
+                records = web_memo_db.get_memos()
+
+        self.assertEqual(1, len(records))
+        self.assertEqual("2026-05-24", records[0]["memo_date"])
+        self.assertEqual("从备份恢复的一条。", records[0]["content"])
+        self.assertEqual("摘录", records[0]["category"])
+        self.assertEqual(["摘录", "测试"], records[0]["tags"])
+
     def test_build_markdown_export_contains_dates_content_and_tags(self):
         records = [
             {
@@ -139,6 +171,15 @@ class WebMemoDbTest(unittest.TestCase):
             web_memo_db.estimate_memo_cards_height(long_records),
             web_memo_db.estimate_memo_cards_height(short_records),
         )
+
+    def test_page_uses_today_without_visible_date_input_and_native_three_columns(self):
+        page_path = Path(__file__).resolve().parents[1] / "pages" / "10_10、🧾_灵感便签盒.py"
+        page_source = page_path.read_text(encoding="utf-8")
+
+        self.assertNotIn("date_input", page_source)
+        self.assertNotIn("streamlit.components", page_source)
+        self.assertIn("date.today().isoformat()", page_source)
+        self.assertIn("st.columns(3", page_source)
 
 
 if __name__ == "__main__":

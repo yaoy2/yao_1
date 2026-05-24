@@ -3,7 +3,6 @@ import sys
 from datetime import date
 
 import streamlit as st
-import streamlit.components.v1 as components
 
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
@@ -102,13 +101,8 @@ def apply_style():
             min-height: 82px !important;
             line-height: 1.8 !important;
         }
-        .memo-card-grid {
-            column-count: 3;
-            column-gap: .82rem;
-        }
         .memo-card {
             position: relative;
-            display: inline-block;
             width: 100%;
             min-height: 168px;
             padding: .95rem .95rem .85rem 1.08rem;
@@ -117,8 +111,6 @@ def apply_style():
             border-radius: 8px;
             box-shadow: 0 10px 24px rgba(24,34,48,.055);
             overflow: hidden;
-            break-inside: avoid;
-            page-break-inside: avoid;
         }
         .memo-card::before {
             content: "";
@@ -201,9 +193,6 @@ def apply_style():
             .memo-stat-row {
                 justify-content: flex-start;
             }
-            .memo-card-grid {
-                column-count: 1;
-            }
         }
         </style>
         """,
@@ -239,14 +228,13 @@ with st.container(border=True):
     st.subheader("快速记录")
     with st.form("web_memo_form", clear_on_submit=True):
         content = st.text_area("内容", placeholder="请输入", label_visibility="collapsed", height=88)
-        memo_date = st.date_input("日期", value=date.today())
         col_save, col_plain = st.columns(2)
         save_classified = col_save.form_submit_button("保存并打标签", use_container_width=True)
         save_plain = col_plain.form_submit_button("只保存", use_container_width=True)
 
     if save_classified or save_plain:
         try:
-            web_memo_db.add_memo(str(memo_date), content, classify=save_classified)
+            web_memo_db.add_memo(date.today().isoformat(), content, classify=save_classified)
             st.success("已保存")
             st.rerun()
         except ValueError:
@@ -264,11 +252,10 @@ with st.container(border=True):
     if not display_records:
         st.info("还没有记录。先在上方粘贴一条。")
     else:
-        components.html(
-            web_memo_db.build_memo_cards_html(display_records),
-            height=web_memo_db.estimate_memo_cards_height(display_records),
-            scrolling=False,
-        )
+        memo_columns = st.columns(3, gap="medium")
+        for index, record in enumerate(display_records):
+            with memo_columns[index % 3]:
+                st.markdown(web_memo_db.build_memo_card_html(record), unsafe_allow_html=True)
 
 st.markdown('<section class="export-strip">', unsafe_allow_html=True)
 export_records = web_memo_db.get_memos()
