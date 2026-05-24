@@ -4,7 +4,7 @@
 
 **Goal:** Build board 11 for daily DingTalk `.docx` transcript registration, DeepSeek-based cleanup, user remarks, and L-computer deployment guidance.
 
-**Architecture:** Keep reusable logic outside Streamlit: configuration and scanning in `utils/ding_minutes.py`, persistence in SQLite, and a thin page in `pages/00_11、🎙️_钉钉纪要登记.py`. A standalone script runs one scan for Windows Task Scheduler, while the page can trigger the same scan manually.
+**Architecture:** Keep reusable logic outside Streamlit: configuration and scanning in `utils/ding_minutes.py`, persistence in SQLite, and a thin page in `pages/00_11、🎙️_Recorder_笔记.py`. A standalone script runs one scan for Windows Task Scheduler, while the page can trigger the same scan manually.
 
 **Tech Stack:** Python standard library, SQLite, `python-docx`, `requests`, Streamlit, `unittest`.
 
@@ -88,7 +88,7 @@ Expected: pass without network access.
 ### Task 4: Board 11 Page and Homepage Entry
 
 **Files:**
-- Create: `pages/00_11、🎙️_钉钉纪要登记.py`
+- Create: `pages/00_11、🎙️_Recorder_笔记.py`
 - Modify: `hello.py`
 - Test: `tests/test_ding_minutes.py`
 
@@ -106,7 +106,7 @@ Add board 11 to `TOOLS` using the existing card structure.
 
 - [ ] **Step 4: Run syntax checks**
 
-Run: `python -m py_compile utils/ding_minutes.py scripts/scan_ding_minutes.py "pages/00_11、🎙️_钉钉纪要登记.py" hello.py`
+Run: `python -m py_compile utils/ding_minutes.py scripts/scan_ding_minutes.py "pages/00_11、🎙️_Recorder_笔记.py" hello.py`
 Expected: pass.
 
 ### Task 5: L Computer Run Guide, Verification, Commit, Push

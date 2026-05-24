@@ -137,6 +137,16 @@ class DingMinutesTest(unittest.TestCase):
         self.assertEqual("done", record["status"])
         self.assertEqual("重新整理：需要重新整理的原文", record["ai_summary"])
 
+    def test_recorder_page_uses_budget_password_gate_and_new_name(self):
+        page_path = Path(__file__).resolve().parents[1] / "pages" / "00_11、🎙️_Recorder_笔记.py"
+        page_source = page_path.read_text(encoding="utf-8")
+
+        self.assertIn("Recorder_笔记", page_source)
+        self.assertIn("from utils import budget_auth, ding_minutes", page_source)
+        self.assertIn("get_budget_password(st.secrets, os.environ)", page_source)
+        self.assertIn("recorder_authenticated", page_source)
+        self.assertNotIn("钉钉纪要登记", page_source)
+
 
 if __name__ == "__main__":
     unittest.main()

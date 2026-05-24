@@ -15,11 +15,11 @@ apply_global_theme()
 
 TOOLS = [
     {
-        "title": "钉钉纪要登记",
+        "title": "Recorder_笔记",
         "desc": "每天扫描钉钉导出的 Word 转写，保留原文并生成可归档、可复盘的 AI 整理稿。",
         "tag": "纪要整理",
         "created": "2026_05_24",
-        "page": "pages/00_11、🎙️_钉钉纪要登记.py",
+        "page": "pages/00_11、🎙️_Recorder_笔记.py",
         "code": "M11",
         "accent": "green",
     },

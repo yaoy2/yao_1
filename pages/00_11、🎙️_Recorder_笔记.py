@@ -6,10 +6,10 @@ import streamlit as st
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from utils import ding_minutes
+from utils import budget_auth, ding_minutes
 
 
-st.set_page_config(page_title="钉钉纪要登记", page_icon="🎙️", layout="wide")
+st.set_page_config(page_title="Recorder_笔记", page_icon="🎙️", layout="wide")
 
 
 STATUS_LABELS = {
@@ -125,6 +125,33 @@ def status_html(status):
     return f'<span class="status-pill status-{safe_status}">{status_label(status)}</span>'
 
 
+def require_recorder_auth():
+    configured_password = budget_auth.get_budget_password(st.secrets, os.environ)
+    if not configured_password:
+        st.title("🎙️ Recorder_笔记")
+        st.warning("上锁板块密码还没有配置。请在 Streamlit secrets 中设置 budget_password，或在本机设置 BUDGET_PASSWORD。")
+        st.stop()
+
+    if st.session_state.get("recorder_authenticated"):
+        return
+
+    st.title("🎙️ Recorder_笔记")
+    st.info("请输入密码后查看和操作 Recorder_笔记。")
+    with st.form("recorder_auth_form"):
+        input_password = st.text_input("访问密码", type="password")
+        submitted = st.form_submit_button("进入 Recorder_笔记", use_container_width=True)
+
+    if submitted:
+        if budget_auth.is_budget_password_valid(input_password, configured_password):
+            st.session_state["recorder_authenticated"] = True
+            st.rerun()
+        else:
+            st.error("密码不正确，请重新输入。")
+
+    st.stop()
+
+
+require_recorder_auth()
 apply_style()
 ding_minutes.init_db()
 config = ding_minutes.load_config()
@@ -135,8 +162,8 @@ st.markdown(
     f"""
     <section class="ding-hero">
       <div>
-        <div class="ding-kicker">DING MINUTES</div>
-        <h1 class="ding-title">🎙️ 钉钉纪要登记</h1>
+        <div class="ding-kicker">RECORDER NOTES</div>
+        <h1 class="ding-title">🎙️ Recorder_笔记</h1>
         <p class="ding-subtitle">
           每天 19:00 扫描 Ding2026 中新建的 export_*.docx 和 dt*.docx，保留原文，并生成适合归档和复盘的整理稿。
         </p>
