@@ -3,6 +3,7 @@ import sys
 from datetime import date
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
@@ -268,7 +269,11 @@ with st.container(border=True):
     if not display_records:
         st.info("还没有记录。先在上方粘贴一条。")
     else:
-        st.html(web_memo_db.build_memo_cards_html(display_records))
+        components.html(
+            web_memo_db.build_memo_cards_html(display_records),
+            height=web_memo_db.estimate_memo_cards_height(display_records),
+            scrolling=True,
+        )
 
 st.markdown('<section class="export-strip">', unsafe_allow_html=True)
 export_records = web_memo_db.get_memos()

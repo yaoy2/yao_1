@@ -10,6 +10,7 @@ from html import escape
 ROOT_DIR = os.path.dirname(os.path.dirname(__file__))
 DB_PATH = os.path.join(ROOT_DIR, "data", "web_memos.db")
 PALETTES_PATH = os.path.join(ROOT_DIR, "data", "color_palettes.md")
+BACKUP_MD_PATH = os.path.join(ROOT_DIR, "data", "web_memos_backup.md")
 
 DEFAULT_PALETTE = {
     "id": 0,
@@ -45,6 +46,7 @@ def init_db():
     )
     conn.commit()
     conn.close()
+    sync_backup_file()
 
 
 def parse_palettes(text=None):
@@ -161,6 +163,7 @@ def add_memo(memo_date, content, classify=True):
     )
     conn.commit()
     conn.close()
+    sync_backup_file()
 
 
 def get_memos(category=None, keyword=None):
@@ -209,6 +212,35 @@ def build_markdown_export(records):
     return "\n".join(lines).strip() + "\n"
 
 
+def build_markdown_backup(records=None):
+    records = get_memos() if records is None else records
+    generated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    return "\n".join(
+        [
+            "# 灵感便签盒备份",
+            "",
+            f"- 生成时间：{generated_at}",
+            f"- 记录数量：{len(records)}",
+            "",
+            build_markdown_export(records).strip(),
+            "",
+        ]
+    )
+
+
+def write_markdown_backup(records=None, path=None):
+    path = BACKUP_MD_PATH if path is None else path
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8", newline="\n") as backup_file:
+        backup_file.write(build_markdown_backup(records))
+    return path
+
+
+def sync_backup_file():
+    write_markdown_backup(get_memos())
+    return BACKUP_MD_PATH
+
+
 def _normalize_palette_colors(record):
     colors = record.get("palette_colors") or DEFAULT_PALETTE["colors"]
     colors = list(colors)
@@ -239,7 +271,115 @@ def build_memo_card_html(record):
 
 def build_memo_cards_html(records):
     cards = "".join(build_memo_card_html(record) for record in records)
-    return f'<div class="memo-card-grid">{cards}</div>'
+    return f"""
+    <style>
+    body {{
+        margin: 0;
+        font-family: "Microsoft YaHei", Arial, sans-serif;
+        color: #182230;
+    }}
+    .memo-card-grid {{
+        column-count: 3;
+        column-gap: .82rem;
+    }}
+    .memo-card {{
+        position: relative;
+        display: inline-block;
+        width: 100%;
+        box-sizing: border-box;
+        min-height: 168px;
+        padding: .95rem .95rem .85rem 1.08rem;
+        margin: 0 0 .82rem;
+        border: 1px solid rgba(24,34,48,.1);
+        border-radius: 8px;
+        box-shadow: 0 10px 24px rgba(24,34,48,.055);
+        overflow: hidden;
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }}
+    .memo-card::before {{
+        content: "";
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 6px;
+        background: linear-gradient(180deg, var(--main), var(--accent));
+    }}
+    .memo-card::after {{
+        content: "";
+        position: absolute;
+        right: -24px;
+        top: -24px;
+        width: 86px;
+        height: 86px;
+        border-radius: 50%;
+        background: var(--accent-soft);
+    }}
+    .memo-card-top {{
+        position: relative;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: .6rem;
+        margin-bottom: .7rem;
+    }}
+    .memo-date {{
+        color: var(--main);
+        font-size: .82rem;
+        font-weight: 800;
+        line-height: 1.35;
+    }}
+    .memo-palette {{
+        font-size: .72rem;
+        color: #667085;
+        background: rgba(255,255,255,.75);
+        border: 1px solid rgba(24,34,48,.08);
+        border-radius: 999px;
+        padding: .22rem .5rem;
+    }}
+    .memo-content {{
+        position: relative;
+        color: #182230;
+        font-size: .94rem;
+        line-height: 1.72;
+        white-space: pre-wrap;
+    }}
+    .memo-tags {{
+        position: relative;
+        margin-top: .75rem;
+        display: flex;
+        gap: .38rem;
+        flex-wrap: wrap;
+    }}
+    .memo-tag {{
+        font-size: .74rem;
+        background: rgba(255,255,255,.78);
+        color: #344054;
+        border: 1px solid rgba(24,34,48,.08);
+        border-radius: 999px;
+        padding: .16rem .48rem;
+    }}
+    .memo-tag-main {{
+        color: var(--main);
+        font-weight: 700;
+    }}
+    @media (max-width: 980px) {{
+        .memo-card-grid {{
+            column-count: 1;
+        }}
+    }}
+    @media (min-width: 981px) and (max-width: 1320px) {{
+        .memo-card-grid {{
+            column-count: 2;
+        }}
+    }}
+    </style>
+    <div class="memo-card-grid">{cards}</div>
+    """
+
+
+def estimate_memo_cards_height(records):
+    rows = max(1, (len(records) + 2) // 3)
+    return min(2200, max(320, rows * 300 + 40))
 
 
 def build_printable_html(records):

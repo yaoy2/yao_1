@@ -1,16 +1,26 @@
 import tempfile
 import unittest
+from contextlib import contextmanager
 from pathlib import Path
 from unittest.mock import patch
 
 from utils import web_memo_db
 
 
+@contextmanager
+def patched_web_memo_storage(tmpdir):
+    tmp_path = Path(tmpdir)
+    with (
+        patch.object(web_memo_db, "DB_PATH", str(tmp_path / "web_memos.db")),
+        patch.object(web_memo_db, "BACKUP_MD_PATH", str(tmp_path / "web_memos_backup.md")),
+    ):
+        yield tmp_path
+
+
 class WebMemoDbTest(unittest.TestCase):
     def test_add_memo_classifies_and_lists_newest_first(self):
         with tempfile.TemporaryDirectory() as tmpdir:
-            db_path = str(Path(tmpdir) / "web_memos.db")
-            with patch.object(web_memo_db, "DB_PATH", db_path):
+            with patched_web_memo_storage(tmpdir):
                 web_memo_db.init_db()
                 web_memo_db.add_memo("2026-05-20", "这是一句可以放进汇报稿的金句。")
                 web_memo_db.add_memo("2026-05-23", "会议段子：会后再议，就是今天先放过彼此。")
@@ -25,8 +35,7 @@ class WebMemoDbTest(unittest.TestCase):
 
     def test_add_memo_can_skip_classification(self):
         with tempfile.TemporaryDirectory() as tmpdir:
-            db_path = str(Path(tmpdir) / "web_memos.db")
-            with patch.object(web_memo_db, "DB_PATH", db_path):
+            with patched_web_memo_storage(tmpdir):
                 web_memo_db.init_db()
                 web_memo_db.add_memo("2026-05-23", "随手记一条。", classify=False)
 
@@ -34,6 +43,19 @@ class WebMemoDbTest(unittest.TestCase):
 
         self.assertEqual("待整理", records[0]["category"])
         self.assertEqual(["待整理"], records[0]["tags"])
+
+    def test_add_memo_writes_markdown_backup(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patched_web_memo_storage(tmpdir) as tmp_path:
+                backup_path = tmp_path / "web_memos_backup.md"
+                web_memo_db.init_db()
+                web_memo_db.add_memo("2026-05-24", "这是一条需要留下硬备份的内容。")
+
+                backup_text = backup_path.read_text(encoding="utf-8")
+
+        self.assertIn("灵感便签盒备份", backup_text)
+        self.assertIn("记录数量：1", backup_text)
+        self.assertIn("这是一条需要留下硬备份的内容", backup_text)
 
     def test_build_markdown_export_contains_dates_content_and_tags(self):
         records = [
