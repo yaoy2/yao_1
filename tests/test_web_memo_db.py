@@ -44,6 +44,25 @@ class WebMemoDbTest(unittest.TestCase):
         self.assertEqual("待整理", records[0]["category"])
         self.assertEqual(["待整理"], records[0]["tags"])
 
+    def test_add_memo_merges_manual_tags_with_auto_tags(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patched_web_memo_storage(tmpdir):
+                web_memo_db.init_db()
+                web_memo_db.add_memo(
+                    "2026-05-24",
+                    "这是一条关于学院预算流程的思考。",
+                    manual_tags=["重点", "预算管理"],
+                )
+
+                records = web_memo_db.get_memos()
+
+        self.assertEqual("观点", records[0]["category"])
+        self.assertIn("预算管理", records[0]["tags"])
+        self.assertIn("重点", records[0]["tags"])
+
+    def test_split_tags_accepts_common_separators(self):
+        self.assertEqual(["重点", "写作素材", "待办"], web_memo_db.split_tags("重点、写作素材, 待办"))
+
     def test_add_memo_writes_markdown_backup(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             with patched_web_memo_storage(tmpdir) as tmp_path:
@@ -173,13 +192,21 @@ class WebMemoDbTest(unittest.TestCase):
         )
 
     def test_page_uses_today_without_visible_date_input_and_native_three_columns(self):
-        page_path = Path(__file__).resolve().parents[1] / "pages" / "10_10、🧾_灵感便签盒.py"
+        page_path = Path(__file__).resolve().parents[1] / "pages" / "01_10、🧾_灵感便签盒.py"
         page_source = page_path.read_text(encoding="utf-8")
 
         self.assertNotIn("date_input", page_source)
         self.assertNotIn("streamlit.components", page_source)
         self.assertIn("date.today().isoformat()", page_source)
         self.assertIn("st.columns(3", page_source)
+
+    def test_page_exposes_manual_tag_controls(self):
+        page_path = Path(__file__).resolve().parents[1] / "pages" / "01_10、🧾_灵感便签盒.py"
+        page_source = page_path.read_text(encoding="utf-8")
+
+        self.assertIn("st.multiselect(\"标签\"", page_source)
+        self.assertIn("st.text_input(\"新增标签\"", page_source)
+        self.assertIn("manual_tags=manual_tags", page_source)
 
 
 if __name__ == "__main__":

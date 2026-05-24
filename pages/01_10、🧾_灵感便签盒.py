@@ -204,6 +204,7 @@ web_memo_db.init_db()
 
 records = web_memo_db.get_memos()
 categories = ["全部"] + web_memo_db.get_categories()
+available_tags = web_memo_db.get_all_tags()
 palettes = web_memo_db.parse_palettes()
 
 st.markdown(
@@ -227,14 +228,25 @@ st.markdown(
 with st.container(border=True):
     st.subheader("快速记录")
     with st.form("web_memo_form", clear_on_submit=True):
-        content = st.text_area("内容", placeholder="请输入", label_visibility="collapsed", height=88)
+        entry_col, tag_col = st.columns([2.35, 1], gap="medium")
+        with entry_col:
+            content = st.text_area("内容", placeholder="请输入", label_visibility="collapsed", height=88)
+        with tag_col:
+            selected_tags = st.multiselect("标签", available_tags, placeholder="选择已有标签")
+            new_tags = st.text_input("新增标签", placeholder="用顿号或逗号分隔")
         col_save, col_plain = st.columns(2)
         save_classified = col_save.form_submit_button("保存并打标签", use_container_width=True)
         save_plain = col_plain.form_submit_button("只保存", use_container_width=True)
 
     if save_classified or save_plain:
         try:
-            web_memo_db.add_memo(date.today().isoformat(), content, classify=save_classified)
+            manual_tags = web_memo_db.merge_tags(selected_tags, web_memo_db.split_tags(new_tags))
+            web_memo_db.add_memo(
+                date.today().isoformat(),
+                content,
+                classify=save_classified,
+                manual_tags=manual_tags,
+            )
             st.success("已保存")
             st.rerun()
         except ValueError:

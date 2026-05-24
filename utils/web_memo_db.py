@@ -18,6 +18,19 @@ DEFAULT_PALETTE = {
     "colors": ["#1B3A5C", "#4A90D9", "#E8F0FE"],
 }
 
+DEFAULT_TAGS = [
+    "摘录",
+    "观点",
+    "待办",
+    "写作素材",
+    "工作记录",
+    "工具想法",
+    "金句",
+    "行政日常",
+    "学生工作",
+    "竞赛",
+]
+
 
 def get_connection():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
@@ -85,31 +98,71 @@ def pick_palette(index, palettes=None):
     return palettes[index % len(palettes)]
 
 
+def split_tags(text):
+    if not text:
+        return []
+    parts = re.split(r"[、,，\s]+", str(text))
+    return normalize_tags(parts)
+
+
+def normalize_tags(tags):
+    normalized = []
+    for tag in tags or []:
+        tag = str(tag).strip()
+        if tag and tag not in normalized:
+            normalized.append(tag)
+    return normalized
+
+
+def merge_tags(*tag_groups, limit=8):
+    merged = []
+    for group in tag_groups:
+        for tag in group or []:
+            tag = str(tag).strip()
+            if tag and tag not in merged:
+                merged.append(tag)
+    return merged[:limit]
+
+
 def classify_content(content):
     text = content.strip()
     lowered = text.lower()
     tags = []
 
-    if any(word in text for word in ["段子", "哈哈", "笑死", "吐槽"]):
+    if any(word in text for word in ["待办", "TODO", "todo", "记得", "跟进", "安排", "需要处理", "明天"]):
+        category = "待办"
+    elif any(word in text for word in ["段子", "哈哈", "笑死", "吐槽"]):
         category = "段子"
     elif any(word in text for word in ["金句", "一句", "格言", "警句"]) or text.startswith(("“", "\"")):
         category = "金句"
-    elif any(word in lowered for word in ["ai", "llm", "chatgpt", "codex"]) or any(word in text for word in ["工具", "自动化", "模型"]):
+    elif any(word in lowered for word in ["ai", "llm", "chatgpt", "codex"]) or any(word in text for word in ["工具", "自动化", "模型", "页面", "功能"]):
+        category = "工具想法"
+    elif any(word in text for word in ["我觉得", "我认为", "本质", "原则", "判断", "思考", "复盘"]):
         category = "观点"
+    elif any(word in text for word in ["通知", "新闻稿", "汇报", "讲话稿", "方案", "材料", "标题"]):
+        category = "写作素材"
+    elif any(word in text for word in ["会议", "流程", "学院", "行政", "课表", "报销", "预算"]):
+        category = "工作记录"
     else:
         category = "摘录"
 
     keyword_tags = [
         ("会议", "会议"),
         ("行政", "行政日常"),
-        ("汇报", "汇报素材"),
+        ("汇报", "写作素材"),
+        ("通知", "写作素材"),
+        ("新闻稿", "写作素材"),
         ("写作", "写作素材"),
         ("沟通", "沟通"),
         ("AI", "AI"),
         ("ai", "AI"),
-        ("工具", "工具建设"),
+        ("工具", "工具想法"),
+        ("自动化", "工具想法"),
         ("学生", "学生工作"),
         ("竞赛", "竞赛"),
+        ("预算", "预算管理"),
+        ("报销", "预算管理"),
+        ("课表", "教学协调"),
     ]
     for needle, tag in keyword_tags:
         if needle in content and tag not in tags:
@@ -118,7 +171,7 @@ def classify_content(content):
     if category not in tags:
         tags.insert(0, category)
 
-    return category, tags[:5]
+    return category, tags[:6]
 
 
 def _record_from_row(row):
@@ -135,12 +188,13 @@ def get_memo_count():
     return int(row["total"] or 0)
 
 
-def add_memo(memo_date, content, classify=True):
+def add_memo(memo_date, content, classify=True, manual_tags=None):
     content = content.strip()
     if not content:
         raise ValueError("content cannot be empty")
 
     category, tags = classify_content(content) if classify else ("待整理", ["待整理"])
+    tags = merge_tags(tags, manual_tags)
     palette = pick_palette(get_memo_count())
     colors = palette.get("colors") or DEFAULT_PALETTE["colors"]
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -221,6 +275,19 @@ def get_categories():
     rows = conn.execute("SELECT DISTINCT category FROM web_memos ORDER BY category").fetchall()
     conn.close()
     return [row["category"] for row in rows]
+
+
+def get_all_tags():
+    conn = get_connection()
+    rows = conn.execute("SELECT tags_json FROM web_memos").fetchall()
+    conn.close()
+    tags = list(DEFAULT_TAGS)
+    for row in rows:
+        try:
+            tags.extend(json.loads(row["tags_json"] or "[]"))
+        except json.JSONDecodeError:
+            continue
+    return sorted(normalize_tags(tags))
 
 
 def build_markdown_export(records):
