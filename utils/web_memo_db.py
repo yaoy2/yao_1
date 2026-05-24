@@ -4,6 +4,7 @@ import re
 import sqlite3
 from io import BytesIO
 from datetime import datetime
+from html import escape
 
 
 ROOT_DIR = os.path.dirname(os.path.dirname(__file__))
@@ -206,6 +207,39 @@ def build_markdown_export(records):
             ]
         )
     return "\n".join(lines).strip() + "\n"
+
+
+def _normalize_palette_colors(record):
+    colors = record.get("palette_colors") or DEFAULT_PALETTE["colors"]
+    colors = list(colors)
+    while len(colors) < 3:
+        colors.append(colors[-1])
+    return colors[:3]
+
+
+def build_memo_card_html(record):
+    main, accent, bg = _normalize_palette_colors(record)
+    tags = record.get("tags") or []
+    tag_html = "".join(
+        f'<span class="memo-tag {"memo-tag-main" if i == 0 else ""}">{escape(str(tag))}</span>'
+        for i, tag in enumerate(tags)
+    )
+    bg_style = f"linear-gradient(135deg, {bg} 0%, #ffffff 78%)"
+    return f"""
+    <article class="memo-card" style="--main:{main};--accent:{accent};--accent-soft:{accent}33;background:{bg_style};">
+      <div class="memo-card-top">
+        <div class="memo-date">{escape(record.get("memo_date", ""))}</div>
+        <div class="memo-palette">{escape(record.get("palette_name", "") or "默认色卡")}</div>
+      </div>
+      <div class="memo-content">{escape(record.get("content", ""))}</div>
+      <div class="memo-tags">{tag_html}</div>
+    </article>
+    """
+
+
+def build_memo_cards_html(records):
+    cards = "".join(build_memo_card_html(record) for record in records)
+    return f'<div class="memo-card-grid">{cards}</div>'
 
 
 def build_printable_html(records):

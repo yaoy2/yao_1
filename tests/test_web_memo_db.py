@@ -81,6 +81,31 @@ class WebMemoDbTest(unittest.TestCase):
         self.assertEqual("B", web_memo_db.pick_palette(1, palettes)["name"])
         self.assertEqual("A", web_memo_db.pick_palette(2, palettes)["name"])
 
+    def test_build_memo_cards_html_renders_multiple_cards_without_leaking_html(self):
+        records = [
+            {
+                "memo_date": "2026-05-24",
+                "content": "第一条",
+                "tags": ["摘录"],
+                "palette_name": "商务蓝",
+                "palette_colors": ["#1B3A5C", "#4A90D9", "#E8F0FE"],
+            },
+            {
+                "memo_date": "2026-05-24",
+                "content": '<article class="memo-card">不该变成结构</article>',
+                "tags": ["摘录"],
+                "palette_name": "莫兰迪灰绿",
+                "palette_colors": ["#2D6A4F", "#95B8A6", "#EEF5EF"],
+            },
+        ]
+
+        html = web_memo_db.build_memo_cards_html(records)
+
+        self.assertEqual(2, html.count('<article class="memo-card"'))
+        self.assertIn("memo-card-grid", html)
+        self.assertIn("&lt;article class=&quot;memo-card&quot;&gt;", html)
+        self.assertNotIn('<article class="memo-card">不该变成结构</article>', html)
+
 
 if __name__ == "__main__":
     unittest.main()

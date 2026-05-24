@@ -1,7 +1,6 @@
 import os
 import sys
 from datetime import date
-from html import escape
 
 import streamlit as st
 
@@ -103,18 +102,22 @@ def apply_style():
             line-height: 1.8 !important;
         }
         .memo-card-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: .82rem;
+            column-count: 3;
+            column-gap: .82rem;
         }
         .memo-card {
             position: relative;
+            display: inline-block;
+            width: 100%;
             min-height: 168px;
             padding: .95rem .95rem .85rem 1.08rem;
+            margin: 0 0 .82rem;
             border: 1px solid rgba(24,34,48,.1);
             border-radius: 8px;
             box-shadow: 0 10px 24px rgba(24,34,48,.055);
             overflow: hidden;
+            break-inside: avoid;
+            page-break-inside: avoid;
         }
         .memo-card::before {
             content: "";
@@ -198,37 +201,18 @@ def apply_style():
                 justify-content: flex-start;
             }
             .memo-card-grid {
-                grid-template-columns: 1fr;
+                column-count: 1;
+            }
+        }
+        @media (min-width: 981px) and (max-width: 1320px) {
+            .memo-card-grid {
+                column-count: 2;
             }
         }
         </style>
         """,
         unsafe_allow_html=True,
     )
-
-
-def card_html(record):
-    colors = record.get("palette_colors") or ["#1B3A5C", "#4A90D9", "#E8F0FE"]
-    while len(colors) < 3:
-        colors.append(colors[-1])
-    main, accent, bg = colors[:3]
-    tags = record.get("tags") or []
-    tag_html = "".join(
-        f'<span class="memo-tag {"memo-tag-main" if i == 0 else ""}">{escape(str(tag))}</span>'
-        for i, tag in enumerate(tags)
-    )
-    bg_style = f"linear-gradient(135deg, {bg} 0%, #ffffff 78%)"
-    return f"""
-    <article class="memo-card" style="--main:{main};--accent:{accent};--accent-soft:{accent}33;background:{bg_style};">
-      <div class="memo-card-top">
-        <div class="memo-date">{escape(record.get("memo_date", ""))}</div>
-        <div class="memo-palette">{escape(record.get("palette_name", "") or "默认色卡")}</div>
-      </div>
-      <div class="memo-content">{escape(record.get("content", ""))}</div>
-      <div class="memo-tags">{tag_html}</div>
-    </article>
-    """
-
 
 apply_style()
 web_memo_db.init_db()
@@ -255,41 +239,36 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-left, right = st.columns([0.9, 1.4], gap="medium")
+with st.container(border=True):
+    st.subheader("快速记录")
+    with st.form("web_memo_form", clear_on_submit=True):
+        content = st.text_area("内容", placeholder="请输入", label_visibility="collapsed")
+        memo_date = st.date_input("日期", value=date.today())
+        col_save, col_plain = st.columns(2)
+        save_classified = col_save.form_submit_button("保存并打标签", use_container_width=True)
+        save_plain = col_plain.form_submit_button("只保存", use_container_width=True)
 
-with left:
-    with st.container(border=True):
-        st.subheader("快速记录")
-        with st.form("web_memo_form", clear_on_submit=True):
-            content = st.text_area("内容", placeholder="请输入", label_visibility="collapsed")
-            memo_date = st.date_input("日期", value=date.today())
-            col_save, col_plain = st.columns(2)
-            save_classified = col_save.form_submit_button("保存并打标签", use_container_width=True)
-            save_plain = col_plain.form_submit_button("只保存", use_container_width=True)
+    if save_classified or save_plain:
+        try:
+            web_memo_db.add_memo(str(memo_date), content, classify=save_classified)
+            st.success("已保存")
+            st.rerun()
+        except ValueError:
+            st.error("请输入内容后再保存。")
 
-        if save_classified or save_plain:
-            try:
-                web_memo_db.add_memo(str(memo_date), content, classify=save_classified)
-                st.success("已保存")
-                st.rerun()
-            except ValueError:
-                st.error("请输入内容后再保存。")
+with st.container(border=True):
+    top_a, top_b = st.columns([1, 1])
+    with top_a:
+        st.subheader("备忘列表")
+    with top_b:
+        selected_category = st.selectbox("分类", categories, label_visibility="collapsed")
+    keyword = st.text_input("搜索", placeholder="按关键词搜索", label_visibility="collapsed")
 
-with right:
-    with st.container(border=True):
-        top_a, top_b = st.columns([1, 1])
-        with top_a:
-            st.subheader("备忘列表")
-        with top_b:
-            selected_category = st.selectbox("分类", categories, label_visibility="collapsed")
-        keyword = st.text_input("搜索", placeholder="按关键词搜索", label_visibility="collapsed")
-
-        display_records = web_memo_db.get_memos(category=selected_category, keyword=keyword.strip() or None)
-        if not display_records:
-            st.info("还没有记录。先在左侧粘贴一条。")
-        else:
-            cards = "".join(card_html(record) for record in display_records)
-            st.markdown(f'<div class="memo-card-grid">{cards}</div>', unsafe_allow_html=True)
+    display_records = web_memo_db.get_memos(category=selected_category, keyword=keyword.strip() or None)
+    if not display_records:
+        st.info("还没有记录。先在上方粘贴一条。")
+    else:
+        st.html(web_memo_db.build_memo_cards_html(display_records))
 
 st.markdown('<section class="export-strip">', unsafe_allow_html=True)
 export_records = web_memo_db.get_memos()
