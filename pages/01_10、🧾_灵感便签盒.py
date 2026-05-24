@@ -130,7 +130,7 @@ def apply_style():
             box-shadow: 0 12px 30px rgba(24,34,48,.06);
         }
         textarea {
-            min-height: 82px !important;
+            min-height: 130px !important;
             line-height: 1.8 !important;
         }
         div[data-testid="stForm"] div[data-testid="stHorizontalBlock"] {
@@ -138,10 +138,10 @@ def apply_style():
         }
         div[data-testid="stForm"] div[data-baseweb="select"] > div,
         div[data-testid="stForm"] input {
-            min-height: 52px !important;
+            min-height: 54px !important;
         }
         .inline-field-label {
-            min-height: 52px;
+            min-height: 54px;
             display: flex;
             align-items: center;
             color: #182230;
@@ -277,7 +277,7 @@ with st.container(border=True):
     with st.form("web_memo_form", clear_on_submit=True):
         entry_col, tag_col = st.columns([2.05, 1.25], gap="medium")
         with entry_col:
-            content = st.text_area("内容", placeholder="请输入", label_visibility="collapsed", height=88)
+            content = st.text_area("内容", placeholder="请输入", label_visibility="collapsed", height=130)
         with tag_col:
             tag_label_col, tag_input_col = st.columns([0.22, 0.78], gap="small")
             with tag_label_col:
