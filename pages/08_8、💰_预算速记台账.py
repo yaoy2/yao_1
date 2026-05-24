@@ -6,7 +6,7 @@ import io
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from config.budget_config import BUDGET_YEAR, BUDGET_CATEGORIES, REIMBURSEMENT_STATUSES, UNITS
+from config.budget_config import BUDGET_YEAR, BUDGET_CATEGORIES, REIMBURSEMENT_STATUSES, UNITS, UNCAPPED_BUDGET_CATEGORIES
 from utils import budget_auth, budget_db
 
 init_db = budget_db.init_db
@@ -137,16 +137,17 @@ for cat, budget in BUDGET_CATEGORIES.items():
     reimbursed = info["reimbursed"]
     unreimbursed = info["unreimbursed"]
     used = reimbursed + unreimbursed
-    cat_remaining = budget - used
-    pct = used / budget if budget > 0 else 0
+    is_uncapped = cat in UNCAPPED_BUDGET_CATEGORIES
+    cat_remaining = "不涉及" if is_uncapped else budget - used
+    pct = "不涉及" if is_uncapped else f"{used / budget:.1%}" if budget > 0 else "0.0%"
     cat_rows.append({
         "费用类别": cat,
-        "年度预算": budget,
+        "年度预算": "不设额度" if is_uncapped else budget,
         "已报销": reimbursed,
         "未报销": unreimbursed,
         "合计占用": used,
         "剩余额度": cat_remaining,
-        "使用率": f"{pct:.1%}",
+        "使用率": pct,
     })
 df_cat = pd.DataFrame(cat_rows)
 st.dataframe(df_cat, use_container_width=True, hide_index=True)

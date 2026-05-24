@@ -15,7 +15,10 @@ BUDGET_CATEGORIES = {
     "手机费": 16400,
     "会务费": 2000,
     "交际费": 5000,
+    "年终奖留存": 0,
 }
+
+UNCAPPED_BUDGET_CATEGORIES = {"年终奖留存"}
 
 REIMBURSEMENT_STATUSES = ["未报销", "已报销", "作废"]
 
