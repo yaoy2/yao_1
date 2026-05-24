@@ -12,10 +12,15 @@ class HomePageTest(unittest.TestCase):
         self.assertIn("前方没有胜利，挺住意味一切", page_source)
         self.assertIn("page_tools = TOOLS[page_index * 9 : page_index * 9 + 9]", page_source)
         self.assertIn("for row_start in range(0, 9, 3)", page_source)
+        self.assertNotIn("进入线上版", page_source)
+        self.assertNotIn("Local Port 8501", page_source)
+        self.assertNotIn("status-band", page_source)
+        self.assertNotIn("首页入口固定为 3x3", page_source)
+        self.assertNotIn("st.page_link", page_source)
 
     def test_tools_are_newest_first_and_oldest_on_second_page(self):
         page_source = (Path(__file__).resolve().parents[1] / "hello.py").read_text(encoding="utf-8")
-        match = re.search(r"TOOLS = (\[.*?\])\n\n\ndef build_terminal_preview_html", page_source, re.S)
+        match = re.search(r"TOOLS = (\[.*?\])\n\n\ndef build_hero_visual_html", page_source, re.S)
         self.assertIsNotNone(match)
 
         tools = ast.literal_eval(match.group(1))

@@ -107,21 +107,18 @@ TOOLS = [
 ]
 
 
-def build_terminal_preview_html() -> str:
-    preview_rows = TOOLS[:5]
-    lines = "\n".join(
-        f'<div class="terminal-line"><span>{tool["code"]} / {tool["created"]}</span><strong>{tool["title"]}</strong></div>'
-        for tool in preview_rows
-    )
+def build_hero_visual_html() -> str:
     return (
-        '<div class="hero-visual" aria-label="首页预览">'
-        '<div class="visual-topline"><span></span><span></span><span></span><strong>COMMAND VIEW</strong></div>'
-        f'<div class="terminal-preview">{lines}</div>'
-        '<div class="signal-row">'
-        f'<div><strong>{len(TOOLS)}</strong><span>Tools Online</span></div>'
-        '<div><strong>3x3</strong><span>Module Grid</span></div>'
-        '<div><strong>MD</strong><span>Backup Ready</span></div>'
-        "</div></div>"
+        '<div class="hero-visual" aria-label="首页视觉">'
+        '<div class="principle-chip">干他妈的</div>'
+        '<div class="visual-orbit">'
+        '<span class="orbit-node node-a"></span>'
+        '<span class="orbit-node node-b"></span>'
+        '<span class="orbit-node node-c"></span>'
+        '<span class="orbit-node node-d"></span>'
+        '<div class="orbit-core">YAO<br/>OPS</div>'
+        "</div>"
+        "</div>"
     )
 
 
@@ -136,25 +133,9 @@ st.markdown(
       面向学院日常事务的高效率工具矩阵：材料处理、数据核对、课表查询、预算台账、微信归档、灵感便签与视觉资产统一接入。
       把重复劳动压缩成一次点击，把复杂流程沉淀为稳定入口。
     </div>
-    <div class="hero-actions">
-      <a class="hero-link primary-link" href="https://yao-1.streamlit.app/" target="_blank">进入线上版</a>
-      <span class="hero-link ghost-link">Local Port 8501</span>
-    </div>
   </div>
-  {build_terminal_preview_html()}
+  {build_hero_visual_html()}
 </section>
-    """,
-    unsafe_allow_html=True,
-)
-
-st.markdown(
-    """
-    <section class="status-band">
-      <div class="status-item"><span>MODE</span><strong>Campus Ops</strong></div>
-      <div class="status-item"><span>STACK</span><strong>Python · Streamlit</strong></div>
-      <div class="status-item"><span>CLOUD</span><strong>yao-1.streamlit.app</strong></div>
-      <div class="status-item"><span>PRINCIPLE</span><strong>干他妈的</strong></div>
-    </section>
     """,
     unsafe_allow_html=True,
 )
@@ -166,7 +147,6 @@ st.markdown(
         <div class="section-label">MISSION MODULES</div>
         <h2>九个工具，一屏进入</h2>
       </div>
-      <p>首页入口固定为 3x3。工具多于九个时，较早的工具进入下一页，左侧导航仍显示全部工具。</p>
     </div>
     """,
     unsafe_allow_html=True,
@@ -187,7 +167,7 @@ for row_start in range(0, 9, 3):
         with col:
             st.markdown(
                 f"""
-                <div class="tool-card {tool["accent"]}">
+                <a class="tool-card {tool["accent"]}" href="{tool["page"]}">
                   <div class="tool-head">
                     <div class="tool-code">{tool["code"]}</div>
                     <div class="tool-date">{tool["created"]}</div>
@@ -198,11 +178,10 @@ for row_start in range(0, 9, 3):
                     <span class="tool-tag">{tool["tag"]}</span>
                     <span class="tool-pulse">READY</span>
                   </div>
-                </div>
+                </a>
                 """,
                 unsafe_allow_html=True,
             )
-            st.page_link(tool["page"], label=f"进入 {tool['title']}")
 
 st.markdown(
     """

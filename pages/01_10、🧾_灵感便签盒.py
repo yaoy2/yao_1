@@ -133,6 +133,13 @@ def apply_style():
             min-height: 82px !important;
             line-height: 1.8 !important;
         }
+        div[data-testid="stForm"] div[data-testid="stHorizontalBlock"] {
+            align-items: flex-start;
+        }
+        div[data-testid="stForm"] div[data-baseweb="select"] > div,
+        div[data-testid="stForm"] input {
+            min-height: 52px !important;
+        }
         .memo-card {
             position: relative;
             width: 100%;
@@ -260,12 +267,15 @@ st.markdown(
 with st.container(border=True):
     st.subheader("快速记录")
     with st.form("web_memo_form", clear_on_submit=True):
-        entry_col, tag_col = st.columns([2.35, 1], gap="medium")
+        entry_col, tag_col = st.columns([2.05, 1.25], gap="medium")
         with entry_col:
             content = st.text_area("内容", placeholder="请输入", label_visibility="collapsed", height=88)
         with tag_col:
-            selected_tags = st.multiselect("标签", available_tags, placeholder="选择已有标签")
-            new_tags = st.text_input("新增标签", placeholder="用顿号或逗号分隔")
+            tag_pick_col, tag_new_col = st.columns(2, gap="small")
+            with tag_pick_col:
+                selected_tags = st.multiselect("标签", available_tags, placeholder="选择已有标签")
+            with tag_new_col:
+                new_tags = st.text_input("新增标签", placeholder="用顿号或逗号分隔")
         col_save, col_plain = st.columns(2)
         save_classified = col_save.form_submit_button("保存并打标签", use_container_width=True)
         save_plain = col_plain.form_submit_button("只保存", use_container_width=True)
