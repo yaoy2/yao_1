@@ -110,48 +110,39 @@ TOOLS = [
 def build_terminal_preview_html() -> str:
     preview_rows = TOOLS[:5]
     lines = "\n".join(
-        f"""
-        <div class="terminal-line">
-          <span>{tool["code"]} / {tool["created"]}</span>
-          <strong>{tool["title"]}</strong>
-        </div>
-        """
+        f'<div class="terminal-line"><span>{tool["code"]} / {tool["created"]}</span><strong>{tool["title"]}</strong></div>'
         for tool in preview_rows
     )
-    return f"""
-        <div class="hero-visual" aria-label="首页预览">
-          <div class="visual-topline">
-            <span></span><span></span><span></span>
-            <strong>COMMAND VIEW</strong>
-          </div>
-          <div class="terminal-preview">{lines}</div>
-          <div class="signal-row">
-            <div><strong>{len(TOOLS)}</strong><span>Tools Online</span></div>
-            <div><strong>3x3</strong><span>Module Grid</span></div>
-            <div><strong>MD</strong><span>Backup Ready</span></div>
-          </div>
-        </div>
-        """
+    return (
+        '<div class="hero-visual" aria-label="首页预览">'
+        '<div class="visual-topline"><span></span><span></span><span></span><strong>COMMAND VIEW</strong></div>'
+        f'<div class="terminal-preview">{lines}</div>'
+        '<div class="signal-row">'
+        f'<div><strong>{len(TOOLS)}</strong><span>Tools Online</span></div>'
+        '<div><strong>3x3</strong><span>Module Grid</span></div>'
+        '<div><strong>MD</strong><span>Backup Ready</span></div>'
+        "</div></div>"
+    )
 
 
 st.markdown(
     f"""
-    <section class="command-hero">
-      <div class="hero-grid"></div>
-      <div class="hero-copy-block">
-        <div class="hero-kicker">YAO · CAMPUS · AI OPERATIONS</div>
-        <div class="hero-title">学院行政智能中枢</div>
-        <div class="hero-copy">
-          面向学院日常事务的高效率工具矩阵：材料处理、数据核对、课表查询、预算台账、微信归档、灵感便签与视觉资产统一接入。
-          把重复劳动压缩成一次点击，把复杂流程沉淀为稳定入口。
-        </div>
-        <div class="hero-actions">
-          <a class="hero-link primary-link" href="https://yao-1.streamlit.app/" target="_blank">进入线上版</a>
-          <span class="hero-link ghost-link">Local Port 8501</span>
-        </div>
-      </div>
-      {build_terminal_preview_html()}
-    </section>
+<section class="command-hero">
+  <div class="hero-grid"></div>
+  <div class="hero-copy-block">
+    <div class="hero-kicker">YAO · CAMPUS · AI OPERATIONS</div>
+    <div class="hero-title">学院行政智能中枢</div>
+    <div class="hero-copy">
+      面向学院日常事务的高效率工具矩阵：材料处理、数据核对、课表查询、预算台账、微信归档、灵感便签与视觉资产统一接入。
+      把重复劳动压缩成一次点击，把复杂流程沉淀为稳定入口。
+    </div>
+    <div class="hero-actions">
+      <a class="hero-link primary-link" href="https://yao-1.streamlit.app/" target="_blank">进入线上版</a>
+      <span class="hero-link ghost-link">Local Port 8501</span>
+    </div>
+  </div>
+  {build_terminal_preview_html()}
+</section>
     """,
     unsafe_allow_html=True,
 )

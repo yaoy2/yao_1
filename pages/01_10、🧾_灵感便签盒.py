@@ -22,6 +22,38 @@ def color_text(hex_code):
     return "#ffffff" if lum < 140 else "#182230"
 
 
+def get_available_tags():
+    fallback_tags = [
+        "摘录",
+        "观点",
+        "待办",
+        "写作素材",
+        "工作记录",
+        "工具想法",
+        "金句",
+        "行政日常",
+        "学生工作",
+        "竞赛",
+    ]
+    if hasattr(web_memo_db, "get_all_tags"):
+        return web_memo_db.get_all_tags()
+    return fallback_tags
+
+
+def parse_manual_tags(selected_tags, new_tags):
+    if hasattr(web_memo_db, "split_tags"):
+        typed_tags = web_memo_db.split_tags(new_tags)
+    else:
+        typed_tags = [tag.strip() for tag in str(new_tags).replace(",", "、").replace("，", "、").split("、") if tag.strip()]
+    if hasattr(web_memo_db, "merge_tags"):
+        return web_memo_db.merge_tags(selected_tags, typed_tags)
+    merged = []
+    for tag in list(selected_tags or []) + typed_tags:
+        if tag and tag not in merged:
+            merged.append(tag)
+    return merged
+
+
 def apply_style():
     st.markdown(
         """
@@ -204,7 +236,7 @@ web_memo_db.init_db()
 
 records = web_memo_db.get_memos()
 categories = ["全部"] + web_memo_db.get_categories()
-available_tags = web_memo_db.get_all_tags()
+available_tags = get_available_tags()
 palettes = web_memo_db.parse_palettes()
 
 st.markdown(
@@ -240,13 +272,16 @@ with st.container(border=True):
 
     if save_classified or save_plain:
         try:
-            manual_tags = web_memo_db.merge_tags(selected_tags, web_memo_db.split_tags(new_tags))
-            web_memo_db.add_memo(
-                date.today().isoformat(),
-                content,
-                classify=save_classified,
-                manual_tags=manual_tags,
-            )
+            manual_tags = parse_manual_tags(selected_tags, new_tags)
+            try:
+                web_memo_db.add_memo(
+                    date.today().isoformat(),
+                    content,
+                    classify=save_classified,
+                    manual_tags=manual_tags,
+                )
+            except TypeError:
+                web_memo_db.add_memo(date.today().isoformat(), content, classify=save_classified)
             st.success("已保存")
             st.rerun()
         except ValueError:
