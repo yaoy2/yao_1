@@ -82,9 +82,17 @@ def apply_style():
         }
         .record-meta {
             color: #667085;
-            font-size: .82rem;
-            line-height: 1.65;
-            margin-bottom: .5rem;
+            font-size: .78rem;
+            line-height: 1.35;
+            margin: .15rem 0 .2rem;
+        }
+        .record-title {
+            margin: 0;
+            color: #182230;
+            font-size: 1.08rem;
+            line-height: 1.28;
+            font-weight: 800;
+            letter-spacing: 0;
         }
         .status-pill {
             display: inline-flex;
@@ -99,8 +107,21 @@ def apply_style():
         .status-done { color: #166534; background: #f0fdf4; }
         .status-pending { color: #92400e; background: #fffbeb; }
         .status-failed { color: #991b1b; background: #fef2f2; }
+        div[data-testid="stVerticalBlockBorderWrapper"] {
+            border-radius: 8px !important;
+        }
+        div[data-testid="stVerticalBlockBorderWrapper"] > div {
+            padding-top: .72rem !important;
+            padding-bottom: .65rem !important;
+        }
+        div[data-testid="stExpander"] details {
+            border-radius: 8px !important;
+        }
+        div[data-testid="stExpander"] summary {
+            min-height: 2.15rem !important;
+        }
         textarea {
-            line-height: 1.75 !important;
+            line-height: 1.62 !important;
         }
         @media (max-width: 980px) {
             .ding-hero {
@@ -247,14 +268,13 @@ else:
         with st.container(border=True):
             title_col, status_col = st.columns([3, 1], gap="medium")
             with title_col:
-                st.subheader(record["file_name"])
+                st.markdown(f'<h3 class="record-title">{record["file_name"]}</h3>', unsafe_allow_html=True)
                 st.markdown(
                     f"""
                     <div class="record-meta">
                     创建：{record["created_at_file"]}　
                     修改：{record["modified_at_file"]}　
-                    大小：{record["file_size"]} 字节<br/>
-                    路径：{record["file_path"]}
+                    大小：{record["file_size"]} 字节
                     </div>
                     """,
                     unsafe_allow_html=True,
@@ -278,33 +298,32 @@ else:
                         st.error("整理失败，请查看错误信息。")
                     st.rerun()
 
-            summary_tab, original_tab, remark_tab = st.tabs(["AI整理稿", "原文", "备注"])
-            with summary_tab:
+            with st.expander("AI整理稿"):
                 st.text_area(
                     "AI整理稿",
                     value=record.get("ai_summary") or "尚未生成整理稿。",
-                    height=260,
+                    height=220,
                     label_visibility="collapsed",
                     disabled=True,
                     key=f"summary_{record['id']}",
                 )
-            with original_tab:
+            with st.expander("原文"):
                 st.text_area(
                     "原文",
                     value=record.get("original_text") or "未提取到原文。",
-                    height=260,
+                    height=220,
                     label_visibility="collapsed",
                     disabled=True,
                     key=f"original_{record['id']}",
                 )
-            with remark_tab:
+            with st.expander("备注"):
                 if display_source == "local":
                     with st.form(f"remark_form_{record['id']}"):
                         remark = st.text_area(
                             "备注",
                             value=record.get("remark") or "",
                             placeholder="可写用途、处理意见、后续动作或个人标记",
-                            height=120,
+                            height=96,
                         )
                         saved = st.form_submit_button("保存备注", use_container_width=True)
                     if saved:
@@ -315,7 +334,7 @@ else:
                     st.text_area(
                         "备注",
                         value=record.get("remark") or "暂无备注。",
-                        height=120,
+                        height=96,
                         disabled=True,
                         label_visibility="collapsed",
                         key=f"cloud_remark_{record['id']}",
