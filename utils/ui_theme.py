@@ -343,39 +343,36 @@ def apply_global_theme() -> None:
             position: relative;
         }
 
-        .tool-enter-link {
+        .tool-title-link {
             position: relative;
-            display: flex;
-            justify-content: flex-end;
             height: 0;
-            margin: -112px 1rem 84px 0;
+            margin: -151px 0 151px 1rem;
             z-index: 3;
             pointer-events: none;
         }
 
-        .tool-enter-link .stButton {
+        .tool-title-link .stButton {
             width: auto;
             pointer-events: auto;
         }
 
-        .tool-enter-link .stButton > button {
-            min-height: 28px;
+        .tool-title-link .stButton > button {
+            min-height: 34px;
             padding: .12rem 0;
             border: 0;
             border-radius: 0;
             background: transparent;
-            color: var(--green) !important;
+            color: var(--ink) !important;
             box-shadow: none;
-            font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-            font-size: .76rem;
-            font-weight: 820;
+            font-size: 1.16rem;
+            font-weight: 860;
             text-decoration: none !important;
         }
 
-        .tool-enter-link .stButton > button:hover {
+        .tool-title-link .stButton > button:hover {
             border: 0;
             background: transparent;
-            color: #7cffbd !important;
+            color: var(--cyan) !important;
             box-shadow: none;
         }
 
@@ -410,7 +407,7 @@ def apply_global_theme() -> None:
             font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
         }
 
-        .tool-title {
+        .tool-title-placeholder {
             display: flex;
             align-items: center;
             gap: .42rem;
@@ -418,6 +415,11 @@ def apply_global_theme() -> None:
             color: var(--ink) !important;
             font-size: 1.16rem;
             font-weight: 860;
+            min-height: 34px;
+        }
+
+        .tool-title-ghost {
+            visibility: hidden;
         }
 
         .tool-lock {

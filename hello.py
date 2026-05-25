@@ -189,7 +189,7 @@ def build_pagination_html(current_page, total_pages):
 
 def build_tool_title_html(tool):
     lock_html = '<span class="tool-lock" title="需要密码访问" aria-label="需要密码访问">🔒</span>' if tool.get("locked") else ""
-    return f'<div class="tool-title"><span>{escape(tool["title"])}</span>{lock_html}</div>'
+    return f'<div class="tool-title-placeholder"><span class="tool-title-ghost">{escape(tool["title"])}</span>{lock_html}</div>'
 
 
 st.markdown(
@@ -322,8 +322,8 @@ for row_start in range(0, 9, 3):
                 """,
                 unsafe_allow_html=True,
             )
-            st.markdown('<div class="tool-enter-link">', unsafe_allow_html=True)
-            if st.button("进入", key=f"enter_{tool['code']}"):
+            st.markdown('<div class="tool-title-link">', unsafe_allow_html=True)
+            if st.button(tool["title"], key=f"open_{tool['code']}"):
                 st.switch_page(tool["page"])
             st.markdown("</div>", unsafe_allow_html=True)
 
