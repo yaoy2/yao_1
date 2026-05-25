@@ -222,6 +222,28 @@ def update_remark(record_id, remark):
     sync_cloud_export()
 
 
+def update_cloud_remark(record_id, remark, path=None):
+    path = CLOUD_EXPORT_PATH if path is None else path
+    payload = load_cloud_export(path)
+    target_id = int(record_id)
+    updated = False
+    for record in payload.get("records", []):
+        if int(record.get("id", -1)) == target_id:
+            record["remark"] = str(remark or "")
+            record["updated_at"] = datetime.now().isoformat(timespec="seconds")
+            updated = True
+            break
+    if not updated:
+        raise ValueError("云端同步记录不存在")
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    payload["record_count"] = len(payload.get("records", []))
+    payload["generated_at"] = datetime.now().isoformat(timespec="seconds")
+    with open(path, "w", encoding="utf-8", newline="\n") as export_file:
+        json.dump(payload, export_file, ensure_ascii=False, indent=2)
+        export_file.write("\n")
+    return path
+
+
 def mark_done(record_id, ai_summary, model):
     update_record(
         record_id,
@@ -289,7 +311,8 @@ def build_cloud_payload(records=None):
     }
 
 
-def sync_cloud_export(path=CLOUD_EXPORT_PATH):
+def sync_cloud_export(path=None):
+    path = CLOUD_EXPORT_PATH if path is None else path
     os.makedirs(os.path.dirname(path), exist_ok=True)
     payload = build_cloud_payload()
     with open(path, "w", encoding="utf-8", newline="\n") as export_file:
@@ -298,7 +321,8 @@ def sync_cloud_export(path=CLOUD_EXPORT_PATH):
     return path
 
 
-def load_cloud_export(path=CLOUD_EXPORT_PATH):
+def load_cloud_export(path=None):
+    path = CLOUD_EXPORT_PATH if path is None else path
     if not os.path.exists(path):
         return {"generated_at": "", "record_count": 0, "records": []}
     with open(path, "r", encoding="utf-8") as export_file:

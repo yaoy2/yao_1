@@ -51,7 +51,10 @@ def init_db():
     if "spender" not in cols:
         conn.execute("ALTER TABLE expense_records ADD COLUMN spender TEXT NOT NULL DEFAULT ''")
     conn.commit()
+    should_restore = _count_records(conn) == 0 and os.path.exists(BACKUP_MD_PATH)
     conn.close()
+    if should_restore:
+        restore_from_markdown_backup()
     sync_backup_files()
 
 
@@ -156,6 +159,11 @@ def replace_all_records(records):
     sync_backup_files()
 
 
+def _count_records(conn):
+    row = conn.execute("SELECT COUNT(*) AS total FROM expense_records").fetchone()
+    return int(row["total"] if isinstance(row, sqlite3.Row) else row[0])
+
+
 def _format_backup_value(value):
     if value is None:
         return ""
@@ -193,6 +201,74 @@ def build_markdown_backup(records=None):
         lines.append("| " + " | ".join(values) + " |")
     lines.append("")
     return "\n".join(lines)
+
+
+def _split_markdown_table_row(line):
+    text = line.strip()
+    if text.startswith("|"):
+        text = text[1:]
+    if text.endswith("|"):
+        text = text[:-1]
+    cells = []
+    current = []
+    escaped = False
+    for char in text:
+        if escaped:
+            current.append(char)
+            escaped = False
+        elif char == "\\":
+            escaped = True
+        elif char == "|":
+            cells.append("".join(current).strip())
+            current = []
+        else:
+            current.append(char)
+    if escaped:
+        current.append("\\")
+    cells.append("".join(current).strip())
+    return cells
+
+
+def parse_markdown_backup(text):
+    records = []
+    label_to_key = {label: key for key, label in BACKUP_COLUMNS}
+    headers = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("|") or "---" in stripped:
+            continue
+        cells = _split_markdown_table_row(stripped)
+        if not headers:
+            headers = cells
+            continue
+        row = dict(zip(headers, cells))
+        if not row.get("日期") or not row.get("类别") or not row.get("金额"):
+            continue
+        record = {}
+        for label, value in row.items():
+            key = label_to_key.get(label)
+            if key:
+                record[key] = value
+        try:
+            record["amount"] = float(record.get("amount", 0))
+        except (TypeError, ValueError):
+            continue
+        if record["amount"] <= 0:
+            continue
+        records.append(record)
+    return records
+
+
+def restore_from_markdown_backup(path=None):
+    path = BACKUP_MD_PATH if path is None else path
+    if not os.path.exists(path):
+        return 0
+    with open(path, "r", encoding="utf-8") as backup_file:
+        records = parse_markdown_backup(backup_file.read())
+    if not records:
+        return 0
+    replace_all_records(records)
+    return len(records)
 
 
 def write_markdown_backup(records=None, path=None):

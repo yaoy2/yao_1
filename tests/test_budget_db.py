@@ -60,6 +60,37 @@ class BudgetDbReplaceAllRecordsTest(unittest.TestCase):
         self.assertEqual("张三", records[0]["spender"])
         self.assertEqual("耗材", records[0]["description"])
 
+    def test_init_db_restores_records_from_markdown_backup_when_database_is_empty(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patched_budget_storage(tmpdir) as tmp_path:
+                backup_path = tmp_path / "budget_ledger_backup.md"
+                backup_path.write_text(
+                    "\n".join(
+                        [
+                            "# 预算速记台账备份",
+                            "",
+                            "- 生成时间：2026-05-26 09:00:00",
+                            "- 记录数量：1",
+                            "",
+                            "| ID | 日期 | 类别 | 使用单位 | 支出人 | 支出明细 | 金额 | 报销状态 | 创建时间 | 更新时间 |",
+                            "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+                            "| 1 | 2026-05-26 | 学生实践费 | 护理系 | 张三 | 实训耗材 | 128.50 | 未报销 | 2026-05-26 09:00:00 | 2026-05-26 09:00:00 |",
+                            "",
+                        ]
+                    ),
+                    encoding="utf-8",
+                )
+
+                budget_db.init_db()
+                records = budget_db.get_all_records()
+
+        self.assertEqual(1, len(records))
+        self.assertEqual("学生实践费", records[0]["category"])
+        self.assertEqual("护理系", records[0]["unit"])
+        self.assertEqual("张三", records[0]["spender"])
+        self.assertEqual("实训耗材", records[0]["description"])
+        self.assertEqual(128.50, records[0]["amount"])
+
     def test_init_db_adds_spender_column_to_existing_database(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             with patched_budget_storage(tmpdir):

@@ -289,6 +289,22 @@ else:
             if record.get("error_message"):
                 st.error(record["error_message"])
 
+            with st.form(f"remark_form_{display_source}_{record['id']}"):
+                remark = st.text_area(
+                    "备注 / 分类标记",
+                    value=record.get("remark") or "",
+                    placeholder="可写大概内容、分类、用途、处理意见或后续动作",
+                    height=88,
+                )
+                saved = st.form_submit_button("保存备注", use_container_width=True)
+            if saved:
+                if display_source == "local":
+                    ding_minutes.update_remark(record["id"], remark)
+                else:
+                    ding_minutes.update_cloud_remark(record["id"], remark)
+                st.success("备注已保存")
+                st.rerun()
+
             if display_source == "local" and record["status"] != "done":
                 if st.button("重新生成整理稿", key=f"retry_{record['id']}", use_container_width=True):
                     ok = ding_minutes.generate_summary_for_record(
@@ -302,8 +318,8 @@ else:
                         st.error("整理失败，请查看错误信息。")
                     st.rerun()
 
-            with st.expander("展开查看整理稿、原文和备注"):
-                summary_tab, original_tab, remark_tab = st.tabs(["AI整理稿", "原文", "备注"])
+            with st.expander("展开查看整理稿和原文"):
+                summary_tab, original_tab = st.tabs(["AI整理稿", "原文"])
                 with summary_tab:
                     st.text_area(
                         "AI整理稿",
@@ -322,26 +338,3 @@ else:
                         disabled=True,
                         key=f"original_{record['id']}",
                     )
-                with remark_tab:
-                    if display_source == "local":
-                        with st.form(f"remark_form_{record['id']}"):
-                            remark = st.text_area(
-                                "备注",
-                                value=record.get("remark") or "",
-                                placeholder="可写用途、处理意见、后续动作或个人标记",
-                                height=96,
-                            )
-                            saved = st.form_submit_button("保存备注", use_container_width=True)
-                        if saved:
-                            ding_minutes.update_remark(record["id"], remark)
-                            st.success("备注已保存")
-                            st.rerun()
-                    else:
-                        st.text_area(
-                            "备注",
-                            value=record.get("remark") or "暂无备注。",
-                            height=96,
-                            disabled=True,
-                            label_visibility="collapsed",
-                            key=f"cloud_remark_{record['id']}",
-                        )

@@ -45,7 +45,11 @@ class DingMinutesTest(unittest.TestCase):
     def test_database_inserts_lists_and_updates_remark(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = os.path.join(tmpdir, "ding_minutes.db")
-            with patch.object(ding_minutes, "DB_PATH", db_path):
+            cloud_path = os.path.join(tmpdir, "ding_minutes_cloud.json")
+            with (
+                patch.object(ding_minutes, "DB_PATH", db_path),
+                patch.object(ding_minutes, "CLOUD_EXPORT_PATH", cloud_path),
+            ):
                 ding_minutes.init_db()
                 record_id = ding_minutes.upsert_file_record(
                     {
@@ -90,8 +94,12 @@ class DingMinutesTest(unittest.TestCase):
             make_docx(matching_path, ["今天讨论了专业建设。", "后续需要整理材料。"])
             make_docx(outside_name_path, ["不应被处理"])
             db_path = os.path.join(tmpdir, "ding_minutes.db")
+            cloud_path = os.path.join(tmpdir, "ding_minutes_cloud.json")
 
-            with patch.object(ding_minutes, "DB_PATH", db_path):
+            with (
+                patch.object(ding_minutes, "DB_PATH", db_path),
+                patch.object(ding_minutes, "CLOUD_EXPORT_PATH", cloud_path),
+            ):
                 result = ding_minutes.scan_once(
                     config={"watch_dir": str(watch_dir), "model": "deepseek-v4-pro"},
                     now=datetime(2026, 5, 24, 20, 0),
@@ -117,7 +125,11 @@ class DingMinutesTest(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = os.path.join(tmpdir, "ding_minutes.db")
-            with patch.object(ding_minutes, "DB_PATH", db_path):
+            cloud_path = os.path.join(tmpdir, "ding_minutes_cloud.json")
+            with (
+                patch.object(ding_minutes, "DB_PATH", db_path),
+                patch.object(ding_minutes, "CLOUD_EXPORT_PATH", cloud_path),
+            ):
                 ding_minutes.init_db()
                 record_id = ding_minutes.upsert_file_record(
                     {
@@ -137,6 +149,33 @@ class DingMinutesTest(unittest.TestCase):
         self.assertEqual("done", record["status"])
         self.assertEqual("重新整理：需要重新整理的原文", record["ai_summary"])
 
+    def test_update_cloud_remark_edits_synced_json(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            export_path = os.path.join(tmpdir, "ding_minutes_cloud.json")
+            Path(export_path).write_text(
+                """
+{
+  "generated_at": "2026-05-25T20:00:00",
+  "record_count": 1,
+  "records": [
+    {
+      "id": 7,
+      "file_name": "export_7.docx",
+      "status": "done",
+      "remark": ""
+    }
+  ]
+}
+""".strip()
+                + "\n",
+                encoding="utf-8",
+            )
+
+            ding_minutes.update_cloud_remark(7, "分类：学生座谈", path=export_path)
+            payload = ding_minutes.load_cloud_export(export_path)
+
+        self.assertEqual("分类：学生座谈", payload["records"][0]["remark"])
+
     def test_recorder_page_uses_budget_password_gate_and_new_name(self):
         page_path = Path(__file__).resolve().parents[1] / "pages" / "00_11、🎙️_Recorder_笔记.py"
         page_source = page_path.read_text(encoding="utf-8")
@@ -145,6 +184,8 @@ class DingMinutesTest(unittest.TestCase):
         self.assertIn("from utils import budget_auth, ding_minutes", page_source)
         self.assertIn("get_budget_password(st.secrets, os.environ)", page_source)
         self.assertIn("recorder_authenticated", page_source)
+        self.assertIn("备注 / 分类标记", page_source)
+        self.assertIn("update_cloud_remark", page_source)
         self.assertNotIn("钉钉纪要登记", page_source)
 
 
