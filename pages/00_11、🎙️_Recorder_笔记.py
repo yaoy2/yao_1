@@ -7,7 +7,7 @@ import streamlit as st
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from utils import budget_auth, ding_minutes
+from utils import budget_auth, ding_minutes, github_backup_sync
 from utils.ui_theme import render_home_link
 
 
@@ -200,6 +200,22 @@ def filter_records(records, status=None, keyword=None):
     return filtered
 
 
+def sync_recorder_cloud_to_github():
+    try:
+        result = github_backup_sync.sync_file_to_github(
+            ding_minutes.CLOUD_EXPORT_PATH,
+            "data/ding_minutes_cloud.json",
+            "data: sync recorder cloud notes",
+            secrets=st.secrets,
+            environ=os.environ,
+        )
+    except Exception as exc:
+        st.warning(f"Recorder 备注已保存在当前环境，但同步到 GitHub 失败：{exc}")
+        return
+    if result.get("skipped") and result.get("reason") == "missing_token":
+        st.info("Recorder 备注已保存在当前环境；如需跨部署保留，请在 Streamlit secrets 配置 GITHUB_BACKUP_TOKEN。")
+
+
 require_recorder_auth()
 apply_style()
 render_home_link()
@@ -329,6 +345,7 @@ else:
                         ding_minutes.update_remark(record["id"], remark)
                     else:
                         ding_minutes.update_cloud_remark(record["id"], remark)
+                    sync_recorder_cloud_to_github()
                     st.success("备注已保存")
                     st.rerun()
 

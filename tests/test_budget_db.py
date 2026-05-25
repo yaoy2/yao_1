@@ -21,6 +21,15 @@ def patched_budget_storage(tmpdir):
 
 
 class BudgetDbReplaceAllRecordsTest(unittest.TestCase):
+    def test_budget_page_syncs_backup_to_github_after_writes(self):
+        page_path = Path(__file__).resolve().parents[1] / "pages" / "03_8、💰_预算速记台账.py"
+        page_source = page_path.read_text(encoding="utf-8")
+
+        self.assertIn("github_backup_sync", page_source)
+        self.assertIn("sync_budget_backup_to_github()", page_source)
+        self.assertIn("data/budget_ledger_backup.md", page_source)
+        self.assertIn("GITHUB_BACKUP_TOKEN", page_source)
+
     def test_add_record_writes_markdown_and_excel_backups(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             with patched_budget_storage(tmpdir) as tmp_path:

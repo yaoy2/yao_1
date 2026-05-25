@@ -7,7 +7,7 @@ import io
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from config.budget_config import BUDGET_YEAR, BUDGET_CATEGORIES, REIMBURSEMENT_STATUSES, UNITS, UNCAPPED_BUDGET_CATEGORIES
-from utils import budget_auth, budget_db
+from utils import budget_auth, budget_db, github_backup_sync
 from utils.ui_theme import render_home_link
 
 init_db = budget_db.init_db
@@ -21,6 +21,22 @@ get_category_unit_pivot = budget_db.get_category_unit_pivot
 replace_all_records = getattr(budget_db, "replace_all_records", None)
 
 st.set_page_config(page_title="预算速记台账", page_icon="💰", layout="wide")
+
+
+def sync_budget_backup_to_github():
+    try:
+        result = github_backup_sync.sync_file_to_github(
+            budget_db.BACKUP_MD_PATH,
+            "data/budget_ledger_backup.md",
+            "data: sync budget ledger backup",
+            secrets=st.secrets,
+            environ=os.environ,
+        )
+    except Exception as exc:
+        st.warning(f"预算备份已保存在当前环境，但同步到 GitHub 失败：{exc}")
+        return
+    if result.get("skipped") and result.get("reason") == "missing_token":
+        st.info("预算已保存在当前环境；如需跨部署保留，请在 Streamlit secrets 配置 GITHUB_BACKUP_TOKEN。")
 
 
 def require_budget_auth():
@@ -125,6 +141,7 @@ with st.form("quick_add", clear_on_submit=True):
             st.error("金额必须大于 0")
         else:
             add_record(str(record_date), category, unit, spender.strip(), description, amount, status)
+            sync_budget_backup_to_github()
             st.success(f"已保存：{category} · {unit} · {spender.strip()} · {amount} 元")
             st.rerun()
 
@@ -306,6 +323,8 @@ if records:
         except Exception as exc:
             st.error(f"保存失败：{exc}")
         else:
+            if changed_count:
+                sync_budget_backup_to_github()
             st.success(f"已保存 {changed_count} 条修改。")
             st.rerun()
 else:
@@ -439,6 +458,7 @@ with st.expander("♻️ 从 Excel 备份恢复"):
                 raise RuntimeError("当前线上环境还没有加载到恢复函数，请在 Streamlit Cloud 重新部署后再试。")
             restore_records = _records_from_excel(uploaded_backup)
             replace_all_records(restore_records)
+            sync_budget_backup_to_github()
         except Exception as exc:
             st.error(f"恢复失败：{exc}")
         else:
