@@ -116,9 +116,11 @@ def apply_style():
         }
         div[data-testid="stExpander"] details {
             border-radius: 8px !important;
+            border-color: rgba(24,34,48,.1) !important;
         }
         div[data-testid="stExpander"] summary {
-            min-height: 2.15rem !important;
+            min-height: 2.25rem !important;
+            font-weight: 700;
         }
         textarea {
             line-height: 1.62 !important;
@@ -298,44 +300,46 @@ else:
                         st.error("整理失败，请查看错误信息。")
                     st.rerun()
 
-            with st.expander("AI整理稿"):
-                st.text_area(
-                    "AI整理稿",
-                    value=record.get("ai_summary") or "尚未生成整理稿。",
-                    height=220,
-                    label_visibility="collapsed",
-                    disabled=True,
-                    key=f"summary_{record['id']}",
-                )
-            with st.expander("原文"):
-                st.text_area(
-                    "原文",
-                    value=record.get("original_text") or "未提取到原文。",
-                    height=220,
-                    label_visibility="collapsed",
-                    disabled=True,
-                    key=f"original_{record['id']}",
-                )
-            with st.expander("备注"):
-                if display_source == "local":
-                    with st.form(f"remark_form_{record['id']}"):
-                        remark = st.text_area(
-                            "备注",
-                            value=record.get("remark") or "",
-                            placeholder="可写用途、处理意见、后续动作或个人标记",
-                            height=96,
-                        )
-                        saved = st.form_submit_button("保存备注", use_container_width=True)
-                    if saved:
-                        ding_minutes.update_remark(record["id"], remark)
-                        st.success("备注已保存")
-                        st.rerun()
-                else:
+            with st.expander("展开查看整理稿、原文和备注"):
+                summary_tab, original_tab, remark_tab = st.tabs(["AI整理稿", "原文", "备注"])
+                with summary_tab:
                     st.text_area(
-                        "备注",
-                        value=record.get("remark") or "暂无备注。",
-                        height=96,
-                        disabled=True,
+                        "AI整理稿",
+                        value=record.get("ai_summary") or "尚未生成整理稿。",
+                        height=220,
                         label_visibility="collapsed",
-                        key=f"cloud_remark_{record['id']}",
+                        disabled=True,
+                        key=f"summary_{record['id']}",
                     )
+                with original_tab:
+                    st.text_area(
+                        "原文",
+                        value=record.get("original_text") or "未提取到原文。",
+                        height=220,
+                        label_visibility="collapsed",
+                        disabled=True,
+                        key=f"original_{record['id']}",
+                    )
+                with remark_tab:
+                    if display_source == "local":
+                        with st.form(f"remark_form_{record['id']}"):
+                            remark = st.text_area(
+                                "备注",
+                                value=record.get("remark") or "",
+                                placeholder="可写用途、处理意见、后续动作或个人标记",
+                                height=96,
+                            )
+                            saved = st.form_submit_button("保存备注", use_container_width=True)
+                        if saved:
+                            ding_minutes.update_remark(record["id"], remark)
+                            st.success("备注已保存")
+                            st.rerun()
+                    else:
+                        st.text_area(
+                            "备注",
+                            value=record.get("remark") or "暂无备注。",
+                            height=96,
+                            disabled=True,
+                            label_visibility="collapsed",
+                            key=f"cloud_remark_{record['id']}",
+                        )
