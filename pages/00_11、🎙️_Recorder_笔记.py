@@ -338,8 +338,9 @@ else:
                         remark = st.text_area(
                             "备注 / 分类标记",
                             value=record.get("remark") or "",
-                            placeholder="可写大概内容、分类、用途、处理意见或后续动作",
-                            height=42,
+                            placeholder="备注 / 分类标记",
+                            height=34,
+                            label_visibility="collapsed",
                         )
                     with save_col:
                         st.write("")
