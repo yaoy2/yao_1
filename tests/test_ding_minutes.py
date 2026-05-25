@@ -186,6 +186,8 @@ class DingMinutesTest(unittest.TestCase):
         self.assertIn("recorder_authenticated", page_source)
         self.assertIn("备注 / 分类标记", page_source)
         self.assertIn("info_col, remark_col = st.columns([1.55, 1]", page_source)
+        self.assertIn("remark_input_col, save_col = st.columns([4, 1]", page_source)
+        self.assertIn('st.form_submit_button("保存"', page_source)
         self.assertIn("record-title-row", page_source)
         self.assertIn("update_cloud_remark", page_source)
         self.assertIn("github_backup_sync", page_source)

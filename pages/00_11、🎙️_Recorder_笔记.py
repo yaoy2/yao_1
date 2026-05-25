@@ -119,8 +119,8 @@ def apply_style():
             border-radius: 8px !important;
         }
         div[data-testid="stVerticalBlockBorderWrapper"] > div {
-            padding-top: .58rem !important;
-            padding-bottom: .52rem !important;
+            padding-top: .48rem !important;
+            padding-bottom: .42rem !important;
         }
         div[data-testid="stExpander"] details {
             border-radius: 8px !important;
@@ -333,13 +333,17 @@ else:
 
             with remark_col:
                 with st.form(f"remark_form_{display_source}_{record['id']}"):
-                    remark = st.text_area(
-                        "备注 / 分类标记",
-                        value=record.get("remark") or "",
-                        placeholder="可写大概内容、分类、用途、处理意见或后续动作",
-                        height=68,
-                    )
-                    saved = st.form_submit_button("保存备注", use_container_width=True)
+                    remark_input_col, save_col = st.columns([4, 1], gap="small")
+                    with remark_input_col:
+                        remark = st.text_area(
+                            "备注 / 分类标记",
+                            value=record.get("remark") or "",
+                            placeholder="可写大概内容、分类、用途、处理意见或后续动作",
+                            height=42,
+                        )
+                    with save_col:
+                        st.write("")
+                        saved = st.form_submit_button("保存", use_container_width=True)
                 if saved:
                     if display_source == "local":
                         ding_minutes.update_remark(record["id"], remark)
