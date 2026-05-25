@@ -1,5 +1,15 @@
 # 更新日志 (CHANGELOG)
 
+## 2026-05-25
+- **Recorder 云端展示同步**：新增 `data/ding_minutes_cloud.json` 云端展示数据和 `scripts/sync_recorder_cloud.py` 同步脚本，本地电脑扫描整理后的记录可以同步到线上页面展示。
+- **Recorder 记录读取优化**：`Recorder_笔记` 页面优先读取本地数据库；线上或本地数据库为空时自动读取云端同步 JSON，并显示同步时间和状态统计。
+- **Recorder 卡片体验优化**：记录列表改为更紧凑的卡片样式，整理稿、原文和备注收进可展开区域，减少页面滚动压力。
+- **Recorder 备注同步**：本地保存备注、生成整理稿或每日扫描完成后，会自动刷新云端展示导出，避免线上记录滞后。
+- **首页入口修复**：首页工具卡片改用 Streamlit 原生页面跳转，修复部分环境下卡片链接不稳定的问题。
+- **返回主页入口**：各工具页新增固定的“回到主页”入口，方便从子页面快速回到工具箱首页。
+- **依赖补充**：`requirements.txt` 新增 `pypdf`，补齐万能合并机 PDF 处理依赖。
+- **Recorder 数据同步**：同步更新了 L 电脑产生的 Recorder 记录，便于云端查看今天整理过的内容。
+
 ## 2026-05-24
 - **新增模块：Recorder_笔记**：新增上锁板块 `🎙️ Recorder_笔记`，用于登记钉钉导出的 Word 转写文件，保留原文并生成 AI 整理稿。
 - **Recorder 自动扫描**：新增 `scripts/scan_ding_minutes.py` 和 `config/ding_minutes.ini`，支持每天 19:00 扫描前一天 19:00 到当天 19:00 新建的 `export_*.docx`、`dt*.docx`。
