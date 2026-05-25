@@ -3,9 +3,11 @@ import pandas as pd
 from docx import Document
 from pypdf import PdfReader
 from io import BytesIO
+from utils.ui_theme import render_home_link
 
 # --- 页面配置 ---
 st.set_page_config(page_title="万能合并机", page_icon="🧰", layout="wide")
+render_home_link()
 
 st.title("🧰 万能文档/表格合并机 (V2.0 破甲版)")
 st.markdown("""

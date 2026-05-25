@@ -8,6 +8,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from config.budget_config import BUDGET_YEAR, BUDGET_CATEGORIES, REIMBURSEMENT_STATUSES, UNITS, UNCAPPED_BUDGET_CATEGORIES
 from utils import budget_auth, budget_db
+from utils.ui_theme import render_home_link
 
 init_db = budget_db.init_db
 add_record = budget_db.add_record
@@ -49,6 +50,7 @@ def require_budget_auth():
 
 
 require_budget_auth()
+render_home_link()
 init_db()
 
 st.title(f"💰 {BUDGET_YEAR}年度预算速记台账")

@@ -1,6 +1,12 @@
 import streamlit as st
 
 
+def render_home_link() -> None:
+    left, right = st.columns([1, 0.16], gap="small")
+    with right:
+        st.page_link("hello.py", label="回到主页", icon="🏠")
+
+
 def apply_global_theme() -> None:
     st.markdown(
         """

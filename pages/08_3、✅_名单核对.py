@@ -1,8 +1,10 @@
 import streamlit as st
 import pandas as pd
+from utils.ui_theme import render_home_link
 
 # 🎨 1. 设置网页标题和布局
 st.set_page_config(page_title="行政核对神器", page_icon="📝")
+render_home_link()
 st.title("📝 学院行政核对神器")
 st.markdown("### 专治各种漏交、重交、名单不一致")
 

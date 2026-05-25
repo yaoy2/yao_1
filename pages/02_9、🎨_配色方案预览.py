@@ -3,8 +3,10 @@ import streamlit.components.v1 as components
 import re
 import os
 from html import escape
+from utils.ui_theme import render_home_link
 
 st.set_page_config(page_title="配色方案预览", page_icon="🎨", layout="wide")
+render_home_link()
 
 PALETTES_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "color_palettes.md")
 

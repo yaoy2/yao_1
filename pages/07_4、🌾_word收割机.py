@@ -3,9 +3,11 @@ import pandas as pd
 from docx import Document
 from io import BytesIO
 import re  # 正则支持
+from utils.ui_theme import render_home_link
 
 # --- 页面配置 ---
 st.set_page_config(page_title="Word收割机", page_icon="🌾", layout="wide")
+render_home_link()
 
 st.title("🌾 Word收割机 (全学历覆盖版)")
 st.markdown("""

@@ -14,6 +14,7 @@ from io import BytesIO
 import time
 from datetime import datetime
 import warnings
+from utils.ui_theme import render_home_link
 warnings.filterwarnings('ignore')
 
 # 检查并导入可选依赖
@@ -493,6 +494,7 @@ def main():
         page_icon="🎓",
         initial_sidebar_state="collapsed"
     )
+    render_home_link()
     
     # 应用自定义样式
     apply_custom_styling()

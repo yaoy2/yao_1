@@ -6,9 +6,11 @@ from collections import defaultdict
 
 import pandas as pd
 import streamlit as st
+from utils.ui_theme import render_home_link
 
 
 st.set_page_config(page_title="课表查询", page_icon="📚", layout="wide")
+render_home_link()
 
 # ── 路径配置（相对于项目根目录）───────────────────────────
 PROJECT_ROOT = Path(__file__).resolve().parent.parent

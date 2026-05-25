@@ -1,9 +1,11 @@
 import streamlit as st
 import pandas as pd
 import io
+from utils.ui_theme import render_home_link
 
 # 页面配置
 st.set_page_config(page_title="材料核查神器v3.0", page_icon="🧾")
+render_home_link()
 st.title("🧾 材料收集核查小工具 v3.0")
 st.markdown("### ✅ 专治：表头乱跑、列名乱写、文件名乱起")
 

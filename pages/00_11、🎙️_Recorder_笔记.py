@@ -8,6 +8,7 @@ import streamlit as st
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from utils import budget_auth, ding_minutes
+from utils.ui_theme import render_home_link
 
 
 st.set_page_config(page_title="Recorder_笔记", page_icon="🎙️", layout="wide")
@@ -194,6 +195,7 @@ def filter_records(records, status=None, keyword=None):
 
 require_recorder_auth()
 apply_style()
+render_home_link()
 ding_minutes.init_db()
 config = ding_minutes.load_config()
 runtime_config = config | {"api_key": ding_minutes.get_deepseek_api_key(st.secrets, os.environ)}

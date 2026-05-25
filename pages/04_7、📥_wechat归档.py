@@ -1,4 +1,5 @@
 import streamlit as st
+from utils.ui_theme import render_home_link
 
 # --- 页面配置 ---
 st.set_page_config(
@@ -55,6 +56,7 @@ def apply_custom_styling():
     """, unsafe_allow_html=True)
 
 apply_custom_styling()
+render_home_link()
 
 # --- 页面标题 ---
 st.markdown('<p class="main-title">📥 微信公众号文章归档工具</p>', unsafe_allow_html=True)
