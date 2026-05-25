@@ -185,7 +185,12 @@ class DingMinutesTest(unittest.TestCase):
         self.assertIn("get_budget_password(st.secrets, os.environ)", page_source)
         self.assertIn("recorder_authenticated", page_source)
         self.assertIn("备注 / 分类标记", page_source)
+        self.assertIn("info_col, remark_col = st.columns([1.55, 1]", page_source)
+        self.assertIn("record-title-row", page_source)
         self.assertIn("update_cloud_remark", page_source)
+        self.assertIn('with st.expander("展开查看整理稿和原文")', page_source)
+        self.assertNotIn("title_col, status_col", page_source)
+        self.assertNotIn('st.columns([3, 1]', page_source)
         self.assertNotIn("钉钉纪要登记", page_source)
 
 

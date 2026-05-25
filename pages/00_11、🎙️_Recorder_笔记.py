@@ -87,6 +87,13 @@ def apply_style():
             line-height: 1.35;
             margin: .15rem 0 .2rem;
         }
+        .record-title-row {
+            display: flex;
+            align-items: center;
+            gap: .55rem;
+            flex-wrap: wrap;
+            margin-bottom: .2rem;
+        }
         .record-title {
             margin: 0;
             color: #182230;
@@ -112,19 +119,19 @@ def apply_style():
             border-radius: 8px !important;
         }
         div[data-testid="stVerticalBlockBorderWrapper"] > div {
-            padding-top: .72rem !important;
-            padding-bottom: .65rem !important;
+            padding-top: .58rem !important;
+            padding-bottom: .52rem !important;
         }
         div[data-testid="stExpander"] details {
             border-radius: 8px !important;
             border-color: rgba(24,34,48,.1) !important;
         }
         div[data-testid="stExpander"] summary {
-            min-height: 2.25rem !important;
+            min-height: 2rem !important;
             font-weight: 700;
         }
         textarea {
-            line-height: 1.62 !important;
+            line-height: 1.45 !important;
         }
         @media (max-width: 980px) {
             .ding-hero {
@@ -270,9 +277,17 @@ else:
         st.caption(f"云端同步时间：{cloud_payload['generated_at']}")
     for record in records:
         with st.container(border=True):
-            title_col, status_col = st.columns([3, 1], gap="medium")
-            with title_col:
-                st.markdown(f'<h3 class="record-title">{record["file_name"]}</h3>', unsafe_allow_html=True)
+            info_col, remark_col = st.columns([1.55, 1], gap="medium")
+            with info_col:
+                st.markdown(
+                    f"""
+                    <div class="record-title-row">
+                      <h3 class="record-title">{record["file_name"]}</h3>
+                      {status_html(record["status"])}
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
                 st.markdown(
                     f"""
                     <div class="record-meta">
@@ -283,39 +298,38 @@ else:
                     """,
                     unsafe_allow_html=True,
                 )
-            with status_col:
-                st.markdown(status_html(record["status"]), unsafe_allow_html=True)
 
-            if record.get("error_message"):
-                st.error(record["error_message"])
+                if record.get("error_message"):
+                    st.error(record["error_message"])
 
-            with st.form(f"remark_form_{display_source}_{record['id']}"):
-                remark = st.text_area(
-                    "备注 / 分类标记",
-                    value=record.get("remark") or "",
-                    placeholder="可写大概内容、分类、用途、处理意见或后续动作",
-                    height=88,
-                )
-                saved = st.form_submit_button("保存备注", use_container_width=True)
-            if saved:
-                if display_source == "local":
-                    ding_minutes.update_remark(record["id"], remark)
-                else:
-                    ding_minutes.update_cloud_remark(record["id"], remark)
-                st.success("备注已保存")
-                st.rerun()
+                if display_source == "local" and record["status"] != "done":
+                    if st.button("重新生成整理稿", key=f"retry_{record['id']}", use_container_width=True):
+                        ok = ding_minutes.generate_summary_for_record(
+                            record["id"],
+                            model=config.get("model", "deepseek-v4-pro"),
+                            config=runtime_config,
+                        )
+                        if ok:
+                            st.success("整理稿已生成")
+                        else:
+                            st.error("整理失败，请查看错误信息。")
+                        st.rerun()
 
-            if display_source == "local" and record["status"] != "done":
-                if st.button("重新生成整理稿", key=f"retry_{record['id']}", use_container_width=True):
-                    ok = ding_minutes.generate_summary_for_record(
-                        record["id"],
-                        model=config.get("model", "deepseek-v4-pro"),
-                        config=runtime_config,
+            with remark_col:
+                with st.form(f"remark_form_{display_source}_{record['id']}"):
+                    remark = st.text_area(
+                        "备注 / 分类标记",
+                        value=record.get("remark") or "",
+                        placeholder="可写大概内容、分类、用途、处理意见或后续动作",
+                        height=68,
                     )
-                    if ok:
-                        st.success("整理稿已生成")
+                    saved = st.form_submit_button("保存备注", use_container_width=True)
+                if saved:
+                    if display_source == "local":
+                        ding_minutes.update_remark(record["id"], remark)
                     else:
-                        st.error("整理失败，请查看错误信息。")
+                        ding_minutes.update_cloud_remark(record["id"], remark)
+                    st.success("备注已保存")
                     st.rerun()
 
             with st.expander("展开查看整理稿和原文"):
