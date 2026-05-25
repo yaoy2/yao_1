@@ -343,39 +343,6 @@ def apply_global_theme() -> None:
             position: relative;
         }
 
-        .tool-title-link {
-            position: relative;
-            height: 0;
-            margin: -151px 0 151px 1rem;
-            z-index: 3;
-            pointer-events: none;
-        }
-
-        .tool-title-link .stButton {
-            width: auto;
-            pointer-events: auto;
-        }
-
-        .tool-title-link .stButton > button {
-            min-height: 34px;
-            padding: .12rem 0;
-            border: 0;
-            border-radius: 0;
-            background: transparent;
-            color: var(--ink) !important;
-            box-shadow: none;
-            font-size: 1.16rem;
-            font-weight: 860;
-            text-decoration: none !important;
-        }
-
-        .tool-title-link .stButton > button:hover {
-            border: 0;
-            background: transparent;
-            color: var(--cyan) !important;
-            box-shadow: none;
-        }
-
         .tool-card::before {
             content: "";
             position: absolute;
@@ -407,19 +374,19 @@ def apply_global_theme() -> None:
             font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
         }
 
-        .tool-title-placeholder {
-            display: flex;
+        .tool-title {
+            display: inline-flex;
             align-items: center;
-            gap: .42rem;
             margin-top: .72rem;
             color: var(--ink) !important;
             font-size: 1.16rem;
             font-weight: 860;
             min-height: 34px;
+            text-decoration: none !important;
         }
 
-        .tool-title-ghost {
-            visibility: hidden;
+        .tool-title:hover {
+            color: var(--cyan) !important;
         }
 
         .tool-lock {
@@ -437,6 +404,11 @@ def apply_global_theme() -> None:
             font-size: .78rem;
             line-height: 1;
             font-weight: 860;
+        }
+
+        .tool-lock-spacer {
+            width: 1.28rem;
+            height: 1.28rem;
         }
 
         .tool-meta {

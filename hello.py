@@ -1,5 +1,8 @@
 import math
+import re
 from html import escape
+from pathlib import Path
+from urllib.parse import quote
 
 import streamlit as st
 
@@ -147,6 +150,15 @@ def build_page_href(page_number):
     return f"?module_page={page_number}"
 
 
+def build_streamlit_page_href(page_path):
+    page_name = Path(page_path).name
+    match = re.match(r"([0-9]*)[_ -]*(.*)\.py$", page_name)
+    if not match:
+        return "#"
+    url_path = re.sub(r"[_ ]+", "_", match.group(2)).strip() or match.group(1)
+    return f"/{quote(url_path)}"
+
+
 def build_pagination_html(current_page, total_pages):
     if total_pages <= 1:
         return ""
@@ -188,8 +200,15 @@ def build_pagination_html(current_page, total_pages):
 
 
 def build_tool_title_html(tool):
-    lock_html = '<span class="tool-lock" title="需要密码访问" aria-label="需要密码访问">🔒</span>' if tool.get("locked") else ""
-    return f'<div class="tool-title-placeholder"><span class="tool-title-ghost">{escape(tool["title"])}</span>{lock_html}</div>'
+    href = escape(build_streamlit_page_href(tool["page"]), quote=True)
+    title = escape(tool["title"])
+    return f'<a class="tool-title" href="{href}" target="_self">{title}</a>'
+
+
+def build_tool_lock_html(tool):
+    if not tool.get("locked"):
+        return '<span class="tool-lock-spacer" aria-hidden="true"></span>'
+    return '<span class="tool-lock" title="需要密码访问" aria-label="需要密码访问">🔒</span>'
 
 
 st.markdown(
@@ -316,16 +335,13 @@ for row_start in range(0, 9, 3):
                     <div class="tool-meta">{tool["desc"]}</div>
                     <div class="tool-footer">
                       <span class="tool-tag">{tool["tag"]}</span>
+                      {build_tool_lock_html(tool)}
                     </div>
                   </div>
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
-            st.markdown('<div class="tool-title-link">', unsafe_allow_html=True)
-            if st.button(tool["title"], key=f"open_{tool['code']}"):
-                st.switch_page(tool["page"])
-            st.markdown("</div>", unsafe_allow_html=True)
 
 if total_pages > 1:
     st.markdown(
