@@ -213,7 +213,7 @@ def build_tool_status_icon_html(tool):
     if tool.get("locked"):
         return '<span class="tool-lock" title="需要密码访问" aria-label="需要密码访问">🔒</span>'
     if tool.get("blocked"):
-        return '<span class="tool-blocked" title="暂不开放" aria-label="暂不开放">×</span>'
+        return '<span class="tool-blocked" title="暂不开放" aria-label="暂不开放">❌</span>'
     return '<span class="tool-lock-spacer" aria-hidden="true"></span>'
 
 

@@ -413,11 +413,9 @@ def apply_global_theme() -> None:
             width: 1.28rem;
             height: 1.28rem;
             padding: 0;
-            border: 1px solid rgba(255, 107, 107, .58);
-            border-radius: 999px;
-            color: #FFB4B4;
-            background: rgba(255, 107, 107, .12);
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08);
+            border: 0;
+            background: transparent;
+            box-shadow: none;
             font-size: .9rem;
             line-height: 1;
             font-weight: 920;
