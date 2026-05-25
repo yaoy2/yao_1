@@ -347,31 +347,36 @@ def apply_global_theme() -> None:
             position: relative;
             display: flex;
             justify-content: flex-end;
-            margin: -46px 1rem 18px 0;
+            height: 0;
+            margin: -112px 1rem 84px 0;
             z-index: 3;
             pointer-events: none;
         }
 
-        .tool-enter-link [data-testid="stPageLink"] {
+        .tool-enter-link .stButton {
             width: auto;
             pointer-events: auto;
         }
 
-        .tool-enter-link [data-testid="stPageLink"] a {
+        .tool-enter-link .stButton > button {
             min-height: 28px;
-            padding: .2rem .62rem;
-            border: 1px solid rgba(84, 240, 163, .34);
-            border-radius: 999px;
-            background: rgba(84, 240, 163, .08);
+            padding: .12rem 0;
+            border: 0;
+            border-radius: 0;
+            background: transparent;
             color: var(--green) !important;
+            box-shadow: none;
+            font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
             font-size: .76rem;
             font-weight: 820;
             text-decoration: none !important;
         }
 
-        .tool-enter-link [data-testid="stPageLink"] a:hover {
-            border-color: rgba(84, 240, 163, .62);
-            background: rgba(84, 240, 163, .14);
+        .tool-enter-link .stButton > button:hover {
+            border: 0;
+            background: transparent;
+            color: #7cffbd !important;
+            box-shadow: none;
         }
 
         .tool-card::before {

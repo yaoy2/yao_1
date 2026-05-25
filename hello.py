@@ -323,7 +323,8 @@ for row_start in range(0, 9, 3):
                 unsafe_allow_html=True,
             )
             st.markdown('<div class="tool-enter-link">', unsafe_allow_html=True)
-            st.page_link(tool["page"], label="进入")
+            if st.button("进入", key=f"enter_{tool['code']}"):
+                st.switch_page(tool["page"])
             st.markdown("</div>", unsafe_allow_html=True)
 
 if total_pages > 1:
