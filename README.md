@@ -18,44 +18,36 @@
 
 ## 十一个核心模块
 
-### 1. 🎙️ Recorder_笔记 (Recorder Notes)
-- **场景**：钉钉录音转写、座谈记录、会议讨论、培训讲座等碎片化口语材料整理。
-- **功能**：
-    - **每日扫描**：配合 Windows 任务计划，每天 19:00 扫描 `Ding2026` 文件夹中前一天 19:00 到当天 19:00 新建的 `export_*.docx` 和 `dt*.docx`。
-    - **原文保留**：自动提取 Word 原文，保存文件名、路径、创建时间、修改时间和处理状态。
-    - **AI整理**：调用 DeepSeek 将口语化转写整理为可归档、可复盘、可继续写材料的整理稿，不套固定纪要模板。
-    - **备注标记**：支持手动填写备注，用于记录用途、处理意见和后续动作。
-    - **访问上锁**：复用预算速记台账同一套密码，读取 `budget_password` / `[budget].password` 或本机 `BUDGET_PASSWORD`。
-    - **迁移说明**：L 电脑运行配置见 `docs/ding_minutes_L_setup.md`。
+模块编号与页面侧边栏保持一致：越晚上线的工具编号越大，侧边栏按 11 → 1 倒序展示。
 
-### 2. 📝 报告评分系统 (Grading System)
+### 1. 📝 报告评分系统 (Grading System)
 - **场景**：期末大作业、实验报告批量打分。
 - **功能**：自动提取 Word/PDF 文字及图片数量，配合 AI 实现人机协同评分与成绩合成。
 
-### 3. 🔍 文件比对神器 (File Comparator)
+### 2. 🔍 文件比对神器 (File Comparator)
 - **场景**：核对学生提交的文件名是否符合规范，查找谁没交作业。
 - **功能**：通过花名册与文件夹实时比对，一键找出漏交、错交和命名异常，支持动态表头识别。
 
-### 4. ✅ 名单核对小工具 (Roster Checker)
+### 3. ✅ 名单核对小工具 (Roster Checker)
 - **场景**：行政汇总表与标准花名册的精准对齐。
 - **功能**：支持自定义 Excel 数据范围（如 C2:C52），快速找出两份名单中的重合与差异项。
 
-### 5. 🌾 Word 收割机 (Word Reaper)
+### 4. 🌾 Word 收割机 (Word Reaper)
 - **场景**：毕业生登记表、政审表等复杂表格数据提取。
 - **功能**：工业级批量处理，自动拆分本科/硕博数据，智能识别合并单元格，一键转为 Excel 汇总表。
 
-### 6. 🧰 万能合并机 (Universal Merger)
+### 5. 🧰 万能合并机 (Universal Merger)
 - **场景**：多文档文字汇总或多表格归档。
 - **功能**：
     - **文档类**：将几十个 Word/PDF 文字合并为 1 个 Word（含”破甲”逻辑，解除 PDF 复制限制）。
     - **表格类**：将多个 Excel 文件合并为 1 个文件中的多个 Sheet。
 
-### 7. 📚 课表查询系统 (Schedule Browser)
+### 6. 📚 课表查询系统 (Schedule Browser)
 - **场景**：学院内部课表快速检索。
 - **功能**：基于 JSON 缓存的课表数据，支持按教师姓名、系部、星期等多维度查询，自动解析复杂的周次与节次信息。
 - **数据更新**：将新 Excel 放入 `data/` 目录后刷新页面，自动重新解析并更新缓存。
 
-### 8. 📥 微信归档工具 (WeChat Archiver)
+### 7. 📥 微信归档工具 (WeChat Archiver)
 - **场景**：优质公众号教学案例、竞赛信息本地永久保存。
 - **功能**：
     - **四路线归档**：支持 `归档raw`、`归档学院`、`归档课题`、`归档竞赛` 四类入口。
@@ -65,7 +57,7 @@
     - **固定端口**：本地归档窗口固定使用 `http://localhost:8502`，避免和主工具箱 `8501` 混用。
     - *注：该模块为本地脚本，线上版仅作功能展示。*
 
-### 9. 💰 预算速记台账 (Budget Tracker)
+### 8. 💰 预算速记台账 (Budget Tracker)
 - **场景**：学院年度预算支出的快速记录与动态监控。
 - **功能**：
     - **快速录入**：选类别、选单位、填写支出人、写明细、填金额，一键保存。
@@ -76,12 +68,12 @@
     - **硬备份**：保存、修改、恢复后自动同步 `data/budget_ledger_backup.md` 和 `data/budget_ledger_backup.xlsx`。
     - **特殊类别**：支持 `年终奖留存`，按实际发生支出累计，不参与固定预算余额计算。
 
-### 10. 🎨 配色方案预览 (Color Palette Preview)
+### 9. 🎨 配色方案预览 (Color Palette Preview)
 - **场景**：PPT、海报、品牌视觉的配色参考。
 - **功能**：从本地 Markdown 数据文件读取配色方案，以“氛围展示 + 色彩角色 + PPT 应用预览”的方式呈现，直观展示主色、辅助色、背景色、色号、颜色名和推荐用途。支持多方案切换浏览。
 - **数据**：内置多组商务风配色方案，可通过编辑 `data/color_palettes.md` 自由扩展。
 
-### 11. 🧾 灵感便签盒 (Web Memo)
+### 10. 🧾 灵感便签盒 (Web Memo)
 - **场景**：临时灵感、摘录、待办、写作素材、工具想法的快速收集。
 - **功能**：
     - **快速记录**：输入内容后自动关联当天日期。
@@ -90,6 +82,16 @@
     - **瀑布式列表**：备忘卡片按三列展示，最新记录在前。
     - **硬备份**：保存后自动同步 `data/web_memos_backup.md`，数据库为空时会尝试从 Markdown 备份恢复。
     - **导出**：支持 Markdown 和 PDF 导出。
+
+### 11. 🎙️ Recorder_笔记 (Recorder Notes)
+- **场景**：钉钉录音转写、座谈记录、会议讨论、培训讲座等碎片化口语材料整理。
+- **功能**：
+    - **每日扫描**：配合 Windows 任务计划，每天 19:00 扫描 `Ding2026` 文件夹中前一天 19:00 到当天 19:00 新建的 `export_*.docx` 和 `dt*.docx`。
+    - **原文保留**：自动提取 Word 原文，保存文件名、路径、创建时间、修改时间和处理状态。
+    - **AI 整理**：调用 DeepSeek 将口语化转写整理为可归档、可复盘、可继续写材料的整理稿，不套固定纪要模板。
+    - **备注标记**：支持手动填写备注，用于记录用途、处理意见和后续动作。
+    - **访问上锁**：复用预算速记台账同一套密码，读取 `budget_password` / `[budget].password` 或本机 `BUDGET_PASSWORD`。
+    - **迁移说明**：L 电脑运行配置见 `docs/ding_minutes_L_setup.md`。
 
 ---
 
@@ -120,24 +122,76 @@
    ```
 
 ### Recorder_笔记本地配置
-`Recorder_笔记` 需要在本机运行，并依赖本机环境变量：
+`Recorder_笔记` 是第 11 个板块，适合放在固定电脑上本地运行。继续配置时按下面顺序处理：
 
-- `DEEPSEEK_API_KEY`：用于调用 DeepSeek 生成整理稿，不能写入代码、配置文件或 GitHub。
-- `BUDGET_PASSWORD`：访问上锁板块的密码，与预算速记台账共用。
+线上 Streamlit App 不读取本机 PowerShell 环境变量；线上使用时，需要在 Streamlit Cloud 的 Secrets 中配置 `DEEPSEEK_API_KEY`。
 
-扫描路径在 `config/ding_minutes.ini` 中配置，默认示例为：
+1. **确认项目位置**
+   ```text
+   E:\github\yao_1
+   ```
 
-```ini
-watch_dir = E:\GoogleDrive\Ding2026
-daily_run_time = 19:00
-model = deepseek-v4-pro
-```
+2. **安装依赖**
+   ```powershell
+   python -m pip install -r requirements.txt
+   ```
 
-L 电脑迁移和任务计划设置见 [docs/ding_minutes_L_setup.md](docs/ding_minutes_L_setup.md)。当前建议正式本地路径为：
+3. **配置本机环境变量**
 
-```text
-E:\github\yao_1
-```
+   - `DEEPSEEK_API_KEY`：用于调用 DeepSeek 生成整理稿，不能写入代码、配置文件或 GitHub。
+   - `BUDGET_PASSWORD`：仅本机没有 Streamlit secrets 时才需要配置，值应与预算速记台账密码相同；线上 Streamlit App 会直接复用 secrets 中的统一密码。
+
+   示例命令：
+   ```powershell
+   [Environment]::SetEnvironmentVariable("DEEPSEEK_API_KEY", "你的真实key", "User")
+   # 仅本机运行且没有 Streamlit secrets 时才需要：
+   [Environment]::SetEnvironmentVariable("BUDGET_PASSWORD", "你的预算台账密码", "User")
+   ```
+
+   设置后重新打开 PowerShell 或重启电脑，让环境变量生效。
+
+   线上 Streamlit Cloud 的 Secrets 示例：
+   ```toml
+   DEEPSEEK_API_KEY = "你的真实key"
+   ```
+
+4. **确认扫描路径**
+
+   扫描路径在 `config/ding_minutes.ini` 中配置。默认示例为：
+
+   ```ini
+   watch_dir = E:\GoogleDrive\Ding2026
+   daily_run_time = 19:00
+   model = deepseek-v4-pro
+   ```
+
+   如果钉钉转写导出的 Word 文件不在这个目录，只改 `watch_dir`，不要把 API key 写进 ini 文件。
+
+5. **手动试运行一次**
+   ```powershell
+   python scripts\scan_ding_minutes.py
+   ```
+
+   如果提示文件夹不存在，检查 `watch_dir`。如果提示缺少 `DEEPSEEK_API_KEY`，重新打开 PowerShell 后再试。
+
+6. **设置每天 19:00 自动扫描**
+
+   Windows 任务计划程序里新建基本任务：
+
+   - 名称：`Ding Minutes Scan`
+   - 触发器：每天 19:00
+   - 操作：启动程序
+   - 程序或脚本：`python`
+   - 添加参数：
+     ```text
+     scripts\scan_ding_minutes.py
+     ```
+   - 起始于：
+     ```text
+     E:\github\yao_1
+     ```
+
+L 电脑迁移和更详细的任务计划设置见 [docs/ding_minutes_L_setup.md](docs/ding_minutes_L_setup.md)。
 
 ---
 

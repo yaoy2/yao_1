@@ -1,5 +1,6 @@
 import os
 import sys
+from pathlib import Path
 
 import streamlit as st
 
@@ -151,11 +152,35 @@ def require_recorder_auth():
     st.stop()
 
 
+def filter_records(records, status=None, keyword=None):
+    filtered = list(records)
+    if status and status != "全部":
+        filtered = [record for record in filtered if record.get("status") == status]
+    if keyword:
+        keyword = keyword.strip()
+        filtered = [
+            record
+            for record in filtered
+            if any(
+                keyword in str(record.get(field, ""))
+                for field in ("file_name", "original_text", "ai_summary", "remark")
+            )
+        ]
+    return filtered
+
+
 require_recorder_auth()
 apply_style()
 ding_minutes.init_db()
 config = ding_minutes.load_config()
-counts = ding_minutes.get_status_counts()
+runtime_config = config | {"api_key": ding_minutes.get_deepseek_api_key(st.secrets, os.environ)}
+local_scan_available = Path(config.get("watch_dir", "")).exists()
+local_records = ding_minutes.get_records(limit=1000)
+cloud_payload = ding_minutes.load_cloud_export()
+cloud_records = cloud_payload.get("records", [])
+display_records = local_records or cloud_records
+display_source = "local" if local_records else "cloud"
+counts = ding_minutes.get_cloud_status_counts(display_records)
 records_total = sum(counts.values())
 
 st.markdown(
@@ -184,12 +209,14 @@ with st.container(border=True):
     with col_path:
         st.caption("当前扫描目录")
         st.code(config.get("watch_dir", ""), language="text")
-        if not os.environ.get("DEEPSEEK_API_KEY"):
-            st.warning("本机尚未配置 DEEPSEEK_API_KEY。可以登记原文，但不会生成 AI 整理稿。")
+        if not local_scan_available:
+            st.info("当前为云端展示模式：线上页面只读取已同步记录，本地电脑负责扫描和 AI 整理。")
+        elif not runtime_config.get("api_key"):
+            st.warning("尚未配置 DEEPSEEK_API_KEY。可以登记原文，但不会生成 AI 整理稿。")
     with col_action:
         st.caption("手动补扫")
-        if st.button("扫描当前时间窗", use_container_width=True):
-            result = ding_minutes.scan_once(config=config)
+        if st.button("扫描当前时间窗", use_container_width=True, disabled=not local_scan_available):
+            result = ding_minutes.scan_once(config=runtime_config)
             if result.get("error"):
                 st.error(result["error"])
             else:
@@ -206,11 +233,16 @@ with st.container(border=True):
     with keyword_col:
         keyword = st.text_input("搜索", placeholder="搜索文件名、原文、整理稿或备注")
 
-records = ding_minutes.get_records(status=selected_status, keyword=keyword.strip() or None)
+records = filter_records(display_records, selected_status, keyword.strip() or None)
 
 if not records:
-    st.info("暂无记录。等定时任务运行后，或点击上方按钮手动扫描。")
+    if display_source == "cloud":
+        st.info("暂无同步记录。等本地 19:00 任务运行并推送后，云端会显示整理结果。")
+    else:
+        st.info("暂无记录。等定时任务运行后，或点击上方按钮手动扫描。")
 else:
+    if display_source == "cloud" and cloud_payload.get("generated_at"):
+        st.caption(f"云端同步时间：{cloud_payload['generated_at']}")
     for record in records:
         with st.container(border=True):
             title_col, status_col = st.columns([3, 1], gap="medium")
@@ -233,12 +265,12 @@ else:
             if record.get("error_message"):
                 st.error(record["error_message"])
 
-            if record["status"] != "done":
+            if display_source == "local" and record["status"] != "done":
                 if st.button("重新生成整理稿", key=f"retry_{record['id']}", use_container_width=True):
                     ok = ding_minutes.generate_summary_for_record(
                         record["id"],
                         model=config.get("model", "deepseek-v4-pro"),
-                        config=config,
+                        config=runtime_config,
                     )
                     if ok:
                         st.success("整理稿已生成")
@@ -266,15 +298,25 @@ else:
                     key=f"original_{record['id']}",
                 )
             with remark_tab:
-                with st.form(f"remark_form_{record['id']}"):
-                    remark = st.text_area(
+                if display_source == "local":
+                    with st.form(f"remark_form_{record['id']}"):
+                        remark = st.text_area(
+                            "备注",
+                            value=record.get("remark") or "",
+                            placeholder="可写用途、处理意见、后续动作或个人标记",
+                            height=120,
+                        )
+                        saved = st.form_submit_button("保存备注", use_container_width=True)
+                    if saved:
+                        ding_minutes.update_remark(record["id"], remark)
+                        st.success("备注已保存")
+                        st.rerun()
+                else:
+                    st.text_area(
                         "备注",
-                        value=record.get("remark") or "",
-                        placeholder="可写用途、处理意见、后续动作或个人标记",
+                        value=record.get("remark") or "暂无备注。",
                         height=120,
+                        disabled=True,
+                        label_visibility="collapsed",
+                        key=f"cloud_remark_{record['id']}",
                     )
-                    saved = st.form_submit_button("保存备注", use_container_width=True)
-                if saved:
-                    ding_minutes.update_remark(record["id"], remark)
-                    st.success("备注已保存")
-                    st.rerun()

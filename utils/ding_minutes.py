@@ -15,6 +15,7 @@ from docx import Document
 ROOT_DIR = os.path.dirname(os.path.dirname(__file__))
 CONFIG_PATH = os.path.join(ROOT_DIR, "config", "ding_minutes.ini")
 DB_PATH = os.path.join(ROOT_DIR, "data", "ding_minutes.db")
+CLOUD_EXPORT_PATH = os.path.join(ROOT_DIR, "data", "ding_minutes_cloud.json")
 
 DEFAULT_CONFIG = {
     "watch_dir": r"E:\GoogleDrive\Ding2026",
@@ -23,6 +24,45 @@ DEFAULT_CONFIG = {
     "api_base": "https://api.deepseek.com",
     "timeout_seconds": "120",
 }
+
+
+def _clean_secret(value):
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def _read_mapping_value(mapping, key, *, clean=True):
+    if mapping is None:
+        return None
+    try:
+        value = mapping.get(key)
+    except Exception:
+        try:
+            value = mapping[key]
+        except Exception:
+            return None
+    if clean:
+        return _clean_secret(value)
+    return value
+
+
+def get_deepseek_api_key(secrets=None, environ=None):
+    environ = os.environ if environ is None else environ
+
+    for key in ("DEEPSEEK_API_KEY", "deepseek_api_key"):
+        api_key = _read_mapping_value(secrets, key)
+        if api_key:
+            return api_key
+
+    deepseek_section = _read_mapping_value(secrets, "deepseek", clean=False)
+    if deepseek_section is not None:
+        api_key = _read_mapping_value(deepseek_section, "api_key")
+        if api_key:
+            return api_key
+
+    return _read_mapping_value(environ, "DEEPSEEK_API_KEY")
 
 
 @dataclass(frozen=True)
@@ -101,6 +141,7 @@ def init_db():
 
 def get_connection():
     conn = sqlite3.connect(DB_PATH)
+    conn.execute("PRAGMA journal_mode=MEMORY")
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -178,6 +219,7 @@ def update_record(record_id, **fields):
 
 def update_remark(record_id, remark):
     update_record(record_id, remark=str(remark or ""))
+    sync_cloud_export()
 
 
 def mark_done(record_id, ai_summary, model):
@@ -238,6 +280,42 @@ def get_status_counts():
     return {row["status"]: row["total"] for row in rows}
 
 
+def build_cloud_payload(records=None):
+    records = get_records(limit=1000) if records is None else list(records)
+    return {
+        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "record_count": len(records),
+        "records": records,
+    }
+
+
+def sync_cloud_export(path=CLOUD_EXPORT_PATH):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    payload = build_cloud_payload()
+    with open(path, "w", encoding="utf-8", newline="\n") as export_file:
+        json.dump(payload, export_file, ensure_ascii=False, indent=2)
+        export_file.write("\n")
+    return path
+
+
+def load_cloud_export(path=CLOUD_EXPORT_PATH):
+    if not os.path.exists(path):
+        return {"generated_at": "", "record_count": 0, "records": []}
+    with open(path, "r", encoding="utf-8") as export_file:
+        payload = json.load(export_file)
+    payload["records"] = list(payload.get("records") or [])
+    payload["record_count"] = len(payload["records"])
+    return payload
+
+
+def get_cloud_status_counts(records):
+    counts = {}
+    for record in records:
+        status = record.get("status") or "pending"
+        counts[status] = counts.get(status, 0) + 1
+    return counts
+
+
 def extract_docx_text(file_path):
     document = Document(file_path)
     parts = []
@@ -282,6 +360,7 @@ def generate_summary_for_record(record_id, ai_client=None, model="deepseek-v4-pr
         return False
     config = DEFAULT_CONFIG | (config or {})
     client = ai_client or DeepSeekClient(
+        api_key=config.get("api_key") or get_deepseek_api_key(),
         model=model or config.get("model", "deepseek-v4-pro"),
         api_base=config.get("api_base", "https://api.deepseek.com"),
         timeout=config.get("timeout_seconds", "120"),
@@ -289,6 +368,7 @@ def generate_summary_for_record(record_id, ai_client=None, model="deepseek-v4-pr
     try:
         summary = client.summarize(original_text)
         mark_done(record_id, summary, model or config.get("model", "deepseek-v4-pro"))
+        sync_cloud_export()
         return True
     except Exception as exc:
         mark_failed(record_id, exc)
@@ -297,7 +377,7 @@ def generate_summary_for_record(record_id, ai_client=None, model="deepseek-v4-pr
 
 class DeepSeekClient:
     def __init__(self, api_key=None, model="deepseek-v4-pro", api_base="https://api.deepseek.com", timeout=120):
-        self.api_key = api_key or os.environ.get("DEEPSEEK_API_KEY")
+        self.api_key = api_key or get_deepseek_api_key()
         self.model = model
         self.api_base = (api_base or "https://api.deepseek.com").rstrip("/")
         self.timeout = int(timeout or 120)
@@ -344,8 +424,10 @@ def scan_once(config=None, now=None, ai_client=None, stat_func=get_file_stat):
         return result
 
     client = ai_client
-    if client is None and os.environ.get("DEEPSEEK_API_KEY"):
+    api_key = config.get("api_key") or get_deepseek_api_key()
+    if client is None and api_key:
         client = DeepSeekClient(
+            api_key=api_key,
             model=config.get("model", "deepseek-v4-pro"),
             api_base=config.get("api_base", "https://api.deepseek.com"),
             timeout=config.get("timeout_seconds", "120"),
@@ -397,6 +479,7 @@ def scan_once(config=None, now=None, ai_client=None, stat_func=get_file_stat):
                 mark_failed(record_id, exc)
             except Exception:
                 pass
+    sync_cloud_export()
     return result
 
 
