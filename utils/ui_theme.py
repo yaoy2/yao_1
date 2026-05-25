@@ -2,9 +2,46 @@ import streamlit as st
 
 
 def render_home_link() -> None:
-    left, right = st.columns([1, 0.16], gap="small")
-    with right:
-        st.page_link("hello.py", label="回到主页", icon="🏠")
+    st.markdown(
+        """
+        <style>
+        .home-link-fixed {
+            position: fixed;
+            top: 4.1rem;
+            right: 1.35rem;
+            z-index: 999999;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 34px;
+            padding: 0 .72rem;
+            border: 1px solid rgba(24, 34, 48, .16);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, .94);
+            color: #182230 !important;
+            font-size: .86rem;
+            font-weight: 750;
+            text-decoration: none !important;
+            box-shadow: 0 10px 26px rgba(24, 34, 48, .12);
+        }
+        .home-link-fixed:hover {
+            border-color: rgba(45, 106, 79, .35);
+            background: #f8fffb;
+        }
+        @media (max-width: 720px) {
+            .home-link-fixed {
+                top: 3.65rem;
+                right: .75rem;
+                min-height: 32px;
+                padding: 0 .56rem;
+                font-size: .8rem;
+            }
+        }
+        </style>
+        <a class="home-link-fixed" href="/" target="_self">🏠 回到主页</a>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def apply_global_theme() -> None:
