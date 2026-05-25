@@ -306,21 +306,26 @@ for row_start in range(0, 9, 3):
         with col:
             st.markdown(
                 f"""
-                <a class="tool-card {tool["accent"]}" href="{tool["page"]}">
-                  <div class="tool-head">
-                    <div class="tool-code">{tool["code"]}</div>
-                    <div class="tool-date">{tool["created"]}</div>
+                <div class="tool-card-shell">
+                  <div class="tool-card {tool["accent"]}">
+                    <div class="tool-head">
+                      <div class="tool-code">{tool["code"]}</div>
+                      <div class="tool-date">{tool["created"]}</div>
+                    </div>
+                    {build_tool_title_html(tool)}
+                    <div class="tool-meta">{tool["desc"]}</div>
+                    <div class="tool-footer">
+                      <span class="tool-tag">{tool["tag"]}</span>
+                      <span class="tool-pulse">READY</span>
+                    </div>
                   </div>
-                  {build_tool_title_html(tool)}
-                  <div class="tool-meta">{tool["desc"]}</div>
-                  <div class="tool-footer">
-                    <span class="tool-tag">{tool["tag"]}</span>
-                    <span class="tool-pulse">READY</span>
-                  </div>
-                </a>
+                </div>
                 """,
                 unsafe_allow_html=True,
             )
+            st.markdown('<div class="tool-card-link">', unsafe_allow_html=True)
+            st.page_link(tool["page"], label=tool["title"])
+            st.markdown("</div>", unsafe_allow_html=True)
 
 if total_pages > 1:
     st.markdown(

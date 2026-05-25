@@ -339,6 +339,26 @@ def apply_global_theme() -> None:
             text-decoration: none !important;
         }
 
+        .tool-card-shell {
+            position: relative;
+        }
+
+        .tool-card-link {
+            position: relative;
+            margin-top: -190px;
+            min-height: 190px;
+            opacity: 0;
+            z-index: 3;
+        }
+
+        .tool-card-link [data-testid="stPageLink"] {
+            min-height: 190px;
+        }
+
+        .tool-card-link [data-testid="stPageLink"] a {
+            min-height: 190px;
+        }
+
         .tool-card::before {
             content: "";
             position: absolute;
