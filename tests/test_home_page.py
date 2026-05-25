@@ -31,7 +31,10 @@ class HomePageTest(unittest.TestCase):
         self.assertNotIn("Local Port 8501", page_source)
         self.assertNotIn("status-band", page_source)
         self.assertNotIn("首页入口固定为 3x3", page_source)
-        self.assertNotIn("st.page_link", page_source)
+        self.assertIn('st.page_link(tool["page"], label="进入")', page_source)
+        self.assertIn("tool-enter-link", page_source)
+        self.assertNotIn("tool-card-link", page_source)
+        self.assertNotIn("READY", page_source)
 
     def test_tools_are_newest_first_and_oldest_on_second_page(self):
         page_source = (Path(__file__).resolve().parents[1] / "hello.py").read_text(encoding="utf-8")

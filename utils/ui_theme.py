@@ -343,20 +343,35 @@ def apply_global_theme() -> None:
             position: relative;
         }
 
-        .tool-card-link {
+        .tool-enter-link {
             position: relative;
-            margin-top: -190px;
-            min-height: 190px;
-            opacity: 0;
+            display: flex;
+            justify-content: flex-end;
+            margin: -46px 1rem 18px 0;
             z-index: 3;
+            pointer-events: none;
         }
 
-        .tool-card-link [data-testid="stPageLink"] {
-            min-height: 190px;
+        .tool-enter-link [data-testid="stPageLink"] {
+            width: auto;
+            pointer-events: auto;
         }
 
-        .tool-card-link [data-testid="stPageLink"] a {
-            min-height: 190px;
+        .tool-enter-link [data-testid="stPageLink"] a {
+            min-height: 28px;
+            padding: .2rem .62rem;
+            border: 1px solid rgba(84, 240, 163, .34);
+            border-radius: 999px;
+            background: rgba(84, 240, 163, .08);
+            color: var(--green) !important;
+            font-size: .76rem;
+            font-weight: 820;
+            text-decoration: none !important;
+        }
+
+        .tool-enter-link [data-testid="stPageLink"] a:hover {
+            border-color: rgba(84, 240, 163, .62);
+            background: rgba(84, 240, 163, .14);
         }
 
         .tool-card::before {
@@ -444,13 +459,6 @@ def apply_global_theme() -> None:
             background: rgba(245, 184, 75, .06);
             font-size: .76rem;
             font-weight: 760;
-        }
-
-        .tool-pulse {
-            color: var(--green);
-            font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-            font-size: .72rem;
-            font-weight: 820;
         }
 
         .quote-strip {

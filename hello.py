@@ -316,15 +316,14 @@ for row_start in range(0, 9, 3):
                     <div class="tool-meta">{tool["desc"]}</div>
                     <div class="tool-footer">
                       <span class="tool-tag">{tool["tag"]}</span>
-                      <span class="tool-pulse">READY</span>
                     </div>
                   </div>
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
-            st.markdown('<div class="tool-card-link">', unsafe_allow_html=True)
-            st.page_link(tool["page"], label=tool["title"])
+            st.markdown('<div class="tool-enter-link">', unsafe_allow_html=True)
+            st.page_link(tool["page"], label="进入")
             st.markdown("</div>", unsafe_allow_html=True)
 
 if total_pages > 1:
