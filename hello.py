@@ -82,6 +82,7 @@ TOOLS = [
         "page": "pages/06_5、🧰_万能合并机.py",
         "code": "M05",
         "accent": "amber",
+        "blocked": True,
     },
     {
         "title": "Word 收割机",
@@ -91,6 +92,7 @@ TOOLS = [
         "page": "pages/07_4、🌾_word收割机.py",
         "code": "M04",
         "accent": "magenta",
+        "blocked": True,
     },
     {
         "title": "名单核对",
@@ -100,6 +102,7 @@ TOOLS = [
         "page": "pages/08_3、✅_名单核对.py",
         "code": "M03",
         "accent": "green",
+        "blocked": True,
     },
     {
         "title": "文件比对",
@@ -109,6 +112,7 @@ TOOLS = [
         "page": "pages/09_2、🔍_文件比对.py",
         "code": "M02",
         "accent": "cyan",
+        "blocked": True,
     },
     {
         "title": "报告评分",
@@ -205,10 +209,12 @@ def build_tool_title_html(tool):
     return f'<a class="tool-title" href="{href}" target="_self">{title}</a>'
 
 
-def build_tool_lock_html(tool):
-    if not tool.get("locked"):
-        return '<span class="tool-lock-spacer" aria-hidden="true"></span>'
-    return '<span class="tool-lock" title="需要密码访问" aria-label="需要密码访问">🔒</span>'
+def build_tool_status_icon_html(tool):
+    if tool.get("locked"):
+        return '<span class="tool-lock" title="需要密码访问" aria-label="需要密码访问">🔒</span>'
+    if tool.get("blocked"):
+        return '<span class="tool-blocked" title="暂不开放" aria-label="暂不开放">×</span>'
+    return '<span class="tool-lock-spacer" aria-hidden="true"></span>'
 
 
 st.markdown(
@@ -335,7 +341,7 @@ for row_start in range(0, 9, 3):
                     <div class="tool-meta">{tool["desc"]}</div>
                     <div class="tool-footer">
                       <span class="tool-tag">{tool["tag"]}</span>
-                      {build_tool_lock_html(tool)}
+                      {build_tool_status_icon_html(tool)}
                     </div>
                   </div>
                 </div>
