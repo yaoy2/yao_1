@@ -4,6 +4,28 @@ import unittest
 from pathlib import Path
 
 
+def load_homepage_bits():
+    page_source = (Path(__file__).resolve().parents[1] / "hello.py").read_text(encoding="utf-8")
+    module = ast.parse(page_source)
+    names = {
+        "TOOLS",
+        "get_homepage_tools",
+        "get_homepage_pages",
+    }
+    selected = [
+        node
+        for node in module.body
+        if (
+            isinstance(node, ast.Assign)
+            and any(isinstance(target, ast.Name) and target.id in names for target in node.targets)
+        )
+        or (isinstance(node, ast.FunctionDef) and node.name in names)
+    ]
+    namespace = {}
+    exec(compile(ast.Module(body=selected, type_ignores=[]), str(Path("hello.py")), "exec"), namespace)
+    return page_source, namespace
+
+
 class HomePageTest(unittest.TestCase):
     def test_home_page_uses_command_center_copy_and_pagination(self):
         page_source = (Path(__file__).resolve().parents[1] / "hello.py").read_text(encoding="utf-8")
@@ -12,7 +34,7 @@ class HomePageTest(unittest.TestCase):
         self.assertNotIn("principle-chip", page_source)
         self.assertNotIn("十一个工具，分页进入", page_source)
         self.assertIn("前方没有胜利，挺住意味一切", page_source)
-        self.assertIn("page_tools = TOOLS[page_index * 9 : page_index * 9 + 9]", page_source)
+        self.assertIn("page_tools = homepage_pages[page_index]", page_source)
         self.assertIn("for row_start in range(0, 9, 3)", page_source)
         self.assertIn("build_pagination_html", page_source)
         self.assertIn("build_streamlit_page_href", page_source)
@@ -48,11 +70,8 @@ class HomePageTest(unittest.TestCase):
         self.assertNotIn("READY", page_source)
 
     def test_tools_are_newest_first_and_oldest_on_second_page(self):
-        page_source = (Path(__file__).resolve().parents[1] / "hello.py").read_text(encoding="utf-8")
-        match = re.search(r"TOOLS = (\[.*?\])\n\n\ndef build_hero_visual_html", page_source, re.S)
-        self.assertIsNotNone(match)
-
-        tools = ast.literal_eval(match.group(1))
+        _page_source, namespace = load_homepage_bits()
+        tools = namespace["TOOLS"]
 
         self.assertEqual("Recorder_笔记", tools[0]["title"])
         self.assertTrue(tools[0]["locked"])
@@ -64,6 +83,18 @@ class HomePageTest(unittest.TestCase):
         self.assertEqual("报告评分", tools[-1]["title"])
         self.assertEqual(11, len(tools))
         self.assertEqual(9, len(tools[:9]))
+
+    def test_homepage_defers_red_x_cards_without_changing_nav_order(self):
+        _page_source, namespace = load_homepage_bits()
+        tools = namespace["TOOLS"]
+        homepage_pages = namespace["get_homepage_pages"](tools)
+
+        self.assertEqual("M11", tools[0]["code"])
+        self.assertEqual("M01", tools[-1]["code"])
+        self.assertEqual("M01", homepage_pages[0][-1]["code"])
+        self.assertEqual(["M05", "M04", "M03", "M02"], [tool["code"] for tool in homepage_pages[1]])
+        self.assertTrue(all(not tool.get("blocked") for tool in homepage_pages[0]))
+        self.assertTrue(all(tool.get("blocked") for tool in homepage_pages[1]))
 
 
 if __name__ == "__main__":
