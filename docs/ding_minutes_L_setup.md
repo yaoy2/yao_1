@@ -1,6 +1,6 @@
 # Recorder_笔记：L 电脑运行配置指南
 
-这份指南用于把板块 11 从当前电脑迁移到 L 电脑，并让 L 电脑每天 19:00 自动扫描 `Ding2026` 文件夹。
+这份指南用于把板块 11 从当前电脑迁移到 L 电脑，并让 L 电脑每天 19:00 自动扫描 Downloads 文件夹中符合命名规则的 Word 文件。
 
 ## 一、在 L 电脑拉取最新代码
 
@@ -33,7 +33,7 @@ config/ding_minutes.ini
 确认这一行是 L 电脑真实存在的路径：
 
 ```ini
-watch_dir = E:\GoogleDrive\Ding2026
+watch_dir = C:\Users\Yao\Downloads
 ```
 
 如果 L 电脑路径不同，只改这一行即可。不要把 API key 写进这个文件。

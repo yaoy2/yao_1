@@ -86,7 +86,7 @@
 ### 11. 🎙️ Recorder_笔记 (Recorder Notes)
 - **场景**：钉钉录音转写、座谈记录、会议讨论、培训讲座等碎片化口语材料整理。
 - **功能**：
-    - **每日扫描**：配合 Windows 任务计划，每天 19:00 扫描 `Ding2026` 文件夹中前一天 19:00 到当天 19:00 新建的 `export_*.docx` 和 `dt*.docx`。
+    - **每日扫描**：配合 Windows 任务计划，每天 19:00 扫描 `C:\Users\Yao\Downloads` 文件夹中前一天 19:00 到当天 19:00 新建的 `export_*.docx`、`dt*.docx` 和文件名包含“原文”的 `.docx`。
     - **原文保留**：自动提取 Word 原文，保存文件名、路径、创建时间、修改时间和处理状态。
     - **AI 整理**：调用 DeepSeek 将口语化转写整理为可归档、可复盘、可继续写材料的整理稿，不套固定纪要模板。
     - **备注标记**：支持手动填写备注，用于记录用途、处理意见和后续动作。
@@ -160,7 +160,7 @@
    扫描路径在 `config/ding_minutes.ini` 中配置。默认示例为：
 
    ```ini
-   watch_dir = E:\GoogleDrive\Ding2026
+   watch_dir = C:\Users\Yao\Downloads
    daily_run_time = 19:00
    model = deepseek-v4-pro
    ```

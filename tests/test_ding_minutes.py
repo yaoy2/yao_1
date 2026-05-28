@@ -18,13 +18,23 @@ def make_docx(path, paragraphs):
 
 
 class DingMinutesTest(unittest.TestCase):
+    def test_default_watch_dir_points_to_downloads(self):
+        self.assertEqual(
+            r"C:\Users\Yao\Downloads",
+            ding_minutes.DEFAULT_CONFIG["watch_dir"],
+        )
+
     def test_matches_ding_docx_rules(self):
         self.assertTrue(ding_minutes.matches_ding_docx("export_1779631538223.docx"))
         self.assertTrue(ding_minutes.matches_ding_docx("dt20260524.docx"))
         self.assertTrue(ding_minutes.matches_ding_docx("DT_meeting.docx"))
+        self.assertTrue(ding_minutes.matches_ding_docx("会议原文.docx"))
+        self.assertTrue(ding_minutes.matches_ding_docx("2026-05-28_原文_座谈.docx"))
         self.assertFalse(ding_minutes.matches_ding_docx("meeting.docx"))
+        self.assertFalse(ding_minutes.matches_ding_docx("原文.txt"))
         self.assertFalse(ding_minutes.matches_ding_docx("export_1779631538223.txt"))
         self.assertFalse(ding_minutes.matches_ding_docx("~$export_1779631538223.docx"))
+        self.assertFalse(ding_minutes.matches_ding_docx("~$会议原文.docx"))
 
     def test_build_scan_window_uses_previous_1900_to_current_1900(self):
         now = datetime(2026, 5, 24, 20, 30)

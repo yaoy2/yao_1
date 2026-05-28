@@ -238,7 +238,7 @@ st.markdown(
         <div class="ding-kicker">RECORDER NOTES</div>
         <h1 class="ding-title">🎙️ Recorder_笔记</h1>
         <p class="ding-subtitle">
-          每天 19:00 扫描 Ding2026 中新建的 export_*.docx 和 dt*.docx，保留原文，并生成适合归档和复盘的整理稿。
+          每天 19:00 扫描 Downloads 中新建的 export_*.docx、dt*.docx 和文件名包含“原文”的 Word，保留原文，并生成适合归档和复盘的整理稿。
         </p>
       </div>
       <div class="ding-stat-row">
