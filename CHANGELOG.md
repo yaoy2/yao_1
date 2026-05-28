@@ -1,5 +1,13 @@
 # 更新日志 (CHANGELOG)
 
+## 2026-05-28
+- **配色预览兼容修复**：将 `配色方案预览` 页面从即将废弃的 `streamlit.components.v1.html` 调整为 `st.html` 渲染，避免 Streamlit 后续移除旧接口后页面预览失效。
+- **防回退测试补充**：更新 `tests/test_color_palette_preview.py`，明确禁止再次引入 `streamlit.components.v1` 和 `components.html`，防止兼容修复被后续改动覆盖。
+- **缓存文件清理**：将已经误入版本管理的 `__pycache__/*.pyc` 文件移出 Git；`.gitignore` 已有忽略规则，后续运行测试或语法检查不再因为 Python 缓存污染提交状态。
+- **本地依赖环境补齐**：按 `requirements.txt` 补齐本地虚拟环境中的 `python-docx` 和 `pypdf`，解决全量测试因缺少 `docx` 模块失败的问题。
+- **远端变更合并**：推送前发现 GitHub 远端已有 Recorder 下载扫描和数据同步相关提交，先 `fetch` 检查文件重叠，再合并远端更新，保留远端新增内容和本次配色页修复。
+- **验证结果**：合并后全量单元测试 48 项通过，项目内 39 个 Python 文件语法检查通过，并确认仓库内不再出现 `streamlit.components.v1` / `components.html`。
+
 ## 2026-05-25
 - **Recorder 云端展示同步**：新增 `data/ding_minutes_cloud.json` 云端展示数据和 `scripts/sync_recorder_cloud.py` 同步脚本，本地电脑扫描整理后的记录可以同步到线上页面展示。
 - **Recorder 记录读取优化**：`Recorder_笔记` 页面优先读取本地数据库；线上或本地数据库为空时自动读取云端同步 JSON，并显示同步时间和状态统计。
