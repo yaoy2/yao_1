@@ -1,4 +1,3 @@
-import math
 import re
 from html import escape
 from pathlib import Path
@@ -124,6 +123,23 @@ TOOLS = [
         "accent": "amber",
     },
 ]
+
+def get_homepage_tools(tools):
+    visible_first = [tool for tool in tools if not tool.get("blocked")]
+    deferred = [tool for tool in tools if tool.get("blocked")]
+    return visible_first + deferred
+
+
+def get_homepage_pages(tools, page_size=9):
+    visible_first = [tool for tool in tools if not tool.get("blocked")]
+    deferred = [tool for tool in tools if tool.get("blocked")]
+    pages = [
+        visible_first[index : index + page_size]
+        for index in range(0, len(visible_first), page_size)
+    ]
+    if deferred:
+        pages.append(deferred)
+    return pages or [[]]
 
 
 def build_hero_visual_html() -> str:
@@ -316,7 +332,8 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-total_pages = math.ceil(len(TOOLS) / 9)
+homepage_pages = get_homepage_pages(TOOLS)
+total_pages = len(homepage_pages)
 if total_pages > 1:
     current_page = coerce_page_number(st.query_params.get("module_page", "1"), total_pages)
     page_index = current_page - 1
@@ -324,7 +341,7 @@ else:
     current_page = 1
     page_index = 0
 
-page_tools = TOOLS[page_index * 9 : page_index * 9 + 9]
+page_tools = homepage_pages[page_index]
 for row_start in range(0, 9, 3):
     cols = st.columns(3)
     for col, tool in zip(cols, page_tools[row_start : row_start + 3]):

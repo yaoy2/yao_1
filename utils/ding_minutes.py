@@ -18,7 +18,7 @@ DB_PATH = os.path.join(ROOT_DIR, "data", "ding_minutes.db")
 CLOUD_EXPORT_PATH = os.path.join(ROOT_DIR, "data", "ding_minutes_cloud.json")
 
 DEFAULT_CONFIG = {
-    "watch_dir": r"E:\GoogleDrive\Ding2026",
+    "watch_dir": r"C:\Users\Yao\Downloads",
     "daily_run_time": "19:00",
     "model": "deepseek-v4-pro",
     "api_base": "https://api.deepseek.com",
@@ -88,7 +88,11 @@ def matches_ding_docx(file_name):
     lower = name.lower()
     if lower.startswith("~$") or not lower.endswith(".docx"):
         return False
-    return bool(re.fullmatch(r"export_.+\.docx", lower) or re.fullmatch(r"dt.*\.docx", lower))
+    return bool(
+        re.fullmatch(r"export_.+\.docx", lower)
+        or re.fullmatch(r"dt.*\.docx", lower)
+        or "原文" in name
+    )
 
 
 def build_scan_window(now=None, run_time_text="19:00"):
