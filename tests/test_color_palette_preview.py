@@ -42,6 +42,13 @@ class ColorPalettePreviewTest(unittest.TestCase):
         self.assertIn("#D8D0C1", html)
         self.assertIn("#F8F6F2", html)
 
+    def test_page_uses_supported_html_renderer(self):
+        page_source = PAGE_PATH.read_text(encoding="utf-8")
+
+        self.assertNotIn("streamlit.components.v1", page_source)
+        self.assertNotIn("components.html", page_source)
+        self.assertIn("st.html(render_palette_showcase(pal))", page_source)
+
 
 if __name__ == "__main__":
     unittest.main()

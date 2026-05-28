@@ -1,5 +1,4 @@
 import streamlit as st
-import streamlit.components.v1 as components
 import re
 import os
 from html import escape
@@ -316,7 +315,7 @@ with col_sel:
             st.color_picker(label, c, disabled=True, key=f"cp_{sel_id}_{i}")
 
 with col_preview:
-    components.html(render_palette_showcase(pal), height=470, scrolling=False)
+    st.html(render_palette_showcase(pal))
 
     # ── 色号文字区 ──
     parts = []
