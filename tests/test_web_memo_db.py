@@ -108,6 +108,32 @@ class WebMemoDbTest(unittest.TestCase):
         self.assertEqual("摘录", records[0]["category"])
         self.assertEqual(["摘录", "测试"], records[0]["tags"])
 
+    def test_has_markdown_backup_records_detects_existing_backup_content(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patched_web_memo_storage(tmpdir) as tmp_path:
+                backup_path = tmp_path / "web_memos_backup.md"
+                backup_path.write_text(
+                    "\n".join(
+                        [
+                            "# 灵感便签盒备份",
+                            "",
+                            "# 灵感便签盒",
+                            "## 2026-05-24",
+                            "",
+                            "本地备份里还有内容。",
+                            "",
+                            "- 分类：摘录",
+                            "- 标签：摘录",
+                            "",
+                        ]
+                    ),
+                    encoding="utf-8",
+                )
+
+                has_records = web_memo_db.has_markdown_backup_records()
+
+        self.assertTrue(has_records)
+
     def test_build_markdown_export_contains_dates_content_and_tags(self):
         records = [
             {
@@ -209,6 +235,24 @@ class WebMemoDbTest(unittest.TestCase):
         self.assertIn("st.text_input(", page_source)
         self.assertIn("\"新增标签\",", page_source)
         self.assertIn("manual_tags=manual_tags", page_source)
+
+    def test_page_syncs_web_memo_backup_to_github_after_writes(self):
+        page_path = Path(__file__).resolve().parents[1] / "pages" / "01_10、🧾_灵感便签盒.py"
+        page_source = page_path.read_text(encoding="utf-8")
+
+        self.assertIn("github_backup_sync", page_source)
+        self.assertIn("sync_web_memo_backup_to_github()", page_source)
+        self.assertIn("GITHUB_BACKUP_TOKEN", page_source)
+
+    def test_page_restores_web_memo_backup_from_github_before_init(self):
+        page_path = Path(__file__).resolve().parents[1] / "pages" / "01_10、🧾_灵感便签盒.py"
+        page_source = page_path.read_text(encoding="utf-8")
+
+        self.assertIn("restore_web_memo_backup_from_github()", page_source)
+        self.assertLess(
+            page_source.index("restore_web_memo_backup_from_github()"),
+            page_source.index("web_memo_db.init_db()"),
+        )
 
 
 if __name__ == "__main__":

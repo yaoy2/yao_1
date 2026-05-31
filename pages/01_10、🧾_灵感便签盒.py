@@ -7,7 +7,7 @@ import streamlit as st
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from utils import web_memo_db
+from utils import github_backup_sync, web_memo_db
 from utils.ui_theme import render_home_link
 
 
@@ -53,6 +53,36 @@ def parse_manual_tags(selected_tags, new_tags):
         if tag and tag not in merged:
             merged.append(tag)
     return merged
+
+
+def restore_web_memo_backup_from_github():
+    if web_memo_db.has_local_memos() or web_memo_db.has_markdown_backup_records():
+        return
+    try:
+        github_backup_sync.download_file_from_github(
+            web_memo_db.BACKUP_MD_PATH,
+            "data/web_memos_backup.md",
+            secrets=st.secrets,
+            environ=os.environ,
+        )
+    except Exception as exc:
+        st.warning(f"便签备份从 GitHub 读取失败，将继续使用当前环境本地备份：{exc}")
+
+
+def sync_web_memo_backup_to_github():
+    try:
+        result = github_backup_sync.sync_file_to_github(
+            web_memo_db.BACKUP_MD_PATH,
+            "data/web_memos_backup.md",
+            "data: sync web memo backup",
+            secrets=st.secrets,
+            environ=os.environ,
+        )
+    except Exception as exc:
+        st.warning(f"便签已保存在当前环境，但同步到 GitHub 失败：{exc}")
+        return
+    if result.get("skipped") and result.get("reason") == "missing_token":
+        st.info("便签已保存在当前环境；如需跨部署保留，请在 Streamlit secrets 配置 GITHUB_BACKUP_TOKEN。")
 
 
 def apply_style():
@@ -249,6 +279,7 @@ def apply_style():
 
 apply_style()
 render_home_link()
+restore_web_memo_backup_from_github()
 web_memo_db.init_db()
 
 records = web_memo_db.get_memos()
@@ -316,6 +347,7 @@ with st.container(border=True):
                 )
             except TypeError:
                 web_memo_db.add_memo(date.today().isoformat(), content, classify=save_classified)
+            sync_web_memo_backup_to_github()
             st.success("已保存")
             st.rerun()
         except ValueError:

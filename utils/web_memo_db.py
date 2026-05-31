@@ -39,6 +39,26 @@ def get_connection():
     return conn
 
 
+def has_local_memos():
+    if not os.path.exists(DB_PATH):
+        return False
+    conn = None
+    try:
+        conn = get_connection()
+        table = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'web_memos'"
+        ).fetchone()
+        if not table:
+            return False
+        row = conn.execute("SELECT COUNT(*) AS total FROM web_memos").fetchone()
+        return int(row["total"] or 0) > 0
+    except sqlite3.Error:
+        return False
+    finally:
+        if conn is not None:
+            conn.close()
+
+
 def init_db():
     conn = get_connection()
     conn.execute(
@@ -384,6 +404,14 @@ def restore_from_markdown_backup(path=None):
     for record in reversed(records):
         _insert_memo_record(record)
     return len(records)
+
+
+def has_markdown_backup_records(path=None):
+    path = BACKUP_MD_PATH if path is None else path
+    if not os.path.exists(path):
+        return False
+    with open(path, "r", encoding="utf-8") as backup_file:
+        return bool(parse_markdown_backup(backup_file.read()))
 
 
 def _normalize_palette_colors(record):
