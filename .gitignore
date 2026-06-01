@@ -15,6 +15,11 @@ AGENTS.md
 CLAUDE.md
 CONVERSATION_LOG.md
 
+# Local scratch artifacts
+*.tmp
+marvis_report*.pdf
+立即Recorder真实测试.bat
+
 # Data
 *.db
 
