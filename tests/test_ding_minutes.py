@@ -30,6 +30,8 @@ class DingMinutesTest(unittest.TestCase):
         self.assertTrue(ding_minutes.matches_ding_docx("DT_meeting.docx"))
         self.assertTrue(ding_minutes.matches_ding_docx("会议原文.docx"))
         self.assertTrue(ding_minutes.matches_ding_docx("2026-05-28_原文_座谈.docx"))
+        self.assertTrue(ding_minutes.matches_ding_docx("2025-12-24 10_50 记录_原文.docx"))
+        self.assertTrue(ding_minutes.matches_ding_docx("钉钉录音转文字.docx"))
         self.assertFalse(ding_minutes.matches_ding_docx("meeting.docx"))
         self.assertFalse(ding_minutes.matches_ding_docx("原文.txt"))
         self.assertFalse(ding_minutes.matches_ding_docx("export_1779631538223.txt"))
