@@ -11,6 +11,7 @@
 
 - **线上入口**：[yao-1.streamlit.app](https://yao-1.streamlit.app/)
 - **仓库地址**：[github.com/yaoy2/yao_1](https://github.com/yaoy2/yao_1)
+- **Codex Radar Lite**：`codex_radar_lite/site/index.html`，读取 `data/codex_radar_current.json` 展示 Codex 重置窗口状态。
 - **首页风格**：Command Center 深色封面；工具入口按时间倒序展示，首页每页固定 3 x 3。
 - **侧边导航**：全部工具按创建/上线时间倒序排列，越晚做的项目越靠上。
 
@@ -92,6 +93,31 @@
     - **备注标记**：支持手动填写备注，用于记录用途、处理意见和后续动作。
     - **访问上锁**：复用预算速记台账同一套密码，读取 `budget_password` / `[budget].password` 或本机 `BUDGET_PASSWORD`。
     - **迁移说明**：L 电脑运行配置见 `docs/ding_minutes_L_setup.md`。
+
+---
+
+## Codex Radar Lite
+
+这是一个放在仓库内、与 `pages/` 同级的轻量监控模块，用来观察 Codex 额度重置窗口。
+
+- **运行方式**：`.github/workflows/codex-radar.yml` 每小时运行一次。
+- **判断方式**：优先用规则引擎读取公开来源，不默认调用大模型。
+- **展示数据**：`data/codex_radar_current.json`、`data/codex_radar_history.json`、`data/codex_radar_signals.json`。
+- **静态页面**：`codex_radar_lite/site/index.html`。
+- **钉钉推送**：只在高概率、窗口开启或窗口关闭时推送。
+
+需要在 GitHub 仓库 Secrets 中配置：
+
+- `DINGTALK_WEBHOOK`：钉钉机器人 webhook。
+- `DINGTALK_SECRET`：如果机器人启用了“加签”，再填写这个；没有启用可不填。
+
+本地检查可以运行：
+
+```bash
+python -m unittest tests.test_codex_radar_lite
+python -m py_compile codex_radar_lite/*.py
+python -m codex_radar_lite.cli --dry-run
+```
 
 ---
 

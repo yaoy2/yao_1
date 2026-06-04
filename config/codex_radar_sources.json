@@ -1,0 +1,19 @@
+{
+  "sources": [
+    {
+      "id": "openai_status_history",
+      "name": "OpenAI Status Incidents",
+      "url": "https://status.openai.com/api/v2/incidents.json",
+      "kind": "statuspage_incidents",
+      "weight": 40,
+      "enabled": true,
+      "keywords": [
+        "codex",
+        "usage limit",
+        "rate limit",
+        "compaction",
+        "recovered"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0">
+  <channel>
+    <title>Codex Radar Lite</title>
+    <link>https://github.com/yaoy2/yao_1</link>
+    <description>Codex quota reset radar alerts</description>
+    <item>
+      <title>Codex Radar Lite: normal</title>
+      <link>https://github.com/yaoy2/yao_1</link>
+      <guid>2026-06-05T00:00:00Z-normal</guid>
+      <pubDate>2026-06-05T00:00:00Z</pubDate>
+      <description>Codex Radar Lite 已安装，等待 GitHub Actions 首次采集。 24h=5%, 48h=13%</description>
+    </item>
+  </channel>
+</rss>

@@ -1,0 +1,10 @@
+{
+  "status": "normal",
+  "probability_24h": 5,
+  "probability_48h": 13,
+  "reason": "Codex Radar Lite 已安装，等待 GitHub Actions 首次采集。",
+  "checked_at": "2026-06-05T00:00:00Z",
+  "alert_level": "silent",
+  "signals": []
+}
+

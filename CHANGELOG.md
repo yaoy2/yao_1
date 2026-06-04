@@ -1,5 +1,16 @@
 # 更新日志 (CHANGELOG)
 
+## 2026-06-05
+
+- **新增 Codex Radar Lite**：新增 `codex_radar_lite/`，作为与 `pages/` 同级的轻量 Codex 重置窗口监控模块。
+- **每小时自动运行**：新增 `.github/workflows/codex-radar.yml`，通过 GitHub Actions 每小时运行一次，不需要 Docker 或常驻服务器。
+- **规则判断内核**：采集公开来源后，根据 Codex、usage limit、rate limit、reset、recovered 等关键词判断 `normal`、`watch`、`high_probability`、`open`、`closed` 状态。
+- **钉钉推送适配**：新增钉钉机器人推送，只读取 GitHub Secrets 中的 `DINGTALK_WEBHOOK` 和可选 `DINGTALK_SECRET`，不把 webhook 或密钥写入仓库。
+- **静态状态页**：新增 `codex_radar_lite/site/index.html`，读取 `data/codex_radar_current.json` 展示当前状态、概率和关键证据。
+- **状态数据文件**：新增 `data/codex_radar_current.json`、`data/codex_radar_history.json`、`data/codex_radar_signals.json` 作为首次运行前的初始数据。
+- **测试覆盖**：新增 `tests/test_codex_radar_lite.py`，覆盖信号提取、规则判断、历史更新、RSS 输出和无 webhook 时的安全跳过。
+- **范围说明**：第一版只做钉钉机器人，不做邮件兜底，不做个人微信；按项目规则未启动 Streamlit，只做代码级验证。
+
 ## 2026-05-28
 - **配色预览兼容修复**：将 `配色方案预览` 页面从即将废弃的 `streamlit.components.v1.html` 调整为 `st.html` 渲染，避免 Streamlit 后续移除旧接口后页面预览失效。
 - **防回退测试补充**：更新 `tests/test_color_palette_preview.py`，明确禁止再次引入 `streamlit.components.v1` 和 `components.html`，防止兼容修复被后续改动覆盖。
