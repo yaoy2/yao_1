@@ -3,9 +3,22 @@
   "probability_24h": 95,
   "probability_48h": 98,
   "reason": "发现疑似额度已恢复或窗口关闭信号。",
-  "checked_at": "2026-06-04T18:32:18.888188Z",
+  "checked_at": "2026-06-04T21:05:11.311037Z",
   "alert_level": "push",
   "signals": [
+    {
+      "id": "4a4cb89eb1bc3df0",
+      "source_id": "openai_status_history",
+      "source_name": "OpenAI Status Incidents",
+      "title": "Image API requests failing with 401s",
+      "summary": "Image API requests failing with 401s resolved All impacted services have now fully recovered. We have applied the mitigation and are monitoring the recovery. We have identified that users are experiencing elevated errors for the impacted services. We are working on implementing a mitigation.",
+      "url": "https://status.openai.com/api/v2/incidents.json",
+      "observed_at": "2026-06-04T19:52:18Z",
+      "weight": 40,
+      "tags": [
+        "recovered"
+      ]
+    },
     {
       "id": "ff160ee11287a9b4",
       "source_id": "openai_status_history",
