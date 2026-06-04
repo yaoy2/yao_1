@@ -92,6 +92,7 @@ def matches_ding_docx(file_name):
         re.fullmatch(r"export_.+\.docx", lower)
         or re.fullmatch(r"dt.*\.docx", lower)
         or "原文" in name
+        or ("钉钉" in name and ("录音" in name or "转文字" in name or "转写" in name))
     )
 
 
