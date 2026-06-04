@@ -1,10 +1,53 @@
 {
-  "status": "normal",
-  "probability_24h": 5,
-  "probability_48h": 13,
-  "reason": "Codex Radar Lite 已安装，等待 GitHub Actions 首次采集。",
-  "checked_at": "2026-06-05T00:00:00Z",
-  "alert_level": "silent",
-  "signals": []
+  "status": "closed",
+  "probability_24h": 95,
+  "probability_48h": 98,
+  "reason": "发现疑似额度已恢复或窗口关闭信号。",
+  "checked_at": "2026-06-04T18:32:18.888188Z",
+  "alert_level": "push",
+  "signals": [
+    {
+      "id": "ff160ee11287a9b4",
+      "source_id": "openai_status_history",
+      "source_name": "OpenAI Status Incidents",
+      "title": "Increased latency for Codex compaction for a subset of users",
+      "summary": "Increased latency for Codex compaction for a subset of users resolved All impacted services have now fully recovered. We have identified that users are experiencing elevated latency for the impacted services. We are working on implementing a mitigation.",
+      "url": "https://status.openai.com/api/v2/incidents.json",
+      "observed_at": "2026-06-04T04:37:16Z",
+      "weight": 40,
+      "tags": [
+        "codex",
+        "compaction",
+        "recovered"
+      ]
+    },
+    {
+      "id": "e8b23d318574b1ee",
+      "source_id": "openai_status_history",
+      "source_name": "OpenAI Status Incidents",
+      "title": "Codex Context Compaction Latency",
+      "summary": "Codex Context Compaction Latency resolved",
+      "url": "https://status.openai.com/api/v2/incidents.json",
+      "observed_at": "2026-05-28T06:59:35Z",
+      "weight": 40,
+      "tags": [
+        "codex",
+        "compaction"
+      ]
+    },
+    {
+      "id": "719e847c386dfc3c",
+      "source_id": "openai_status_history",
+      "source_name": "OpenAI Status Incidents",
+      "title": "Increase in users hitting Codex rate limits",
+      "summary": "Increase in users hitting Codex rate limits resolved",
+      "url": "https://status.openai.com/api/v2/incidents.json",
+      "observed_at": "2026-05-23T10:58:21Z",
+      "weight": 40,
+      "tags": [
+        "codex",
+        "rate limit"
+      ]
+    }
+  ]
 }
-

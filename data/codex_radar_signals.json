@@ -1,1 +1,45 @@
-[]
+[
+  {
+    "id": "ff160ee11287a9b4",
+    "source_id": "openai_status_history",
+    "source_name": "OpenAI Status Incidents",
+    "title": "Increased latency for Codex compaction for a subset of users",
+    "summary": "Increased latency for Codex compaction for a subset of users resolved All impacted services have now fully recovered. We have identified that users are experiencing elevated latency for the impacted services. We are working on implementing a mitigation.",
+    "url": "https://status.openai.com/api/v2/incidents.json",
+    "observed_at": "2026-06-04T04:37:16Z",
+    "weight": 40,
+    "tags": [
+      "codex",
+      "compaction",
+      "recovered"
+    ]
+  },
+  {
+    "id": "e8b23d318574b1ee",
+    "source_id": "openai_status_history",
+    "source_name": "OpenAI Status Incidents",
+    "title": "Codex Context Compaction Latency",
+    "summary": "Codex Context Compaction Latency resolved",
+    "url": "https://status.openai.com/api/v2/incidents.json",
+    "observed_at": "2026-05-28T06:59:35Z",
+    "weight": 40,
+    "tags": [
+      "codex",
+      "compaction"
+    ]
+  },
+  {
+    "id": "719e847c386dfc3c",
+    "source_id": "openai_status_history",
+    "source_name": "OpenAI Status Incidents",
+    "title": "Increase in users hitting Codex rate limits",
+    "summary": "Increase in users hitting Codex rate limits resolved",
+    "url": "https://status.openai.com/api/v2/incidents.json",
+    "observed_at": "2026-05-23T10:58:21Z",
+    "weight": 40,
+    "tags": [
+      "codex",
+      "rate limit"
+    ]
+  }
+]
