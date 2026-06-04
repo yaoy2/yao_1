@@ -2,11 +2,12 @@
 
 ## 2026-06-05
 
-- **新增 Codex Radar Lite**：新增 `codex_radar_lite/`，作为与 `pages/` 同级的轻量 Codex 重置窗口监控模块。
+- **新增第 12 个板块：Codex雷达**：新增 `pages/00_12、📡_Codex雷达.py`，把 Codex 重置窗口监控接入主工具箱首页和 Streamlit 多页面入口。
+- **新增 Codex Radar Lite 内核**：新增 `codex_radar_lite/`，作为第 12 板块背后的轻量监控模块。
 - **每小时自动运行**：新增 `.github/workflows/codex-radar.yml`，通过 GitHub Actions 每小时运行一次，不需要 Docker 或常驻服务器。
 - **规则判断内核**：采集公开来源后，根据 Codex、usage limit、rate limit、reset、recovered 等关键词判断 `normal`、`watch`、`high_probability`、`open`、`closed` 状态。
 - **钉钉推送适配**：新增钉钉机器人推送，只读取 GitHub Secrets 中的 `DINGTALK_WEBHOOK` 和可选 `DINGTALK_SECRET`，不把 webhook 或密钥写入仓库。
-- **静态状态页**：新增 `codex_radar_lite/site/index.html`，读取 `data/codex_radar_current.json` 展示当前状态、概率和关键证据。
+- **页面展示**：新增第 12 板块页面，同时保留 `codex_radar_lite/site/index.html` 作为备用静态状态页，读取 `data/codex_radar_current.json` 展示当前状态、概率和关键证据。
 - **状态数据文件**：新增 `data/codex_radar_current.json`、`data/codex_radar_history.json`、`data/codex_radar_signals.json` 作为首次运行前的初始数据。
 - **测试覆盖**：新增 `tests/test_codex_radar_lite.py`，覆盖信号提取、规则判断、历史更新、RSS 输出和无 webhook 时的安全跳过。
 - **范围说明**：第一版只做钉钉机器人，不做邮件兜底，不做个人微信；按项目规则未启动 Streamlit，只做代码级验证。

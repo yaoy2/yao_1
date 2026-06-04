@@ -11,15 +11,15 @@
 
 - **线上入口**：[yao-1.streamlit.app](https://yao-1.streamlit.app/)
 - **仓库地址**：[github.com/yaoy2/yao_1](https://github.com/yaoy2/yao_1)
-- **Codex Radar Lite**：`codex_radar_lite/site/index.html`，读取 `data/codex_radar_current.json` 展示 Codex 重置窗口状态。
+- **Codex雷达**：第 12 个工具板块，读取 `data/codex_radar_current.json` 展示 Codex 重置窗口状态。
 - **首页风格**：Command Center 深色封面；工具入口按时间倒序展示，首页每页固定 3 x 3。
 - **侧边导航**：全部工具按创建/上线时间倒序排列，越晚做的项目越靠上。
 
 ---
 
-## 十一个核心模块
+## 十二个核心模块
 
-模块编号与页面侧边栏保持一致：越晚上线的工具编号越大，侧边栏按 11 → 1 倒序展示。
+模块编号与页面侧边栏保持一致：越晚上线的工具编号越大，侧边栏按 12 → 1 倒序展示。
 
 ### 1. 📝 报告评分系统 (Grading System)
 - **场景**：期末大作业、实验报告批量打分。
@@ -94,16 +94,26 @@
     - **访问上锁**：复用预算速记台账同一套密码，读取 `budget_password` / `[budget].password` 或本机 `BUDGET_PASSWORD`。
     - **迁移说明**：L 电脑运行配置见 `docs/ding_minutes_L_setup.md`。
 
+### 12. 📡 Codex雷达 (Codex Radar Lite)
+- **场景**：观察 Codex 额度重置窗口，避免错过高概率窗口或官方重置信号。
+- **功能**：
+    - **每小时监控**：GitHub Actions 每小时运行一次，不需要 Docker 或常驻服务器。
+    - **规则判断**：读取公开来源，按 Codex、limit、reset、recovered 等信号判断状态和 24/48 小时概率。
+    - **工具箱展示**：作为第 12 个板块出现在首页，可查看当前状态、关键证据、历史窗口记录和推送配置说明。
+    - **钉钉提醒**：高概率、窗口开启或窗口关闭时，通过钉钉机器人主动推送。
+    - **密钥保护**：钉钉 webhook 和加签密钥只放 GitHub Secrets，不写入代码。
+
 ---
 
 ## Codex Radar Lite
 
-这是一个放在仓库内、与 `pages/` 同级的轻量监控模块，用来观察 Codex 额度重置窗口。
+这是第 12 个工具板块的后台监控模块，用来观察 Codex 额度重置窗口。
 
 - **运行方式**：`.github/workflows/codex-radar.yml` 每小时运行一次。
 - **判断方式**：优先用规则引擎读取公开来源，不默认调用大模型。
 - **展示数据**：`data/codex_radar_current.json`、`data/codex_radar_history.json`、`data/codex_radar_signals.json`。
-- **静态页面**：`codex_radar_lite/site/index.html`。
+- **工具页面**：`pages/00_12、📡_Codex雷达.py`。
+- **静态页面**：`codex_radar_lite/site/index.html`，作为轻量备用展示入口。
 - **钉钉推送**：只在高概率、窗口开启或窗口关闭时推送。
 
 需要在 GitHub 仓库 Secrets 中配置：

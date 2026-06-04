@@ -18,6 +18,15 @@ apply_global_theme()
 
 TOOLS = [
     {
+        "title": "Codex雷达",
+        "desc": "每小时观察 Codex 重置窗口信号，展示当前概率，并在高概率或窗口变化时推送钉钉。",
+        "tag": "AI 工具监控",
+        "created": "2026_06_05",
+        "page": "pages/00_12、📡_Codex雷达.py",
+        "code": "M12",
+        "accent": "magenta",
+    },
+    {
         "title": "Recorder_笔记",
         "desc": "每天扫描钉钉导出的 Word 转写，保留原文并生成可归档、可复盘的 AI 整理稿。",
         "tag": "纪要整理",

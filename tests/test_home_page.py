@@ -73,15 +73,17 @@ class HomePageTest(unittest.TestCase):
         _page_source, namespace = load_homepage_bits()
         tools = namespace["TOOLS"]
 
-        self.assertEqual("Recorder_笔记", tools[0]["title"])
-        self.assertTrue(tools[0]["locked"])
-        self.assertEqual("灵感便签盒", tools[1]["title"])
+        self.assertEqual("Codex雷达", tools[0]["title"])
+        self.assertEqual("M12", tools[0]["code"])
+        self.assertEqual("Recorder_笔记", tools[1]["title"])
+        self.assertTrue(tools[1]["locked"])
+        self.assertEqual("灵感便签盒", tools[2]["title"])
         budget_tool = next(tool for tool in tools if tool["title"] == "预算速记台账")
         self.assertTrue(budget_tool["locked"])
         blocked_codes = {tool["code"] for tool in tools if tool.get("blocked")}
         self.assertEqual({"M02", "M03", "M04", "M05"}, blocked_codes)
         self.assertEqual("报告评分", tools[-1]["title"])
-        self.assertEqual(11, len(tools))
+        self.assertEqual(12, len(tools))
         self.assertEqual(9, len(tools[:9]))
 
     def test_homepage_defers_red_x_cards_without_changing_nav_order(self):
@@ -89,7 +91,7 @@ class HomePageTest(unittest.TestCase):
         tools = namespace["TOOLS"]
         homepage_pages = namespace["get_homepage_pages"](tools)
 
-        self.assertEqual("M11", tools[0]["code"])
+        self.assertEqual("M12", tools[0]["code"])
         self.assertEqual("M01", tools[-1]["code"])
         self.assertEqual("M01", homepage_pages[0][-1]["code"])
         self.assertEqual(["M05", "M04", "M03", "M02"], [tool["code"] for tool in homepage_pages[1]])
