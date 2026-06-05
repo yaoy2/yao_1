@@ -1,1 +1,83 @@
-[]
+[
+  {
+    "id": "37967fbff5203400",
+    "source_id": "openai_status_history",
+    "source_name": "OpenAI Status Incidents",
+    "title": "Some users may experience issues accessing OpenAI accounts",
+    "summary": "Some users may experience issues accessing OpenAI accounts resolved All impacted services have now fully recovered. An issue caused some user accounts to be incorrectly suspended. We’re restoring account access and working through related subscription and credit impacts for affected users. We are still implementing the mitigation.",
+    "url": "https://status.openai.com/api/v2/incidents.json",
+    "observed_at": "2026-06-05T16:09:19Z",
+    "weight": 40,
+    "tags": [
+      "recovered"
+    ]
+  },
+  {
+    "id": "20cc490b79cab60c",
+    "source_id": "openai_status_history",
+    "source_name": "OpenAI Status Incidents",
+    "title": "Users unable to sign in using Microsoft personal accounts",
+    "summary": "Users unable to sign in using Microsoft personal accounts resolved All impacted services have now fully recovered. We have applied the mitigation and are monitoring the recovery. We are investigating the issue for the listed services.",
+    "url": "https://status.openai.com/api/v2/incidents.json",
+    "observed_at": "2026-06-05T15:58:28Z",
+    "weight": 40,
+    "tags": [
+      "recovered"
+    ]
+  },
+  {
+    "id": "ae4e9d336107d8b8",
+    "source_id": "openai_status_history",
+    "source_name": "OpenAI Status Incidents",
+    "title": "Elevated error rates for Free users in conversations",
+    "summary": "Elevated error rates for Free users in conversations resolved All impacted services have now fully recovered. We have applied the mitigation and are monitoring the recovery. We have identified that users are experiencing elevated errors for the impacted services. We are working on implementing a mitigation.",
+    "url": "https://status.openai.com/api/v2/incidents.json",
+    "observed_at": "2026-06-05T15:37:16Z",
+    "weight": 40,
+    "tags": [
+      "recovered"
+    ]
+  },
+  {
+    "id": "4a4cb89eb1bc3df0",
+    "source_id": "openai_status_history",
+    "source_name": "OpenAI Status Incidents",
+    "title": "Image API requests failing with 401s",
+    "summary": "Image API requests failing with 401s resolved All impacted services have now fully recovered. We have applied the mitigation and are monitoring the recovery. We have identified that users are experiencing elevated errors for the impacted services. We are working on implementing a mitigation.",
+    "url": "https://status.openai.com/api/v2/incidents.json",
+    "observed_at": "2026-06-04T19:52:18Z",
+    "weight": 40,
+    "tags": [
+      "recovered"
+    ]
+  },
+  {
+    "id": "ff160ee11287a9b4",
+    "source_id": "openai_status_history",
+    "source_name": "OpenAI Status Incidents",
+    "title": "Increased latency for Codex compaction for a subset of users",
+    "summary": "Increased latency for Codex compaction for a subset of users resolved All impacted services have now fully recovered. We have identified that users are experiencing elevated latency for the impacted services. We are working on implementing a mitigation.",
+    "url": "https://status.openai.com/api/v2/incidents.json",
+    "observed_at": "2026-06-04T04:37:16Z",
+    "weight": 40,
+    "tags": [
+      "codex",
+      "compaction",
+      "recovered"
+    ]
+  },
+  {
+    "id": "e8b23d318574b1ee",
+    "source_id": "openai_status_history",
+    "source_name": "OpenAI Status Incidents",
+    "title": "Codex Context Compaction Latency",
+    "summary": "Codex Context Compaction Latency resolved",
+    "url": "https://status.openai.com/api/v2/incidents.json",
+    "observed_at": "2026-05-28T06:59:35Z",
+    "weight": 40,
+    "tags": [
+      "codex",
+      "compaction"
+    ]
+  }
+]
