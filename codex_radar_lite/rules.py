@@ -43,7 +43,7 @@ def evaluate(signals: list[Signal], rules: dict[str, Any], history: list[dict[st
         if contains_any(text, open_words) and (is_codex or is_limit):
             score += 80 + signal.weight
             evidence.append(signal)
-        elif contains_any(text, closed_words) and (is_codex or is_limit or is_incident):
+        elif contains_any(text, closed_words) and (is_codex or is_limit):
             score += 65 + signal.weight
             evidence.append(signal)
         elif is_codex and is_limit:
@@ -82,4 +82,3 @@ def evaluate(signals: list[Signal], rules: dict[str, Any], history: list[dict[st
         signals=evidence[:10] if evidence else signals[:5],
         alert_level=alert_level,
     )
-

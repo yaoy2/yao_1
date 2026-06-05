@@ -115,6 +115,25 @@ class CodexRadarLiteTest(unittest.TestCase):
         self.assertEqual("closed", history[0]["status"])
         self.assertIsNotNone(history[0]["closed_at"])
 
+    def test_non_codex_recovered_incident_does_not_trigger_alert(self):
+        rules = {
+            "high_probability_threshold": 60,
+            "watch_threshold": 25,
+            "cooldown_hours_after_closed": 24,
+            "keywords": {
+                "open": ["will reset"],
+                "closed": ["fully recovered"],
+                "codex": ["codex"],
+                "limit": ["usage limits"],
+                "incident": ["latency", "recovered"],
+            },
+        }
+
+        state = evaluate([self.make_signal("Image API requests have now fully recovered")], rules, [])
+
+        self.assertEqual("normal", state.status)
+        self.assertEqual("silent", state.alert_level)
+
     def test_should_push_only_for_important_changes(self):
         previous = RadarState(
             status="watch",
