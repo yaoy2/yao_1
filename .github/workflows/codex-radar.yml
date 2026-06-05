@@ -4,6 +4,15 @@ on:
   schedule:
     - cron: "17 * * * *"
   workflow_dispatch:
+    inputs:
+      demo_alert:
+        description: "Send a DingTalk demo alert instead of running the radar"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
 
 permissions:
   contents: write
@@ -25,17 +34,25 @@ jobs:
           python -m pip install --upgrade pip
           pip install requests beautifulsoup4
 
+      - name: Send DingTalk demo alert
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.demo_alert == 'true' }}
+        env:
+          DINGTALK_WEBHOOK: ${{ secrets.DINGTALK_WEBHOOK }}
+          DINGTALK_SECRET: ${{ secrets.DINGTALK_SECRET }}
+        run: python -m codex_radar_lite.demo_alert
+
       - name: Run radar
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.demo_alert == 'true') }}
         env:
           DINGTALK_WEBHOOK: ${{ secrets.DINGTALK_WEBHOOK }}
           DINGTALK_SECRET: ${{ secrets.DINGTALK_SECRET }}
         run: python -m codex_radar_lite.cli
 
       - name: Commit radar data
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.demo_alert == 'true') }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/codex_radar_current.json data/codex_radar_history.json data/codex_radar_signals.json data/codex_radar_feed.xml
           git diff --cached --quiet || git commit -m "chore: update codex radar data"
           git push
-

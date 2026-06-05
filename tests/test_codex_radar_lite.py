@@ -5,6 +5,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from codex_radar_lite.collectors import extract_matching_signals, extract_statuspage_incidents
+from codex_radar_lite.demo_alert import build_demo_state
 from codex_radar_lite.feed import build_feed
 from codex_radar_lite.models import RadarState, Signal
 from codex_radar_lite.notifiers import send_dingtalk, should_push, signed_webhook
@@ -213,6 +214,15 @@ class CodexRadarLiteTest(unittest.TestCase):
         )
 
         self.assertEqual("skipped:no_webhook", send_dingtalk(state))
+
+    def test_demo_alert_looks_like_real_high_probability_window(self):
+        state = build_demo_state()
+
+        self.assertEqual("high_probability", state.status)
+        self.assertEqual("push", state.alert_level)
+        self.assertGreaterEqual(state.probability_24h, 60)
+        self.assertIn("Codex", state.reason)
+        self.assertGreaterEqual(len(state.signals), 2)
 
 
 if __name__ == "__main__":
