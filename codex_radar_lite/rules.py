@@ -21,6 +21,14 @@ def latest_closed_at(history: list[dict[str, Any]]) -> datetime | None:
     return max(candidates) if candidates else None
 
 
+def is_closed_signal(text: str, keywords: dict[str, Any]) -> bool:
+    return (
+        contains_any(text, list(keywords.get("closed", [])))
+        and contains_any(text, list(keywords.get("codex", [])))
+        and contains_any(text, list(keywords.get("limit", [])))
+    )
+
+
 def evaluate(signals: list[Signal], rules: dict[str, Any], history: list[dict[str, Any]] | None = None) -> RadarState:
     history = history or []
     keywords = rules.get("keywords", {})
@@ -43,14 +51,14 @@ def evaluate(signals: list[Signal], rules: dict[str, Any], history: list[dict[st
         if contains_any(text, open_words) and (is_codex or is_limit):
             score += 80 + signal.weight
             evidence.append(signal)
-        elif contains_any(text, closed_words) and (is_codex or is_limit):
+        elif contains_any(text, closed_words) and is_codex and is_limit:
             score += 65 + signal.weight
             evidence.append(signal)
         elif is_codex and is_limit:
             score += 35 + signal.weight
             evidence.append(signal)
         elif is_codex and is_incident:
-            score += 22 + signal.weight
+            score += 25
             evidence.append(signal)
 
     closed_at = latest_closed_at(history)
@@ -60,7 +68,7 @@ def evaluate(signals: list[Signal], rules: dict[str, Any], history: list[dict[st
     if evidence and any(contains_any(f"{item.title} {item.summary}", open_words) for item in evidence):
         status = "open"
         reason = "发现疑似官方重置窗口开启信号。"
-    elif evidence and any(contains_any(f"{item.title} {item.summary}", closed_words) for item in evidence):
+    elif evidence and any(is_closed_signal(f"{item.title} {item.summary}", keywords) for item in evidence):
         status = "closed"
         reason = "发现疑似额度已恢复或窗口关闭信号。"
     elif score >= int(rules.get("high_probability_threshold", 60)):

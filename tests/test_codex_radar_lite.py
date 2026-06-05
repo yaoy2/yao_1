@@ -108,12 +108,31 @@ class CodexRadarLiteTest(unittest.TestCase):
             },
         }
 
-        state = evaluate([self.make_signal("Codex latency fully recovered")], rules, [])
+        state = evaluate([self.make_signal("Codex usage limits fully recovered")], rules, [])
         history = update_history([], state)
 
         self.assertEqual("closed", state.status)
         self.assertEqual("closed", history[0]["status"])
         self.assertIsNotNone(history[0]["closed_at"])
+
+    def test_codex_latency_recovered_without_limit_does_not_trigger_alert(self):
+        rules = {
+            "high_probability_threshold": 60,
+            "watch_threshold": 25,
+            "cooldown_hours_after_closed": 24,
+            "keywords": {
+                "open": ["will reset"],
+                "closed": ["fully recovered"],
+                "codex": ["codex"],
+                "limit": ["usage limits"],
+                "incident": ["latency", "recovered"],
+            },
+        }
+
+        state = evaluate([self.make_signal("Codex compaction latency fully recovered")], rules, [])
+
+        self.assertEqual("watch", state.status)
+        self.assertEqual("silent", state.alert_level)
 
     def test_non_codex_recovered_incident_does_not_trigger_alert(self):
         rules = {

@@ -11,8 +11,8 @@
         "codex",
         "usage limit",
         "rate limit",
-        "compaction",
-        "recovered"
+        "quota",
+        "credit"
       ]
     }
   ]

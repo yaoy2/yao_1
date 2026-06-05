@@ -40,7 +40,7 @@ DEFAULT_SOURCES = {
             "kind": "statuspage_incidents",
             "weight": 40,
             "enabled": True,
-            "keywords": ["codex", "usage limit", "rate limit", "compaction", "recovered"],
+                "keywords": ["codex", "usage limit", "rate limit", "quota", "credit"],
         }
     ]
 }
