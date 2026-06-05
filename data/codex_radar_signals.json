@@ -1,18 +1,5 @@
 [
   {
-    "id": "37967fbff5203400",
-    "source_id": "openai_status_history",
-    "source_name": "OpenAI Status Incidents",
-    "title": "Some users may experience issues accessing OpenAI accounts",
-    "summary": "Some users may experience issues accessing OpenAI accounts resolved All impacted services have now fully recovered. An issue caused some user accounts to be incorrectly suspended. We’re restoring account access and working through related subscription and credit impacts for affected users. We are still implementing the mitigation.",
-    "url": "https://status.openai.com/api/v2/incidents.json",
-    "observed_at": "2026-06-05T16:09:19Z",
-    "weight": 40,
-    "tags": [
-      "recovered"
-    ]
-  },
-  {
     "id": "ff160ee11287a9b4",
     "source_id": "openai_status_history",
     "source_name": "OpenAI Status Incidents",
@@ -22,9 +9,7 @@
     "observed_at": "2026-06-04T04:37:16Z",
     "weight": 40,
     "tags": [
-      "codex",
-      "compaction",
-      "recovered"
+      "codex"
     ]
   },
   {
@@ -37,8 +22,7 @@
     "observed_at": "2026-05-28T06:59:35Z",
     "weight": 40,
     "tags": [
-      "codex",
-      "compaction"
+      "codex"
     ]
   }
 ]
