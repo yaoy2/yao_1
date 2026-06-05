@@ -62,5 +62,7 @@ def send_dingtalk(state: RadarState) -> str:
         timeout=20,
     )
     response.raise_for_status()
+    result = response.json()
+    if result.get("errcode") != 0:
+        raise RuntimeError(f"DingTalk rejected message: {result}")
     return "sent"
-

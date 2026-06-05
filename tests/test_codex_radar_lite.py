@@ -2,7 +2,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from codex_radar_lite.collectors import extract_matching_signals, extract_statuspage_incidents
 from codex_radar_lite.demo_alert import build_demo_state
@@ -214,6 +214,25 @@ class CodexRadarLiteTest(unittest.TestCase):
         )
 
         self.assertEqual("skipped:no_webhook", send_dingtalk(state))
+
+    @patch.dict(os.environ, {"DINGTALK_WEBHOOK": "https://oapi.dingtalk.com/robot/send"}, clear=True)
+    @patch("codex_radar_lite.notifiers.requests.post")
+    def test_dingtalk_rejection_raises_error(self, post):
+        response = Mock()
+        response.json.return_value = {"errcode": 310000, "errmsg": "keywords not in content"}
+        post.return_value = response
+        state = RadarState(
+            status="open",
+            probability_24h=90,
+            probability_48h=95,
+            reason="open",
+            checked_at="2026-06-05T00:00:00Z",
+            signals=[],
+            alert_level="push",
+        )
+
+        with self.assertRaises(RuntimeError):
+            send_dingtalk(state)
 
     def test_demo_alert_looks_like_real_high_probability_window(self):
         state = build_demo_state()
