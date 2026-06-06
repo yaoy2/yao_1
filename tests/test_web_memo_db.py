@@ -255,6 +255,7 @@ class WebMemoDbTest(unittest.TestCase):
 
         self.assertIn("Current palette", html)
         self.assertIn("#111111", html)
+        self.assertNotIn("linear-gradient", html)
         self.assertNotIn("Deleted palette", html)
         self.assertNotIn("#AAAAAA", html)
 

@@ -463,7 +463,7 @@ def build_memo_card_html(record, palettes=None):
         f'<span class="memo-tag {"memo-tag-main" if i == 0 else ""}">{escape(str(tag))}</span>'
         for i, tag in enumerate(tags)
     )
-    bg_style = f"linear-gradient(135deg, {bg} 0%, #ffffff 78%)"
+    bg_style = bg
     return f"""
     <article class="memo-card" style="--main:{main};--accent:{accent};--accent-soft:{accent}33;background:{bg_style};">
       <div class="memo-card-top">
@@ -520,17 +520,7 @@ def build_memo_cards_html(records):
         position: absolute;
         inset: 0 auto 0 0;
         width: 6px;
-        background: linear-gradient(180deg, var(--main), var(--accent));
-    }}
-    .memo-card::after {{
-        content: "";
-        position: absolute;
-        right: -24px;
-        top: -24px;
-        width: 86px;
-        height: 86px;
-        border-radius: 50%;
-        background: var(--accent-soft);
+        background: var(--main);
     }}
     .memo-card-top {{
         position: relative;
