@@ -1,9 +1,9 @@
 {
   "status": "watch",
-  "probability_24h": 30,
-  "probability_48h": 38,
+  "probability_24h": 50,
+  "probability_48h": 62,
   "reason": "发现 Codex 相关限额或事故信号，建议保持观察。",
-  "checked_at": "2026-06-06T16:35:52.326119Z",
+  "checked_at": "2026-06-06T18:41:20.849804Z",
   "alert_level": "silent",
   "signals": [
     {
