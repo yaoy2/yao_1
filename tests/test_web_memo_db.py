@@ -239,6 +239,25 @@ class WebMemoDbTest(unittest.TestCase):
         self.assertIn("&lt;article class=&quot;memo-card&quot;&gt;", html)
         self.assertNotIn('<article class="memo-card">不该变成结构</article>', html)
 
+    def test_memo_card_uses_current_palette_pool_instead_of_stored_snapshot(self):
+        record = {
+            "memo_date": "2026-06-07",
+            "content": "same memo should follow current palettes",
+            "tags": ["note"],
+            "palette_name": "Deleted palette",
+            "palette_colors": ["#AAAAAA", "#BBBBBB", "#CCCCCC"],
+        }
+        palettes = [
+            {"id": 1, "name": "Current palette", "colors": ["#111111", "#222222", "#333333"]},
+        ]
+
+        html = web_memo_db.build_memo_card_html(record, palettes=palettes)
+
+        self.assertIn("Current palette", html)
+        self.assertIn("#111111", html)
+        self.assertNotIn("Deleted palette", html)
+        self.assertNotIn("#AAAAAA", html)
+
     def test_estimate_memo_cards_height_accounts_for_content_length(self):
         short_records = [{"content": "短句", "tags": []}]
         long_records = [{"content": "第一行\n第二行\n第三行\n第四行\n第五行", "tags": ["摘录"]}]

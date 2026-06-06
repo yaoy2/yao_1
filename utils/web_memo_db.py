@@ -1,4 +1,5 @@
 import json
+import hashlib
 import os
 import re
 import sqlite3
@@ -116,6 +117,15 @@ def pick_palette(index, palettes=None):
     if not palettes:
         return DEFAULT_PALETTE
     return palettes[index % len(palettes)]
+
+
+def pick_palette_for_record(record, palettes=None):
+    palettes = palettes or parse_palettes()
+    if not palettes:
+        return DEFAULT_PALETTE
+    key = f"{record.get('memo_date', '')}|{record.get('content', '')}"
+    digest = hashlib.sha256(key.encode("utf-8")).hexdigest()
+    return palettes[int(digest, 16) % len(palettes)]
 
 
 def split_tags(text):
@@ -436,16 +446,18 @@ def has_markdown_backup_records(path=None):
         return bool(parse_markdown_backup(backup_file.read()))
 
 
-def _normalize_palette_colors(record):
-    colors = record.get("palette_colors") or DEFAULT_PALETTE["colors"]
+def _normalize_palette_colors(colors):
+    colors = colors or DEFAULT_PALETTE["colors"]
     colors = list(colors)
     while len(colors) < 3:
         colors.append(colors[-1])
     return colors[:3]
 
 
-def build_memo_card_html(record):
-    main, accent, bg = _normalize_palette_colors(record)
+def build_memo_card_html(record, palettes=None):
+    palette = pick_palette_for_record(record, palettes)
+    main, accent, bg = _normalize_palette_colors(palette.get("colors"))
+    palette_name = palette.get("name") or DEFAULT_PALETTE["name"]
     tags = record.get("tags") or []
     tag_html = "".join(
         f'<span class="memo-tag {"memo-tag-main" if i == 0 else ""}">{escape(str(tag))}</span>'
@@ -456,7 +468,7 @@ def build_memo_card_html(record):
     <article class="memo-card" style="--main:{main};--accent:{accent};--accent-soft:{accent}33;background:{bg_style};">
       <div class="memo-card-top">
         <div class="memo-date">{escape(record.get("memo_date", ""))}</div>
-        <div class="memo-palette">{escape(record.get("palette_name", "") or "默认色卡")}</div>
+        <div class="memo-palette">{escape(palette_name)}</div>
       </div>
       <div class="memo-content">{escape(record.get("content", ""))}</div>
       <div class="memo-tags">{tag_html}</div>
@@ -465,10 +477,11 @@ def build_memo_card_html(record):
 
 
 def build_memo_cards_html(records):
+    palettes = parse_palettes()
     columns = _split_records_into_columns(records, 3)
     column_html = "".join(
         '<div class="memo-card-column">'
-        + "".join(build_memo_card_html(record) for record in column)
+        + "".join(build_memo_card_html(record, palettes=palettes) for record in column)
         + "</div>"
         for column in columns
     )
