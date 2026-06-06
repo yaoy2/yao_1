@@ -122,5 +122,21 @@ class GithubBackupSyncTest(unittest.TestCase):
         self.assertEqual({"ref": "main"}, session.get_calls[0]["params"])
 
 
+    def test_read_file_from_github_returns_text_without_writing_local_file(self):
+        session = FakeDownloadSession(content="# backup\n\ncontent")
+
+        result = github_backup_sync.read_file_from_github(
+            "data/web_memos_backup.md",
+            secrets={"github_backup_token": "token-1"},
+            environ={},
+            session=session,
+        )
+
+        self.assertTrue(result["ok"])
+        self.assertEqual("# backup\n\ncontent", result["content"])
+        self.assertEqual("data/web_memos_backup.md", result["path"])
+        self.assertEqual(1, len(session.get_calls))
+
+
 if __name__ == "__main__":
     unittest.main()

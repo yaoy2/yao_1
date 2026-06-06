@@ -271,6 +271,28 @@ def _insert_memo_record(record):
     conn.close()
 
 
+def _memo_identity(record):
+    return (
+        str(record.get("memo_date", "")).strip(),
+        str(record.get("content", "")).strip(),
+    )
+
+
+def import_memo_records(records):
+    existing_keys = {_memo_identity(record) for record in get_memos()}
+    inserted = 0
+    for record in reversed(records or []):
+        key = _memo_identity(record)
+        if not key[0] or not key[1] or key in existing_keys:
+            continue
+        _insert_memo_record(record)
+        existing_keys.add(key)
+        inserted += 1
+    if inserted:
+        sync_backup_file()
+    return inserted
+
+
 def get_memos(category=None, keyword=None):
     conn = get_connection()
     conditions = []

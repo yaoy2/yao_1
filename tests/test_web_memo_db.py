@@ -134,6 +134,37 @@ class WebMemoDbTest(unittest.TestCase):
 
         self.assertTrue(has_records)
 
+    def test_import_memo_records_merges_new_records_without_duplicates(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patched_web_memo_storage(tmpdir) as tmp_path:
+                backup_path = tmp_path / "web_memos_backup.md"
+                web_memo_db.init_db()
+                web_memo_db.add_memo("2026-06-01", "local memo", classify=False)
+
+                inserted = web_memo_db.import_memo_records(
+                    [
+                        {
+                            "memo_date": "2026-06-01",
+                            "content": "local memo",
+                            "category": "local",
+                            "tags": ["duplicate"],
+                        },
+                        {
+                            "memo_date": "2026-06-02",
+                            "content": "remote memo",
+                            "category": "remote",
+                            "tags": ["new"],
+                        },
+                    ]
+                )
+                records = web_memo_db.get_memos()
+                backup_records = web_memo_db.parse_markdown_backup(backup_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(1, inserted)
+        self.assertEqual(2, len(records))
+        self.assertEqual(2, len(backup_records))
+        self.assertIn("remote memo", [record["content"] for record in records])
+
     def test_build_markdown_export_contains_dates_content_and_tags(self):
         records = [
             {
@@ -253,6 +284,18 @@ class WebMemoDbTest(unittest.TestCase):
             page_source.index("restore_web_memo_backup_from_github()"),
             page_source.index("web_memo_db.init_db()"),
         )
+
+
+    def test_page_merges_remote_web_memos_and_blocks_empty_overwrite(self):
+        pages_dir = Path(__file__).resolve().parents[1] / "pages"
+        page_path = next(pages_dir.glob("01_10*.py"))
+        page_source = page_path.read_text(encoding="utf-8")
+
+        self.assertIn("merge_remote_web_memos_from_github()", page_source)
+        self.assertIn("read_file_from_github", page_source)
+        self.assertIn("import_memo_records(remote_records)", page_source)
+        self.assertIn("remote_records and not local_records", page_source)
+        self.assertIn("web_memo_db.init_db()\nmerge_remote_web_memos_from_github()", page_source)
 
 
 if __name__ == "__main__":

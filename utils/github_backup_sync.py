@@ -86,7 +86,7 @@ def sync_file_to_github(local_path, repo_path, message, secrets=None, environ=No
     return {"ok": True, "skipped": False, "path": repo_path}
 
 
-def download_file_from_github(local_path, repo_path, secrets=None, environ=None, session=None):
+def read_file_from_github(repo_path, secrets=None, environ=None, session=None):
     config = get_backup_sync_config(secrets, environ)
     if not config["enabled"]:
         return {"ok": False, "skipped": True, "reason": "missing_token"}
@@ -107,10 +107,18 @@ def download_file_from_github(local_path, repo_path, secrets=None, environ=None,
         raise RuntimeError(f"GitHub 璇诲彇澶囦唤鏂囦欢澶辫触锛欻TTP {response.status_code}")
 
     encoded_content = str(response.json().get("content", ""))
-    content = base64.b64decode("".join(encoded_content.split()))
+    content = base64.b64decode("".join(encoded_content.split())).decode("utf-8")
+    return {"ok": True, "skipped": False, "path": repo_path, "content": content}
+
+
+def download_file_from_github(local_path, repo_path, secrets=None, environ=None, session=None):
+    result = read_file_from_github(repo_path, secrets=secrets, environ=environ, session=session)
+    if not result.get("ok"):
+        return result
+
     local_path = Path(local_path)
     local_path.parent.mkdir(parents=True, exist_ok=True)
-    local_path.write_bytes(content)
+    local_path.write_text(str(result.get("content", "")), encoding="utf-8")
     return {"ok": True, "skipped": False, "path": repo_path}
 
 

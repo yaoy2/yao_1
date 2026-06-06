@@ -69,7 +69,50 @@ def restore_web_memo_backup_from_github():
         st.warning(f"便签备份从 GitHub 读取失败，将继续使用当前环境本地备份：{exc}")
 
 
+def merge_remote_web_memos_from_github():
+    try:
+        result = github_backup_sync.read_file_from_github(
+            "data/web_memos_backup.md",
+            secrets=st.secrets,
+            environ=os.environ,
+        )
+    except Exception as exc:
+        st.warning(f"便签备份从 GitHub 读取失败，将继续使用当前环境本地备份：{exc}")
+        return
+    if not result.get("ok"):
+        return
+
+    remote_records = web_memo_db.parse_markdown_backup(result.get("content", ""))
+    if not remote_records:
+        return
+    inserted = web_memo_db.import_memo_records(remote_records)
+    if inserted:
+        st.info(f"已从 GitHub 备份补回 {inserted} 条便签。")
+
+
 def sync_web_memo_backup_to_github():
+    local_records = web_memo_db.get_memos()
+    try:
+        remote_result = github_backup_sync.read_file_from_github(
+            "data/web_memos_backup.md",
+            secrets=st.secrets,
+            environ=os.environ,
+        )
+    except Exception as exc:
+        st.warning(f"便签已保存在当前环境，但同步到 GitHub 前读取远端备份失败：{exc}")
+        return
+    if remote_result.get("skipped") and remote_result.get("reason") == "missing_token":
+        st.info("便签已保存在当前环境；如需跨部署保留，请在 Streamlit secrets 配置 GITHUB_BACKUP_TOKEN。")
+        return
+    if remote_result.get("ok"):
+        remote_records = web_memo_db.parse_markdown_backup(remote_result.get("content", ""))
+        if remote_records and not local_records:
+            st.warning("GitHub 上还有便签备份，当前环境是空的，已阻止空备份覆盖远端。")
+            return
+        inserted = web_memo_db.import_memo_records(remote_records)
+        if inserted:
+            st.info(f"已与 GitHub 备份合并 {inserted} 条便签，再同步回远端。")
+
     try:
         result = github_backup_sync.sync_file_to_github(
             web_memo_db.BACKUP_MD_PATH,
@@ -281,6 +324,7 @@ apply_style()
 render_home_link()
 restore_web_memo_backup_from_github()
 web_memo_db.init_db()
+merge_remote_web_memos_from_github()
 
 records = web_memo_db.get_memos()
 categories = ["全部"] + web_memo_db.get_categories()
