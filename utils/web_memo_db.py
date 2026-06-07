@@ -637,18 +637,34 @@ def _normalize_palette_colors(colors):
     return colors[:3]
 
 
+def _memo_card_theme(colors, palette_index=None):
+    main, accent, bg = _normalize_palette_colors(colors)
+    mode = int(palette_index or 0) % 3
+    if mode == 0:
+        card_bg, card_text, card_accent = main, accent, bg
+    elif mode == 1:
+        card_bg, card_text, card_accent = accent, main, bg
+    else:
+        card_bg, card_text, card_accent = bg, main, accent
+    return {
+        "main": main,
+        "accent": card_accent,
+        "card_bg": card_bg,
+        "card_text": card_text,
+    }
+
+
 def build_memo_card_html(record, palettes=None, palette_index=None):
     palette = pick_palette_for_record(record, palettes, index=palette_index)
-    main, accent, bg = _normalize_palette_colors(palette.get("colors"))
+    theme = _memo_card_theme(palette.get("colors"), palette_index)
     palette_name = palette.get("name") or DEFAULT_PALETTE["name"]
     tags = record.get("tags") or []
     tag_html = "".join(
         f'<span class="memo-tag {"memo-tag-main" if i == 0 else ""}">{escape(str(tag))}</span>'
         for i, tag in enumerate(tags)
     )
-    bg_style = bg
     return f"""
-    <article class="memo-card" style="--main:{main};--accent:{accent};--accent-soft:{accent}33;background:{bg_style};">
+    <article class="memo-card" style="--main:{theme['main']};--accent:{theme['accent']};--card-text:{theme['card_text']};--card-pill-bg:{theme['card_text']}1F;--card-border:{theme['card_text']}40;background:{theme['card_bg']};color:{theme['card_text']};">
       <div class="memo-card-top">
         <div class="memo-date">{escape(record.get("memo_date", ""))}</div>
         <div class="memo-palette">{escape(palette_name)}</div>
@@ -674,7 +690,7 @@ def build_memo_cards_html(records):
     body {{
         margin: 0;
         font-family: "Microsoft YaHei", Arial, sans-serif;
-        color: #182230;
+        color: inherit;
     }}
     .memo-card-grid {{
         display: grid;
@@ -696,7 +712,7 @@ def build_memo_cards_html(records):
         margin: 0;
         border: 1px solid rgba(24,34,48,.1);
         border-radius: 8px;
-        box-shadow: 0 10px 24px rgba(24,34,48,.055);
+        box-shadow: 0 12px 26px rgba(24,34,48,.16);
         overflow: hidden;
     }}
     .memo-card::before {{
@@ -704,7 +720,7 @@ def build_memo_cards_html(records):
         position: absolute;
         inset: 0 auto 0 0;
         width: 6px;
-        background: var(--main);
+        background: var(--card-text);
     }}
     .memo-card-top {{
         position: relative;
@@ -715,22 +731,22 @@ def build_memo_cards_html(records):
         margin-bottom: .7rem;
     }}
     .memo-date {{
-        color: var(--main);
+        color: var(--card-text);
         font-size: .82rem;
         font-weight: 800;
         line-height: 1.35;
     }}
     .memo-palette {{
         font-size: .72rem;
-        color: #667085;
-        background: rgba(255,255,255,.75);
-        border: 1px solid rgba(24,34,48,.08);
+        color: var(--card-text);
+        background: var(--card-pill-bg);
+        border: 1px solid var(--card-border);
         border-radius: 999px;
         padding: .22rem .5rem;
     }}
     .memo-content {{
         position: relative;
-        color: #182230;
+        color: var(--card-text);
         font-family: "Kaiti SC", KaiTi, STKaiti, "Songti SC", SimSun, serif;
         font-size: 1.08rem;
         font-weight: 600;
@@ -747,14 +763,14 @@ def build_memo_cards_html(records):
     }}
     .memo-tag {{
         font-size: .74rem;
-        background: rgba(255,255,255,.78);
-        color: #344054;
-        border: 1px solid rgba(24,34,48,.08);
+        background: var(--card-pill-bg);
+        color: var(--card-text);
+        border: 1px solid var(--card-border);
         border-radius: 999px;
         padding: .16rem .48rem;
     }}
     .memo-tag-main {{
-        color: var(--main);
+        color: var(--card-text);
         font-weight: 700;
     }}
     @media (max-width: 980px) {{

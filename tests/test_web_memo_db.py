@@ -331,6 +331,29 @@ class WebMemoDbTest(unittest.TestCase):
         self.assertIn("A", first_html)
         self.assertIn("B", second_html)
 
+    def test_memo_card_uses_palette_pair_as_background_and_text_colors(self):
+        record = {"memo_date": "2026-06-07", "content": "那不勒黄配曙绿", "tags": ["配色"]}
+        palettes = [
+            {"id": 37, "name": "那不勒黄曙绿", "colors": ["#F8CB1D", "#19663C", "#F6F1DA"]},
+        ]
+
+        yellow_card = web_memo_db.build_memo_card_html(record, palettes=palettes, palette_index=0)
+        green_card = web_memo_db.build_memo_card_html(record, palettes=palettes, palette_index=1)
+
+        self.assertIn("background:#F8CB1D", yellow_card)
+        self.assertIn("--card-text:#19663C", yellow_card)
+        self.assertIn("background:#19663C", green_card)
+        self.assertIn("--card-text:#F8CB1D", green_card)
+
+    def test_memo_card_css_uses_palette_text_variable_instead_of_fixed_black(self):
+        records = [{"memo_date": "2026-06-07", "content": "配色测试", "tags": ["配色"]}]
+
+        html = web_memo_db.build_memo_cards_html(records)
+
+        self.assertIn("color: var(--card-text);", html)
+        self.assertNotIn("linear-gradient", html)
+        self.assertNotIn("color: #182230;", html)
+
     def test_build_memo_cards_html_renders_multiple_cards_without_leaking_html(self):
         records = [
             {

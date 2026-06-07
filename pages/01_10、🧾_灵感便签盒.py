@@ -230,7 +230,7 @@ def apply_style():
             margin: 0 0 .82rem;
             border: 1px solid rgba(24,34,48,.1);
             border-radius: 8px;
-            box-shadow: 0 10px 24px rgba(24,34,48,.055);
+            box-shadow: 0 12px 26px rgba(24,34,48,.16);
             overflow: hidden;
         }
         .memo-card::before {
@@ -238,17 +238,7 @@ def apply_style():
             position: absolute;
             inset: 0 auto 0 0;
             width: 6px;
-            background: linear-gradient(180deg, var(--main), var(--accent));
-        }
-        .memo-card::after {
-            content: "";
-            position: absolute;
-            right: -24px;
-            top: -24px;
-            width: 86px;
-            height: 86px;
-            border-radius: 50%;
-            background: var(--accent-soft);
+            background: var(--card-text);
         }
         .memo-card-top {
             position: relative;
@@ -259,22 +249,22 @@ def apply_style():
             margin-bottom: .7rem;
         }
         .memo-date {
-            color: var(--main);
+            color: var(--card-text);
             font-size: .82rem;
             font-weight: 800;
             line-height: 1.35;
         }
         .memo-palette {
             font-size: .72rem;
-            color: #667085;
-            background: rgba(255,255,255,.75);
-            border: 1px solid rgba(24,34,48,.08);
+            color: var(--card-text);
+            background: var(--card-pill-bg);
+            border: 1px solid var(--card-border);
             border-radius: 999px;
             padding: .22rem .5rem;
         }
         .memo-content {
             position: relative;
-            color: #182230;
+            color: var(--card-text);
             font-family: "Kaiti SC", KaiTi, STKaiti, "Songti SC", SimSun, serif;
             font-size: 1.08rem;
             font-weight: 600;
@@ -291,14 +281,14 @@ def apply_style():
         }
         .memo-tag {
             font-size: .74rem;
-            background: rgba(255,255,255,.78);
-            color: #344054;
-            border: 1px solid rgba(24,34,48,.08);
+            background: var(--card-pill-bg);
+            color: var(--card-text);
+            border: 1px solid var(--card-border);
             border-radius: 999px;
             padding: .16rem .48rem;
         }
         .memo-tag-main {
-            color: var(--main);
+            color: var(--card-text);
             font-weight: 700;
         }
         .export-strip {
