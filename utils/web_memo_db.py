@@ -647,20 +647,32 @@ def _hex_to_rgb(hex_code):
         return (0, 0, 0)
 
 
-def _is_neutral_black(hex_code):
+def _is_visually_black_text(hex_code):
     r, g, b = _hex_to_rgb(hex_code)
     luminance = 0.299 * r + 0.587 * g + 0.114 * b
     saturation_hint = max(r, g, b) - min(r, g, b)
-    return luminance < 75 and saturation_hint < 42
+    return luminance < 75 and saturation_hint < 70
 
 
 def _avoid_black_text(preferred, fallback_candidates):
-    if not _is_neutral_black(preferred):
+    if not _is_visually_black_text(preferred):
         return preferred
     for candidate in fallback_candidates:
-        if candidate != preferred and not _is_neutral_black(candidate):
+        if candidate != preferred and not _is_visually_black_text(candidate):
             return candidate
     return preferred
+
+
+def _memo_poster_excerpt(content, limit=18):
+    lines = [line.strip() for line in str(content or "").splitlines() if line.strip()]
+    text = lines[0] if lines else ""
+    for separator in ["。", "，", "；", ";", "."]:
+        if separator in text:
+            text = text.split(separator, 1)[0] + separator
+            break
+    if len(text) > limit:
+        text = text[:limit].rstrip("，。；;,. ") + "..."
+    return text
 
 
 def _memo_card_theme(colors, palette_index=None):
@@ -672,7 +684,7 @@ def _memo_card_theme(colors, palette_index=None):
         card_bg, card_text, card_accent = accent, main, bg
     else:
         card_bg, card_text, card_accent = bg, main, accent
-    card_text = _avoid_black_text(card_text, [accent, main, bg])
+    card_text = _avoid_black_text(card_text, [card_accent, bg, accent, main])
     return {
         "main": main,
         "accent": card_accent,
@@ -690,13 +702,11 @@ def build_memo_card_html(record, palettes=None, palette_index=None):
         f'<span class="memo-tag {"memo-tag-main" if i == 0 else ""}">{escape(str(tag))}</span>'
         for i, tag in enumerate(tags)
     )
+    poster_excerpt = _memo_poster_excerpt(record.get("content", ""))
     return f"""
-    <article class="memo-card" style="--main:{theme['main']};--accent:{theme['accent']};--card-text:{theme['card_text']};--card-pill-bg:{theme['card_text']}1F;--card-border:{theme['card_text']}40;background:{theme['card_bg']};color:{theme['card_text']};">
-      <div class="memo-card-top">
-        <div class="memo-date">{escape(record.get("memo_date", ""))}</div>
-        <div class="memo-palette">{escape(palette_name)}</div>
-      </div>
-      <div class="memo-content">{escape(record.get("content", ""))}</div>
+    <article class="memo-card memo-card-poster" style="--main:{theme['main']};--accent:{theme['accent']};--card-text:{theme['card_text']};--card-pill-bg:{theme['card_text']}1F;--card-border:{theme['card_text']}40;background:{theme['card_bg']};color:{theme['card_text']};">
+      <div class="memo-poster-kicker">{escape(record.get("memo_date", ""))} / {escape(palette_name)}</div>
+      <div class="memo-poster-title">{escape(poster_excerpt)}</div>
       <div class="memo-tags">{tag_html}</div>
     </article>
     """
@@ -734,56 +744,53 @@ def build_memo_cards_html(records):
         position: relative;
         width: 100%;
         box-sizing: border-box;
-        min-height: 168px;
-        padding: .95rem .95rem .85rem 1.08rem;
+        min-height: 210px;
+        padding: 1.05rem 1rem 1rem;
         margin: 0;
-        border: 1px solid rgba(24,34,48,.1);
+        border: 1px solid var(--card-border);
         border-radius: 8px;
-        box-shadow: 0 12px 26px rgba(24,34,48,.16);
+        box-shadow: 0 18px 30px rgba(24,34,48,.24);
         overflow: hidden;
     }}
     .memo-card::before {{
         content: "";
         position: absolute;
-        inset: 0 auto 0 0;
-        width: 6px;
-        background: var(--card-text);
-    }}
-    .memo-card-top {{
-        position: relative;
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        gap: .6rem;
-        margin-bottom: .7rem;
-    }}
-    .memo-date {{
-        color: var(--card-text);
-        font-size: .82rem;
-        font-weight: 800;
-        line-height: 1.35;
-    }}
-    .memo-palette {{
-        font-size: .72rem;
-        color: var(--card-text);
-        background: var(--card-pill-bg);
+        inset: .46rem;
         border: 1px solid var(--card-border);
-        border-radius: 999px;
-        padding: .22rem .5rem;
+        border-radius: 7px;
+        pointer-events: none;
     }}
-    .memo-content {{
+    .memo-poster-kicker {{
         position: relative;
+        color: var(--card-text);
+        text-align: center;
+        font-size: .76rem;
+        font-weight: 800;
+        letter-spacing: .42em;
+        opacity: .86;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }}
+    .memo-poster-title {{
+        position: relative;
+        min-height: 106px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         color: var(--card-text);
         font-family: "Kaiti SC", KaiTi, STKaiti, "Songti SC", SimSun, serif;
-        font-size: 1.08rem;
-        font-weight: 600;
-        line-height: 1.9;
-        letter-spacing: .02em;
-        white-space: pre-wrap;
+        font-size: clamp(2rem, 7vw, 3.1rem);
+        font-weight: 850;
+        line-height: 1.18;
+        text-align: center;
+        letter-spacing: .04em;
+        padding: .65rem .2rem .35rem;
     }}
     .memo-tags {{
         position: relative;
-        margin-top: .75rem;
+        justify-content: center;
+        margin-top: .25rem;
         display: flex;
         gap: .38rem;
         flex-wrap: wrap;
@@ -794,7 +801,7 @@ def build_memo_cards_html(records):
         color: var(--card-text);
         border: 1px solid var(--card-border);
         border-radius: 999px;
-        padding: .16rem .48rem;
+        padding: .16rem .52rem;
     }}
     .memo-tag-main {{
         color: var(--card-text);

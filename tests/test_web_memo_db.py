@@ -356,6 +356,17 @@ class WebMemoDbTest(unittest.TestCase):
         self.assertNotIn("--card-text:#1F1B1D", html)
         self.assertNotIn("color:#1F1B1D", html)
 
+    def test_memo_card_never_uses_visually_black_deep_brown_as_text_color(self):
+        record = {"memo_date": "2026-06-07", "content": "暖棕复古不能黑字", "tags": ["配色"]}
+        palettes = [
+            {"id": 3, "name": "暖棕复古", "colors": ["#592E2E", "#A0522D", "#F5E6D3"]},
+        ]
+
+        html = web_memo_db.build_memo_card_html(record, palettes=palettes, palette_index=1)
+
+        self.assertNotIn("--card-text:#592E2E", html)
+        self.assertNotIn("color:#592E2E", html)
+
     def test_memo_card_css_uses_palette_text_variable_instead_of_fixed_black(self):
         records = [{"memo_date": "2026-06-07", "content": "配色测试", "tags": ["配色"]}]
 
@@ -364,6 +375,21 @@ class WebMemoDbTest(unittest.TestCase):
         self.assertIn("color: var(--card-text);", html)
         self.assertNotIn("linear-gradient", html)
         self.assertNotIn("color: #182230;", html)
+
+    def test_memo_card_front_is_poster_excerpt_instead_of_full_text(self):
+        record = {
+            "memo_date": "2026-06-07",
+            "content": "发心是行为的内在动机与根本誓愿，是一切工作、生活、实践、修行的起点。\n\n后面还有很多正文。",
+            "tags": ["金句"],
+        }
+
+        html = web_memo_db.build_memo_card_html(record, palette_index=0)
+
+        self.assertIn("memo-card-poster", html)
+        self.assertIn("memo-poster-title", html)
+        self.assertIn("发心是行为的内在动机", html)
+        self.assertNotIn("后面还有很多正文", html)
+        self.assertNotIn('class="memo-content"', html)
 
     def test_color_palette_pool_excludes_business_blue(self):
         palettes = web_memo_db.parse_palettes()
@@ -390,12 +416,12 @@ class WebMemoDbTest(unittest.TestCase):
 
         html = web_memo_db.build_memo_cards_html(records)
 
-        self.assertEqual(2, html.count('<article class="memo-card"'))
+        self.assertEqual(2, html.count('<article class="memo-card memo-card-poster"'))
         self.assertIn("memo-card-grid", html)
         self.assertEqual(3, html.count('class="memo-card-column"'))
         self.assertIn("grid-template-columns: repeat(3, minmax(0, 1fr));", html)
         self.assertNotIn("max-width: 1320px", html)
-        self.assertIn("&lt;article class=&quot;memo-card&quot;&gt;", html)
+        self.assertIn("&lt;article class=&quot;me...", html)
         self.assertNotIn('<article class="memo-card">不该变成结构</article>', html)
 
     def test_memo_card_uses_current_palette_pool_instead_of_stored_snapshot(self):
@@ -490,6 +516,7 @@ class WebMemoDbTest(unittest.TestCase):
         self.assertNotIn('button("编辑"', page_source)
         self.assertNotIn('button("隐藏"', page_source)
         self.assertIn("st.columns([0.18, 0.18, 0.18, 0.18, 1]", page_source)
+        self.assertIn('st.expander("全文"', page_source)
         self.assertIn("update_memo(", page_source)
         self.assertIn("archive_memo(", page_source)
         self.assertIn("move_memo(", page_source)

@@ -225,56 +225,53 @@ def apply_style():
         .memo-card {
             position: relative;
             width: 100%;
-            min-height: 168px;
-            padding: .95rem .95rem .85rem 1.08rem;
+            min-height: 210px;
+            padding: 1.05rem 1rem 1rem;
             margin: 0 0 .82rem;
-            border: 1px solid rgba(24,34,48,.1);
+            border: 1px solid var(--card-border);
             border-radius: 8px;
-            box-shadow: 0 12px 26px rgba(24,34,48,.16);
+            box-shadow: 0 18px 30px rgba(24,34,48,.24);
             overflow: hidden;
         }
         .memo-card::before {
             content: "";
             position: absolute;
-            inset: 0 auto 0 0;
-            width: 6px;
-            background: var(--card-text);
-        }
-        .memo-card-top {
-            position: relative;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: .6rem;
-            margin-bottom: .7rem;
-        }
-        .memo-date {
-            color: var(--card-text);
-            font-size: .82rem;
-            font-weight: 800;
-            line-height: 1.35;
-        }
-        .memo-palette {
-            font-size: .72rem;
-            color: var(--card-text);
-            background: var(--card-pill-bg);
+            inset: .46rem;
             border: 1px solid var(--card-border);
-            border-radius: 999px;
-            padding: .22rem .5rem;
+            border-radius: 7px;
+            pointer-events: none;
         }
-        .memo-content {
+        .memo-poster-kicker {
             position: relative;
+            color: var(--card-text);
+            text-align: center;
+            font-size: .76rem;
+            font-weight: 800;
+            letter-spacing: .42em;
+            opacity: .86;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .memo-poster-title {
+            position: relative;
+            min-height: 106px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             color: var(--card-text);
             font-family: "Kaiti SC", KaiTi, STKaiti, "Songti SC", SimSun, serif;
-            font-size: 1.08rem;
-            font-weight: 600;
-            line-height: 1.9;
-            letter-spacing: .02em;
-            white-space: pre-wrap;
+            font-size: clamp(2rem, 7vw, 3.1rem);
+            font-weight: 850;
+            line-height: 1.18;
+            text-align: center;
+            letter-spacing: .04em;
+            padding: .65rem .2rem .35rem;
         }
         .memo-tags {
             position: relative;
-            margin-top: .75rem;
+            justify-content: center;
+            margin-top: .25rem;
             display: flex;
             gap: .38rem;
             flex-wrap: wrap;
@@ -285,7 +282,7 @@ def apply_style():
             color: var(--card-text);
             border: 1px solid var(--card-border);
             border-radius: 999px;
-            padding: .16rem .48rem;
+            padding: .16rem .52rem;
         }
         .memo-tag-main {
             color: var(--card-text);
@@ -407,6 +404,8 @@ with st.container(border=True):
             with memo_columns[index % 3]:
                 with st.container(border=True):
                     st.markdown(web_memo_db.build_memo_card_html(record, palette_index=index), unsafe_allow_html=True)
+                    with st.expander("全文", expanded=False):
+                        st.markdown(record.get("content", "").replace("\n", "\n\n"))
                     move_up, move_down, edit_col, hide_col, _spacer = st.columns([0.18, 0.18, 0.18, 0.18, 1], gap="small")
                     if move_up.button("↑", key=f"memo_up_{record['id']}", disabled=index == 0, help="上移"):
                         web_memo_db.move_memo(record["id"], "up")
