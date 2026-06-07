@@ -780,7 +780,7 @@ def build_memo_cards_html(records):
         justify-content: center;
         color: var(--card-text);
         font-family: "Kaiti SC", KaiTi, STKaiti, "Songti SC", SimSun, serif;
-        font-size: clamp(2rem, 7vw, 3.1rem);
+        font-size: 1.62rem;
         font-weight: 850;
         line-height: 1.18;
         text-align: center;

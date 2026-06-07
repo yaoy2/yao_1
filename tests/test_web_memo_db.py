@@ -375,6 +375,8 @@ class WebMemoDbTest(unittest.TestCase):
         self.assertIn("color: var(--card-text);", html)
         self.assertNotIn("linear-gradient", html)
         self.assertNotIn("color: #182230;", html)
+        self.assertIn("font-size: 1.62rem;", html)
+        self.assertNotIn("clamp(2rem, 7vw, 3.1rem)", html)
 
     def test_memo_card_front_is_poster_excerpt_instead_of_full_text(self):
         record = {
@@ -517,16 +519,19 @@ class WebMemoDbTest(unittest.TestCase):
         self.assertNotIn('button("隐藏"', page_source)
         self.assertIn("st.columns([0.18, 0.18, 0.18, 0.18, 1]", page_source)
         self.assertIn('st.expander("全文"', page_source)
+        self.assertIn(
+            'with st.expander("全文", expanded=False):\n'
+            '                        st.markdown(record.get("content", "").replace("\\n", "\\n\\n"))\n'
+            '                        move_up, move_down, edit_col, hide_col, _spacer = st.columns',
+            page_source,
+        )
         self.assertIn("update_memo(", page_source)
         self.assertIn("archive_memo(", page_source)
         self.assertIn("move_memo(", page_source)
         self.assertIn("editing_memo_id", page_source)
         self.assertIn("with st.container(border=True):", page_source)
         self.assertIn("build_memo_card_html(record, palette_index=index)", page_source)
-        self.assertLess(
-            page_source.index("with st.container(border=True):"),
-            page_source.index('button("↑"'),
-        )
+        self.assertLess(page_source.index('st.expander("全文"'), page_source.index('button("↑"'))
 
 
 if __name__ == "__main__":
