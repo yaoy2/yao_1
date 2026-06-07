@@ -288,6 +288,16 @@ def apply_style():
             color: var(--card-text);
             font-weight: 700;
         }
+        .memo-fulltext {
+            font-family: "Kaiti SC", KaiTi, STKaiti, "Songti SC", SimSun, serif;
+            font-size: 1.05rem;
+            line-height: 1;
+            text-align: justify;
+        }
+        .memo-fulltext p {
+            text-indent: 2em;
+            margin: 0 0 .35em;
+        }
         .export-strip {
             margin-top: 1.15rem;
             padding: .95rem 1rem;
@@ -405,7 +415,10 @@ with st.container(border=True):
                 with st.container(border=True):
                     st.markdown(web_memo_db.build_memo_card_html(record, palette_index=index), unsafe_allow_html=True)
                     with st.expander("全文", expanded=False):
-                        st.markdown(record.get("content", "").replace("\n", "\n\n"))
+                        _content_html = record.get("content", "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                        _content_html = _content_html.replace("\n\n", "</p><p>").replace("\n", "<br>")
+                        _content_html = f'<div class="memo-fulltext"><p>{_content_html}</p></div>'
+                        st.markdown(_content_html, unsafe_allow_html=True)
                         move_up, move_down, edit_col, hide_col, _spacer = st.columns([0.18, 0.18, 0.18, 0.18, 1], gap="small")
                         if move_up.button("↑", key=f"memo_up_{record['id']}", disabled=index == 0, help="上移"):
                             web_memo_db.move_memo(record["id"], "up")

@@ -521,7 +521,10 @@ class WebMemoDbTest(unittest.TestCase):
         self.assertIn('st.expander("全文"', page_source)
         self.assertIn(
             'with st.expander("全文", expanded=False):\n'
-            '                        st.markdown(record.get("content", "").replace("\\n", "\\n\\n"))\n'
+            '                        _content_html = record.get("content", "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")\n'
+            '                        _content_html = _content_html.replace("\\n\\n", "</p><p>").replace("\\n", "<br>")\n'
+            '                        _content_html = f\'<div class="memo-fulltext"><p>{_content_html}</p></div>\'\n'
+            '                        st.markdown(_content_html, unsafe_allow_html=True)\n'
             '                        move_up, move_down, edit_col, hide_col, _spacer = st.columns',
             page_source,
         )
