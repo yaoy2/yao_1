@@ -3,7 +3,7 @@
   "probability_24h": 50,
   "probability_48h": 62,
   "reason": "发现 Codex 相关限额或事故信号，建议保持观察。",
-  "checked_at": "2026-06-07T06:43:56.983215Z",
+  "checked_at": "2026-06-07T12:03:15.929863Z",
   "alert_level": "silent",
   "signals": [
     {
