@@ -2,6 +2,10 @@
 
 ## 2026-06-07
 
+- **修复 Codex Radar Actions 并发推送失败**：排查 GitHub Actions 第 29 次运行发现，`python -m codex_radar_lite.cli` 已成功，失败发生在 `Commit radar data` 步骤；日志显示 `main -> main (fetch first)`，原因是同一时间远端 `main` 已有其他数据提交先进入，旧工作流直接 `git push` 导致被拒。
+- **Radar 工作流同步保护**：`.github/workflows/codex-radar.yml` 现在 checkout 后使用完整历史，并在生成 radar 数据前 `git pull --ff-only origin main`；提交 radar 数据后先 `git pull --rebase origin main`，再带重试执行 `git push`。如果 radar 数据没有变化，工作流会直接退出，不再无意义推送旧 HEAD。
+- **回归检查补充**：新增 `tests/test_codex_radar_workflow.py`，专门检查 workflow 是否包含“运行前同步 main、无变更跳过推送、推送前 rebase”三项保护，避免以后又退回到直接 push。
+- **验证结果**：先运行新增测试确认旧 workflow 会失败；修复后 `tests.test_codex_radar_workflow` 与 `tests.test_codex_radar_lite` 均通过，`codex_radar_lite` 包语法检查通过。第一次语法检查曾因 PowerShell 不展开 `*.py` 通配符而报 `[Errno 22] Invalid argument`，随后改为显式文件列表验证通过。按项目规则未启动 Streamlit。
 - **README 与 Change Log 双语命名落地**：将原中文 README / CHANGELOG 保留为 `README_ZH-CN.md` 和 `CHANGELOG_ZH-CN.md`，新增英文版 `README_EN.md` 和 `CHANGELOG_EN.md`；`README.md` 与 `CHANGELOG.md` 保留为 GitHub 默认入口，指向英文主版本并链接中文版。
 - **项目规则同步更新**：更新 `AGENTS.md`，明确以后凡是更新 README 或 Change Log，默认同时维护中英文版本；正式命名为 `README_ZH-CN.md` / `README_EN.md` 和 `CHANGELOG_ZH-CN.md` / `CHANGELOG_EN.md`。
 - **验证结果**：本次只改文档，未启动 Streamlit；已用 `git diff --check` 检查 Markdown 补丁格式和空白问题。

@@ -7,6 +7,10 @@ This English change log mirrors the project history maintained in `CHANGELOG_ZH-
 
 ## 2026-06-07
 
+- **Fixed Codex Radar Actions push conflict**: GitHub Actions run #29 was investigated. `python -m codex_radar_lite.cli` had already succeeded; the failure was in `Commit radar data`. The job log showed `main -> main (fetch first)`, meaning another remote `main` commit landed before the workflow pushed its radar-data commit.
+- **Radar workflow sync protection**: `.github/workflows/codex-radar.yml` now checks out full history, runs `git pull --ff-only origin main` before generating radar data, rebases with `git pull --rebase origin main` before pushing, and retries the push. If radar data did not change, the workflow exits without pushing an old HEAD.
+- **Regression check added**: `tests/test_codex_radar_workflow.py` now checks that the workflow keeps the three protections: sync main before running, skip empty pushes, and rebase before push.
+- **Verification**: the new workflow test was first run against the old workflow and failed as expected. After the fix, `tests.test_codex_radar_workflow` and `tests.test_codex_radar_lite` passed, and the `codex_radar_lite` package passed syntax checks. The first syntax-check command failed because PowerShell did not expand `*.py`; rerunning with an explicit file list passed. Streamlit was not started according to project rules.
 - **Bilingual README and Change Log naming added**: the former Chinese `README.md` and `CHANGELOG.md` content is now preserved as `README_ZH-CN.md` and `CHANGELOG_ZH-CN.md`. New English documents were added as `README_EN.md` and `CHANGELOG_EN.md`. `README.md` and `CHANGELOG.md` remain GitHub-default entry files that mirror the English versions and link back to the Chinese versions.
 - **Project rules updated**: `AGENTS.md` now records that future README or Change Log updates must maintain both Chinese and English versions by default.
 - **Verification**: this was a documentation-only change. Streamlit was not started. Markdown patch formatting and whitespace were checked with `git diff --check`.
