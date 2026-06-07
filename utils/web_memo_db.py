@@ -89,6 +89,7 @@ def init_db():
     conn.commit()
     conn.close()
     if get_memo_count() > 0:
+        archive_duplicate_memos()
         sync_backup_file()
     else:
         restore_from_markdown_backup()
@@ -127,10 +128,12 @@ def pick_palette(index, palettes=None):
     return palettes[index % len(palettes)]
 
 
-def pick_palette_for_record(record, palettes=None):
+def pick_palette_for_record(record, palettes=None, index=None):
     palettes = palettes or parse_palettes()
     if not palettes:
         return DEFAULT_PALETTE
+    if index is not None:
+        return pick_palette(index, palettes)
     key = f"{record.get('memo_date', '')}|{record.get('content', '')}"
     digest = hashlib.sha256(key.encode("utf-8")).hexdigest()
     return palettes[int(digest, 16) % len(palettes)]
@@ -305,25 +308,86 @@ def _insert_memo_record(record):
 
 
 def _memo_identity(record):
+    record_id = _coerce_record_id(record.get("id"))
+    if record_id:
+        return ("id", record_id)
+    return _memo_content_identity(record)
+
+
+def _memo_content_identity(record):
     return (
         str(record.get("memo_date", "")).strip(),
-        str(record.get("content", "")).strip(),
+        _normalize_memo_content(record.get("content", "")),
     )
 
 
+def _normalize_memo_content(content):
+    return re.sub(r"\s+", "", str(content or ""))
+
+
+def _memo_identities(record):
+    identities = {_memo_content_identity(record)}
+    record_id = _coerce_record_id(record.get("id"))
+    if record_id:
+        identities.add(("id", record_id))
+    return identities
+
+
+def _coerce_record_id(value):
+    try:
+        record_id = int(value or 0)
+    except (TypeError, ValueError):
+        return 0
+    return record_id if record_id > 0 else 0
+
+
 def import_memo_records(records):
-    existing_keys = {_memo_identity(record) for record in get_memos()}
+    existing_keys = set()
+    for record in get_memos(include_archived=True):
+        existing_keys.update(_memo_identities(record))
     inserted = 0
     for record in reversed(records or []):
         key = _memo_identity(record)
         if not key[0] or not key[1] or key in existing_keys:
             continue
         _insert_memo_record(record)
-        existing_keys.add(key)
+        existing_keys.update(_memo_identities(record))
         inserted += 1
     if inserted:
+        archive_duplicate_memos()
         sync_backup_file()
     return inserted
+
+
+def archive_duplicate_memos():
+    records = get_memos(include_archived=True)
+    seen = set()
+    duplicate_ids = []
+    for record in records:
+        if record.get("is_archived"):
+            continue
+        key = (
+            str(record.get("memo_date", "")).strip(),
+            _normalize_memo_content(record.get("content", "")),
+        )
+        if not key[0] or not key[1]:
+            continue
+        if key in seen:
+            duplicate_ids.append(record["id"])
+        else:
+            seen.add(key)
+    if not duplicate_ids:
+        return 0
+    placeholders = ", ".join("?" for _ in duplicate_ids)
+    conn = get_connection()
+    cur = conn.execute(
+        f"UPDATE web_memos SET is_archived = 1, updated_at = ? WHERE id IN ({placeholders})",
+        [datetime.now().strftime("%Y-%m-%d %H:%M:%S"), *duplicate_ids],
+    )
+    conn.commit()
+    changed = cur.rowcount
+    conn.close()
+    return changed
 
 
 def update_memo(record_id, content=None, category=None, tags=None):
@@ -456,6 +520,7 @@ def build_markdown_export(records, include_system_fields=False):
         if include_system_fields:
             lines.extend(
                 [
+                    f"- ID：{int(record.get('id') or 0)}",
                     f"- 顺序：{int(record.get('display_order') or 0)}",
                     f"- 状态：{'已隐藏' if record.get('is_archived') else '正常'}",
                 ]
@@ -505,9 +570,13 @@ def parse_markdown_backup(text):
         category = "待整理"
         tags = []
         palette_name = ""
+        record_id = 0
         display_order = 0
         is_archived = False
         for line in lines[1:]:
+            if line.startswith("- ID："):
+                record_id = _coerce_record_id(line.replace("- ID：", "", 1).strip())
+                continue
             if line.startswith("- 分类："):
                 category = line.replace("- 分类：", "", 1).strip() or "待整理"
             elif line.startswith("- 标签："):
@@ -528,6 +597,7 @@ def parse_markdown_backup(text):
         if memo_date and content:
             records.append(
                 {
+                    "id": record_id,
                     "memo_date": memo_date,
                     "content": content,
                     "category": category,
@@ -567,8 +637,8 @@ def _normalize_palette_colors(colors):
     return colors[:3]
 
 
-def build_memo_card_html(record, palettes=None):
-    palette = pick_palette_for_record(record, palettes)
+def build_memo_card_html(record, palettes=None, palette_index=None):
+    palette = pick_palette_for_record(record, palettes, index=palette_index)
     main, accent, bg = _normalize_palette_colors(palette.get("colors"))
     palette_name = palette.get("name") or DEFAULT_PALETTE["name"]
     tags = record.get("tags") or []
@@ -591,10 +661,11 @@ def build_memo_card_html(record, palettes=None):
 
 def build_memo_cards_html(records):
     palettes = parse_palettes()
-    columns = _split_records_into_columns(records, 3)
+    indexed_records = list(enumerate(records))
+    columns = _split_records_into_columns(indexed_records, 3)
     column_html = "".join(
         '<div class="memo-card-column">'
-        + "".join(build_memo_card_html(record, palettes=palettes) for record in column)
+        + "".join(build_memo_card_html(record, palettes=palettes, palette_index=index) for index, record in column)
         + "</div>"
         for column in columns
     )

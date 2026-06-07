@@ -92,12 +92,39 @@ class WebMemoDbTest(unittest.TestCase):
                 )
                 record = web_memo_db.get_memos()[0]
                 backup_text = backup_path.read_text(encoding="utf-8")
+                backup_records = web_memo_db.parse_markdown_backup(backup_text)
 
         self.assertEqual("新内容", record["content"])
         self.assertEqual("观点", record["category"])
         self.assertEqual(["观点", "已编辑"], record["tags"])
         self.assertIn("新内容", backup_text)
         self.assertIn("已编辑", backup_text)
+        self.assertEqual(memo_id, backup_records[0]["id"])
+
+    def test_import_memo_records_skips_stale_remote_version_after_edit(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patched_web_memo_storage(tmpdir):
+                web_memo_db.init_db()
+                web_memo_db.add_memo("2026-06-07", "旧内容", classify=False)
+                memo_id = web_memo_db.get_memos()[0]["id"]
+
+                web_memo_db.update_memo(memo_id, content="新内容")
+                inserted = web_memo_db.import_memo_records(
+                    [
+                        {
+                            "id": memo_id,
+                            "memo_date": "2026-06-07",
+                            "content": "旧内容",
+                            "category": "观点",
+                            "tags": ["旧版本"],
+                        }
+                    ]
+                )
+                records = web_memo_db.get_memos()
+
+        self.assertEqual(0, inserted)
+        self.assertEqual(1, len(records))
+        self.assertEqual("新内容", records[0]["content"])
 
     def test_archive_memo_hides_from_default_list_but_keeps_backup_record(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -229,6 +256,22 @@ class WebMemoDbTest(unittest.TestCase):
         self.assertEqual(2, len(backup_records))
         self.assertIn("remote memo", [record["content"] for record in records])
 
+    def test_archive_duplicate_memos_keeps_only_one_visible_card(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patched_web_memo_storage(tmpdir):
+                web_memo_db.init_db()
+                web_memo_db.add_memo("2026-06-07", "same memo", classify=False)
+                web_memo_db.add_memo("2026-06-07", "same\nmemo", classify=False)
+
+                archived = web_memo_db.archive_duplicate_memos()
+                visible_records = web_memo_db.get_memos()
+                all_records = web_memo_db.get_memos(include_archived=True)
+
+        self.assertEqual(1, archived)
+        self.assertEqual(1, len(visible_records))
+        self.assertEqual(2, len(all_records))
+        self.assertEqual(1, sum(1 for record in all_records if record["is_archived"]))
+
     def test_build_markdown_export_contains_dates_content_and_tags(self):
         records = [
             {
@@ -274,6 +317,19 @@ class WebMemoDbTest(unittest.TestCase):
         self.assertEqual("A", web_memo_db.pick_palette(0, palettes)["name"])
         self.assertEqual("B", web_memo_db.pick_palette(1, palettes)["name"])
         self.assertEqual("A", web_memo_db.pick_palette(2, palettes)["name"])
+
+    def test_memo_card_can_use_position_palette_to_reduce_repeated_colors(self):
+        record = {"memo_date": "2026-06-07", "content": "same memo", "tags": []}
+        palettes = [
+            {"id": 1, "name": "A", "colors": ["#111111", "#222222", "#333333"]},
+            {"id": 2, "name": "B", "colors": ["#444444", "#555555", "#666666"]},
+        ]
+
+        first_html = web_memo_db.build_memo_card_html(record, palettes=palettes, palette_index=0)
+        second_html = web_memo_db.build_memo_card_html(record, palettes=palettes, palette_index=1)
+
+        self.assertIn("A", first_html)
+        self.assertIn("B", second_html)
 
     def test_build_memo_cards_html_renders_multiple_cards_without_leaking_html(self):
         records = [
@@ -394,6 +450,12 @@ class WebMemoDbTest(unittest.TestCase):
         self.assertIn("archive_memo(", page_source)
         self.assertIn("move_memo(", page_source)
         self.assertIn("editing_memo_id", page_source)
+        self.assertIn("with st.container(border=True):", page_source)
+        self.assertIn("build_memo_card_html(record, palette_index=index)", page_source)
+        self.assertLess(
+            page_source.index("with st.container(border=True):"),
+            page_source.index('button("↑"'),
+        )
 
 
 if __name__ == "__main__":
