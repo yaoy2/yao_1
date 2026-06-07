@@ -345,6 +345,17 @@ class WebMemoDbTest(unittest.TestCase):
         self.assertIn("background:#19663C", green_card)
         self.assertIn("--card-text:#F8CB1D", green_card)
 
+    def test_memo_card_never_uses_neutral_black_as_text_color(self):
+        record = {"memo_date": "2026-06-07", "content": "不要黑字", "tags": ["配色"]}
+        palettes = [
+            {"id": 99, "name": "测试黑色", "colors": ["#F8CB1D", "#1F1B1D", "#F6F1DA"]},
+        ]
+
+        html = web_memo_db.build_memo_card_html(record, palettes=palettes, palette_index=0)
+
+        self.assertNotIn("--card-text:#1F1B1D", html)
+        self.assertNotIn("color:#1F1B1D", html)
+
     def test_memo_card_css_uses_palette_text_variable_instead_of_fixed_black(self):
         records = [{"memo_date": "2026-06-07", "content": "配色测试", "tags": ["配色"]}]
 
@@ -353,6 +364,11 @@ class WebMemoDbTest(unittest.TestCase):
         self.assertIn("color: var(--card-text);", html)
         self.assertNotIn("linear-gradient", html)
         self.assertNotIn("color: #182230;", html)
+
+    def test_color_palette_pool_excludes_business_blue(self):
+        palettes = web_memo_db.parse_palettes()
+
+        self.assertNotIn("商务蓝", [palette["name"] for palette in palettes])
 
     def test_build_memo_cards_html_renders_multiple_cards_without_leaking_html(self):
         records = [

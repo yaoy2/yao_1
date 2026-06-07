@@ -637,6 +637,32 @@ def _normalize_palette_colors(colors):
     return colors[:3]
 
 
+def _hex_to_rgb(hex_code):
+    hex_code = str(hex_code or "").strip().lstrip("#")
+    if len(hex_code) != 6:
+        return (0, 0, 0)
+    try:
+        return tuple(int(hex_code[index : index + 2], 16) for index in (0, 2, 4))
+    except ValueError:
+        return (0, 0, 0)
+
+
+def _is_neutral_black(hex_code):
+    r, g, b = _hex_to_rgb(hex_code)
+    luminance = 0.299 * r + 0.587 * g + 0.114 * b
+    saturation_hint = max(r, g, b) - min(r, g, b)
+    return luminance < 75 and saturation_hint < 42
+
+
+def _avoid_black_text(preferred, fallback_candidates):
+    if not _is_neutral_black(preferred):
+        return preferred
+    for candidate in fallback_candidates:
+        if candidate != preferred and not _is_neutral_black(candidate):
+            return candidate
+    return preferred
+
+
 def _memo_card_theme(colors, palette_index=None):
     main, accent, bg = _normalize_palette_colors(colors)
     mode = int(palette_index or 0) % 3
@@ -646,6 +672,7 @@ def _memo_card_theme(colors, palette_index=None):
         card_bg, card_text, card_accent = accent, main, bg
     else:
         card_bg, card_text, card_accent = bg, main, accent
+    card_text = _avoid_black_text(card_text, [accent, main, bg])
     return {
         "main": main,
         "accent": card_accent,
