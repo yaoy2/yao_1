@@ -357,15 +357,15 @@ class WebMemoDbTest(unittest.TestCase):
         self.assertNotIn("color:#1F1B1D", html)
 
     def test_memo_card_never_uses_visually_black_deep_brown_as_text_color(self):
-        record = {"memo_date": "2026-06-07", "content": "暖棕复古不能黑字", "tags": ["配色"]}
+        record = {"memo_date": "2026-06-07", "content": "深色不能当正文色", "tags": ["配色"]}
         palettes = [
-            {"id": 3, "name": "暖棕复古", "colors": ["#592E2E", "#A0522D", "#F5E6D3"]},
+            {"id": 7, "name": "夜空墨蓝", "colors": ["#162A46", "#D8D0C1", "#F8F6F2"]},
         ]
 
         html = web_memo_db.build_memo_card_html(record, palettes=palettes, palette_index=1)
 
-        self.assertNotIn("--card-text:#592E2E", html)
-        self.assertNotIn("color:#592E2E", html)
+        self.assertNotIn("--card-text:#162A46", html)
+        self.assertNotIn("color:#162A46", html)
 
     def test_memo_card_css_uses_palette_text_variable_instead_of_fixed_black(self):
         records = [{"memo_date": "2026-06-07", "content": "配色测试", "tags": ["配色"]}]
