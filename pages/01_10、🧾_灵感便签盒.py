@@ -415,8 +415,11 @@ with st.container(border=True):
                 with st.container(border=True):
                     st.markdown(web_memo_db.build_memo_card_html(record, palette_index=index), unsafe_allow_html=True)
                     with st.expander("全文", expanded=False):
+                        import re as _re
                         _content_html = record.get("content", "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-                        _content_html = _content_html.replace("\n\n", "</p><p>").replace("\n", "<br>")
+                        _content_html = _content_html.replace("\n\n", "</p><p>")
+                        _content_html = _re.sub(r'([。？！…])\n', r'\1</p><p>', _content_html)
+                        _content_html = _content_html.replace("\n", "")
                         _content_html = f'<div class="memo-fulltext"><p>{_content_html}</p></div>'
                         st.markdown(_content_html, unsafe_allow_html=True)
                         move_up, move_down, edit_col, hide_col, _spacer = st.columns([0.18, 0.18, 0.18, 0.18, 1], gap="small")
