@@ -3,7 +3,7 @@ from pathlib import Path
 import unittest
 
 
-PAGE_PATH = Path(__file__).resolve().parents[1] / "pages" / "02_9、🎨_配色方案预览.py"
+PAGE_PATH = Path(__file__).resolve().parents[1] / "pages" / "02_9_palette.py"
 
 
 def load_page_module():
@@ -18,29 +18,29 @@ class ColorPalettePreviewTest(unittest.TestCase):
         page = load_page_module()
         palette = {
             "id": 7,
-            "name": "夜空墨蓝",
+            "name": "复古红棕",
             "pairs": [
-                {"name": "夜幕蓝", "hex": "#162A46"},
-                {"name": "香槟银", "hex": "#D8D0C1"},
-                {"name": "珍珠白", "hex": "#F8F6F2"},
+                {"name": "檀木红棕", "hex": "#592E2E"},
+                {"name": "豆沙禁色", "hex": "#C89C85"},
+                {"name": "奶雾暖白", "hex": "#F7F0EB"},
             ],
-            "colors": ["#162A46", "#D8D0C1", "#F8F6F2"],
-            "scene": "西装男装、星级会所",
+            "colors": ["#592E2E", "#C89C85", "#F7F0EB"],
+            "scene": "皮具、复古穿搭、酒水品牌",
             "source": "微信公众号",
         }
 
         html = page.render_palette_showcase(palette)
 
         self.assertIn("高级感配色", html)
-        self.assertIn("夜空墨蓝", html)
+        self.assertIn("复古红棕", html)
         self.assertIn("主色", html)
         self.assertIn("辅助色", html)
         self.assertIn("背景色", html)
         self.assertIn("标题 / 大面积背景 / 高级感主体", html)
         self.assertIn("PPT 标题条", html)
-        self.assertIn("#162A46", html)
-        self.assertIn("#D8D0C1", html)
-        self.assertIn("#F8F6F2", html)
+        self.assertIn("#592E2E", html)
+        self.assertIn("#C89C85", html)
+        self.assertIn("#F7F0EB", html)
 
     def test_page_uses_supported_html_renderer(self):
         page_source = PAGE_PATH.read_text(encoding="utf-8")
