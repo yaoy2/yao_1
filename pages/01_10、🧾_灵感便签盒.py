@@ -407,18 +407,18 @@ with st.container(border=True):
             with memo_columns[index % 3]:
                 with st.container(border=True):
                     st.markdown(web_memo_db.build_memo_card_html(record, palette_index=index), unsafe_allow_html=True)
-                    move_up, move_down, edit_col, hide_col = st.columns(4, gap="small")
-                    if move_up.button("↑", key=f"memo_up_{record['id']}", disabled=index == 0, use_container_width=True):
+                    move_up, move_down, edit_col, hide_col, _spacer = st.columns([0.18, 0.18, 0.18, 0.18, 1], gap="small")
+                    if move_up.button("↑", key=f"memo_up_{record['id']}", disabled=index == 0, help="上移"):
                         web_memo_db.move_memo(record["id"], "up")
                         sync_web_memo_backup_to_github()
                         st.rerun()
-                    if move_down.button("↓", key=f"memo_down_{record['id']}", disabled=index == len(display_records) - 1, use_container_width=True):
+                    if move_down.button("↓", key=f"memo_down_{record['id']}", disabled=index == len(display_records) - 1, help="下移"):
                         web_memo_db.move_memo(record["id"], "down")
                         sync_web_memo_backup_to_github()
                         st.rerun()
-                    if edit_col.button("编辑", key=f"memo_edit_{record['id']}", use_container_width=True):
+                    if edit_col.button("✎", key=f"memo_edit_{record['id']}", help="编辑"):
                         st.session_state["editing_memo_id"] = record["id"]
-                    if hide_col.button("隐藏", key=f"memo_archive_{record['id']}", use_container_width=True):
+                    if hide_col.button("×", key=f"memo_archive_{record['id']}", help="隐藏"):
                         web_memo_db.archive_memo(record["id"])
                         sync_web_memo_backup_to_github()
                         st.rerun()
