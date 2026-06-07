@@ -411,8 +411,8 @@ class WebMemoDbTest(unittest.TestCase):
                 "memo_date": "2026-05-24",
                 "content": '<article class="memo-card">不该变成结构</article>',
                 "tags": ["摘录"],
-                "palette_name": "莫兰迪灰绿",
-                "palette_colors": ["#2D6A4F", "#95B8A6", "#EEF5EF"],
+                "palette_name": "清新绿意",
+                "palette_colors": ["#2D6A4F", "#74C69D", "#D8F3DC"],
             },
         ]
 
