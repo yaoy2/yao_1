@@ -275,8 +275,11 @@ def apply_style():
         .memo-content {
             position: relative;
             color: #182230;
-            font-size: .94rem;
-            line-height: 1.72;
+            font-family: "Kaiti SC", KaiTi, STKaiti, "Songti SC", SimSun, serif;
+            font-size: 1.08rem;
+            font-weight: 600;
+            line-height: 1.9;
+            letter-spacing: .02em;
             white-space: pre-wrap;
         }
         .memo-tags {
@@ -413,6 +416,60 @@ with st.container(border=True):
         for index, record in enumerate(display_records):
             with memo_columns[index % 3]:
                 st.markdown(web_memo_db.build_memo_card_html(record), unsafe_allow_html=True)
+                move_up, move_down, edit_col, hide_col = st.columns(4, gap="small")
+                if move_up.button("↑", key=f"memo_up_{record['id']}", disabled=index == 0, use_container_width=True):
+                    web_memo_db.move_memo(record["id"], "up")
+                    sync_web_memo_backup_to_github()
+                    st.rerun()
+                if move_down.button("↓", key=f"memo_down_{record['id']}", disabled=index == len(display_records) - 1, use_container_width=True):
+                    web_memo_db.move_memo(record["id"], "down")
+                    sync_web_memo_backup_to_github()
+                    st.rerun()
+                if edit_col.button("编辑", key=f"memo_edit_{record['id']}", use_container_width=True):
+                    st.session_state["editing_memo_id"] = record["id"]
+                if hide_col.button("隐藏", key=f"memo_archive_{record['id']}", use_container_width=True):
+                    web_memo_db.archive_memo(record["id"])
+                    sync_web_memo_backup_to_github()
+                    st.rerun()
+
+                if st.session_state.get("editing_memo_id") == record["id"]:
+                    with st.form(f"memo_edit_form_{record['id']}"):
+                        edited_content = st.text_area("内容", value=record.get("content", ""), height=160, key=f"memo_edit_content_{record['id']}")
+                        edit_category_options = [cat for cat in categories if cat != "全部"]
+                        current_category = record.get("category") or "待整理"
+                        if current_category not in edit_category_options:
+                            edit_category_options.insert(0, current_category)
+                        edited_category = st.selectbox(
+                            "分类",
+                            edit_category_options,
+                            index=edit_category_options.index(current_category),
+                            key=f"memo_edit_category_{record['id']}",
+                        )
+                        edited_tags = st.multiselect(
+                            "标签",
+                            available_tags,
+                            default=[tag for tag in record.get("tags", []) if tag in available_tags],
+                            key=f"memo_edit_tags_{record['id']}",
+                        )
+                        extra_tags = st.text_input("新增标签", key=f"memo_edit_extra_tags_{record['id']}")
+                        save_edit, cancel_edit = st.columns(2)
+                        if save_edit.form_submit_button("保存修改", use_container_width=True):
+                            try:
+                                web_memo_db.update_memo(
+                                    record["id"],
+                                    content=edited_content,
+                                    category=edited_category,
+                                    tags=parse_manual_tags(edited_tags, extra_tags),
+                                )
+                            except ValueError:
+                                st.error("内容不能为空。")
+                            else:
+                                sync_web_memo_backup_to_github()
+                                st.session_state.pop("editing_memo_id", None)
+                                st.rerun()
+                        if cancel_edit.form_submit_button("取消", use_container_width=True):
+                            st.session_state.pop("editing_memo_id", None)
+                            st.rerun()
 
 st.markdown('<section class="export-strip">', unsafe_allow_html=True)
 export_records = web_memo_db.get_memos()

@@ -76,6 +76,70 @@ class WebMemoDbTest(unittest.TestCase):
         self.assertIn("记录数量：1", backup_text)
         self.assertIn("这是一条需要留下硬备份的内容", backup_text)
 
+    def test_update_memo_edits_content_tags_category_and_backup(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patched_web_memo_storage(tmpdir) as tmp_path:
+                backup_path = tmp_path / "web_memos_backup.md"
+                web_memo_db.init_db()
+                web_memo_db.add_memo("2026-06-07", "旧内容", classify=False)
+                memo_id = web_memo_db.get_memos()[0]["id"]
+
+                web_memo_db.update_memo(
+                    memo_id,
+                    content="新内容",
+                    category="观点",
+                    tags=["观点", "已编辑"],
+                )
+                record = web_memo_db.get_memos()[0]
+                backup_text = backup_path.read_text(encoding="utf-8")
+
+        self.assertEqual("新内容", record["content"])
+        self.assertEqual("观点", record["category"])
+        self.assertEqual(["观点", "已编辑"], record["tags"])
+        self.assertIn("新内容", backup_text)
+        self.assertIn("已编辑", backup_text)
+
+    def test_archive_memo_hides_from_default_list_but_keeps_backup_record(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patched_web_memo_storage(tmpdir) as tmp_path:
+                backup_path = tmp_path / "web_memos_backup.md"
+                web_memo_db.init_db()
+                web_memo_db.add_memo("2026-06-07", "需要隐藏的便签", classify=False)
+                memo_id = web_memo_db.get_memos()[0]["id"]
+
+                web_memo_db.archive_memo(memo_id)
+                visible_records = web_memo_db.get_memos()
+                all_records = web_memo_db.get_memos(include_archived=True)
+                backup_text = backup_path.read_text(encoding="utf-8")
+                backup_records = web_memo_db.parse_markdown_backup(backup_text)
+                export_text = web_memo_db.build_markdown_export(all_records)
+
+        self.assertEqual([], visible_records)
+        self.assertEqual(1, len(all_records))
+        self.assertTrue(all_records[0]["is_archived"])
+        self.assertEqual(1, len(backup_records))
+        self.assertTrue(backup_records[0]["is_archived"])
+        self.assertIn("状态：已隐藏", backup_text)
+        self.assertNotIn("状态：已隐藏", export_text)
+
+    def test_move_memo_changes_display_order_without_removing_waterfall_layout(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patched_web_memo_storage(tmpdir):
+                web_memo_db.init_db()
+                web_memo_db.add_memo("2026-06-01", "第一条", classify=False)
+                web_memo_db.add_memo("2026-06-02", "第二条", classify=False)
+                web_memo_db.add_memo("2026-06-03", "第三条", classify=False)
+                records = web_memo_db.get_memos()
+                bottom_id = next(record["id"] for record in records if record["content"] == "第一条")
+
+                web_memo_db.move_memo(bottom_id, "up")
+                moved_records = web_memo_db.get_memos()
+                html = web_memo_db.build_memo_cards_html(moved_records)
+
+        self.assertEqual(["第三条", "第一条", "第二条"], [record["content"] for record in moved_records])
+        self.assertIn("memo-card-grid", html)
+        self.assertEqual(3, html.count('class="memo-card-column"'))
+
     def test_init_db_restores_records_from_markdown_backup_when_database_is_empty(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             with patched_web_memo_storage(tmpdir) as tmp_path:
@@ -316,6 +380,20 @@ class WebMemoDbTest(unittest.TestCase):
         self.assertIn("import_memo_records(remote_records)", page_source)
         self.assertIn("remote_records and not local_records", page_source)
         self.assertIn("web_memo_db.init_db()\nmerge_remote_web_memos_from_github()", page_source)
+
+    def test_page_exposes_edit_archive_and_move_controls(self):
+        pages_dir = Path(__file__).resolve().parents[1] / "pages"
+        page_path = next(pages_dir.glob("01_10*.py"))
+        page_source = page_path.read_text(encoding="utf-8")
+
+        self.assertIn('button("↑"', page_source)
+        self.assertIn('button("↓"', page_source)
+        self.assertIn('button("编辑"', page_source)
+        self.assertIn('button("隐藏"', page_source)
+        self.assertIn("update_memo(", page_source)
+        self.assertIn("archive_memo(", page_source)
+        self.assertIn("move_memo(", page_source)
+        self.assertIn("editing_memo_id", page_source)
 
 
 if __name__ == "__main__":

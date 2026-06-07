@@ -73,11 +73,19 @@ def init_db():
             palette_id INTEGER NOT NULL DEFAULT 0,
             palette_name TEXT NOT NULL DEFAULT '',
             palette_colors_json TEXT NOT NULL DEFAULT '[]',
+            display_order INTEGER NOT NULL DEFAULT 0,
+            is_archived INTEGER NOT NULL DEFAULT 0,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )
         """
     )
+    cols = [row[1] for row in conn.execute("PRAGMA table_info(web_memos)").fetchall()]
+    if "display_order" not in cols:
+        conn.execute("ALTER TABLE web_memos ADD COLUMN display_order INTEGER NOT NULL DEFAULT 0")
+    if "is_archived" not in cols:
+        conn.execute("ALTER TABLE web_memos ADD COLUMN is_archived INTEGER NOT NULL DEFAULT 0")
+    conn.execute("UPDATE web_memos SET display_order = id WHERE display_order = 0")
     conn.commit()
     conn.close()
     if get_memo_count() > 0:
@@ -208,7 +216,15 @@ def _record_from_row(row):
     item = dict(row)
     item["tags"] = json.loads(item.pop("tags_json") or "[]")
     item["palette_colors"] = json.loads(item.pop("palette_colors_json") or "[]")
+    item["is_archived"] = bool(item.get("is_archived", 0))
     return item
+
+
+def _next_display_order():
+    conn = get_connection()
+    row = conn.execute("SELECT COALESCE(MAX(display_order), 0) + 1 AS next_order FROM web_memos").fetchone()
+    conn.close()
+    return int(row["next_order"] or 1)
 
 
 def get_memo_count():
@@ -227,14 +243,15 @@ def add_memo(memo_date, content, classify=True, manual_tags=None):
     tags = merge_tags(tags, manual_tags)
     palette = pick_palette(get_memo_count())
     colors = palette.get("colors") or DEFAULT_PALETTE["colors"]
+    display_order = _next_display_order()
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     conn = get_connection()
     conn.execute(
         """
         INSERT INTO web_memos
-            (memo_date, content, category, tags_json, palette_id, palette_name, palette_colors_json, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (memo_date, content, category, tags_json, palette_id, palette_name, palette_colors_json, display_order, is_archived, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             str(memo_date),
@@ -244,6 +261,8 @@ def add_memo(memo_date, content, classify=True, manual_tags=None):
             int(palette.get("id", 0)),
             str(palette.get("name", "")),
             json.dumps(colors[:3], ensure_ascii=False),
+            display_order,
+            0,
             now,
             now,
         ),
@@ -258,12 +277,14 @@ def _insert_memo_record(record):
     palette = pick_palette(get_memo_count())
     colors = palette.get("colors") or DEFAULT_PALETTE["colors"]
     tags = record.get("tags") or []
+    display_order = int(record.get("display_order") or _next_display_order())
+    is_archived = 1 if record.get("is_archived") else 0
     conn = get_connection()
     conn.execute(
         """
         INSERT INTO web_memos
-            (memo_date, content, category, tags_json, palette_id, palette_name, palette_colors_json, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (memo_date, content, category, tags_json, palette_id, palette_name, palette_colors_json, display_order, is_archived, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             str(record.get("memo_date", "")),
@@ -273,6 +294,8 @@ def _insert_memo_record(record):
             int(palette.get("id", 0)),
             str(record.get("palette_name") or palette.get("name", "")),
             json.dumps(colors[:3], ensure_ascii=False),
+            display_order,
+            is_archived,
             now,
             now,
         ),
@@ -303,10 +326,82 @@ def import_memo_records(records):
     return inserted
 
 
-def get_memos(category=None, keyword=None):
+def update_memo(record_id, content=None, category=None, tags=None):
+    fields = []
+    values = []
+    if content is not None:
+        content = str(content).strip()
+        if not content:
+            raise ValueError("content cannot be empty")
+        fields.append("content = ?")
+        values.append(content)
+    if category is not None:
+        fields.append("category = ?")
+        values.append(str(category).strip() or "待整理")
+    if tags is not None:
+        fields.append("tags_json = ?")
+        values.append(json.dumps(normalize_tags(tags), ensure_ascii=False))
+    if not fields:
+        return 0
+    fields.append("updated_at = ?")
+    values.append(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    values.append(record_id)
+    conn = get_connection()
+    cur = conn.execute(f"UPDATE web_memos SET {', '.join(fields)} WHERE id = ?", values)
+    conn.commit()
+    changed = cur.rowcount
+    conn.close()
+    if changed:
+        sync_backup_file()
+    return changed
+
+
+def archive_memo(record_id):
+    conn = get_connection()
+    cur = conn.execute(
+        "UPDATE web_memos SET is_archived = 1, updated_at = ? WHERE id = ?",
+        (datetime.now().strftime("%Y-%m-%d %H:%M:%S"), record_id),
+    )
+    conn.commit()
+    changed = cur.rowcount
+    conn.close()
+    if changed:
+        sync_backup_file()
+    return changed
+
+
+def move_memo(record_id, direction):
+    records = get_memos()
+    ids = [record["id"] for record in records]
+    if record_id not in ids:
+        return False
+    index = ids.index(record_id)
+    if direction == "up":
+        target_index = index - 1
+    elif direction == "down":
+        target_index = index + 1
+    else:
+        raise ValueError("direction must be up or down")
+    if target_index < 0 or target_index >= len(records):
+        return False
+
+    current = records[index]
+    target = records[target_index]
+    conn = get_connection()
+    conn.execute("UPDATE web_memos SET display_order = ? WHERE id = ?", (target["display_order"], current["id"]))
+    conn.execute("UPDATE web_memos SET display_order = ? WHERE id = ?", (current["display_order"], target["id"]))
+    conn.commit()
+    conn.close()
+    sync_backup_file()
+    return True
+
+
+def get_memos(category=None, keyword=None, include_archived=False):
     conn = get_connection()
     conditions = []
     values = []
+    if not include_archived:
+        conditions.append("is_archived = 0")
     if category and category != "全部":
         conditions.append("category = ?")
         values.append(category)
@@ -315,7 +410,7 @@ def get_memos(category=None, keyword=None):
         values.append(f"%{keyword}%")
     where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
     rows = conn.execute(
-        f"SELECT * FROM web_memos {where} ORDER BY memo_date DESC, id DESC",
+        f"SELECT * FROM web_memos {where} ORDER BY display_order DESC, memo_date DESC, id DESC",
         values,
     ).fetchall()
     conn.close()
@@ -342,7 +437,7 @@ def get_all_tags():
     return sorted(normalize_tags(tags))
 
 
-def build_markdown_export(records):
+def build_markdown_export(records, include_system_fields=False):
     lines = ["# 灵感便签盒", ""]
     for record in records:
         tags = record.get("tags") or []
@@ -356,14 +451,21 @@ def build_markdown_export(records):
                 f"- 分类：{record.get('category', '待整理')}",
                 f"- 标签：{tag_text}",
                 f"- 色卡：{record.get('palette_name', '') or '默认色卡'}",
-                "",
             ]
         )
+        if include_system_fields:
+            lines.extend(
+                [
+                    f"- 顺序：{int(record.get('display_order') or 0)}",
+                    f"- 状态：{'已隐藏' if record.get('is_archived') else '正常'}",
+                ]
+            )
+        lines.append("")
     return "\n".join(lines).strip() + "\n"
 
 
 def build_markdown_backup(records=None):
-    records = get_memos() if records is None else records
+    records = get_memos(include_archived=True) if records is None else records
     generated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     return "\n".join(
         [
@@ -372,7 +474,7 @@ def build_markdown_backup(records=None):
             f"- 生成时间：{generated_at}",
             f"- 记录数量：{len(records)}",
             "",
-            build_markdown_export(records).strip(),
+            build_markdown_export(records, include_system_fields=True).strip(),
             "",
         ]
     )
@@ -387,7 +489,7 @@ def write_markdown_backup(records=None, path=None):
 
 
 def sync_backup_file():
-    write_markdown_backup(get_memos())
+    write_markdown_backup(get_memos(include_archived=True))
     return BACKUP_MD_PATH
 
 
@@ -403,6 +505,8 @@ def parse_markdown_backup(text):
         category = "待整理"
         tags = []
         palette_name = ""
+        display_order = 0
+        is_archived = False
         for line in lines[1:]:
             if line.startswith("- 分类："):
                 category = line.replace("- 分类：", "", 1).strip() or "待整理"
@@ -411,6 +515,13 @@ def parse_markdown_backup(text):
                 tags = [] if tag_text == "无" else [tag.strip() for tag in tag_text.split("、") if tag.strip()]
             elif line.startswith("- 色卡："):
                 palette_name = line.replace("- 色卡：", "", 1).strip()
+            elif line.startswith("- 顺序："):
+                try:
+                    display_order = int(line.replace("- 顺序：", "", 1).strip() or 0)
+                except ValueError:
+                    display_order = 0
+            elif line.startswith("- 状态："):
+                is_archived = line.replace("- 状态：", "", 1).strip() == "已隐藏"
             elif not line.startswith("- "):
                 content_lines.append(line)
         content = "\n".join(content_lines).strip()
@@ -422,6 +533,8 @@ def parse_markdown_backup(text):
                     "category": category,
                     "tags": tags,
                     "palette_name": palette_name,
+                    "display_order": display_order,
+                    "is_archived": is_archived,
                 }
             )
     return records
@@ -547,8 +660,11 @@ def build_memo_cards_html(records):
     .memo-content {{
         position: relative;
         color: #182230;
-        font-size: .94rem;
-        line-height: 1.72;
+        font-family: "Kaiti SC", KaiTi, STKaiti, "Songti SC", SimSun, serif;
+        font-size: 1.08rem;
+        font-weight: 600;
+        line-height: 1.9;
+        letter-spacing: .02em;
         white-space: pre-wrap;
     }}
     .memo-tags {{
