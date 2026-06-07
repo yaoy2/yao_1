@@ -289,9 +289,9 @@ def apply_style():
             font-weight: 700;
         }
         .memo-fulltext {
-            font-family: "Kaiti SC", KaiTi, STKaiti, "Songti SC", SimSun, serif;
-            font-size: 1.05rem;
-            line-height: 1;
+            font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", sans-serif;
+            font-size: .95rem;
+            line-height: 1.6;
             text-align: justify;
         }
         .memo-fulltext p {
