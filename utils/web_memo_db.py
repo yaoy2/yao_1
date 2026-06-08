@@ -680,24 +680,19 @@ def _color_luminance(hex_code):
     return 0.299 * r + 0.587 * g + 0.114 * b
 
 
+def _color_saturation(hex_code):
+    r, g, b = _hex_to_rgb(hex_code)
+    return max(r, g, b) - min(r, g, b)
+
+
 def _memo_card_theme(colors, palette_index=None):
     c0, c1, c2 = _normalize_palette_colors(colors)
-    sorted_colors = sorted([c0, c1, c2], key=_color_luminance)
-    light, mid, dark = sorted_colors
-    mode = int(palette_index or 0) % 3
-    if mode == 0:
-        bg, title, accent = light, dark, mid
-        body = "#2D3436"
-    elif mode == 1:
-        bg, title, accent = mid, dark, light
-        body = "#2D3436"
-    else:
-        bg, title, accent = dark, light, mid
-        body = "#F0EDE8"
-    if _color_luminance(bg) > 160:
-        body = "#2D3436"
-    elif _color_luminance(bg) < 80:
-        body = "#F0EDE8"
+    sorted_by_sat = sorted([c0, c1, c2], key=_color_saturation)
+    bg = sorted_by_sat[0]
+    others = sorted_by_sat[1:]
+    others.sort(key=_color_luminance, reverse=True)
+    title, accent = others[0], others[1]
+    body = "#2D3436" if _color_luminance(bg) > 100 else "#F0EDE8"
     return {
         "title": title,
         "accent": accent,
