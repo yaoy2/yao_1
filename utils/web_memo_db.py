@@ -675,21 +675,34 @@ def _memo_poster_excerpt(content, limit=18):
     return text
 
 
+def _color_luminance(hex_code):
+    r, g, b = _hex_to_rgb(hex_code)
+    return 0.299 * r + 0.587 * g + 0.114 * b
+
+
 def _memo_card_theme(colors, palette_index=None):
-    main, accent, bg = _normalize_palette_colors(colors)
+    c0, c1, c2 = _normalize_palette_colors(colors)
+    sorted_colors = sorted([c0, c1, c2], key=_color_luminance)
+    light, mid, dark = sorted_colors
     mode = int(palette_index or 0) % 3
     if mode == 0:
-        card_bg, card_text, card_accent = main, accent, bg
+        bg, title, accent = light, dark, mid
+        body = "#2D3436"
     elif mode == 1:
-        card_bg, card_text, card_accent = accent, main, bg
+        bg, title, accent = mid, dark, light
+        body = "#2D3436"
     else:
-        card_bg, card_text, card_accent = bg, main, accent
-    card_text = _avoid_black_text(card_text, [card_accent, bg, accent, main])
+        bg, title, accent = dark, light, mid
+        body = "#F0EDE8"
+    if _color_luminance(bg) > 160:
+        body = "#2D3436"
+    elif _color_luminance(bg) < 80:
+        body = "#F0EDE8"
     return {
-        "main": main,
-        "accent": card_accent,
-        "card_bg": card_bg,
-        "card_text": card_text,
+        "title": title,
+        "accent": accent,
+        "card_bg": bg,
+        "card_text": body,
     }
 
 
@@ -704,9 +717,9 @@ def build_memo_card_html(record, palettes=None, palette_index=None):
     )
     poster_excerpt = _memo_poster_excerpt(record.get("content", ""))
     return f"""
-    <article class="memo-card memo-card-poster" style="--main:{theme['main']};--accent:{theme['accent']};--card-text:{theme['card_text']};--card-pill-bg:{theme['card_text']}1F;--card-border:{theme['card_text']}40;background:{theme['card_bg']};color:{theme['card_text']};">
-      <div class="memo-poster-kicker">{escape(record.get("memo_date", ""))} / {escape(palette_name)}</div>
-      <div class="memo-poster-title">{escape(poster_excerpt)}</div>
+    <article class="memo-card memo-card-poster" style="--main:{theme['title']};--accent:{theme['accent']};--card-text:{theme['card_text']};--card-pill-bg:{theme['accent']}18;--card-border:{theme['accent']}30;background:{theme['card_bg']};color:{theme['card_text']};">
+      <div class="memo-poster-kicker" style="color:{theme['accent']};">{escape(record.get("memo_date", ""))} / {escape(palette_name)}</div>
+      <div class="memo-poster-title" style="color:{theme['title']};">{escape(poster_excerpt)}</div>
       <div class="memo-tags">{tag_html}</div>
     </article>
     """
