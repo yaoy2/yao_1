@@ -99,7 +99,7 @@ The module numbers match the Streamlit sidebar. Newer tools have larger numbers 
   - **Waterfall layout**: cards are displayed in three columns, newest first; the card face shows a poster-like excerpt while full content stays inside an expander.
   - **Card actions**: each memo supports move up, move down, edit, and hide actions.
   - **Safe deletion**: hiding a memo removes it from the default list but keeps it in the GitHub backup ledger.
-  - **Live palette mapping**: memo cards use the current palettes from `data/color_palettes.md` instead of frozen palette snapshots saved at memo creation time.
+  - **Live palette mapping**: memo cards use the current palettes from `data/color_palettes.md` instead of frozen palette snapshots saved at memo creation time. The background always uses the least-saturated palette color; title and accent use the remaining two; body text adapts to background luminance.
   - **GitHub backup**: saves to `data/web_memos_backup.md` through `GITHUB_BACKUP_TOKEN`; startup restores and merges from the remote backup before writing, preventing empty environments from overwriting existing remote memos.
   - **Export**: supports Markdown and PDF export.
 
