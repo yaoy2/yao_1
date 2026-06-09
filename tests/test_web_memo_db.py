@@ -331,19 +331,34 @@ class WebMemoDbTest(unittest.TestCase):
         self.assertIn("A", first_html)
         self.assertIn("B", second_html)
 
-    def test_memo_card_uses_palette_pair_as_background_and_text_colors(self):
+    def test_memo_card_uses_low_saturation_color_as_background(self):
         record = {"memo_date": "2026-06-07", "content": "那不勒黄配曙绿", "tags": ["配色"]}
         palettes = [
             {"id": 37, "name": "那不勒黄曙绿", "colors": ["#F8CB1D", "#19663C", "#F6F1DA"]},
         ]
 
-        yellow_card = web_memo_db.build_memo_card_html(record, palettes=palettes, palette_index=0)
-        green_card = web_memo_db.build_memo_card_html(record, palettes=palettes, palette_index=1)
+        html = web_memo_db.build_memo_card_html(record, palettes=palettes, palette_index=0)
 
-        self.assertIn("background:#F8CB1D", yellow_card)
-        self.assertIn("--card-text:#19663C", yellow_card)
-        self.assertIn("background:#19663C", green_card)
-        self.assertIn("--card-text:#F8CB1D", green_card)
+        self.assertIn("background:#F6F1DA", html)
+        self.assertIn("color:#19663C", html)
+        self.assertIn("--main:#F8CB1D", html)
+        self.assertIn("--accent:#19663C", html)
+
+    def test_memo_cards_exclude_glare_palettes_without_changing_palette_library(self):
+        record = {"memo_date": "2026-06-07", "content": "不要刺眼底色", "tags": ["配色"]}
+        palettes = [
+            {"id": 26, "name": "樱桃苏打", "colors": ["#FFF1F3", "#FF4D6D", "#7B2CBF"]},
+            {"id": 27, "name": "橘子派对", "colors": ["#FFF4E6", "#FF8C42", "#3A86FF"]},
+            {"id": 4, "name": "清新绿意", "colors": ["#2D6A4F", "#74C69D", "#D8F3DC"]},
+        ]
+
+        html = web_memo_db.build_memo_card_html(record, palettes=palettes, palette_index=0)
+
+        self.assertEqual(3, len(palettes))
+        self.assertIn("清新绿意", html)
+        self.assertNotIn("樱桃苏打", html)
+        self.assertNotIn("橘子派对", html)
+        self.assertNotIn("background:#3A86FF", html)
 
     def test_memo_card_never_uses_neutral_black_as_text_color(self):
         record = {"memo_date": "2026-06-07", "content": "不要黑字", "tags": ["配色"]}

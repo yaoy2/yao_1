@@ -5,6 +5,19 @@
 
 This English change log mirrors the project history maintained in `CHANGELOG_ZH-CN.md`. It keeps the same dated structure and preserves the operational notes that matter for later troubleshooting: what changed, why it changed, what failed or detoured, and how the work was verified.
 
+## 2026-06-09
+
+- **Excluded glare palettes from Web Memo cards**: `data/color_palettes.md` was left unchanged, so "樱桃苏打" and "橘子派对" remain available as palette references. Web Memo cards no longer draw from those two palettes, preventing existing saved memos from rendering with large high-saturation blue, orange, or cherry-red surfaces.
+- **Verification**: added a regression test confirming the palette library still contains the palettes while `build_memo_card_html` skips them and uses the next memo-display palette. Streamlit was not started according to project rules.
+
+## 2026-06-08
+
+- **Removed four palettes**: deleted "午夜歌剧" (Midnight Opera), "泡泡糖" (Bubblegum), "冬日庄园" (Winter Estate), and "西瓜夏天" (Watermelon Summer) from `data/color_palettes.md`.
+- **Memo card color logic refactored**: card backgrounds now always use the least-saturated color from the palette, preventing high-saturation colors (e.g. electric blue, vivid orange, cherry red) from filling the entire card surface. Title and accent colors use the remaining two palette colors.
+- **Adaptive body text color**: body text automatically switches between dark gray `#2D3436` on light backgrounds and light `#F0EDE8` on dark backgrounds, ensuring readability.
+- **Clear color-role separation**: palette colors now serve as atmosphere (background), decoration (title), and accent (tags/date), while body text is independent from the palette. This resolves the issue where palette reference images looked good but memo cards did not — the three palette colors were never designed as "background + text + text."
+- **Verification**: Playwright browser preview confirmed that high-saturation palettes like 橘子派对 and 樱桃苏打 no longer produce刺眼 backgrounds. Streamlit was not started per project rules.
+
 ## 2026-06-07
 
 - **Fixed Codex Radar Actions push conflict**: GitHub Actions run #29 was investigated. `python -m codex_radar_lite.cli` had already succeeded; the failure was in `Commit radar data`. The job log showed `main -> main (fetch first)`, meaning another remote `main` commit landed before the workflow pushed its radar-data commit.

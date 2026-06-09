@@ -19,6 +19,8 @@ DEFAULT_PALETTE = {
     "colors": ["#1B3A5C", "#4A90D9", "#E8F0FE"],
 }
 
+MEMO_EXCLUDED_PALETTE_NAMES = {"樱桃苏打", "橘子派对"}
+
 DEFAULT_TAGS = [
     "摘录",
     "观点",
@@ -137,6 +139,16 @@ def pick_palette_for_record(record, palettes=None, index=None):
     key = f"{record.get('memo_date', '')}|{record.get('content', '')}"
     digest = hashlib.sha256(key.encode("utf-8")).hexdigest()
     return palettes[int(digest, 16) % len(palettes)]
+
+
+def memo_display_palettes(palettes=None):
+    palettes = palettes or parse_palettes()
+    filtered = [
+        palette
+        for palette in palettes
+        if palette.get("name") not in MEMO_EXCLUDED_PALETTE_NAMES
+    ]
+    return filtered or palettes or [DEFAULT_PALETTE]
 
 
 def split_tags(text):
@@ -693,6 +705,8 @@ def _memo_card_theme(colors, palette_index=None):
     others.sort(key=_color_luminance, reverse=True)
     title, accent = others[0], others[1]
     body = "#2D3436" if _color_luminance(bg) > 100 else "#F0EDE8"
+    title = _avoid_black_text(title, [accent, body])
+    accent = _avoid_black_text(accent, [title, body])
     return {
         "title": title,
         "accent": accent,
@@ -702,7 +716,7 @@ def _memo_card_theme(colors, palette_index=None):
 
 
 def build_memo_card_html(record, palettes=None, palette_index=None):
-    palette = pick_palette_for_record(record, palettes, index=palette_index)
+    palette = pick_palette_for_record(record, memo_display_palettes(palettes), index=palette_index)
     theme = _memo_card_theme(palette.get("colors"), palette_index)
     palette_name = palette.get("name") or DEFAULT_PALETTE["name"]
     tags = record.get("tags") or []
@@ -721,7 +735,7 @@ def build_memo_card_html(record, palettes=None, palette_index=None):
 
 
 def build_memo_cards_html(records):
-    palettes = parse_palettes()
+    palettes = memo_display_palettes(parse_palettes())
     indexed_records = list(enumerate(records))
     columns = _split_records_into_columns(indexed_records, 3)
     column_html = "".join(

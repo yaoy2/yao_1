@@ -5,6 +5,11 @@
 
 This English change log mirrors the project history maintained in `CHANGELOG_ZH-CN.md`. It keeps the same dated structure and preserves the operational notes that matter for later troubleshooting: what changed, why it changed, what failed or detoured, and how the work was verified.
 
+## 2026-06-09
+
+- **Excluded glare palettes from Web Memo cards**: `data/color_palettes.md` was left unchanged, so "樱桃苏打" and "橘子派对" remain available as palette references. Web Memo cards no longer draw from those two palettes, preventing existing saved memos from rendering with large high-saturation blue, orange, or cherry-red surfaces.
+- **Verification**: added a regression test confirming the palette library still contains the palettes while `build_memo_card_html` skips them and uses the next memo-display palette. Streamlit was not started according to project rules.
+
 ## 2026-06-08
 
 - **Removed four palettes**: deleted "午夜歌剧" (Midnight Opera), "泡泡糖" (Bubblegum), "冬日庄园" (Winter Estate), and "西瓜夏天" (Watermelon Summer) from `data/color_palettes.md`.
