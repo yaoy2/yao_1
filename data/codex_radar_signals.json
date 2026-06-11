@@ -1,5 +1,18 @@
 [
   {
+    "id": "7541afc5d3048196",
+    "source_id": "openai_status_history",
+    "source_name": "OpenAI Status Incidents",
+    "title": "Elevated error rates for GPT 5.5 in Codex",
+    "summary": "Elevated error rates for GPT 5.5 in Codex monitoring We have applied the mitigation and are monitoring the recovery. We have identified that users are experiencing elevated errors when using GPT 5.5 in Codex. We are working on implementing a mitigation.",
+    "url": "https://status.openai.com/api/v2/incidents.json",
+    "observed_at": "2026-06-11T21:33:30Z",
+    "weight": 40,
+    "tags": [
+      "codex"
+    ]
+  },
+  {
     "id": "ff160ee11287a9b4",
     "source_id": "openai_status_history",
     "source_name": "OpenAI Status Incidents",

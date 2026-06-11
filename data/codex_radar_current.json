@@ -1,11 +1,24 @@
 {
-  "status": "watch",
-  "probability_24h": 50,
-  "probability_48h": 62,
-  "reason": "发现 Codex 相关限额或事故信号，建议保持观察。",
-  "checked_at": "2026-06-11T19:48:27.716984Z",
-  "alert_level": "silent",
+  "status": "high_probability",
+  "probability_24h": 75,
+  "probability_48h": 93,
+  "reason": "多个 Codex 限额或事故信号叠加，进入高概率关注。",
+  "checked_at": "2026-06-11T22:18:39.792094Z",
+  "alert_level": "push",
   "signals": [
+    {
+      "id": "7541afc5d3048196",
+      "source_id": "openai_status_history",
+      "source_name": "OpenAI Status Incidents",
+      "title": "Elevated error rates for GPT 5.5 in Codex",
+      "summary": "Elevated error rates for GPT 5.5 in Codex monitoring We have applied the mitigation and are monitoring the recovery. We have identified that users are experiencing elevated errors when using GPT 5.5 in Codex. We are working on implementing a mitigation.",
+      "url": "https://status.openai.com/api/v2/incidents.json",
+      "observed_at": "2026-06-11T21:33:30Z",
+      "weight": 40,
+      "tags": [
+        "codex"
+      ]
+    },
     {
       "id": "ff160ee11287a9b4",
       "source_id": "openai_status_history",
