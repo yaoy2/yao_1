@@ -1,19 +1,19 @@
 {
-  "status": "high_probability",
-  "probability_24h": 75,
-  "probability_48h": 93,
-  "reason": "多个 Codex 限额或事故信号叠加，进入高概率关注。",
-  "checked_at": "2026-06-11T22:18:39.792094Z",
-  "alert_level": "push",
+  "status": "watch",
+  "probability_24h": 50,
+  "probability_48h": 62,
+  "reason": "发现 Codex 相关限额或事故信号，建议保持观察。",
+  "checked_at": "2026-06-12T01:41:17.033991Z",
+  "alert_level": "silent",
   "signals": [
     {
-      "id": "7541afc5d3048196",
+      "id": "92db71e6bb2433d3",
       "source_id": "openai_status_history",
       "source_name": "OpenAI Status Incidents",
       "title": "Elevated error rates for GPT 5.5 in Codex",
-      "summary": "Elevated error rates for GPT 5.5 in Codex monitoring We have applied the mitigation and are monitoring the recovery. We have identified that users are experiencing elevated errors when using GPT 5.5 in Codex. We are working on implementing a mitigation.",
+      "summary": "Elevated error rates for GPT 5.5 in Codex resolved All impacted services have now fully recovered. We have applied the mitigation and are monitoring the recovery. We have identified that users are experiencing elevated errors when using GPT 5.5 in Codex. We are working on implementing a mitigation.",
       "url": "https://status.openai.com/api/v2/incidents.json",
-      "observed_at": "2026-06-11T21:33:30Z",
+      "observed_at": "2026-06-11T22:28:09Z",
       "weight": 40,
       "tags": [
         "codex"
@@ -27,19 +27,6 @@
       "summary": "Increased latency for Codex compaction for a subset of users resolved All impacted services have now fully recovered. We have identified that users are experiencing elevated latency for the impacted services. We are working on implementing a mitigation.",
       "url": "https://status.openai.com/api/v2/incidents.json",
       "observed_at": "2026-06-04T04:37:16Z",
-      "weight": 40,
-      "tags": [
-        "codex"
-      ]
-    },
-    {
-      "id": "e8b23d318574b1ee",
-      "source_id": "openai_status_history",
-      "source_name": "OpenAI Status Incidents",
-      "title": "Codex Context Compaction Latency",
-      "summary": "Codex Context Compaction Latency resolved",
-      "url": "https://status.openai.com/api/v2/incidents.json",
-      "observed_at": "2026-05-28T06:59:35Z",
       "weight": 40,
       "tags": [
         "codex"
