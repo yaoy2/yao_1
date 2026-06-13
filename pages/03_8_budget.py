@@ -129,7 +129,7 @@ with st.form("quick_add", clear_on_submit=True):
     description = st.text_input("支出明细")
     col5, col6, col7 = st.columns([1, 1, 2])
     with col5:
-        amount = st.number_input("金额（元）", min_value=0.0, step=100.0, format="%.2f")
+        amount_str = st.text_input("金额（元）", placeholder="0")
     with col6:
         spender = st.text_input("支出人")
     with col7:
@@ -137,6 +137,10 @@ with st.form("quick_add", clear_on_submit=True):
         st.write("")
         submitted = st.form_submit_button("💾 保存记录", use_container_width=True)
     if submitted:
+        try:
+            amount = float(amount_str)
+        except (ValueError, TypeError):
+            amount = 0
         if amount <= 0:
             st.error("金额必须大于 0")
         else:
