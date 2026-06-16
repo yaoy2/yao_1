@@ -1,5 +1,18 @@
 [
   {
+    "id": "b76422f421861f40",
+    "source_id": "openai_status_history",
+    "source_name": "OpenAI Status Incidents",
+    "title": "Codex \"Selected Model is at Capacity\" Error",
+    "summary": "Codex \"Selected Model is at Capacity\" Error identified We have identified that users are experiencing elevated errors for the impacted services. We are working on implementing a mitigation.",
+    "url": "https://status.openai.com/api/v2/incidents.json",
+    "observed_at": "2026-06-16T10:32:11Z",
+    "weight": 40,
+    "tags": [
+      "codex"
+    ]
+  },
+  {
     "id": "fefe1e28f03ee2d4",
     "source_id": "openai_status_history",
     "source_name": "OpenAI Status Incidents",
@@ -36,6 +49,34 @@
     "weight": 40,
     "tags": [
       "codex"
+    ]
+  },
+  {
+    "id": "ae7c235509135677",
+    "source_id": "openai_status_components",
+    "source_name": "OpenAI Status Components",
+    "title": "Codex Web: degraded_performance",
+    "summary": "Component 'Codex Web' status: degraded_performance",
+    "url": "https://status.openai.com/",
+    "observed_at": "2026-06-16T11:37:22.540167Z",
+    "weight": 25,
+    "tags": [
+      "codex",
+      "degraded"
+    ]
+  },
+  {
+    "id": "cc875549b63da723",
+    "source_id": "openai_status_components",
+    "source_name": "OpenAI Status Components",
+    "title": "Codex API: degraded_performance",
+    "summary": "Component 'Codex API' status: degraded_performance",
+    "url": "https://status.openai.com/",
+    "observed_at": "2026-06-16T11:37:22.540167Z",
+    "weight": 25,
+    "tags": [
+      "codex",
+      "degraded"
     ]
   },
   {
@@ -86,46 +127,6 @@
     "summary": "ChatGPT Plus Codex limits penalize honest weekend open-source use I am posting this separately because my earlier reply was in the rate-limit discussion thread, which had been active for about two weeks. After my reply, the only response that followed was off-topic, and the thread was closed a few hours later. That left me with no real opportunity to bring the ...",
     "url": "https://community.openai.com/t/chatgpt-plus-codex-limits-penalize-honest-weekend-open-source-use/1379384",
     "observed_at": "2026-04-20T15:57:34.812Z",
-    "weight": 10,
-    "tags": [
-      "codex"
-    ]
-  },
-  {
-    "id": "c572a09f427d3e56",
-    "source_id": "openai_community",
-    "source_name": "OpenAI Community Forum",
-    "title": "Hitting Codex limits after a few prompts",
-    "summary": "Hitting Codex limits after a few prompts I created a few codex tasks and my 5 hour limit was full, I bought $40 credits since it was urgent and after few prompts more they were gone as well. Now my limits are used for the entire week despite me buying a 1000 credits (which I honestly assumed would last the entire month). Reddit was full...",
-    "url": "https://community.openai.com/t/hitting-codex-limits-after-a-few-prompts/1364963",
-    "observed_at": "2025-11-03T21:31:53.957Z",
-    "weight": 10,
-    "tags": [
-      "codex",
-      "credit"
-    ]
-  },
-  {
-    "id": "707451884ddcff81",
-    "source_id": "openai_community",
-    "source_name": "OpenAI Community Forum",
-    "title": "Codex limits the screen to 80 char width",
-    "summary": "Codex limits the screen to 80 char width Is anyone else using the codex cli and noticing that the screen width maxes out at 80 chars, despite your terminal being much greater like ~208 chars? Have you figured out a solution?",
-    "url": "https://community.openai.com/t/codex-limits-the-screen-to-80-char-width/1337584",
-    "observed_at": "2025-08-08T01:46:07.520Z",
-    "weight": 10,
-    "tags": [
-      "codex"
-    ]
-  },
-  {
-    "id": "9cb23ca14adc921d",
-    "source_id": "openai_community",
-    "source_name": "OpenAI Community Forum",
-    "title": "Plus plan - Codex limited reached after asking one question",
-    "summary": "Plus plan - Codex limited reached after asking one question Hi all I know that there is already a Limit discussion thread. I just typed on one question to codex and I hit my rate immediately, 100% that only resent in two days. This cant be correct, even on the plus plan I should be able to use it, this efectively makes it un-usable. Not allowing me to do ...",
-    "url": "https://community.openai.com/t/plus-plan-codex-limited-reached-after-asking-one-question/1378667",
-    "observed_at": "2026-04-06T16:17:05.422Z",
     "weight": 10,
     "tags": [
       "codex"
