@@ -1,12 +1,12 @@
 [
   {
-    "id": "b76422f421861f40",
+    "id": "bab1284d6f1f7dc9",
     "source_id": "openai_status_history",
     "source_name": "OpenAI Status Incidents",
     "title": "Codex \"Selected Model is at Capacity\" Error",
-    "summary": "Codex \"Selected Model is at Capacity\" Error identified We have identified that users are experiencing elevated errors for the impacted services. We are working on implementing a mitigation.",
+    "summary": "Codex \"Selected Model is at Capacity\" Error resolved All impacted services have now fully recovered. We have applied the mitigation and are monitoring the recovery. We have identified that users are experiencing elevated errors for the impacted services. We are working on implementing a mitigation.",
     "url": "https://status.openai.com/api/v2/incidents.json",
-    "observed_at": "2026-06-16T10:32:11Z",
+    "observed_at": "2026-06-16T13:48:12Z",
     "weight": 40,
     "tags": [
       "codex"
@@ -52,84 +52,16 @@
     ]
   },
   {
-    "id": "ae7c235509135677",
-    "source_id": "openai_status_components",
-    "source_name": "OpenAI Status Components",
-    "title": "Codex Web: degraded_performance",
-    "summary": "Component 'Codex Web' status: degraded_performance",
-    "url": "https://status.openai.com/",
-    "observed_at": "2026-06-16T11:37:22.540167Z",
-    "weight": 25,
-    "tags": [
-      "codex",
-      "degraded"
-    ]
-  },
-  {
-    "id": "cc875549b63da723",
-    "source_id": "openai_status_components",
-    "source_name": "OpenAI Status Components",
-    "title": "Codex API: degraded_performance",
-    "summary": "Component 'Codex API' status: degraded_performance",
-    "url": "https://status.openai.com/",
-    "observed_at": "2026-06-16T11:37:22.540167Z",
-    "weight": 25,
-    "tags": [
-      "codex",
-      "degraded"
-    ]
-  },
-  {
-    "id": "725bf89f26df730f",
+    "id": "10ca3975979bbfb1",
     "source_id": "openai_community",
     "source_name": "OpenAI Community Forum",
-    "title": "Business Tier missing 5-hour/weekly Codex limits",
-    "summary": "Business Tier missing 5-hour/weekly Codex limits HKE-DGTXYAAECVc Hi everyone, I'm currently facing a frustrating provisioning issue with my Business subscription and wanted to see if anyone else is experiencing the same situation. According to the standard Business plan, our workspaces should display rolling 5-hour and weekly usage limits for C...",
-    "url": "https://community.openai.com/t/business-tier-missing-5-hour-weekly-codex-limits/1383064",
-    "observed_at": "2026-06-08T14:25:56.134Z",
-    "weight": 10,
+    "title": "Source fetch failed",
+    "summary": "HTTPError: 429 Client Error: Too Many Requests for url: https://community.openai.com/search.json?q=codex+limit&order=latest",
+    "url": "https://community.openai.com/search.json?q=codex+limit&order=latest",
+    "observed_at": "2026-06-16T17:24:27.406511Z",
+    "weight": 0,
     "tags": [
-      "codex",
-      "usage limit"
-    ]
-  },
-  {
-    "id": "d56b859920888d47",
-    "source_id": "openai_community",
-    "source_name": "OpenAI Community Forum",
-    "title": "WE ARE TIRED! Codex Limits drainage",
-    "summary": "WE ARE TIRED! Codex Limits drainage Dear OpenAI. Could you please stop releasing features that causes massive drainage of limits. Why you are not allowing us to simply work? Every single time you are releasing some new features our limits are being burned instantly. Why are you not allowing us to simply have routines and work. Righ...",
-    "url": "https://community.openai.com/t/we-are-tired-codex-limits-drainage/1379740",
-    "observed_at": "2026-04-25T10:15:46.837Z",
-    "weight": 10,
-    "tags": [
-      "codex"
-    ]
-  },
-  {
-    "id": "dd1d33b861b3853b",
-    "source_id": "openai_community",
-    "source_name": "OpenAI Community Forum",
-    "title": "Understanding the New Codex Limit System After the April 9 Update",
-    "summary": "Understanding the New Codex Limit System After the April 9 Update After about a week of testing, I think I finally understand how the new Codex limit system works in practice. I'm writing this post because many people are still trying to interpret the new system using the old mental model. They see...",
-    "url": "https://community.openai.com/t/understanding-the-new-codex-limit-system-after-the-april-9-update/1378768",
-    "observed_at": "2026-04-10T17:48:26.898Z",
-    "weight": 10,
-    "tags": [
-      "codex"
-    ]
-  },
-  {
-    "id": "8e496cd26bd7ef12",
-    "source_id": "openai_community",
-    "source_name": "OpenAI Community Forum",
-    "title": "ChatGPT Plus Codex limits penalize honest weekend open-source use",
-    "summary": "ChatGPT Plus Codex limits penalize honest weekend open-source use I am posting this separately because my earlier reply was in the rate-limit discussion thread, which had been active for about two weeks. After my reply, the only response that followed was off-topic, and the thread was closed a few hours later. That left me with no real opportunity to bring the ...",
-    "url": "https://community.openai.com/t/chatgpt-plus-codex-limits-penalize-honest-weekend-open-source-use/1379384",
-    "observed_at": "2026-04-20T15:57:34.812Z",
-    "weight": 10,
-    "tags": [
-      "codex"
+      "fetch_error"
     ]
   }
 ]
