@@ -1,11 +1,24 @@
 {
-  "status": "watch",
-  "probability_24h": 50,
-  "probability_48h": 62,
-  "reason": "发现 Codex 相关限额或事故信号，建议保持观察。",
-  "checked_at": "2026-06-16T00:03:29.680672Z",
-  "alert_level": "silent",
+  "status": "high_probability",
+  "probability_24h": 75,
+  "probability_48h": 93,
+  "reason": "多个 Codex 限额或事故信号叠加，进入高概率关注。",
+  "checked_at": "2026-06-16T05:37:49.660796Z",
+  "alert_level": "push",
   "signals": [
+    {
+      "id": "fefe1e28f03ee2d4",
+      "source_id": "openai_status_history",
+      "source_name": "OpenAI Status Incidents",
+      "title": "Users may experience issue with Codex Cloud tasks",
+      "summary": "Users may experience issue with Codex Cloud tasks resolved All impacted services have now fully recovered. We are investigating the issue for the listed services.",
+      "url": "https://status.openai.com/api/v2/incidents.json",
+      "observed_at": "2026-06-16T00:55:57Z",
+      "weight": 40,
+      "tags": [
+        "codex"
+      ]
+    },
     {
       "id": "92db71e6bb2433d3",
       "source_id": "openai_status_history",

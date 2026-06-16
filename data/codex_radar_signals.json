@@ -1,5 +1,18 @@
 [
   {
+    "id": "fefe1e28f03ee2d4",
+    "source_id": "openai_status_history",
+    "source_name": "OpenAI Status Incidents",
+    "title": "Users may experience issue with Codex Cloud tasks",
+    "summary": "Users may experience issue with Codex Cloud tasks resolved All impacted services have now fully recovered. We are investigating the issue for the listed services.",
+    "url": "https://status.openai.com/api/v2/incidents.json",
+    "observed_at": "2026-06-16T00:55:57Z",
+    "weight": 40,
+    "tags": [
+      "codex"
+    ]
+  },
+  {
     "id": "92db71e6bb2433d3",
     "source_id": "openai_status_history",
     "source_name": "OpenAI Status Incidents",
