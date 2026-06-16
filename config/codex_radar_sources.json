@@ -14,6 +14,54 @@
         "quota",
         "credit"
       ]
+    },
+    {
+      "id": "openai_status_components",
+      "name": "OpenAI Status Components",
+      "url": "https://status.openai.com/api/v2/summary.json",
+      "kind": "statuspage_components",
+      "weight": 25,
+      "enabled": true,
+      "keywords": [
+        "codex",
+        "major_outage",
+        "partial_outage",
+        "degraded",
+        "operational"
+      ]
+    },
+    {
+      "id": "reddit_openai",
+      "name": "Reddit r/OpenAI",
+      "url": "https://www.reddit.com/r/OpenAI/new/.rss?limit=10",
+      "kind": "rss",
+      "weight": 15,
+      "enabled": true,
+      "keywords": [
+        "codex",
+        "usage limit",
+        "rate limit",
+        "quota",
+        "credit",
+        "codex down",
+        "codex unavailable",
+        "codex error"
+      ]
+    },
+    {
+      "id": "openai_community",
+      "name": "OpenAI Community Forum",
+      "url": "https://community.openai.com/search.json?q=codex+limit&order=latest",
+      "kind": "community_json",
+      "weight": 10,
+      "enabled": true,
+      "keywords": [
+        "codex",
+        "usage limit",
+        "rate limit",
+        "quota",
+        "credit"
+      ]
     }
   ]
 }
