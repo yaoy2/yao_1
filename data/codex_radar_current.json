@@ -3,7 +3,7 @@
   "probability_24h": 95,
   "probability_48h": 98,
   "reason": "多个 Codex 限额或事故信号叠加，进入高概率关注。",
-  "checked_at": "2026-06-20T04:43:01.906053Z",
+  "checked_at": "2026-06-20T08:29:18.091620Z",
   "alert_level": "push",
   "signals": [
     {
@@ -59,26 +59,13 @@
       ]
     },
     {
-      "id": "c6131d5c0f0a8527",
-      "source_id": "reddit_openai",
-      "source_name": "Reddit r/OpenAI",
-      "title": "I’m 100% convinced ChatGPT subscription models are running heavier quantization than API models",
-      "summary": "I’m 100% convinced ChatGPT subscription models are running heavier quantization than API models I’m not saying this is confirmed, but it would explain a lot of what people are noticing with Codex and ChatGPT lately.\nA lot of degradation benchmarks seem to use API access, not the subscription product. So when people say “the model hasn’t degraded,” they",
-      "url": "https://www.reddit.com/r/OpenAI/new/.rss?limit=10",
-      "observed_at": "2026-06-19T16:47:08+00:00",
-      "weight": 15,
-      "tags": [
-        "codex"
-      ]
-    },
-    {
-      "id": "08c67d2bc2eb3030",
+      "id": "00cf1a0a8f44d203",
       "source_id": "openai_community",
       "source_name": "OpenAI Community Forum",
       "title": "Source fetch failed",
       "summary": "HTTPError: 429 Client Error: Too Many Requests for url: https://community.openai.com/search.json?q=codex+limit&order=latest",
       "url": "https://community.openai.com/search.json?q=codex+limit&order=latest",
-      "observed_at": "2026-06-20T04:43:01.905009Z",
+      "observed_at": "2026-06-20T08:29:18.090896Z",
       "weight": 0,
       "tags": [
         "fetch_error"
