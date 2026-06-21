@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { assignSeatsToProviders } from "@/lib/assignment";
 import { parseSeatPool, validateSeatSelection } from "@/lib/seats";
+import type { RoundtableError, RoundtableProviderStatus, RoundtableStatus, RoundtableTranscriptItem } from "@/lib/roundtable";
 import type { ModelProvider, Seat, SeatAssignment } from "@/lib/types";
 
 const sampleSeatPool = JSON.stringify(
@@ -13,7 +14,7 @@ const sampleSeatPool = JSON.stringify(
         "席位名称": "基层教师现实主义",
         "席位类型": "现实批判",
         "核心关切": "行政任务如何挤压真实教学",
-        "典型问题": ["谁承担额外劳动", "制度压力如何传导到课堂"],
+        "典型问题": ["谁承担额外劳动？", "制度压力如何传导到课堂？"],
         "可能反驳对象": ["古典教育伦理"],
         "典型盲点": ["容易低估长期教育理想"],
         "发言风格": "直接、具体、有现场感"
@@ -51,6 +52,13 @@ const sampleSeatPool = JSON.stringify(
   2
 );
 
+interface RoundtableRunResponse {
+  status: "success" | "failed";
+  transcript: RoundtableTranscriptItem[];
+  errors: RoundtableError[];
+  providerStatus: RoundtableProviderStatus[];
+}
+
 export default function Home() {
   const [topic, setTopic] = useState("");
   const [seatPoolText, setSeatPoolText] = useState(sampleSeatPool);
@@ -59,9 +67,15 @@ export default function Home() {
   const [assignments, setAssignments] = useState<SeatAssignment[]>([]);
   const [providers, setProviders] = useState<ModelProvider[]>([]);
   const [message, setMessage] = useState("");
+  const [useMock, setUseMock] = useState(true);
+  const [runStatus, setRunStatus] = useState<RoundtableStatus>("pending");
+  const [transcript, setTranscript] = useState<RoundtableTranscriptItem[]>([]);
+  const [errors, setErrors] = useState<RoundtableError[]>([]);
+  const [providerStatus, setProviderStatus] = useState<RoundtableProviderStatus[]>([]);
 
   const selectedSeats = seats.filter((seat) => selectedSeatIds.includes(seat.id));
   const configuredProviderCount = providers.filter((provider) => provider.isConfigured).length;
+  const activeAssignments = assignments.length ? assignments : assignSeatsToProviders(selectedSeats);
 
   useEffect(() => {
     fetch("/api/providers")
@@ -76,6 +90,10 @@ export default function Home() {
       setSeats(parsed);
       setSelectedSeatIds([]);
       setAssignments([]);
+      setTranscript([]);
+      setErrors([]);
+      setProviderStatus([]);
+      setRunStatus("pending");
       setMessage(`已解析 ${parsed.length} 个候选席位。`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "席位池解析失败。");
@@ -107,15 +125,79 @@ export default function Home() {
     setMessage("已生成席位分配。");
   }
 
+  async function handleStartRoundtable() {
+    const selection = validateBeforeRun();
+    if (!selection.ok) {
+      setMessage(selection.message);
+      return;
+    }
+
+    const nextAssignments = assignments.length ? assignments : assignSeatsToProviders(selectedSeats);
+    setAssignments(nextAssignments);
+    setRunStatus("running");
+    setTranscript([]);
+    setErrors([]);
+    setProviderStatus([]);
+    setMessage("圆桌运行中：opening + 1 轮 debate。");
+
+    try {
+      const response = await fetch("/api/roundtable/run", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          topic,
+          selectedSeats,
+          providerAssignments: nextAssignments,
+          rounds: 1,
+          useMock
+        })
+      });
+
+      const payload = (await response.json()) as RoundtableRunResponse | { error?: string };
+      if (!response.ok) {
+        throw new Error("error" in payload && payload.error ? payload.error : "圆桌运行失败。");
+      }
+
+      const result = payload as RoundtableRunResponse;
+      setTranscript(result.transcript);
+      setErrors(result.errors);
+      setProviderStatus(result.providerStatus);
+      setRunStatus(result.status);
+      setMessage(result.status === "success" ? "圆桌已完成 opening + 1 轮 debate。" : "圆桌已完成，但部分席位调用失败。");
+    } catch (error) {
+      setRunStatus("failed");
+      setMessage(error instanceof Error ? error.message : "圆桌运行失败。");
+    }
+  }
+
+  function validateBeforeRun(): { ok: true } | { ok: false; message: string } {
+    if (!topic.trim()) {
+      return { ok: false, message: "请先输入讨论话题。" };
+    }
+
+    const selection = validateSeatSelection(selectedSeatIds);
+    if (!selection.ok) {
+      return selection;
+    }
+
+    if (!useMock && configuredProviderCount < 2) {
+      return { ok: false, message: "真实运行至少需要配置 2 个可用模型；本地验证可以先打开 mock provider。" };
+    }
+
+    return { ok: true };
+  }
+
   return (
     <main className="min-h-screen bg-mist px-4 py-5 text-ink md:px-8">
       <div className="mx-auto flex max-w-7xl flex-col gap-4">
         <header className="flex flex-wrap items-end justify-between gap-3 border-b border-ink/10 pb-4">
           <div>
-            <p className="text-sm font-semibold text-rust">本地 MVP · 第 1-4 步</p>
+            <p className="text-sm font-semibold text-rust">本地 MVP · 最小圆桌链路</p>
             <h1 className="text-3xl font-bold">众声室</h1>
           </div>
-          <div className="text-sm text-ink/70">多模型圆桌群聊工具</div>
+          <div className="text-sm text-ink/70">opening + 1 轮 debate</div>
         </header>
 
         <section className="grid gap-4 lg:grid-cols-[1fr_1.1fr]">
@@ -189,7 +271,10 @@ export default function Home() {
                   </dl>
                 </div>
               ))}
-              <p className="text-sm text-ink/60">开始圆桌前需要至少 2 个模型配置完整。当前页面只展示配置状态，不暴露密钥。</p>
+              <label className="flex items-center gap-2 text-sm text-ink/70">
+                <input type="checkbox" checked={useMock} onChange={(event) => setUseMock(event.target.checked)} />
+                使用 mock provider 本地验证，不消耗真实 API
+              </label>
             </div>
           </Panel>
         </section>
@@ -200,33 +285,64 @@ export default function Home() {
               生成席位分配
             </button>
             <div className="mt-3 grid gap-2">
-              {assignments.map((assignment) => {
+              {activeAssignments.map((assignment) => {
                 const seat = seats.find((item) => item.id === assignment.seatId);
                 const provider = providers.find((item) => item.id === assignment.providerId);
                 return (
                   <div key={assignment.id} className="rounded border border-ink/10 bg-paper p-3 text-sm">
-                    <strong>{provider?.displayName}</strong>｜{seat?.name}
+                    <strong>{provider?.displayName ?? assignment.providerId}</strong>｜{seat?.name}
                     <p className="mt-1 text-xs text-ink/60">{assignment.reason}</p>
                   </div>
                 );
               })}
-              {!assignments.length && <EmptyState text="选择 4 到 6 个席位后生成分配。" />}
+              {!selectedSeats.length && <EmptyState text="选择 4 到 6 个席位后生成分配。" />}
             </div>
           </Panel>
 
-          <Panel title="圆桌控制台">
-            <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
-              {["开始圆桌", "继续一轮", "正面交锋", "检测缺席视角", "生成总结", "暂停"].map((label) => (
-                <button key={label} className="rounded border border-ink/15 bg-paper px-3 py-2 text-sm text-ink/70" disabled>
-                  {label}
-                </button>
-              ))}
+          <Panel title="运行日志">
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                className="rounded bg-moss px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-ink/30"
+                onClick={handleStartRoundtable}
+                disabled={runStatus === "running"}
+              >
+                {runStatus === "running" ? "运行中" : "开始圆桌"}
+              </button>
+              <StatusBadge status={runStatus} />
             </div>
-            <div className="mt-4 rounded border border-dashed border-ink/20 bg-paper p-4 text-sm text-ink/60">
-              后续步骤会在这里显示圆桌消息流。当前 MVP 先完成页面结构、席位选择、模型配置状态和席位分配。
+            <div className="mt-4 grid gap-2 text-sm">
+              {providerStatus.map((item) => (
+                <div key={item.providerId} className="rounded border border-ink/10 bg-paper p-3">
+                  <strong>{item.providerName}</strong>：{item.status}，调用 {item.calls} 次，失败 {item.failures} 次
+                </div>
+              ))}
+              {errors.map((error) => (
+                <div key={`${error.phase}-${error.round}-${error.seatId}`} className="rounded border border-rust/30 bg-rust/10 p-3 text-rust">
+                  {error.phase} R{error.round}｜{error.providerName}｜{error.seatName}：{error.message}
+                </div>
+              ))}
+              {!providerStatus.length && !errors.length && <EmptyState text="点击开始后，这里显示 provider 调用状态和错误。" />}
             </div>
           </Panel>
         </section>
+
+        <Panel title="Transcript">
+          <div className="grid gap-3">
+            {transcript.map((item) => (
+              <article key={item.id} className={`rounded border p-4 ${item.status === "failed" ? "border-rust/30 bg-rust/10" : "border-ink/10 bg-paper"}`}>
+                <div className="mb-2 flex flex-wrap items-center gap-2 text-sm">
+                  <span className="rounded bg-ink/10 px-2 py-1">R{item.round}</span>
+                  <span className="rounded bg-moss/15 px-2 py-1 text-moss">{item.phase}</span>
+                  <strong>{item.seatName}</strong>
+                  <span className="text-ink/60">｜{item.providerName}</span>
+                  <span className={item.status === "failed" ? "text-rust" : "text-moss"}>{item.status}</span>
+                </div>
+                <p className="whitespace-pre-wrap text-sm leading-7 text-ink/80">{item.status === "failed" ? item.error : item.content}</p>
+              </article>
+            ))}
+            {!transcript.length && <EmptyState text="圆桌运行后会显示每个席位的 opening 和 debate 发言。" />}
+          </div>
+        </Panel>
 
         <footer className="flex flex-wrap items-center justify-between gap-2 rounded bg-paper px-4 py-3 text-sm text-ink/70">
           <span>{message || "准备就绪。"}</span>
@@ -248,4 +364,17 @@ function Panel({ title, children }: { title: string; children: React.ReactNode }
 
 function EmptyState({ text }: { text: string }) {
   return <div className="rounded border border-dashed border-ink/20 bg-paper p-4 text-sm text-ink/55">{text}</div>;
+}
+
+function StatusBadge({ status }: { status: RoundtableStatus }) {
+  const className =
+    status === "success"
+      ? "bg-moss/15 text-moss"
+      : status === "failed"
+        ? "bg-rust/10 text-rust"
+        : status === "running"
+          ? "bg-ink/10 text-ink"
+          : "bg-ink/5 text-ink/60";
+
+  return <span className={`rounded px-2 py-1 text-xs font-semibold ${className}`}>{status}</span>;
 }

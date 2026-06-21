@@ -1,6 +1,6 @@
 export type ProviderId = "deepseek" | "mimo" | "minimax";
 
-export type ProviderType = "openai-compatible";
+export type ProviderType = "openai-compatible" | "mock";
 
 export interface Topic {
   id: string;

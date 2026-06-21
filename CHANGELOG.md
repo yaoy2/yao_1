@@ -7,6 +7,13 @@ This English change log mirrors the project history maintained in `CHANGELOG_ZH-
 
 ## 2026-06-21
 
+- **Zhongshengshi minimum roundtable flow added**: `zhongshengshi/` now includes `/api/roundtable/run`, implementing opening statements plus one debate round. After entering a topic, parsing a seat pool, and selecting 4 to 6 seats, the user can start the roundtable and see each seat's opening and debate messages.
+- **Prompt builder and model orchestration**: added `prompt-builder`, using seat name, type, core concern, typical questions, must-do / must-not-do rules, likely opponents, blind spots, style, example preference, and custom seat prompts for opening / debate prompts. Added a roundtable engine that calls the assigned provider for each seat.
+- **Mock provider and non-blocking failures**: added a mock provider for local verification and tests without real API cost. A failed seat or provider call is recorded in the transcript and error log while the remaining seats continue.
+- **API-key boundary tightened**: real provider calls read API keys only from `.env.local` / server environment variables. `/api/providers` and `/api/roundtable/run` do not return secrets.
+- **Frontend transcript display**: the former control placeholder is now a run log showing pending / running / success / failed status, provider call counts, failure details, and the full transcript.
+- **Current limits**: this phase only implements opening plus one debate round. Speech-value evaluation, missing-view detection, summary generation, multi-round orchestration, and SQLite / Prisma persistence remain future work.
+- **Verification**: prompt, mock provider, roundtable engine, API route, and failure-path tests were added first and confirmed failing before implementation. After implementation, `npm test` passed 12 tests and `npm run typecheck` passed.
 - **Added the Zhongshengshi local MVP subproject**: created an isolated Next.js + TypeScript + Tailwind CSS project under `zhongshengshi/` to validate the multi-model roundtable setup flow before adapting it into the existing Streamlit toolbox.
 - **Completed steps 1-4**: the MVP now has the base page, topic input, seat-pool JSON paste and parsing, candidate-seat display, 4-to-6 seat selection, DeepSeek / MiMo / MiniMax provider status, an OpenAI-compatible adapter foundation, and automatic seat assignment with at most two seats per model.
 - **Protected API-key boundaries**: API keys are read only from `.env.local` / server environment variables. The browser receives only provider status, Base URL, and Model Name metadata.

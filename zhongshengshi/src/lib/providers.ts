@@ -39,6 +39,15 @@ const providerDefinitions: ProviderDefinition[] = [
   }
 ];
 
+export function getProviderSecret(providerId: ProviderId, env: Env = process.env): string {
+  const definition = providerDefinitions.find((item) => item.id === providerId);
+  if (!definition) {
+    return "";
+  }
+
+  return env[definition.apiKeyKey]?.trim() ?? "";
+}
+
 export function buildProviderConfigs(env: Env = process.env): ModelProvider[] {
   return providerDefinitions.map((definition) => {
     const baseUrl = env[definition.baseUrlKey]?.trim() ?? "";

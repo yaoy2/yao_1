@@ -17,7 +17,7 @@ The project is built around real administrative, teaching-support, competition-g
 
 - **Online app**: [yao-1.streamlit.app](https://yao-1.streamlit.app/)
 - **Repository**: [github.com/yaoy2/yao_1](https://github.com/yaoy2/yao_1)
-- **Zhongshengshi MVP**: `zhongshengshi/`, a local Next.js subproject for validating the multi-model roundtable flow. The current version covers steps 1-4 only and does not call real models yet.
+- **Zhongshengshi MVP**: `zhongshengshi/`, a local Next.js subproject for validating the multi-model roundtable flow. The current version can run opening statements plus one debate round.
 - **Codex Radar**: the 12th tool panel, reading `data/codex_radar_current.json` to display Codex reset-window status.
 - **Home style**: a dark Command Center cover; tools are listed in reverse launch order, with a fixed 3 x 3 grid per page.
 - **Sidebar navigation**: all tools are ordered from newest to oldest, so recently added modules appear first.
@@ -26,7 +26,7 @@ The project is built around real administrative, teaching-support, competition-g
 
 ## Zhongshengshi MVP
 
-`zhongshengshi/` is the local Web MVP for "众声室". It validates the core pre-chat roundtable setup before deciding whether to adapt the tool into the existing Streamlit toolbox.
+`zhongshengshi/` is the local Web MVP for "众声室". It validates the core roundtable flow before deciding whether to adapt the tool into the existing Streamlit toolbox.
 
 Completed so far:
 
@@ -37,6 +37,10 @@ Completed so far:
 - Added DeepSeek, MiMo, and MiniMax provider configuration status. API keys are read only from `.env.local` / server environment variables and are not returned to the browser.
 - Added a basic OpenAI-compatible Chat Completions adapter so incompatible providers can be swapped later.
 - Added automatic seat assignment: each model gets at most two seats, with keyword preferences for DeepSeek, MiMo, and MiniMax.
+- Added `/api/roundtable/run`, which runs the minimum roundtable flow: opening statements for every selected seat, then one debate round.
+- Added a prompt builder using seat name, type, core concern, typical questions, must-do / must-not-do rules, likely opponents, blind spots, speaking style, example preference, and seat-specific prompts.
+- Added a mock provider for local verification and tests without spending real API calls. Real providers still run through server-side environment variables and OpenAI-compatible Chat Completions calls.
+- The frontend now displays run status, provider status, error logs, and the full transcript. A failed provider or seat call does not stop the rest of the roundtable.
 
 Local run:
 
@@ -46,6 +50,8 @@ npm install
 Copy-Item .env.local.example .env.local
 npm run dev
 ```
+
+The page enables "mock provider" by default for local verification. To call real models, turn it off and configure at least two providers in `.env.local`.
 
 `.env.local` fields:
 
@@ -63,12 +69,17 @@ MINIMAX_BASE_URL=
 MINIMAX_MODEL=
 ```
 
+Current limits:
+
+- The flow currently runs opening plus one debate round only; there is no complex multi-round orchestration yet.
+- Speech-value evaluation, missing-view detection, final summary, and persistence are still pending.
+- Real providers use OpenAI-compatible Chat Completions by default. Any incompatible provider will need its own adapter extension.
+
 Next steps:
 
-- Step 5: opening statements.
-- Step 6: speech-value evaluation and debate rounds.
-- Steps 7-8: missing-view detection and final summary.
-- Step 9: SQLite / Prisma persistence for rooms, seats, messages, and summaries.
+- Add speech-value evaluation so not every seat has to speak in every debate round.
+- Add missing-view detection and final summary.
+- Add SQLite / Prisma persistence for rooms, seats, messages, and summaries.
 - After the core flow works, decide whether to adapt it into Streamlit or keep it as an independent local Web tool.
 
 ---

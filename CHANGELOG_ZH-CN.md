@@ -2,6 +2,13 @@
 
 ## 2026-06-21
 
+- **众声室最小圆桌链路上线**：在 `zhongshengshi/` 新增 `/api/roundtable/run`，实现 opening + 1 轮 debate。用户输入话题、解析席位池、选择 4 到 6 个席位后，可以点击开始圆桌，前端展示每个席位的开场发言和一轮交锋发言。
+- **Prompt builder 与模型编排**：新增 `prompt-builder`，按席位名称、类型、核心关切、典型问题、应做/不应做、反驳对象、盲点、风格、例子偏好和自定义提示词生成 opening / debate 提示。新增 roundtable engine，按席位分配调用对应 provider。
+- **Mock provider 与失败不中断**：新增 mock provider 用于本地验证和测试，不消耗真实 API。单个席位或 provider 调用失败时会写入 transcript 和错误日志，其他席位继续运行。
+- **密钥安全继续收紧**：真实 provider 调用只在服务端读取 `.env.local` / 环境变量中的 API Key；`/api/providers` 和 `/api/roundtable/run` 都不返回密钥。
+- **前端 transcript 展示**：控制台占位区升级为运行日志区，显示 pending / running / success / failed 状态、provider 调用次数、失败信息和完整 transcript。
+- **当前限制**：本阶段只做 opening + 1 轮 debate；发言价值评估、缺席视角检测、总结、多轮编排和 SQLite / Prisma 持久化仍待后续实现。
+- **验证结果**：先新增 prompt、mock provider、roundtable engine、API route 和失败路径测试，确认缺实现时失败；补实现后 `npm test` 通过 12 项测试，`npm run typecheck` 通过。
 - **新增“众声室”本地 MVP 子项目**：在 `zhongshengshi/` 下创建独立 Next.js + TypeScript + Tailwind CSS 项目，用来先验证多模型圆桌群聊的核心前置流程，而不是直接改造进现有 Streamlit 工具箱。
 - **完成第 1-4 步范围**：已完成基础页面、话题输入、席位池 JSON 粘贴解析、候选席位展示、4 到 6 个席位选择、DeepSeek / MiMo / MiniMax provider 配置状态读取、OpenAI-compatible adapter 基础封装，以及每个模型最多 2 个席位的自动分配。
 - **密钥边界处理**：API Key 只通过 `.env.local` / 服务端环境变量读取，前端页面只显示配置状态、Base URL 和 Model Name，不返回密钥。
