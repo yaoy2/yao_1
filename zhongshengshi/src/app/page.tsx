@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { assignSeatsToProviders } from "@/lib/assignment";
+import { projectGuideSections } from "@/lib/guide";
 import { parseSeatPool, validateSeatSelection } from "@/lib/seats";
 import type { RoundtableError, RoundtableProviderStatus, RoundtableStatus, RoundtableTranscriptItem } from "@/lib/roundtable";
 import type { ModelProvider, Seat, SeatAssignment } from "@/lib/types";
@@ -199,6 +200,23 @@ export default function Home() {
           </div>
           <div className="text-sm text-ink/70">opening + 1 轮 debate</div>
         </header>
+
+        <Panel title="项目说明书 / 使用指南">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+            {projectGuideSections.map((section) => (
+              <section key={section.title} className="rounded border border-ink/10 bg-paper p-3">
+                <h3 className="mb-2 text-sm font-semibold text-moss">{section.title}</h3>
+                <ol className="space-y-1 pl-4 text-sm leading-6 text-ink/75">
+                  {section.items.map((item) => (
+                    <li key={item} className="list-decimal">
+                      {item}
+                    </li>
+                  ))}
+                </ol>
+              </section>
+            ))}
+          </div>
+        </Panel>
 
         <section className="grid gap-4 lg:grid-cols-[1fr_1.1fr]">
           <Panel title="话题输入">

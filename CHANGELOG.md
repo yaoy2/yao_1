@@ -7,6 +7,8 @@ This English change log mirrors the project history maintained in `CHANGELOG_ZH-
 
 ## 2026-06-21
 
+- **Zhongshengshi page guide added**: added a compact "Project Manual / User Guide" section at the top of the `zhongshengshi/` page, covering the fastest local workflow, real-provider setup, seat-pool format, result interpretation, and current limits.
+- **Guide content modularized**: added `src/lib/guide.ts` for the guide content and a test confirming that the guide covers mock provider usage, starting the roundtable, API-key server boundaries, current phase scope, and no Streamlit adaptation for now.
 - **Zhongshengshi minimum roundtable flow added**: `zhongshengshi/` now includes `/api/roundtable/run`, implementing opening statements plus one debate round. After entering a topic, parsing a seat pool, and selecting 4 to 6 seats, the user can start the roundtable and see each seat's opening and debate messages.
 - **Prompt builder and model orchestration**: added `prompt-builder`, using seat name, type, core concern, typical questions, must-do / must-not-do rules, likely opponents, blind spots, style, example preference, and custom seat prompts for opening / debate prompts. Added a roundtable engine that calls the assigned provider for each seat.
 - **Mock provider and non-blocking failures**: added a mock provider for local verification and tests without real API cost. A failed seat or provider call is recorded in the transcript and error log while the remaining seats continue.

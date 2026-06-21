@@ -2,6 +2,8 @@
 
 ## 2026-06-21
 
+- **众声室页面新增说明书板块**：在 `zhongshengshi/` 页面顶部新增“项目说明书 / 使用指南”，用紧凑分栏说明最快跑通、真实模型配置、席位池格式、结果解读和当前边界，方便打开页面后直接按步骤使用。
+- **指南内容模块化**：新增 `src/lib/guide.ts` 管理说明书内容，并新增测试确认指南覆盖 mock provider、开始圆桌、API Key 服务端边界、当前阶段和暂不做 Streamlit 适配等关键说明。
 - **众声室最小圆桌链路上线**：在 `zhongshengshi/` 新增 `/api/roundtable/run`，实现 opening + 1 轮 debate。用户输入话题、解析席位池、选择 4 到 6 个席位后，可以点击开始圆桌，前端展示每个席位的开场发言和一轮交锋发言。
 - **Prompt builder 与模型编排**：新增 `prompt-builder`，按席位名称、类型、核心关切、典型问题、应做/不应做、反驳对象、盲点、风格、例子偏好和自定义提示词生成 opening / debate 提示。新增 roundtable engine，按席位分配调用对应 provider。
 - **Mock provider 与失败不中断**：新增 mock provider 用于本地验证和测试，不消耗真实 API。单个席位或 provider 调用失败时会写入 transcript 和错误日志，其他席位继续运行。

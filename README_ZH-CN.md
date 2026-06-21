@@ -39,6 +39,7 @@
 - 新增 prompt builder，根据席位名称、类型、核心关切、典型问题、应做/不应做、反驳对象、盲点、风格、例子偏好和自定义提示词生成模型提示。
 - 新增 mock provider，用于本地验证和测试，不消耗真实 API；真实 provider 仍走服务端环境变量和 OpenAI-compatible Chat Completions 调用。
 - 前端可展示运行状态、provider 调用状态、错误日志和完整 transcript；单个 provider 或席位失败不会中断整场圆桌。
+- 页面顶部新增“项目说明书 / 使用指南”板块，集中说明最快跑通方式、真实模型配置、席位池格式、结果解读和当前边界。
 
 本地运行：
 

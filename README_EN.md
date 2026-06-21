@@ -41,6 +41,7 @@ Completed so far:
 - Added a prompt builder using seat name, type, core concern, typical questions, must-do / must-not-do rules, likely opponents, blind spots, speaking style, example preference, and seat-specific prompts.
 - Added a mock provider for local verification and tests without spending real API calls. Real providers still run through server-side environment variables and OpenAI-compatible Chat Completions calls.
 - The frontend now displays run status, provider status, error logs, and the full transcript. A failed provider or seat call does not stop the rest of the roundtable.
+- The page now includes a "Project Manual / User Guide" section covering the fastest local workflow, real-provider setup, seat-pool format, result interpretation, and current limits.
 
 Local run:
 
