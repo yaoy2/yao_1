@@ -7,6 +7,8 @@ This English change log mirrors the project history maintained in `CHANGELOG_ZH-
 
 ## 2026-06-21
 
+- **Zhongshengshi browser-local draft recovery added**: while investigating the page returning to an empty setup after starting the roundtable, confirmed that Next.js development Fast Refresh / full page reloads can drop temporary React state. Added `src/lib/draft-state.ts` to persist and restore the topic, seat pool, parsed seats, selected seats, assignments, mock mode, and JSON editor state; page buttons now explicitly use `type="button"` to reduce accidental submit behavior in future layout changes.
+- **Draft recovery verification**: added `tests/draft-state.test.ts` for draft serialization, parsing, and invalid persisted data handling. Browser verification confirmed that a test topic survives reload. `npm run lint`, `npm test`, `npm run typecheck`, and `npm run build` all passed.
 - **Third Zhongshengshi provider corrected to Kimi**: the provider previously labeled MiniMax was corrected to Kimi. The page, types, mock provider, assignment preferences, README, and tests now consistently use `kimi` / `Kimi` / `KIMI_*`.
 - **Legacy environment variable fallback kept**: to avoid breaking existing `.env.local` files immediately, the Kimi provider reads `KIMI_*` first and falls back to `MINIMAX_*` if needed. New configuration should use `KIMI_API_KEY`, `KIMI_BASE_URL`, and `KIMI_MODEL`.
 - **Zhongshengshi seat pools moved to a compact workflow**: the parser now supports a short `seats` array where each seat only needs `seat_name`, `type`, `core_concern`, `typical_questions`, `must_do`, `must_not_do`, and `speaking_style`; other fields may be omitted.

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { assignSeatsToProviders } from "@/lib/assignment";
+import { parseRoundtableDraft, roundtableDraftStorageKey, serializeRoundtableDraft } from "@/lib/draft-state";
 import { projectGuideSections } from "@/lib/guide";
 import { getPresetSeatPoolText, lowRelevanceCompetitionPreset } from "@/lib/preset-seat-pools";
 import { parseSeatPool, validateSeatSelection } from "@/lib/seats";
@@ -75,10 +76,26 @@ export default function Home() {
   const [transcript, setTranscript] = useState<RoundtableTranscriptItem[]>([]);
   const [errors, setErrors] = useState<RoundtableError[]>([]);
   const [providerStatus, setProviderStatus] = useState<RoundtableProviderStatus[]>([]);
+  const [hasLoadedDraft, setHasLoadedDraft] = useState(false);
 
   const selectedSeats = seats.filter((seat) => selectedSeatIds.includes(seat.id));
   const configuredProviderCount = providers.filter((provider) => provider.isConfigured).length;
   const activeAssignments = assignments.length ? assignments : assignSeatsToProviders(selectedSeats);
+
+  useEffect(() => {
+    const savedDraft = parseRoundtableDraft(window.localStorage.getItem(roundtableDraftStorageKey));
+    if (savedDraft) {
+      setTopic(savedDraft.topic);
+      setSeatPoolText(savedDraft.seatPoolText);
+      setSeats(savedDraft.seats);
+      setSelectedSeatIds(savedDraft.selectedSeatIds);
+      setAssignments(savedDraft.assignments);
+      setUseMock(savedDraft.useMock);
+      setShowSeatPoolEditor(savedDraft.showSeatPoolEditor);
+      setMessage("已恢复上次未完成的圆桌草稿。");
+    }
+    setHasLoadedDraft(true);
+  }, []);
 
   useEffect(() => {
     fetch("/api/providers")
@@ -86,6 +103,25 @@ export default function Home() {
       .then((data: { providers: ModelProvider[] }) => setProviders(data.providers))
       .catch(() => setMessage("模型配置状态读取失败，请检查本地服务。"));
   }, []);
+
+  useEffect(() => {
+    if (!hasLoadedDraft) {
+      return;
+    }
+
+    window.localStorage.setItem(
+      roundtableDraftStorageKey,
+      serializeRoundtableDraft({
+        topic,
+        seatPoolText,
+        seats,
+        selectedSeatIds,
+        assignments,
+        useMock,
+        showSeatPoolEditor
+      })
+    );
+  }, [assignments, hasLoadedDraft, seats, seatPoolText, selectedSeatIds, showSeatPoolEditor, topic, useMock]);
 
   function handleParseSeats() {
     try {
@@ -155,6 +191,18 @@ export default function Home() {
 
     const nextAssignments = assignments.length ? assignments : assignSeatsToProviders(selectedSeats);
     setAssignments(nextAssignments);
+    window.localStorage.setItem(
+      roundtableDraftStorageKey,
+      serializeRoundtableDraft({
+        topic,
+        seatPoolText,
+        seats,
+        selectedSeatIds,
+        assignments: nextAssignments,
+        useMock,
+        showSeatPoolEditor
+      })
+    );
     setRunStatus("running");
     setTranscript([]);
     setErrors([]);
@@ -250,10 +298,10 @@ export default function Home() {
 
           <Panel title="席位池">
             <div className="mb-3 flex flex-wrap items-center gap-2">
-              <button className="rounded bg-moss px-4 py-2 text-sm font-semibold text-white" onClick={handleLoadPresetSeatPool}>
+              <button type="button" className="rounded bg-moss px-4 py-2 text-sm font-semibold text-white" onClick={handleLoadPresetSeatPool}>
                 载入示例席位池
               </button>
-              <button className="rounded border border-ink/15 bg-paper px-4 py-2 text-sm" onClick={() => setShowSeatPoolEditor((current) => !current)}>
+              <button type="button" className="rounded border border-ink/15 bg-paper px-4 py-2 text-sm" onClick={() => setShowSeatPoolEditor((current) => !current)}>
                 {showSeatPoolEditor ? "收起 JSON" : "编辑/粘贴 JSON"}
               </button>
               <span className="text-sm text-ink/60">支持 compact seats 数组，不需要粘贴完整 12 席位长 JSON。</span>
@@ -270,7 +318,7 @@ export default function Home() {
               </div>
             )}
             <div className="mt-3 flex items-center gap-3">
-              <button className="rounded bg-moss px-4 py-2 text-sm font-semibold text-white" onClick={handleParseSeats}>
+              <button type="button" className="rounded bg-moss px-4 py-2 text-sm font-semibold text-white" onClick={handleParseSeats}>
                 解析席位池
               </button>
               <span className="text-sm text-ink/65">{seats.length ? `${seats.length} 个候选席位` : "等待解析"}</span>
@@ -292,7 +340,7 @@ export default function Home() {
                     <strong className="text-base">{seat.name}</strong>
                     <div className="flex shrink-0 items-center gap-2">
                       <span className="rounded bg-ink/10 px-2 py-1 text-xs">{seat.type || "未分类"}</span>
-                      <button className="rounded border border-ink/15 bg-white px-2 py-1 text-xs" onClick={() => toggleSeat(seat.id)}>
+                      <button type="button" className="rounded border border-ink/15 bg-white px-2 py-1 text-xs" onClick={() => toggleSeat(seat.id)}>
                         {selectedSeatIds.includes(seat.id) ? "取消" : "选择"}
                       </button>
                     </div>
@@ -345,7 +393,7 @@ export default function Home() {
 
         <section className="grid gap-4 xl:grid-cols-[1fr_1fr]">
           <Panel title="席位分配">
-            <button className="rounded bg-rust px-4 py-2 text-sm font-semibold text-white" onClick={handleAssignSeats}>
+            <button type="button" className="rounded bg-rust px-4 py-2 text-sm font-semibold text-white" onClick={handleAssignSeats}>
               生成席位分配
             </button>
             <div className="mt-3 grid gap-2">
@@ -366,6 +414,7 @@ export default function Home() {
           <Panel title="运行日志">
             <div className="flex flex-wrap items-center gap-3">
               <button
+                type="button"
                 className="rounded bg-moss px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-ink/30"
                 onClick={handleStartRoundtable}
                 disabled={runStatus === "running"}

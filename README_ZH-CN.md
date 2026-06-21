@@ -42,6 +42,7 @@
 - 页面顶部新增“项目说明书 / 使用指南”板块，集中说明最快跑通方式、真实模型配置、席位池格式、结果解读和当前边界。
 - 支持 compact seat pool：只需要 `seats` 数组，每个席位至少包含 `seat_name`、`type`、`core_concern`、`typical_questions`、`must_do`、`must_not_do`、`speaking_style`。
 - 新增“载入示例席位池”按钮，内置 `low_relevance_competition` 示例，载入后自动填入主题和 6 个短席位；解析后页面只展示席位卡片，长 JSON 默认收起。
+- 新增浏览器本地草稿恢复：自动暂存话题、席位池、已解析席位、已选席位、席位分配、mock 模式和 JSON 编辑区状态，页面刷新或开发服务 Fast Refresh 后不需要从头重填。
 
 本地运行：
 

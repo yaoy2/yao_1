@@ -44,6 +44,7 @@ Completed so far:
 - The page now includes a "Project Manual / User Guide" section covering the fastest local workflow, real-provider setup, seat-pool format, result interpretation, and current limits.
 - Added compact seat-pool support: the runtime only needs a `seats` array, with each seat containing `seat_name`, `type`, `core_concern`, `typical_questions`, `must_do`, `must_not_do`, and `speaking_style`.
 - Added a "Load sample seat pool" button backed by the `low_relevance_competition` preset. It fills the topic and six compact seats, then hides the long JSON after parsing so the user works from seat cards.
+- Added browser-local draft recovery for the topic, seat pool, parsed seats, selected seats, seat assignments, mock mode, and JSON editor state, so a page reload or development-server Fast Refresh does not force the user to rebuild the setup from scratch.
 
 Local run:
 

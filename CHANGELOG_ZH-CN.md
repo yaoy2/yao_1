@@ -2,6 +2,8 @@
 
 ## 2026-06-21
 
+- **众声室增加浏览器本地草稿恢复**：排查“点击开始圆桌后页面回到空状态”时确认，Next.js 开发服务 Fast Refresh / 整页重载会导致 React 临时状态丢失。新增 `src/lib/draft-state.ts`，自动暂存并恢复话题、席位池、已解析席位、已选席位、席位分配、mock 模式和 JSON 编辑区状态；同时给页面按钮补 `type="button"`，降低误触发表单提交的风险。
+- **草稿恢复验证**：新增 `tests/draft-state.test.ts` 覆盖草稿序列化、反序列化和异常数据忽略；本地浏览器验证刷新后可恢复测试话题。`npm run lint`、`npm test`、`npm run typecheck`、`npm run build` 均通过。
 - **众声室第三 provider 更正为 Kimi**：将原先误写的 MiniMax provider 更正为 Kimi，页面、类型、mock provider、自动分配偏好、README 和测试统一改为 `kimi` / `Kimi` / `KIMI_*`。
 - **兼容旧环境变量名**：为了不让已经写入 `.env.local` 的旧 `MINIMAX_*` 配置立刻失效，Kimi provider 会优先读取 `KIMI_*`，没有时再读取 `MINIMAX_*` 作为 fallback；文档推荐新配置统一使用 `KIMI_API_KEY`、`KIMI_BASE_URL`、`KIMI_MODEL`。
 - **众声室席位池改为 compact 工作流**：支持只包含 `seats` 数组的短版席位池，每个席位只需 `seat_name`、`type`、`core_concern`、`typical_questions`、`must_do`、`must_not_do`、`speaking_style`，其他字段可缺省。
