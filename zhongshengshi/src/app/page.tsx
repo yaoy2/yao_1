@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { assignSeatsToProviders } from "@/lib/assignment";
 import { projectGuideSections } from "@/lib/guide";
+import { getPresetSeatPoolText, lowRelevanceCompetitionPreset } from "@/lib/preset-seat-pools";
 import { parseSeatPool, validateSeatSelection } from "@/lib/seats";
 import type { RoundtableError, RoundtableProviderStatus, RoundtableStatus, RoundtableTranscriptItem } from "@/lib/roundtable";
 import type { ModelProvider, Seat, SeatAssignment } from "@/lib/types";
@@ -68,6 +69,7 @@ export default function Home() {
   const [assignments, setAssignments] = useState<SeatAssignment[]>([]);
   const [providers, setProviders] = useState<ModelProvider[]>([]);
   const [message, setMessage] = useState("");
+  const [showSeatPoolEditor, setShowSeatPoolEditor] = useState(true);
   const [useMock, setUseMock] = useState(true);
   const [runStatus, setRunStatus] = useState<RoundtableStatus>("pending");
   const [transcript, setTranscript] = useState<RoundtableTranscriptItem[]>([]);
@@ -95,10 +97,28 @@ export default function Home() {
       setErrors([]);
       setProviderStatus([]);
       setRunStatus("pending");
+      setShowSeatPoolEditor(false);
       setMessage(`已解析 ${parsed.length} 个候选席位。`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "席位池解析失败。");
     }
+  }
+
+  function handleLoadPresetSeatPool() {
+    const nextSeatPoolText = getPresetSeatPoolText(lowRelevanceCompetitionPreset);
+    const parsed = parseSeatPool(nextSeatPoolText);
+
+    setTopic(lowRelevanceCompetitionPreset.topic);
+    setSeatPoolText(nextSeatPoolText);
+    setSeats(parsed);
+    setSelectedSeatIds([]);
+    setAssignments([]);
+    setTranscript([]);
+    setErrors([]);
+    setProviderStatus([]);
+    setRunStatus("pending");
+    setShowSeatPoolEditor(false);
+    setMessage(`已载入示例席位池：${parsed.length} 个短席位。`);
   }
 
   function toggleSeat(seatId: string) {
@@ -228,12 +248,27 @@ export default function Home() {
             />
           </Panel>
 
-          <Panel title="席位池粘贴">
-            <textarea
-              className="h-52 w-full resize-none rounded border border-ink/15 bg-paper p-3 font-mono text-xs outline-none focus:border-moss"
-              value={seatPoolText}
-              onChange={(event) => setSeatPoolText(event.target.value)}
-            />
+          <Panel title="席位池">
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <button className="rounded bg-moss px-4 py-2 text-sm font-semibold text-white" onClick={handleLoadPresetSeatPool}>
+                载入示例席位池
+              </button>
+              <button className="rounded border border-ink/15 bg-paper px-4 py-2 text-sm" onClick={() => setShowSeatPoolEditor((current) => !current)}>
+                {showSeatPoolEditor ? "收起 JSON" : "编辑/粘贴 JSON"}
+              </button>
+              <span className="text-sm text-ink/60">支持 compact seats 数组，不需要粘贴完整 12 席位长 JSON。</span>
+            </div>
+            {showSeatPoolEditor ? (
+              <textarea
+                className="h-52 w-full resize-none rounded border border-ink/15 bg-paper p-3 font-mono text-xs outline-none focus:border-moss"
+                value={seatPoolText}
+                onChange={(event) => setSeatPoolText(event.target.value)}
+              />
+            ) : (
+              <div className="rounded border border-dashed border-ink/20 bg-paper p-3 text-sm text-ink/65">
+                JSON 已收起。解析后请在下方席位卡片中查看和选择；需要修改时点击“编辑/粘贴 JSON”。
+              </div>
+            )}
             <div className="mt-3 flex items-center gap-3">
               <button className="rounded bg-moss px-4 py-2 text-sm font-semibold text-white" onClick={handleParseSeats}>
                 解析席位池
@@ -247,21 +282,32 @@ export default function Home() {
           <Panel title={`席位选择 · 已选 ${selectedSeatIds.length}/6`}>
             <div className="grid gap-3 md:grid-cols-2">
               {seats.map((seat) => (
-                <button
+                <article
                   key={seat.id}
                   className={`rounded border p-3 text-left transition ${
-                    selectedSeatIds.includes(seat.id) ? "border-moss bg-moss/10" : "border-ink/10 bg-paper hover:border-moss/60"
+                    selectedSeatIds.includes(seat.id) ? "border-moss bg-moss/10" : "border-ink/10 bg-paper"
                   }`}
-                  onClick={() => toggleSeat(seat.id)}
                 >
                   <div className="flex items-center justify-between gap-2">
                     <strong className="text-base">{seat.name}</strong>
-                    <span className="shrink-0 rounded bg-ink/10 px-2 py-1 text-xs">{seat.type || "未分类"}</span>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span className="rounded bg-ink/10 px-2 py-1 text-xs">{seat.type || "未分类"}</span>
+                      <button className="rounded border border-ink/15 bg-white px-2 py-1 text-xs" onClick={() => toggleSeat(seat.id)}>
+                        {selectedSeatIds.includes(seat.id) ? "取消" : "选择"}
+                      </button>
+                    </div>
                   </div>
                   <p className="mt-2 text-sm text-ink/75">{seat.coreConcern}</p>
-                  <p className="mt-2 text-xs text-ink/60">可能反驳：{seat.likelyOpponents.join("、") || "未填写"}</p>
-                  <p className="text-xs text-ink/60">典型盲点：{seat.blindSpots.join("、") || "未填写"}</p>
-                </button>
+                  <p className="mt-2 text-xs text-ink/60">发言风格：{seat.speakingStyle || "未填写"}</p>
+                  <details className="mt-3 text-xs text-ink/65">
+                    <summary className="cursor-pointer font-semibold text-moss">展开</summary>
+                    <div className="mt-2 space-y-1">
+                      <p>典型问题：{seat.typicalQuestions.join("、") || "未填写"}</p>
+                      <p>应当做：{seat.mustDo || "未填写"}</p>
+                      <p>应当避免：{seat.mustNotDo || "未填写"}</p>
+                    </div>
+                  </details>
+                </article>
               ))}
               {!seats.length && <EmptyState text="先粘贴并解析席位池 JSON。" />}
             </div>

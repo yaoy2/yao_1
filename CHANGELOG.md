@@ -7,6 +7,10 @@ This English change log mirrors the project history maintained in `CHANGELOG_ZH-
 
 ## 2026-06-21
 
+- **Zhongshengshi seat pools moved to a compact workflow**: the parser now supports a short `seats` array where each seat only needs `seat_name`, `type`, `core_concern`, `typical_questions`, `must_do`, `must_not_do`, and `speaking_style`; other fields may be omitted.
+- **Low-relevance competition preset added**: added `src/presets/low_relevance_competition.json` with the topic about whether low-alignment competitions benefit or harm students and six compact seats. The page now has a "Load sample seat pool" button that fills the topic and compact JSON.
+- **Seat-card display tightened**: after parsing, the JSON editor is hidden by default and the page shows seat cards instead. Each card face shows only name, type, core concern, and speaking style; expanding the card shows typical questions, must-do, and must-not-do.
+- **Prompt defaults for missing fields**: `prompt-builder` now adds generic constraints when `opening_prompt`, `debate_prompt`, `blind_spots`, `likely_opponents`, or `example_preference` are missing, so compact seats do not fail at runtime.
 - **Zhongshengshi page guide added**: added a compact "Project Manual / User Guide" section at the top of the `zhongshengshi/` page, covering the fastest local workflow, real-provider setup, seat-pool format, result interpretation, and current limits.
 - **Guide content modularized**: added `src/lib/guide.ts` for the guide content and a test confirming that the guide covers mock provider usage, starting the roundtable, API-key server boundaries, current phase scope, and no Streamlit adaptation for now.
 - **Zhongshengshi minimum roundtable flow added**: `zhongshengshi/` now includes `/api/roundtable/run`, implementing opening statements plus one debate round. After entering a topic, parsing a seat pool, and selecting 4 to 6 seats, the user can start the roundtable and see each seat's opening and debate messages.

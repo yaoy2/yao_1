@@ -40,6 +40,8 @@
 - 新增 mock provider，用于本地验证和测试，不消耗真实 API；真实 provider 仍走服务端环境变量和 OpenAI-compatible Chat Completions 调用。
 - 前端可展示运行状态、provider 调用状态、错误日志和完整 transcript；单个 provider 或席位失败不会中断整场圆桌。
 - 页面顶部新增“项目说明书 / 使用指南”板块，集中说明最快跑通方式、真实模型配置、席位池格式、结果解读和当前边界。
+- 支持 compact seat pool：只需要 `seats` 数组，每个席位至少包含 `seat_name`、`type`、`core_concern`、`typical_questions`、`must_do`、`must_not_do`、`speaking_style`。
+- 新增“载入示例席位池”按钮，内置 `low_relevance_competition` 示例，载入后自动填入主题和 6 个短席位；解析后页面只展示席位卡片，长 JSON 默认收起。
 
 本地运行：
 

@@ -61,4 +61,31 @@ describe("prompt builder", () => {
     expect(prompt).toContain("回应、反驳、补充或追问");
     expect(prompt).toContain("不要复述前文");
   });
+
+  it("fills generic constraints when optional prompt fields are missing", () => {
+    const compactSeat: Seat = {
+      id: "compact-1",
+      name: "就业能力迁移派",
+      type: "能力迁移",
+      coreConcern: "非对口竞赛能否训练通用表达、协作和作品化能力",
+      typicalQuestions: ["能力是否能迁移到专业学习？"],
+      mustDo: "说明可迁移能力和边界",
+      mustNotDo: "不要把所有竞赛都说成有用",
+      likelyOpponents: [],
+      blindSpots: [],
+      speakingStyle: "务实、分寸清楚",
+      examplePreference: "",
+      openingPrompt: "",
+      debatePrompt: ""
+    };
+
+    const openingPrompt = buildOpeningPrompt({ topic: "低相关竞赛利弊", seat: compactSeat });
+    const debatePrompt = buildDebatePrompt({ topic: "低相关竞赛利弊", seat: compactSeat, transcript: [] });
+
+    expect(openingPrompt).toContain("通用约束");
+    expect(openingPrompt).toContain("不主动假设反驳对象");
+    expect(openingPrompt).toContain("盲点未填写");
+    expect(debatePrompt).toContain("没有自定义交锋提示时");
+    expect(debatePrompt).toContain("请选择最值得回应的一个具体观点");
+  });
 });

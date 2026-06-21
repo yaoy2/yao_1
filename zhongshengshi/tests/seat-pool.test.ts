@@ -2,6 +2,37 @@ import { describe, expect, it } from "vitest";
 import { parseSeatPool, validateSeatSelection } from "../src/lib/seats";
 
 describe("parseSeatPool", () => {
+  it("accepts a compact seat pool with only the runtime-required fields", () => {
+    const input = JSON.stringify({
+      seats: [
+        {
+          seat_name: "竞赛机会现实派",
+          type: "现实评估",
+          core_concern: "低相关竞赛是否仍能带来可迁移能力",
+          typical_questions: ["学生投入是否值得？", "获奖难度是否可承受？"],
+          must_do: "比较收益和机会成本",
+          must_not_do: "不要只用竞赛数量判断价值",
+          speaking_style: "克制、具体、重证据"
+        }
+      ]
+    });
+
+    const seats = parseSeatPool(input);
+
+    expect(seats).toHaveLength(1);
+    expect(seats[0]).toMatchObject({
+      name: "竞赛机会现实派",
+      type: "现实评估",
+      coreConcern: "低相关竞赛是否仍能带来可迁移能力",
+      typicalQuestions: ["学生投入是否值得？", "获奖难度是否可承受？"],
+      mustDo: "比较收益和机会成本",
+      mustNotDo: "不要只用竞赛数量判断价值",
+      speakingStyle: "克制、具体、重证据",
+      likelyOpponents: [],
+      blindSpots: []
+    });
+  });
+
   it("normalizes a copied GPT seat pool with Chinese and English field names", () => {
     const input = JSON.stringify({
       seats: [

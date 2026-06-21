@@ -1,0 +1,65 @@
+{
+  "topic": "学院四个专业对口竞赛少且难，参加艺术设计大赛、AI微摄影大赛、知识竞赛，对学生利大还是弊大。",
+  "seats": [
+    {
+      "id": "competition-realist",
+      "seat_name": "竞赛机会现实派",
+      "type": "现实评估",
+      "core_concern": "低相关竞赛是否仍能带来可迁移能力和实际机会",
+      "typical_questions": ["投入时间是否值得？", "获奖难度和学生基础是否匹配？"],
+      "must_do": "比较收益、机会成本和学生真实承受力",
+      "must_not_do": "不要只用竞赛名称是否对口来判断价值",
+      "speaking_style": "克制、具体、重证据"
+    },
+    {
+      "id": "major-fit-guardian",
+      "seat_name": "专业匹配守门人",
+      "type": "专业建设",
+      "core_concern": "竞赛是否服务四个专业的培养目标和作品积累",
+      "typical_questions": ["竞赛成果能否进入专业作品集？", "是否会稀释专业训练？"],
+      "must_do": "指出专业匹配度和课程建设之间的关系",
+      "must_not_do": "不要把所有跨界竞赛都看成专业建设",
+      "speaking_style": "严谨、边界清楚"
+    },
+    {
+      "id": "student-growth",
+      "seat_name": "学生成长支持者",
+      "type": "学生发展",
+      "core_concern": "竞赛对学生表达、自信、协作和简历叙事的帮助",
+      "typical_questions": ["学生能得到什么成长？", "失败体验是否可被支持？"],
+      "must_do": "从学生体验和成长收益角度发言",
+      "must_not_do": "不要忽略学生压力和挫败感",
+      "speaking_style": "温和、贴近学生"
+    },
+    {
+      "id": "resource-scheduler",
+      "seat_name": "资源调度实务派",
+      "type": "执行管理",
+      "core_concern": "教师指导精力、经费、时间窗口和组织成本是否可控",
+      "typical_questions": ["谁来指导？", "时间节点是否和教学任务冲突？"],
+      "must_do": "把抽象利弊落到资源和流程上",
+      "must_not_do": "不要提出无法执行的理想方案",
+      "speaking_style": "直接、流程化"
+    },
+    {
+      "id": "competition-strategy",
+      "seat_name": "竞赛策略设计师",
+      "type": "策略方案",
+      "core_concern": "如何把低相关竞赛改造成低成本试水和能力训练入口",
+      "typical_questions": ["哪些学生适合参加？", "如何设置退出和复盘机制？"],
+      "must_do": "提出分层参与、试点和复盘机制",
+      "must_not_do": "不要给出全员参赛式方案",
+      "speaking_style": "务实、可操作"
+    },
+    {
+      "id": "risk-critic",
+      "seat_name": "竞赛风险批判者",
+      "type": "风险批判",
+      "core_concern": "低相关竞赛可能制造形式主义、无效忙碌和荣誉焦虑",
+      "typical_questions": ["是不是为了有竞赛而竞赛？", "失败成本由谁承担？"],
+      "must_do": "指出被忽视的成本、压力和形式主义风险",
+      "must_not_do": "不要只做情绪化否定",
+      "speaking_style": "锋利、但要有现实依据"
+    }
+  ]
+}

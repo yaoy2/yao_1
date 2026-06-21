@@ -2,6 +2,10 @@
 
 ## 2026-06-21
 
+- **众声室席位池改为 compact 工作流**：支持只包含 `seats` 数组的短版席位池，每个席位只需 `seat_name`、`type`、`core_concern`、`typical_questions`、`must_do`、`must_not_do`、`speaking_style`，其他字段可缺省。
+- **新增低相关竞赛示例席位池**：新增 `src/presets/low_relevance_competition.json`，内置“学院四个专业对口竞赛少且难，参加艺术设计大赛、AI微摄影大赛、知识竞赛，对学生利大还是弊大。”主题和 6 个短席位；页面新增“载入示例席位池”按钮，自动填入主题和 compact JSON。
+- **席位卡片展示收敛**：解析后默认收起 JSON，只展示席位卡片；卡片正面只显示席位名称、类型、核心关切和发言风格，点击“展开”后再显示典型问题、应当做、应当避免。
+- **Prompt 缺省字段兜底**：`prompt-builder` 在 `opening_prompt`、`debate_prompt`、`blind_spots`、`likely_opponents`、`example_preference` 缺失时自动加入通用约束，不让短版席位因为字段少而运行失败。
 - **众声室页面新增说明书板块**：在 `zhongshengshi/` 页面顶部新增“项目说明书 / 使用指南”，用紧凑分栏说明最快跑通、真实模型配置、席位池格式、结果解读和当前边界，方便打开页面后直接按步骤使用。
 - **指南内容模块化**：新增 `src/lib/guide.ts` 管理说明书内容，并新增测试确认指南覆盖 mock provider、开始圆桌、API Key 服务端边界、当前阶段和暂不做 Streamlit 适配等关键说明。
 - **众声室最小圆桌链路上线**：在 `zhongshengshi/` 新增 `/api/roundtable/run`，实现 opening + 1 轮 debate。用户输入话题、解析席位池、选择 4 到 6 个席位后，可以点击开始圆桌，前端展示每个席位的开场发言和一轮交锋发言。
