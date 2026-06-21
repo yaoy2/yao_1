@@ -17,9 +17,59 @@ The project is built around real administrative, teaching-support, competition-g
 
 - **Online app**: [yao-1.streamlit.app](https://yao-1.streamlit.app/)
 - **Repository**: [github.com/yaoy2/yao_1](https://github.com/yaoy2/yao_1)
+- **Zhongshengshi MVP**: `zhongshengshi/`, a local Next.js subproject for validating the multi-model roundtable flow. The current version covers steps 1-4 only and does not call real models yet.
 - **Codex Radar**: the 12th tool panel, reading `data/codex_radar_current.json` to display Codex reset-window status.
 - **Home style**: a dark Command Center cover; tools are listed in reverse launch order, with a fixed 3 x 3 grid per page.
 - **Sidebar navigation**: all tools are ordered from newest to oldest, so recently added modules appear first.
+
+---
+
+## Zhongshengshi MVP
+
+`zhongshengshi/` is the local Web MVP for "众声室". It validates the core pre-chat roundtable setup before deciding whether to adapt the tool into the existing Streamlit toolbox.
+
+Completed so far:
+
+- Created an isolated Next.js + TypeScript + Tailwind CSS subproject.
+- Built the single-page structure: topic input, seat-pool paste area, seat selection, provider status, seat assignment, and roundtable control placeholders.
+- Added seat-pool JSON parsing with support for common Chinese and English field names.
+- Added 4-to-6 seat selection validation.
+- Added DeepSeek, MiMo, and MiniMax provider configuration status. API keys are read only from `.env.local` / server environment variables and are not returned to the browser.
+- Added a basic OpenAI-compatible Chat Completions adapter so incompatible providers can be swapped later.
+- Added automatic seat assignment: each model gets at most two seats, with keyword preferences for DeepSeek, MiMo, and MiniMax.
+
+Local run:
+
+```powershell
+cd zhongshengshi
+npm install
+Copy-Item .env.local.example .env.local
+npm run dev
+```
+
+`.env.local` fields:
+
+```text
+DEEPSEEK_API_KEY=
+DEEPSEEK_BASE_URL=
+DEEPSEEK_MODEL=
+
+MIMO_API_KEY=
+MIMO_BASE_URL=
+MIMO_MODEL=
+
+MINIMAX_API_KEY=
+MINIMAX_BASE_URL=
+MINIMAX_MODEL=
+```
+
+Next steps:
+
+- Step 5: opening statements.
+- Step 6: speech-value evaluation and debate rounds.
+- Steps 7-8: missing-view detection and final summary.
+- Step 9: SQLite / Prisma persistence for rooms, seats, messages, and summaries.
+- After the core flow works, decide whether to adapt it into Streamlit or keep it as an independent local Web tool.
 
 ---
 

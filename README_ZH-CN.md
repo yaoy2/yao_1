@@ -15,9 +15,59 @@
 
 - **线上入口**：[yao-1.streamlit.app](https://yao-1.streamlit.app/)
 - **仓库地址**：[github.com/yaoy2/yao_1](https://github.com/yaoy2/yao_1)
+- **众声室 MVP**：`zhongshengshi/`，本地 Next.js 子项目，用于验证多模型圆桌群聊流程；当前先完成第 1-4 步，不接入真实模型发言。
 - **Codex雷达**：第 12 个工具板块，读取 `data/codex_radar_current.json` 展示 Codex 重置窗口状态。
 - **首页风格**：Command Center 深色封面；工具入口按时间倒序展示，首页每页固定 3 x 3。
 - **侧边导航**：全部工具按创建/上线时间倒序排列，越晚做的项目越靠上。
+
+---
+
+## 众声室 MVP
+
+`zhongshengshi/` 是“众声室”的本地 Web MVP，用来先验证圆桌工具的核心前置流程，再决定是否适配进现有 Streamlit 工具箱。
+
+当前已完成：
+
+- 创建独立 Next.js + TypeScript + Tailwind CSS 子项目。
+- 搭建单页页面结构：话题输入、席位池粘贴、席位选择、模型配置状态、席位分配、圆桌控制台占位。
+- 支持粘贴 GPT 生成的席位池 JSON，并兼容常见中文/英文字段。
+- 支持从候选席位中选择 4 到 6 个席位。
+- 支持 DeepSeek、MiMo、MiniMax 的 provider 配置读取；API Key 只从 `.env.local` / 服务端环境变量读取，不返回前端。
+- 提供 OpenAI-compatible Chat Completions adapter 基础封装，后续可替换不兼容 provider。
+- 实现自动席位分配：每个模型最多 2 个席位，并按 DeepSeek / MiMo / MiniMax 的偏好关键词做初步匹配。
+
+本地运行：
+
+```powershell
+cd zhongshengshi
+npm install
+Copy-Item .env.local.example .env.local
+npm run dev
+```
+
+`.env.local` 示例字段：
+
+```text
+DEEPSEEK_API_KEY=
+DEEPSEEK_BASE_URL=
+DEEPSEEK_MODEL=
+
+MIMO_API_KEY=
+MIMO_BASE_URL=
+MIMO_MODEL=
+
+MINIMAX_API_KEY=
+MINIMAX_BASE_URL=
+MINIMAX_MODEL=
+```
+
+下一步计划：
+
+- 第 5 步：实现开场发言流程。
+- 第 6 步：实现发言价值评估和交锋轮。
+- 第 7-8 步：实现缺席视角检测和总结。
+- 第 9 步：再引入 SQLite / Prisma 保存房间、席位、消息和总结。
+- 核心流程跑通后，再评估是否迁入 Streamlit 工具箱或继续保留为独立本地 Web 工具。
 
 ---
 

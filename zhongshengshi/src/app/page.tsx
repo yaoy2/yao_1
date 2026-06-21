@@ -1,0 +1,251 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { assignSeatsToProviders } from "@/lib/assignment";
+import { parseSeatPool, validateSeatSelection } from "@/lib/seats";
+import type { ModelProvider, Seat, SeatAssignment } from "@/lib/types";
+
+const sampleSeatPool = JSON.stringify(
+  {
+    seats: [
+      {
+        id: "s1",
+        "席位名称": "基层教师现实主义",
+        "席位类型": "现实批判",
+        "核心关切": "行政任务如何挤压真实教学",
+        "典型问题": ["谁承担额外劳动", "制度压力如何传导到课堂"],
+        "可能反驳对象": ["古典教育伦理"],
+        "典型盲点": ["容易低估长期教育理想"],
+        "发言风格": "直接、具体、有现场感"
+      },
+      {
+        id: "s2",
+        "席位名称": "古典教育伦理",
+        "席位类型": "伦理叙事",
+        "核心关切": "教育是否仍然守住人的完整成长",
+        "可能反驳对象": ["绩效主义管理者"],
+        "典型盲点": ["容易忽略行政资源约束"],
+        "发言风格": "稳重、价值导向"
+      },
+      {
+        id: "s3",
+        "席位名称": "制度分析者",
+        "席位类型": "制度分析",
+        "核心关切": "责任、权力与激励如何错位",
+        "可能反驳对象": ["单纯情绪化批判"],
+        "典型盲点": ["可能低估个体情绪"],
+        "发言风格": "结构化、冷静"
+      },
+      {
+        id: "s4",
+        "席位名称": "工程实务派",
+        "席位类型": "方案工程",
+        "核心关切": "如何把讨论变成可执行流程",
+        "可能反驳对象": ["只提出价值判断者"],
+        "典型盲点": ["可能过度工具化"],
+        "发言风格": "步骤清楚、可落地"
+      }
+    ]
+  },
+  null,
+  2
+);
+
+export default function Home() {
+  const [topic, setTopic] = useState("");
+  const [seatPoolText, setSeatPoolText] = useState(sampleSeatPool);
+  const [seats, setSeats] = useState<Seat[]>([]);
+  const [selectedSeatIds, setSelectedSeatIds] = useState<string[]>([]);
+  const [assignments, setAssignments] = useState<SeatAssignment[]>([]);
+  const [providers, setProviders] = useState<ModelProvider[]>([]);
+  const [message, setMessage] = useState("");
+
+  const selectedSeats = seats.filter((seat) => selectedSeatIds.includes(seat.id));
+  const configuredProviderCount = providers.filter((provider) => provider.isConfigured).length;
+
+  useEffect(() => {
+    fetch("/api/providers")
+      .then((response) => response.json())
+      .then((data: { providers: ModelProvider[] }) => setProviders(data.providers))
+      .catch(() => setMessage("模型配置状态读取失败，请检查本地服务。"));
+  }, []);
+
+  function handleParseSeats() {
+    try {
+      const parsed = parseSeatPool(seatPoolText);
+      setSeats(parsed);
+      setSelectedSeatIds([]);
+      setAssignments([]);
+      setMessage(`已解析 ${parsed.length} 个候选席位。`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "席位池解析失败。");
+    }
+  }
+
+  function toggleSeat(seatId: string) {
+    setSelectedSeatIds((current) => {
+      if (current.includes(seatId)) {
+        return current.filter((id) => id !== seatId);
+      }
+      if (current.length >= 6) {
+        setMessage("最多选择 6 个席位。");
+        return current;
+      }
+      return [...current, seatId];
+    });
+  }
+
+  function handleAssignSeats() {
+    const selection = validateSeatSelection(selectedSeatIds);
+    if (!selection.ok) {
+      setMessage(selection.message);
+      return;
+    }
+
+    const nextAssignments = assignSeatsToProviders(selectedSeats);
+    setAssignments(nextAssignments);
+    setMessage("已生成席位分配。");
+  }
+
+  return (
+    <main className="min-h-screen bg-mist px-4 py-5 text-ink md:px-8">
+      <div className="mx-auto flex max-w-7xl flex-col gap-4">
+        <header className="flex flex-wrap items-end justify-between gap-3 border-b border-ink/10 pb-4">
+          <div>
+            <p className="text-sm font-semibold text-rust">本地 MVP · 第 1-4 步</p>
+            <h1 className="text-3xl font-bold">众声室</h1>
+          </div>
+          <div className="text-sm text-ink/70">多模型圆桌群聊工具</div>
+        </header>
+
+        <section className="grid gap-4 lg:grid-cols-[1fr_1.1fr]">
+          <Panel title="话题输入">
+            <textarea
+              className="h-28 w-full resize-none rounded border border-ink/15 bg-paper p-3 text-sm outline-none focus:border-moss"
+              placeholder="输入本次圆桌讨论的话题"
+              value={topic}
+              onChange={(event) => setTopic(event.target.value)}
+            />
+          </Panel>
+
+          <Panel title="席位池粘贴">
+            <textarea
+              className="h-52 w-full resize-none rounded border border-ink/15 bg-paper p-3 font-mono text-xs outline-none focus:border-moss"
+              value={seatPoolText}
+              onChange={(event) => setSeatPoolText(event.target.value)}
+            />
+            <div className="mt-3 flex items-center gap-3">
+              <button className="rounded bg-moss px-4 py-2 text-sm font-semibold text-white" onClick={handleParseSeats}>
+                解析席位池
+              </button>
+              <span className="text-sm text-ink/65">{seats.length ? `${seats.length} 个候选席位` : "等待解析"}</span>
+            </div>
+          </Panel>
+        </section>
+
+        <section className="grid gap-4 xl:grid-cols-[1.4fr_0.9fr]">
+          <Panel title={`席位选择 · 已选 ${selectedSeatIds.length}/6`}>
+            <div className="grid gap-3 md:grid-cols-2">
+              {seats.map((seat) => (
+                <button
+                  key={seat.id}
+                  className={`rounded border p-3 text-left transition ${
+                    selectedSeatIds.includes(seat.id) ? "border-moss bg-moss/10" : "border-ink/10 bg-paper hover:border-moss/60"
+                  }`}
+                  onClick={() => toggleSeat(seat.id)}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <strong className="text-base">{seat.name}</strong>
+                    <span className="shrink-0 rounded bg-ink/10 px-2 py-1 text-xs">{seat.type || "未分类"}</span>
+                  </div>
+                  <p className="mt-2 text-sm text-ink/75">{seat.coreConcern}</p>
+                  <p className="mt-2 text-xs text-ink/60">可能反驳：{seat.likelyOpponents.join("、") || "未填写"}</p>
+                  <p className="text-xs text-ink/60">典型盲点：{seat.blindSpots.join("、") || "未填写"}</p>
+                </button>
+              ))}
+              {!seats.length && <EmptyState text="先粘贴并解析席位池 JSON。" />}
+            </div>
+          </Panel>
+
+          <Panel title="模型配置">
+            <div className="space-y-3">
+              {providers.map((provider) => (
+                <div key={provider.id} className="rounded border border-ink/10 bg-paper p-3">
+                  <div className="flex items-center justify-between">
+                    <strong>{provider.displayName}</strong>
+                    <span className={`rounded px-2 py-1 text-xs ${provider.isConfigured ? "bg-moss/15 text-moss" : "bg-rust/10 text-rust"}`}>
+                      {provider.isConfigured ? "已配置" : "待配置"}
+                    </span>
+                  </div>
+                  <dl className="mt-2 grid grid-cols-[92px_1fr] gap-1 text-xs text-ink/65">
+                    <dt>Provider</dt>
+                    <dd>{provider.providerType}</dd>
+                    <dt>Base URL</dt>
+                    <dd>{provider.baseUrl || "读取 .env.local"}</dd>
+                    <dt>Model</dt>
+                    <dd>{provider.modelName || "读取 .env.local"}</dd>
+                    <dt>API Key</dt>
+                    <dd>仅后端/环境变量保存</dd>
+                  </dl>
+                </div>
+              ))}
+              <p className="text-sm text-ink/60">开始圆桌前需要至少 2 个模型配置完整。当前页面只展示配置状态，不暴露密钥。</p>
+            </div>
+          </Panel>
+        </section>
+
+        <section className="grid gap-4 xl:grid-cols-[1fr_1fr]">
+          <Panel title="席位分配">
+            <button className="rounded bg-rust px-4 py-2 text-sm font-semibold text-white" onClick={handleAssignSeats}>
+              生成席位分配
+            </button>
+            <div className="mt-3 grid gap-2">
+              {assignments.map((assignment) => {
+                const seat = seats.find((item) => item.id === assignment.seatId);
+                const provider = providers.find((item) => item.id === assignment.providerId);
+                return (
+                  <div key={assignment.id} className="rounded border border-ink/10 bg-paper p-3 text-sm">
+                    <strong>{provider?.displayName}</strong>｜{seat?.name}
+                    <p className="mt-1 text-xs text-ink/60">{assignment.reason}</p>
+                  </div>
+                );
+              })}
+              {!assignments.length && <EmptyState text="选择 4 到 6 个席位后生成分配。" />}
+            </div>
+          </Panel>
+
+          <Panel title="圆桌控制台">
+            <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+              {["开始圆桌", "继续一轮", "正面交锋", "检测缺席视角", "生成总结", "暂停"].map((label) => (
+                <button key={label} className="rounded border border-ink/15 bg-paper px-3 py-2 text-sm text-ink/70" disabled>
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div className="mt-4 rounded border border-dashed border-ink/20 bg-paper p-4 text-sm text-ink/60">
+              后续步骤会在这里显示圆桌消息流。当前 MVP 先完成页面结构、席位选择、模型配置状态和席位分配。
+            </div>
+          </Panel>
+        </section>
+
+        <footer className="flex flex-wrap items-center justify-between gap-2 rounded bg-paper px-4 py-3 text-sm text-ink/70">
+          <span>{message || "准备就绪。"}</span>
+          <span>话题：{topic.trim() ? "已填写" : "未填写"} · 可用模型：{configuredProviderCount}</span>
+        </footer>
+      </div>
+    </main>
+  );
+}
+
+function Panel({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="rounded border border-ink/10 bg-white p-4 shadow-sm">
+      <h2 className="mb-3 text-lg font-semibold">{title}</h2>
+      {children}
+    </section>
+  );
+}
+
+function EmptyState({ text }: { text: string }) {
+  return <div className="rounded border border-dashed border-ink/20 bg-paper p-4 text-sm text-ink/55">{text}</div>;
+}

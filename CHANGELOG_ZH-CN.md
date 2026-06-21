@@ -1,5 +1,14 @@
 # 更新日志 (CHANGELOG)
 
+## 2026-06-21
+
+- **新增“众声室”本地 MVP 子项目**：在 `zhongshengshi/` 下创建独立 Next.js + TypeScript + Tailwind CSS 项目，用来先验证多模型圆桌群聊的核心前置流程，而不是直接改造进现有 Streamlit 工具箱。
+- **完成第 1-4 步范围**：已完成基础页面、话题输入、席位池 JSON 粘贴解析、候选席位展示、4 到 6 个席位选择、DeepSeek / MiMo / MiniMax provider 配置状态读取、OpenAI-compatible adapter 基础封装，以及每个模型最多 2 个席位的自动分配。
+- **密钥边界处理**：API Key 只通过 `.env.local` / 服务端环境变量读取，前端页面只显示配置状态、Base URL 和 Model Name，不返回密钥。
+- **路线判断记录**：本轮讨论过是否直接搬成 Streamlit。当前判断是先跑通 MVP 更稳，因为真正风险在圆桌流程和模型协作逻辑；等核心流程成功后，再决定适配 Streamlit、继续保留独立 Next.js，或抽取逻辑复用。
+- **README 同步更新**：补充 `zhongshengshi/` 的运行方式、环境变量填写方式、已完成内容和下一步计划。
+- **验证结果**：先写解析、provider 和席位分配测试，确认缺实现时失败；补实现后 `npm test` 通过 7 项测试。按项目规则未启动 Streamlit。
+
 ## 2026-06-09
 
 - **便签展示池排除刺眼色卡**：不修改 `data/color_palettes.md` 中任何具体色号，保留「樱桃苏打」「橘子派对」作为配色方案参考；但灵感便签卡片不再从这两套色卡中取色，避免已保存便签继续出现高饱和蓝底、橙底或红粉大面积背景。

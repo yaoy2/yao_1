@@ -5,6 +5,15 @@
 
 This English change log mirrors the project history maintained in `CHANGELOG_ZH-CN.md`. It keeps the same dated structure and preserves the operational notes that matter for later troubleshooting: what changed, why it changed, what failed or detoured, and how the work was verified.
 
+## 2026-06-21
+
+- **Added the Zhongshengshi local MVP subproject**: created an isolated Next.js + TypeScript + Tailwind CSS project under `zhongshengshi/` to validate the multi-model roundtable setup flow before adapting it into the existing Streamlit toolbox.
+- **Completed steps 1-4**: the MVP now has the base page, topic input, seat-pool JSON paste and parsing, candidate-seat display, 4-to-6 seat selection, DeepSeek / MiMo / MiniMax provider status, an OpenAI-compatible adapter foundation, and automatic seat assignment with at most two seats per model.
+- **Protected API-key boundaries**: API keys are read only from `.env.local` / server environment variables. The browser receives only provider status, Base URL, and Model Name metadata.
+- **Route decision recorded**: the Streamlit adaptation question was discussed. The current decision is to validate the MVP first, because the main risk is the roundtable and model-collaboration logic; after that works, the project can either be adapted into Streamlit, kept as a standalone Next.js tool, or have its core logic reused.
+- **README updated**: documented how to run `zhongshengshi/`, how to fill environment variables, what is complete, and what comes next.
+- **Verification**: parsing, provider, and assignment tests were written first and confirmed failing before implementation. After implementation, `npm test` passed 7 tests. Streamlit was not started according to project rules.
+
 ## 2026-06-09
 
 - **Excluded glare palettes from Web Memo cards**: `data/color_palettes.md` was left unchanged, so "樱桃苏打" and "橘子派对" remain available as palette references. Web Memo cards no longer draw from those two palettes, preventing existing saved memos from rendering with large high-saturation blue, orange, or cherry-red surfaces.
