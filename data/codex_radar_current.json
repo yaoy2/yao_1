@@ -3,7 +3,7 @@
   "probability_24h": 95,
   "probability_48h": 98,
   "reason": "多个 Codex 限额或事故信号叠加，进入高概率关注。",
-  "checked_at": "2026-06-21T20:06:16.273246Z",
+  "checked_at": "2026-06-21T21:44:29.836951Z",
   "alert_level": "push",
   "signals": [
     {
@@ -73,13 +73,13 @@
       ]
     },
     {
-      "id": "e171145d61b71297",
+      "id": "f08a5d6eff4e35d9",
       "source_id": "openai_community",
       "source_name": "OpenAI Community Forum",
       "title": "Source fetch failed",
       "summary": "HTTPError: 429 Client Error: Too Many Requests for url: https://community.openai.com/search.json?q=codex+limit&order=latest",
       "url": "https://community.openai.com/search.json?q=codex+limit&order=latest",
-      "observed_at": "2026-06-21T20:06:16.272171Z",
+      "observed_at": "2026-06-21T21:44:29.836068Z",
       "weight": 0,
       "tags": [
         "fetch_error"
