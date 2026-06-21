@@ -15,7 +15,7 @@ export const projectGuideSections: GuideSection[] = [
   {
     title: "真实模型",
     items: [
-      "在 .env.local 填写 DeepSeek、MiMo、MiniMax 的 API Key、Base URL 和 Model Name。",
+      "在 .env.local 填写 DeepSeek、MiMo、Kimi 的 API Key、Base URL 和 Model Name。",
       "取消 mock provider 后再开始圆桌；API Key 只在服务端读取，不会返回前端。",
       "真实 provider 当前按 OpenAI-compatible Chat Completions 调用，不兼容的服务后续再补 adapter。"
     ]

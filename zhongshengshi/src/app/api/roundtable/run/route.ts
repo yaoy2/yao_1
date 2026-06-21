@@ -82,10 +82,10 @@ function buildMockProviders(): ModelProvider[] {
       isConfigured: true
     },
     {
-      id: "minimax",
-      displayName: "MiniMax Mock",
-      baseUrl: "mock://minimax",
-      modelName: "mock-minimax",
+      id: "kimi",
+      displayName: "Kimi Mock",
+      baseUrl: "mock://kimi",
+      modelName: "mock-kimi",
       providerType: "mock",
       isConfigured: true
     }

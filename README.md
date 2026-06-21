@@ -34,9 +34,9 @@ Completed so far:
 - Built the single-page structure: topic input, seat-pool paste area, seat selection, provider status, seat assignment, and roundtable control placeholders.
 - Added seat-pool JSON parsing with support for common Chinese and English field names.
 - Added 4-to-6 seat selection validation.
-- Added DeepSeek, MiMo, and MiniMax provider configuration status. API keys are read only from `.env.local` / server environment variables and are not returned to the browser.
+- Added DeepSeek, MiMo, and Kimi provider configuration status. API keys are read only from `.env.local` / server environment variables and are not returned to the browser.
 - Added a basic OpenAI-compatible Chat Completions adapter so incompatible providers can be swapped later.
-- Added automatic seat assignment: each model gets at most two seats, with keyword preferences for DeepSeek, MiMo, and MiniMax.
+- Added automatic seat assignment: each model gets at most two seats, with keyword preferences for DeepSeek, MiMo, and Kimi.
 - Added `/api/roundtable/run`, which runs the minimum roundtable flow: opening statements for every selected seat, then one debate round.
 - Added a prompt builder using seat name, type, core concern, typical questions, must-do / must-not-do rules, likely opponents, blind spots, speaking style, example preference, and seat-specific prompts.
 - Added a mock provider for local verification and tests without spending real API calls. Real providers still run through server-side environment variables and OpenAI-compatible Chat Completions calls.
@@ -67,10 +67,12 @@ MIMO_API_KEY=
 MIMO_BASE_URL=
 MIMO_MODEL=
 
-MINIMAX_API_KEY=
-MINIMAX_BASE_URL=
-MINIMAX_MODEL=
+KIMI_API_KEY=
+KIMI_BASE_URL=
+KIMI_MODEL=
 ```
+
+Compatibility note: legacy `MINIMAX_API_KEY` / `MINIMAX_BASE_URL` / `MINIMAX_MODEL` values are still read as Kimi fallback values, but new setups should use `KIMI_*`.
 
 Current limits:
 

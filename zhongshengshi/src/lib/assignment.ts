@@ -1,10 +1,10 @@
 import type { ProviderId, Seat, SeatAssignment } from "./types";
 
-const providerOrder: ProviderId[] = ["deepseek", "minimax", "mimo"];
+const providerOrder: ProviderId[] = ["deepseek", "kimi", "mimo"];
 
 const preferenceKeywords: Record<ProviderId, string[]> = {
   deepseek: ["逻辑", "拆解", "现实", "批判", "制度", "分析", "反驳", "治理", "结构"],
-  minimax: ["伦理", "人际", "角色", "叙事", "长文", "表达", "情感", "关系", "感受"],
+  kimi: ["伦理", "人际", "角色", "叙事", "长文", "表达", "情感", "关系", "感受"],
   mimo: ["方案", "工程", "实务", "推理", "操作", "流程", "执行", "改良", "步骤"]
 };
 
@@ -55,7 +55,7 @@ function buildReason(seat: Seat, providerId: ProviderId): string {
   const providerName = {
     deepseek: "DeepSeek",
     mimo: "MiMo",
-    minimax: "MiniMax"
+    kimi: "Kimi"
   }[providerId];
 
   return `${providerName} 与「${seat.name}」的类型和核心关切匹配；同时保持每个模型最多 2 个席位。`;

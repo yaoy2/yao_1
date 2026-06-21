@@ -38,10 +38,10 @@ const providers: ModelProvider[] = [
     isConfigured: true
   },
   {
-    id: "minimax",
-    displayName: "MiniMax",
-    baseUrl: "mock://minimax",
-    modelName: "mock-minimax",
+    id: "kimi",
+    displayName: "Kimi",
+    baseUrl: "mock://kimi",
+    modelName: "mock-kimi",
     providerType: "mock",
     isConfigured: true
   }

@@ -5,9 +5,9 @@ type Env = Record<string, string | undefined>;
 interface ProviderDefinition {
   id: ProviderId;
   displayName: string;
-  baseUrlKey: string;
-  modelKey: string;
-  apiKeyKey: string;
+  baseUrlKeys: string[];
+  modelKeys: string[];
+  apiKeyKeys: string[];
 }
 
 interface ChatMessage {
@@ -19,23 +19,23 @@ const providerDefinitions: ProviderDefinition[] = [
   {
     id: "deepseek",
     displayName: "DeepSeek",
-    baseUrlKey: "DEEPSEEK_BASE_URL",
-    modelKey: "DEEPSEEK_MODEL",
-    apiKeyKey: "DEEPSEEK_API_KEY"
+    baseUrlKeys: ["DEEPSEEK_BASE_URL"],
+    modelKeys: ["DEEPSEEK_MODEL"],
+    apiKeyKeys: ["DEEPSEEK_API_KEY"]
   },
   {
     id: "mimo",
     displayName: "MiMo",
-    baseUrlKey: "MIMO_BASE_URL",
-    modelKey: "MIMO_MODEL",
-    apiKeyKey: "MIMO_API_KEY"
+    baseUrlKeys: ["MIMO_BASE_URL"],
+    modelKeys: ["MIMO_MODEL"],
+    apiKeyKeys: ["MIMO_API_KEY"]
   },
   {
-    id: "minimax",
-    displayName: "MiniMax",
-    baseUrlKey: "MINIMAX_BASE_URL",
-    modelKey: "MINIMAX_MODEL",
-    apiKeyKey: "MINIMAX_API_KEY"
+    id: "kimi",
+    displayName: "Kimi",
+    baseUrlKeys: ["KIMI_BASE_URL", "MINIMAX_BASE_URL"],
+    modelKeys: ["KIMI_MODEL", "MINIMAX_MODEL"],
+    apiKeyKeys: ["KIMI_API_KEY", "MINIMAX_API_KEY"]
   }
 ];
 
@@ -45,14 +45,14 @@ export function getProviderSecret(providerId: ProviderId, env: Env = process.env
     return "";
   }
 
-  return env[definition.apiKeyKey]?.trim() ?? "";
+  return readFirstEnvValue(env, definition.apiKeyKeys);
 }
 
 export function buildProviderConfigs(env: Env = process.env): ModelProvider[] {
   return providerDefinitions.map((definition) => {
-    const baseUrl = env[definition.baseUrlKey]?.trim() ?? "";
-    const modelName = env[definition.modelKey]?.trim() ?? "";
-    const apiKey = env[definition.apiKeyKey]?.trim() ?? "";
+    const baseUrl = readFirstEnvValue(env, definition.baseUrlKeys);
+    const modelName = readFirstEnvValue(env, definition.modelKeys);
+    const apiKey = readFirstEnvValue(env, definition.apiKeyKeys);
 
     return {
       id: definition.id,
@@ -85,4 +85,15 @@ export function createChatCompletionAdapter(provider: ModelProvider) {
       };
     }
   };
+}
+
+function readFirstEnvValue(env: Env, keys: string[]): string {
+  for (const key of keys) {
+    const value = env[key]?.trim();
+    if (value) {
+      return value;
+    }
+  }
+
+  return "";
 }

@@ -31,10 +31,10 @@ describe("assignSeatsToProviders", () => {
 
     expect(assignments).toHaveLength(6);
     expect(assignments.filter((item) => item.providerId === "deepseek")).toHaveLength(2);
-    expect(assignments.filter((item) => item.providerId === "minimax")).toHaveLength(2);
+    expect(assignments.filter((item) => item.providerId === "kimi")).toHaveLength(2);
     expect(assignments.filter((item) => item.providerId === "mimo")).toHaveLength(2);
     expect(assignments.find((item) => item.seatId === "s1")?.providerId).toBe("deepseek");
-    expect(assignments.find((item) => item.seatId === "s3")?.providerId).toBe("minimax");
+    expect(assignments.find((item) => item.seatId === "s3")?.providerId).toBe("kimi");
     expect(assignments.find((item) => item.seatId === "s5")?.providerId).toBe("mimo");
   });
 });

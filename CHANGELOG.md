@@ -7,6 +7,8 @@ This English change log mirrors the project history maintained in `CHANGELOG_ZH-
 
 ## 2026-06-21
 
+- **Third Zhongshengshi provider corrected to Kimi**: the provider previously labeled MiniMax was corrected to Kimi. The page, types, mock provider, assignment preferences, README, and tests now consistently use `kimi` / `Kimi` / `KIMI_*`.
+- **Legacy environment variable fallback kept**: to avoid breaking existing `.env.local` files immediately, the Kimi provider reads `KIMI_*` first and falls back to `MINIMAX_*` if needed. New configuration should use `KIMI_API_KEY`, `KIMI_BASE_URL`, and `KIMI_MODEL`.
 - **Zhongshengshi seat pools moved to a compact workflow**: the parser now supports a short `seats` array where each seat only needs `seat_name`, `type`, `core_concern`, `typical_questions`, `must_do`, `must_not_do`, and `speaking_style`; other fields may be omitted.
 - **Low-relevance competition preset added**: added `src/presets/low_relevance_competition.json` with the topic about whether low-alignment competitions benefit or harm students and six compact seats. The page now has a "Load sample seat pool" button that fills the topic and compact JSON.
 - **Seat-card display tightened**: after parsing, the JSON editor is hidden by default and the page shows seat cards instead. Each card face shows only name, type, core concern, and speaking style; expanding the card shows typical questions, must-do, and must-not-do.
@@ -21,7 +23,7 @@ This English change log mirrors the project history maintained in `CHANGELOG_ZH-
 - **Current limits**: this phase only implements opening plus one debate round. Speech-value evaluation, missing-view detection, summary generation, multi-round orchestration, and SQLite / Prisma persistence remain future work.
 - **Verification**: prompt, mock provider, roundtable engine, API route, and failure-path tests were added first and confirmed failing before implementation. After implementation, `npm test` passed 12 tests and `npm run typecheck` passed.
 - **Added the Zhongshengshi local MVP subproject**: created an isolated Next.js + TypeScript + Tailwind CSS project under `zhongshengshi/` to validate the multi-model roundtable setup flow before adapting it into the existing Streamlit toolbox.
-- **Completed steps 1-4**: the MVP now has the base page, topic input, seat-pool JSON paste and parsing, candidate-seat display, 4-to-6 seat selection, DeepSeek / MiMo / MiniMax provider status, an OpenAI-compatible adapter foundation, and automatic seat assignment with at most two seats per model.
+- **Completed steps 1-4**: the MVP now has the base page, topic input, seat-pool JSON paste and parsing, candidate-seat display, 4-to-6 seat selection, DeepSeek / MiMo / Kimi provider status, an OpenAI-compatible adapter foundation, and automatic seat assignment with at most two seats per model.
 - **Protected API-key boundaries**: API keys are read only from `.env.local` / server environment variables. The browser receives only provider status, Base URL, and Model Name metadata.
 - **Route decision recorded**: the Streamlit adaptation question was discussed. The current decision is to validate the MVP first, because the main risk is the roundtable and model-collaboration logic; after that works, the project can either be adapted into Streamlit, kept as a standalone Next.js tool, or have its core logic reused.
 - **README updated**: documented how to run `zhongshengshi/`, how to fill environment variables, what is complete, and what comes next.

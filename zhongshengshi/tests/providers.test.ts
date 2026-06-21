@@ -7,6 +7,9 @@ describe("buildProviderConfigs", () => {
       DEEPSEEK_API_KEY: "secret-deepseek",
       DEEPSEEK_BASE_URL: "https://api.deepseek.example",
       DEEPSEEK_MODEL: "deepseek-chat",
+      KIMI_API_KEY: "secret-kimi",
+      KIMI_BASE_URL: "https://api.kimi.example",
+      KIMI_MODEL: "kimi-k2",
       MIMO_BASE_URL: "https://api.mimo.example",
       MIMO_MODEL: "mimo-chat"
     });
@@ -20,7 +23,28 @@ describe("buildProviderConfigs", () => {
       isConfigured: true
     });
     expect(providers[0]).not.toHaveProperty("apiKey");
+    expect(providers.find((item) => item.id === "kimi")).toMatchObject({
+      displayName: "Kimi",
+      baseUrl: "https://api.kimi.example",
+      modelName: "kimi-k2",
+      isConfigured: true
+    });
     expect(providers.find((item) => item.id === "mimo")?.isConfigured).toBe(false);
+  });
+
+  it("keeps legacy MINIMAX environment names as a Kimi fallback", () => {
+    const providers = buildProviderConfigs({
+      MINIMAX_API_KEY: "legacy-secret",
+      MINIMAX_BASE_URL: "https://api.kimi-legacy.example",
+      MINIMAX_MODEL: "kimi-legacy"
+    });
+
+    expect(providers.find((item) => item.id === "kimi")).toMatchObject({
+      displayName: "Kimi",
+      baseUrl: "https://api.kimi-legacy.example",
+      modelName: "kimi-legacy",
+      isConfigured: true
+    });
   });
 });
 

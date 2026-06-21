@@ -32,9 +32,9 @@
 - 搭建单页页面结构：话题输入、席位池粘贴、席位选择、模型配置状态、席位分配、圆桌控制台占位。
 - 支持粘贴 GPT 生成的席位池 JSON，并兼容常见中文/英文字段。
 - 支持从候选席位中选择 4 到 6 个席位。
-- 支持 DeepSeek、MiMo、MiniMax 的 provider 配置读取；API Key 只从 `.env.local` / 服务端环境变量读取，不返回前端。
+- 支持 DeepSeek、MiMo、Kimi 的 provider 配置读取；API Key 只从 `.env.local` / 服务端环境变量读取，不返回前端。
 - 提供 OpenAI-compatible Chat Completions adapter 基础封装，后续可替换不兼容 provider。
-- 实现自动席位分配：每个模型最多 2 个席位，并按 DeepSeek / MiMo / MiniMax 的偏好关键词做初步匹配。
+- 实现自动席位分配：每个模型最多 2 个席位，并按 DeepSeek / MiMo / Kimi 的偏好关键词做初步匹配。
 - 新增 `/api/roundtable/run`，支持最小圆桌运行：每个入选席位先完成 opening，再完成 1 轮 debate。
 - 新增 prompt builder，根据席位名称、类型、核心关切、典型问题、应做/不应做、反驳对象、盲点、风格、例子偏好和自定义提示词生成模型提示。
 - 新增 mock provider，用于本地验证和测试，不消耗真实 API；真实 provider 仍走服务端环境变量和 OpenAI-compatible Chat Completions 调用。
@@ -65,10 +65,12 @@ MIMO_API_KEY=
 MIMO_BASE_URL=
 MIMO_MODEL=
 
-MINIMAX_API_KEY=
-MINIMAX_BASE_URL=
-MINIMAX_MODEL=
+KIMI_API_KEY=
+KIMI_BASE_URL=
+KIMI_MODEL=
 ```
+
+兼容说明：旧的 `MINIMAX_API_KEY` / `MINIMAX_BASE_URL` / `MINIMAX_MODEL` 仍会被当作 Kimi fallback 读取，但建议改成 `KIMI_*`。
 
 当前限制：
 

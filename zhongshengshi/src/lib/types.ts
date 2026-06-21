@@ -1,4 +1,4 @@
-export type ProviderId = "deepseek" | "mimo" | "minimax";
+export type ProviderId = "deepseek" | "mimo" | "kimi";
 
 export type ProviderType = "openai-compatible" | "mock";
 

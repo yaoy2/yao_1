@@ -2,6 +2,8 @@
 
 ## 2026-06-21
 
+- **众声室第三 provider 更正为 Kimi**：将原先误写的 MiniMax provider 更正为 Kimi，页面、类型、mock provider、自动分配偏好、README 和测试统一改为 `kimi` / `Kimi` / `KIMI_*`。
+- **兼容旧环境变量名**：为了不让已经写入 `.env.local` 的旧 `MINIMAX_*` 配置立刻失效，Kimi provider 会优先读取 `KIMI_*`，没有时再读取 `MINIMAX_*` 作为 fallback；文档推荐新配置统一使用 `KIMI_API_KEY`、`KIMI_BASE_URL`、`KIMI_MODEL`。
 - **众声室席位池改为 compact 工作流**：支持只包含 `seats` 数组的短版席位池，每个席位只需 `seat_name`、`type`、`core_concern`、`typical_questions`、`must_do`、`must_not_do`、`speaking_style`，其他字段可缺省。
 - **新增低相关竞赛示例席位池**：新增 `src/presets/low_relevance_competition.json`，内置“学院四个专业对口竞赛少且难，参加艺术设计大赛、AI微摄影大赛、知识竞赛，对学生利大还是弊大。”主题和 6 个短席位；页面新增“载入示例席位池”按钮，自动填入主题和 compact JSON。
 - **席位卡片展示收敛**：解析后默认收起 JSON，只展示席位卡片；卡片正面只显示席位名称、类型、核心关切和发言风格，点击“展开”后再显示典型问题、应当做、应当避免。
@@ -16,7 +18,7 @@
 - **当前限制**：本阶段只做 opening + 1 轮 debate；发言价值评估、缺席视角检测、总结、多轮编排和 SQLite / Prisma 持久化仍待后续实现。
 - **验证结果**：先新增 prompt、mock provider、roundtable engine、API route 和失败路径测试，确认缺实现时失败；补实现后 `npm test` 通过 12 项测试，`npm run typecheck` 通过。
 - **新增“众声室”本地 MVP 子项目**：在 `zhongshengshi/` 下创建独立 Next.js + TypeScript + Tailwind CSS 项目，用来先验证多模型圆桌群聊的核心前置流程，而不是直接改造进现有 Streamlit 工具箱。
-- **完成第 1-4 步范围**：已完成基础页面、话题输入、席位池 JSON 粘贴解析、候选席位展示、4 到 6 个席位选择、DeepSeek / MiMo / MiniMax provider 配置状态读取、OpenAI-compatible adapter 基础封装，以及每个模型最多 2 个席位的自动分配。
+- **完成第 1-4 步范围**：已完成基础页面、话题输入、席位池 JSON 粘贴解析、候选席位展示、4 到 6 个席位选择、DeepSeek / MiMo / Kimi provider 配置状态读取、OpenAI-compatible adapter 基础封装，以及每个模型最多 2 个席位的自动分配。
 - **密钥边界处理**：API Key 只通过 `.env.local` / 服务端环境变量读取，前端页面只显示配置状态、Base URL 和 Model Name，不返回密钥。
 - **路线判断记录**：本轮讨论过是否直接搬成 Streamlit。当前判断是先跑通 MVP 更稳，因为真正风险在圆桌流程和模型协作逻辑；等核心流程成功后，再决定适配 Streamlit、继续保留独立 Next.js，或抽取逻辑复用。
 - **README 同步更新**：补充 `zhongshengshi/` 的运行方式、环境变量填写方式、已完成内容和下一步计划。

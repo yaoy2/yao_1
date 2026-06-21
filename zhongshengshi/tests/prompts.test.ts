@@ -45,8 +45,8 @@ describe("prompt builder", () => {
         phase: "opening",
         seatId: "s2",
         seatName: "古典教育伦理",
-        providerId: "minimax",
-        providerName: "MiniMax",
+        providerId: "kimi",
+        providerName: "Kimi",
         status: "success",
         content: "教育要守住人的完整成长。",
         createdAt: "2026-06-21T00:00:00.000Z"
