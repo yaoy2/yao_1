@@ -45,6 +45,7 @@ Completed so far:
 - Added compact seat-pool support: the runtime only needs a `seats` array, with each seat containing `seat_name`, `type`, `core_concern`, `typical_questions`, `must_do`, `must_not_do`, and `speaking_style`.
 - Added a "Load sample seat pool" button backed by the `low_relevance_competition` preset. It fills the topic and six compact seats, then hides the long JSON after parsing so the user works from seat cards.
 - Added browser-local draft recovery for the topic, seat pool, parsed seats, selected seats, seat assignments, mock mode, and JSON editor state, so a page reload or development-server Fast Refresh does not force the user to rebuild the setup from scratch.
+- Reworked mock-provider output and real-model prompt quality rules: mock mode is now clearly positioned as a flow test and no longer emits plumbing-test filler; real prompts explicitly forbid topic repetition, generic "balanced view" answers, and agreement without a concrete target.
 
 Local run:
 
@@ -55,7 +56,7 @@ Copy-Item .env.local.example .env.local
 npm run dev
 ```
 
-The page enables "mock provider" by default for local verification. To call real models, turn it off and configure at least two providers in `.env.local`.
+The page enables "mock provider" by default for local verification. Mock mode only checks the workflow and does not represent real discussion quality. To call real models and evaluate roundtable output quality, turn it off and configure at least two providers in `.env.local`.
 
 `.env.local` fields:
 

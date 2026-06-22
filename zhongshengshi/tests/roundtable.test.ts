@@ -66,6 +66,27 @@ describe("runRoundtable", () => {
     expect(result.providerStatus.every((item) => item.calls > 0)).toBe(true);
   });
 
+  it("mock speeches avoid plumbing-test filler and keep phase-specific substance", async () => {
+    const result = await runRoundtable({
+      topic: "学院专业竞赛少且难，参加低相关竞赛利大还是弊大",
+      selectedSeats: seats,
+      providerAssignments: assignSeatsToProviders(seats),
+      providers,
+      rounds: 1,
+      providerClientFactory: () => createMockProviderClient()
+    });
+
+    const successfulMessages = result.transcript.filter((item) => item.status === "success");
+    expect(successfulMessages).toHaveLength(8);
+    expect(successfulMessages.some((item) => item.content.includes("链路"))).toBe(false);
+    expect(successfulMessages.some((item) => item.content.includes("本地验证"))).toBe(false);
+    expect(successfulMessages.some((item) => item.content.includes("围绕"))).toBe(false);
+    expect(successfulMessages.every((item) => item.content.length > 80)).toBe(true);
+    expect(result.transcript.find((item) => item.phase === "opening")?.content).toContain("我的判断");
+    expect(result.transcript.find((item) => item.phase === "debate")?.content).toContain("我回应");
+    expect(new Set(result.transcript.filter((item) => item.phase === "opening").map((item) => item.content.slice(0, 36))).size).toBeGreaterThan(1);
+  });
+
   it("records a failed seat call and continues the remaining seats", async () => {
     const result = await runRoundtable({
       topic: "高校行政流程如何减负",

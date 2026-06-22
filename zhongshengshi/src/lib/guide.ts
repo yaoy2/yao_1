@@ -7,16 +7,16 @@ export const projectGuideSections: GuideSection[] = [
   {
     title: "最快跑通",
     items: [
-      "先保持 mock provider 勾选，输入话题，解析示例席位池，选择 4 到 6 个席位。",
+      "可以先保持 mock provider 勾选，输入话题，解析示例席位池，选择 4 到 6 个席位。",
       "点击“生成席位分配”，确认每个模型最多承载 2 个席位。",
-      "点击“开始圆桌”，页面会生成 opening 和 1 轮 debate 的 transcript。"
+      "点击“开始圆桌”，页面会生成 opening 和 1 轮 debate 的 transcript。mock 只验证流程，不代表真实讨论质量。"
     ]
   },
   {
     title: "真实模型",
     items: [
       "在 .env.local 填写 DeepSeek、MiMo、Kimi 的 API Key、Base URL 和 Model Name。",
-      "取消 mock provider 后再开始圆桌；API Key 只在服务端读取，不会返回前端。",
+      "要看真实发言质量，请取消 mock provider 后再开始圆桌；API Key 只在服务端读取，不会返回前端。",
       "真实 provider 当前按 OpenAI-compatible Chat Completions 调用，不兼容的服务后续再补 adapter。"
     ]
   },

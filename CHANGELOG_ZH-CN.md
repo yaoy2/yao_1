@@ -2,6 +2,9 @@
 
 ## 2026-06-21
 
+- **修复众声室 mock 输出低质误导问题**：用户反馈点击“开始圆桌”后 transcript 充满复述题目、空泛表态和“链路连通”测试话术。定位原因是当前运行勾选了 mock provider，而 mock 输出硬编码为通路验证文本，容易被误认为圆桌真实质量。已重写 `src/lib/mock-provider.ts`，让 mock 生成更像席位样例的 opening / debate 内容，并在页面明确提示 mock 只用于流程测试。
+- **强化真实模型 prompt 质量底线**：`src/lib/prompt-builder.ts` 新增明确约束，要求 opening 第一句直接给判断，禁止复述题目、禁止“综合看待”式糊弄；debate 必须点名回应具体席位观点，不能只说同意或复述前文。新增 `tests/prompt-quality.test.ts` 和 mock 质量测试，防止回退到低质模板。
+- **隔离 Next.js dev / build 缓存目录**：排查到一边运行 `next dev` 一边执行 `next build` 会共同写入 `.next`，造成开发服务找不到临时 chunk 并让首页 500。新增 `next.config.mjs`，开发模式继续使用 `.next`，生产构建改用 `.next-build`，并加入 `.gitignore`；验证 build 后 3000 首页仍返回 200。
 - **众声室增加浏览器本地草稿恢复**：排查“点击开始圆桌后页面回到空状态”时确认，Next.js 开发服务 Fast Refresh / 整页重载会导致 React 临时状态丢失。新增 `src/lib/draft-state.ts`，自动暂存并恢复话题、席位池、已解析席位、已选席位、席位分配、mock 模式和 JSON 编辑区状态；同时给页面按钮补 `type="button"`，降低误触发表单提交的风险。
 - **草稿恢复验证**：新增 `tests/draft-state.test.ts` 覆盖草稿序列化、反序列化和异常数据忽略；本地浏览器验证刷新后可恢复测试话题。`npm run lint`、`npm test`、`npm run typecheck`、`npm run build` 均通过。
 - **众声室第三 provider 更正为 Kimi**：将原先误写的 MiniMax provider 更正为 Kimi，页面、类型、mock provider、自动分配偏好、README 和测试统一改为 `kimi` / `Kimi` / `KIMI_*`。

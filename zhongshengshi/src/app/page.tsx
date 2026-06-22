@@ -385,8 +385,13 @@ export default function Home() {
               ))}
               <label className="flex items-center gap-2 text-sm text-ink/70">
                 <input type="checkbox" checked={useMock} onChange={(event) => setUseMock(event.target.checked)} />
-                使用 mock provider 本地验证，不消耗真实 API
+                使用 mock provider 只做流程测试，不消耗真实 API；要看真实讨论质量请取消勾选
               </label>
+              {useMock && (
+                <p className="rounded border border-rust/20 bg-rust/10 p-3 text-xs leading-5 text-rust">
+                  当前是 mock 模式：发言由本地样例生成，只用于检查席位、分配、错误处理和 transcript 展示。真实质量请关闭 mock 后调用 DeepSeek / MiMo / Kimi。
+                </p>
+              )}
             </div>
           </Panel>
         </section>
