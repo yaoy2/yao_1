@@ -52,27 +52,13 @@
     ]
   },
   {
-    "id": "2063cb42873f05cc",
-    "source_id": "reddit_openai",
-    "source_name": "Reddit r/OpenAI",
-    "title": "Codex Promo Credit Misuse",
-    "summary": "Codex Promo Credit Misuse As the title says, I want to take responsibility for this.\n​\nMy father gave me permission to use his phone number and email for Codex, but he is in another city and could not figure out the installation process. I got frustrated and ended up put",
-    "url": "https://www.reddit.com/r/OpenAI/new/.rss?limit=10",
-    "observed_at": "2026-06-21T17:35:13+00:00",
-    "weight": 15,
-    "tags": [
-      "codex",
-      "credit"
-    ]
-  },
-  {
-    "id": "73e717eae8e869c5",
+    "id": "107cdbf8b94c04ef",
     "source_id": "openai_community",
     "source_name": "OpenAI Community Forum",
     "title": "Source fetch failed",
     "summary": "HTTPError: 429 Client Error: Too Many Requests for url: https://community.openai.com/search.json?q=codex+limit&order=latest",
     "url": "https://community.openai.com/search.json?q=codex+limit&order=latest",
-    "observed_at": "2026-06-22T05:34:05.544873Z",
+    "observed_at": "2026-06-22T12:28:14.979735Z",
     "weight": 0,
     "tags": [
       "fetch_error"
