@@ -2,7 +2,8 @@ import { PHASE_DEVELOPMENT_SERVER } from "next/constants.js";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = (phase) => ({
-  distDir: phase === PHASE_DEVELOPMENT_SERVER ? ".next" : ".next-build"
+  distDir: phase === PHASE_DEVELOPMENT_SERVER ? ".next" : ".next-build",
+  typedRoutes: false
 });
 
 export default nextConfig;
