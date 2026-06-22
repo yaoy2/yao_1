@@ -7,6 +7,7 @@ This English change log mirrors the project history maintained in `CHANGELOG_ZH-
 
 ## 2026-06-21
 
+- **Transcript redesigned as a chat room**: replaced the engineering-style transcript cards with a roundtable chat view. Messages now appear in chronological bubble form, with speakers labeled as `seat name - model name`, so the page reads more like a multi-person discussion and less like a run log.
 - **Freechat provider coverage fixed**: after switching to short freechat turns, the first lightweight speaker planner could accidentally choose only seats assigned to DeepSeek and Kimi, leaving MiMo at `idle` with 0 calls even when it had assigned seats. The planner now selects at least one active seat per assigned provider before applying the irregular speaking pattern.
 - **Zhongshengshi default flow changed to `freechat`**: user feedback showed that the previous opening/debate structure still felt like one LLM answer split across seats. The page now calls `/api/roundtable/run` with `mode: "freechat"` and a short message budget, so the transcript appears as a conversational stream rather than a fixed queue of essays.
 - **Freechat prompt and mock behavior added**: added `buildFreechatPrompt`, a freechat engine path, and mock freechat samples. Each turn now receives the nearby transcript and is asked to respond, interrupt, distinguish, question, or add a concrete angle without repeating the topic.

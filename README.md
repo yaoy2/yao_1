@@ -47,6 +47,7 @@ Completed so far:
 - Added browser-local draft recovery for the topic, seat pool, parsed seats, selected seats, seat assignments, mock mode, and JSON editor state, so a page reload or development-server Fast Refresh does not force the user to rebuild the setup from scratch.
 - Reworked mock-provider output and real-model prompt quality rules: mock mode is now clearly positioned as a flow test and no longer emits plumbing-test filler; real prompts explicitly forbid topic repetition, generic "balanced view" answers, and agreement without a concrete target.
 - Added `freechat` roundtable mode: the page now asks seats to speak in short, conversational turns, respond to nearby messages, interrupt or add concrete distinctions, and avoid predictable one-seat-after-another essays.
+- Redesigned the transcript as a roundtable chat room: each message is shown as a chronological bubble, with the speaker labeled as `seat name - model name`.
 
 Local run:
 

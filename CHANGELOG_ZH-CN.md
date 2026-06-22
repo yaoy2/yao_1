@@ -2,6 +2,7 @@
 
 ## 2026-06-21
 
+- **Transcript 改为聊天室形态**：将原来偏工程日志感的 transcript 卡片改成“圆桌聊天室”。消息按时间顺序以气泡展示，发言人显示为 `席位名 - 模型名`，让页面读起来更像多人讨论，而不是运行记录。
 - **修复 freechat provider 覆盖问题**：切换到短消息自由讨论后，第一版轻量说话人规划可能只选到分配给 DeepSeek 和 Kimi 的席位，导致 MiMo 即使已有分配席位也一直显示 `idle`、调用 0 次。现在规划器会先确保每个已分配 provider 至少有一个活跃席位，再套用不规则发言顺序。
 - **众声室默认流程改为 `freechat`**：用户反馈原来的 opening / debate 结构仍然像“一个 LLM 回答拆给多个席位”。现在页面点击“开始圆桌”时会调用 `/api/roundtable/run` 的 `mode: "freechat"`，按短消息预算生成更接近聊天流的 transcript，而不是固定排队小作文。
 - **新增自由讨论 prompt 和 mock 行为**：新增 `buildFreechatPrompt`、freechat engine 路径和 mock freechat 样例；每一轮都会读取附近 transcript，要求席位接话、打断、反驳、区分、追问或补一个具体角度，避免复述题目。
