@@ -472,52 +472,69 @@ function EmptyState({ text }: { text: string }) {
 
 function ChatTranscript({ transcript }: { transcript: RoundtableTranscriptItem[] }) {
   return (
-    <section className="rounded border border-ink/10 bg-white shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-ink/10 px-4 py-3">
-        <div>
-          <h2 className="text-lg font-semibold">圆桌聊天室</h2>
-          <p className="text-xs text-ink/55">按真实发言顺序展示，发言人格式为“角色名 - 模型名”。</p>
+    <section className="overflow-hidden rounded border border-ink/10 bg-[#f4f4f4] shadow-sm">
+      <div className="flex h-14 items-center justify-between border-b border-ink/10 bg-white px-4">
+        <h2 className="truncate text-base font-semibold">众声室圆桌群聊{transcript.length ? `（${transcript.length}）` : ""}</h2>
+        <div className="flex items-center gap-3 text-lg text-ink/45" aria-hidden="true">
+          <span>○</span>
+          <span>⌕</span>
+          <span>⋯</span>
         </div>
-        <span className="rounded bg-moss/10 px-2 py-1 text-xs font-semibold text-moss">{transcript.length ? `${transcript.length} 条消息` : "等待发言"}</span>
       </div>
 
-      <div className="max-h-[680px] overflow-y-auto bg-[#f7f5ef] px-3 py-4 sm:px-5">
+      <div className="min-h-[560px] max-h-[760px] overflow-y-auto bg-[#f5f5f5] px-3 py-5 sm:px-6">
         {transcript.length ? (
-          <div className="space-y-4">
+          <div className="space-y-6">
             {transcript.map((item, index) => (
-              <ChatMessage key={item.id} item={item} messageNumber={index + 1} />
+              <div key={item.id}>
+                {shouldShowTimeDivider(index) && <ChatTimeDivider label={formatChatTime(index)} />}
+                <ChatMessage item={item} />
+              </div>
             ))}
           </div>
         ) : (
-          <EmptyState text="圆桌运行后，这里会像聊天室一样按顺序显示每位角色的发言。" />
+          <div className="flex min-h-[420px] items-center justify-center text-sm text-ink/45">等待圆桌开始</div>
         )}
       </div>
     </section>
   );
 }
 
-function ChatMessage({ item, messageNumber }: { item: RoundtableTranscriptItem; messageNumber: number }) {
+function ChatMessage({ item }: { item: RoundtableTranscriptItem }) {
   const failed = item.status === "failed";
   const speakerName = `${item.seatName} - ${item.providerName}`;
 
   return (
     <article className="flex items-start gap-3">
-      <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${avatarClassName(item.providerId, failed)}`}>
+      <div className={`mt-5 flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-sm font-semibold shadow-sm ${avatarClassName(item.providerId, failed)}`}>
         {item.seatName.trim().slice(0, 1) || "席"}
       </div>
-      <div className="min-w-0 flex-1">
-        <div className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink/55">
-          <strong className="text-sm text-ink">{speakerName}</strong>
-          <span>#{messageNumber}</span>
-          <span>{item.phase}</span>
+      <div className="min-w-0 max-w-[min(760px,calc(100%-3.5rem))]">
+        <div className="mb-1 min-h-4 text-xs leading-4 text-ink/40">
+          <span>{speakerName}</span>
           {failed && <span className="font-semibold text-rust">调用失败</span>}
         </div>
-        <div className={`max-w-4xl rounded-lg border px-4 py-3 shadow-sm ${bubbleClassName(item.providerId, failed)}`}>
-          <p className="whitespace-pre-wrap text-sm leading-7">{failed ? item.error : item.content}</p>
+        <div className={`rounded-md px-3 py-2 shadow-sm ${bubbleClassName(item.providerId, failed)}`}>
+          <p className="whitespace-pre-wrap text-[15px] leading-7">{failed ? item.error : item.content}</p>
         </div>
       </div>
     </article>
   );
+}
+
+function ChatTimeDivider({ label }: { label: string }) {
+  return <div className="mb-5 text-center text-xs text-ink/35">{label}</div>;
+}
+
+function shouldShowTimeDivider(index: number) {
+  return index === 0 || index % 5 === 0;
+}
+
+function formatChatTime(index: number) {
+  const baseMinutes = 22 * 60 + 18 + Math.floor(index / 5) * 7;
+  const hours = Math.floor(baseMinutes / 60) % 24;
+  const minutes = baseMinutes % 60;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 }
 
 function avatarClassName(providerId: string, failed: boolean) {
@@ -527,11 +544,11 @@ function avatarClassName(providerId: string, failed: boolean) {
 
   switch (providerId) {
     case "deepseek":
-      return "bg-moss/15 text-moss";
+      return "bg-[#dfeadf] text-moss";
     case "mimo":
-      return "bg-sky-100 text-sky-800";
+      return "bg-[#dfe6ef] text-[#3d5f86]";
     case "kimi":
-      return "bg-violet-100 text-violet-800";
+      return "bg-[#eadff0] text-[#72508c]";
     default:
       return "bg-ink/10 text-ink";
   }
@@ -542,16 +559,7 @@ function bubbleClassName(providerId: string, failed: boolean) {
     return "border-rust/30 bg-rust/10 text-rust";
   }
 
-  switch (providerId) {
-    case "deepseek":
-      return "border-moss/20 bg-white text-ink";
-    case "mimo":
-      return "border-sky-200 bg-sky-50 text-ink";
-    case "kimi":
-      return "border-violet-200 bg-violet-50 text-ink";
-    default:
-      return "border-ink/10 bg-white text-ink";
-  }
+  return "bg-white text-ink";
 }
 
 function StatusBadge({ status }: { status: RoundtableStatus }) {
