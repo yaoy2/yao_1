@@ -102,4 +102,34 @@ describe("runRoundtable", () => {
     expect(result.transcript.some((item) => item.seatId === "s1" && item.status === "success")).toBe(true);
     expect(result.transcript.some((item) => item.seatId === "s2" && item.status === "failed")).toBe(true);
   });
+
+  it("gives Kimi K2 models a longer timeout because late freechat prompts are slower", async () => {
+    const timeoutValues: number[] = [];
+    const result = await runRoundtable({
+      topic: "高校行政流程如何减负",
+      selectedSeats: [seats[0]],
+      providerAssignments: [{ id: "assignment-1", seatId: "s1", providerId: "kimi", reason: "test" }],
+      providers: [
+        {
+          id: "kimi",
+          displayName: "Kimi",
+          baseUrl: "https://api.moonshot.cn/v1",
+          modelName: "kimi-k2.7-code",
+          providerType: "openai-compatible",
+          isConfigured: true
+        }
+      ],
+      rounds: 1,
+      timeoutMs: 45_000,
+      providerClientFactory: () => ({
+        async generate(input) {
+          timeoutValues.push(input.timeoutMs);
+          return { content: "我的判断是先降低任务密度，再看竞赛是否真的服务学生。" };
+        }
+      })
+    });
+
+    expect(result.status).toBe("success");
+    expect(timeoutValues).toEqual([90_000, 90_000]);
+  });
 });

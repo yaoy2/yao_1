@@ -472,19 +472,18 @@ function EmptyState({ text }: { text: string }) {
 
 function ChatTranscript({ transcript }: { transcript: RoundtableTranscriptItem[] }) {
   return (
-    <section className="overflow-hidden rounded border border-ink/10 bg-[#f4f4f4] shadow-sm">
-      <div className="flex h-14 items-center justify-between border-b border-ink/10 bg-white px-4">
-        <h2 className="truncate text-base font-semibold">众声室圆桌群聊{transcript.length ? `（${transcript.length}）` : ""}</h2>
-        <div className="flex items-center gap-3 text-lg text-ink/45" aria-hidden="true">
-          <span>○</span>
-          <span>⌕</span>
+    <section className="overflow-hidden rounded bg-[#ededed] shadow-[0_1px_8px_rgba(15,23,42,0.08)] ring-1 ring-ink/10">
+      <div className="flex h-12 items-center justify-between border-b border-[#dedede] bg-[#f7f7f7] px-4">
+        <h2 className="truncate text-[15px] font-semibold text-ink">众声室圆桌群聊{transcript.length ? `（${transcript.length}）` : ""}</h2>
+        <div className="flex items-center gap-4 text-xl leading-none text-ink/50" aria-hidden="true">
+          <span className="-mt-1">⌕</span>
           <span>⋯</span>
         </div>
       </div>
 
-      <div className="min-h-[560px] max-h-[760px] overflow-y-auto bg-[#f5f5f5] px-3 py-5 sm:px-6">
+      <div className="min-h-[640px] max-h-[780px] overflow-y-auto bg-[#ededed] px-4 py-6 sm:px-8">
         {transcript.length ? (
-          <div className="space-y-6">
+          <div className="space-y-5">
             {transcript.map((item, index) => (
               <div key={item.id}>
                 {shouldShowTimeDivider(index) && <ChatTimeDivider label={formatChatTime(index)} />}
@@ -493,7 +492,7 @@ function ChatTranscript({ transcript }: { transcript: RoundtableTranscriptItem[]
             ))}
           </div>
         ) : (
-          <div className="flex min-h-[420px] items-center justify-center text-sm text-ink/45">等待圆桌开始</div>
+          <div className="flex min-h-[500px] items-center justify-center text-sm text-ink/40">等待圆桌开始</div>
         )}
       </div>
     </section>
@@ -506,16 +505,16 @@ function ChatMessage({ item }: { item: RoundtableTranscriptItem }) {
 
   return (
     <article className="flex items-start gap-3">
-      <div className={`mt-5 flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-sm font-semibold shadow-sm ${avatarClassName(item.providerId, failed)}`}>
+      <div className={`mt-5 flex h-10 w-10 shrink-0 items-center justify-center rounded-[4px] text-sm font-semibold shadow-sm ${avatarClassName(item.providerId, failed)}`}>
         {item.seatName.trim().slice(0, 1) || "席"}
       </div>
-      <div className="min-w-0 max-w-[min(760px,calc(100%-3.5rem))]">
-        <div className="mb-1 min-h-4 text-xs leading-4 text-ink/40">
+      <div className="min-w-0 max-w-[min(620px,calc(100%-3.5rem))]">
+        <div className="mb-1 min-h-4 text-xs leading-4 text-[#8a8a8a]">
           <span>{speakerName}</span>
-          {failed && <span className="font-semibold text-rust">调用失败</span>}
+          {failed && <span className="ml-2 font-semibold text-rust">调用失败</span>}
         </div>
-        <div className={`rounded-md px-3 py-2 shadow-sm ${bubbleClassName(item.providerId, failed)}`}>
-          <p className="whitespace-pre-wrap text-[15px] leading-7">{failed ? item.error : item.content}</p>
+        <div className={`relative rounded-[4px] px-3.5 py-2.5 shadow-[0_1px_1px_rgba(0,0,0,0.04)] before:absolute before:left-[-5px] before:top-3 before:h-2.5 before:w-2.5 before:rotate-45 ${bubbleClassName(item.providerId, failed)}`}>
+          <p className="whitespace-pre-wrap text-[15px] leading-[1.75]">{failed ? item.error : item.content}</p>
         </div>
       </div>
     </article>
@@ -523,7 +522,7 @@ function ChatMessage({ item }: { item: RoundtableTranscriptItem }) {
 }
 
 function ChatTimeDivider({ label }: { label: string }) {
-  return <div className="mb-5 text-center text-xs text-ink/35">{label}</div>;
+  return <div className="mb-5 text-center text-xs text-[#a7a7a7]">{label}</div>;
 }
 
 function shouldShowTimeDivider(index: number) {
@@ -556,10 +555,10 @@ function avatarClassName(providerId: string, failed: boolean) {
 
 function bubbleClassName(providerId: string, failed: boolean) {
   if (failed) {
-    return "border-rust/30 bg-rust/10 text-rust";
+    return "bg-rust/10 text-rust before:bg-rust/10";
   }
 
-  return "bg-white text-ink";
+  return "bg-white text-ink before:bg-white";
 }
 
 function StatusBadge({ status }: { status: RoundtableStatus }) {

@@ -2,6 +2,8 @@
 
 ## 2026-06-21
 
+- **优化 Kimi 超时处理**：freechat 越到后面会携带更长的 transcript 上下文，Kimi K2.x 响应可能超过原来的 45 秒默认超时。现在 roundtable engine 对 Kimi K2.7 / K2.6 / K2.5 调用放宽到 90 秒，其他 provider 仍保持较短默认超时。
+- **聊天室视觉继续靠近桌面社交软件**：进一步降低网页卡片感，改成更轻的群聊顶栏、更大面积灰色聊天画布、更窄消息气泡、方形头像、轻量气泡尖角和更柔和的时间分隔。
 - **聊天室视觉继续收敛**：将圆桌 transcript 从网页卡片布局进一步调整为更常见的社交聊天界面，包含白色群聊顶栏、浅灰聊天背景、方形头像、轻量时间分隔和灰白消息气泡。
 - **修复 Kimi K2.x 模型 HTTP 400**：Kimi K2.7 Code 会拒绝非默认采样参数，而通用 OpenAI-compatible adapter 之前会给所有 provider 都发送 `temperature: 0.7`。现在 adapter 对 Kimi K2.7 / K2.6 / K2.5 模型名不再主动传 temperature，同时保持 DeepSeek / MiMo 请求形态不变。
 - **Transcript 改为聊天室形态**：将原来偏工程日志感的 transcript 卡片改成“圆桌聊天室”。消息按时间顺序以气泡展示，发言人显示为 `席位名 - 模型名`，让页面读起来更像多人讨论，而不是运行记录。

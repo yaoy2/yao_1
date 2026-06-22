@@ -289,7 +289,7 @@ async function runSeatCall({
       round,
       prompt,
       transcript: [...transcript],
-      timeoutMs
+      timeoutMs: resolveProviderTimeout(provider, timeoutMs)
     });
 
     if (status) {
@@ -330,6 +330,14 @@ async function runSeatCall({
     errors.push(roundtableError);
     transcript.push(failedTranscriptItem(roundtableError));
   }
+}
+
+function resolveProviderTimeout(provider: ModelProvider, defaultTimeoutMs: number) {
+  if (provider.id === "kimi" && /^kimi-k2\.(7|6|5)/.test(provider.modelName)) {
+    return Math.max(defaultTimeoutMs, 90_000);
+  }
+
+  return defaultTimeoutMs;
 }
 
 function failedTranscriptItem(error: RoundtableError): RoundtableTranscriptItem {

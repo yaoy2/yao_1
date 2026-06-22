@@ -7,6 +7,8 @@ This English change log mirrors the project history maintained in `CHANGELOG_ZH-
 
 ## 2026-06-21
 
+- **Kimi timeout handling improved**: later freechat turns include longer transcript context and Kimi K2.x responses can take longer than the original 45-second default. The roundtable engine now gives Kimi K2.7 / K2.6 / K2.5 calls a 90-second timeout while keeping the shorter default for other providers.
+- **Chat room styling moved closer to desktop social apps**: reduced the web-card feel with a lighter group header, larger gray chat canvas, narrower message bubbles, square avatars, subtle bubble tails, and softer time dividers.
 - **Chat room visual style tightened**: adjusted the roundtable transcript from a web-card layout into a more familiar social-chat surface, with a white group header, light gray conversation area, square avatars, subtle time dividers, and plain gray-white message bubbles.
 - **Kimi HTTP 400 fixed for K2.x models**: Kimi K2.7 Code rejects non-default sampling parameters, while the generic OpenAI-compatible adapter was sending `temperature: 0.7` to every provider. The adapter now omits temperature for Kimi K2.7 / K2.6 / K2.5 model names and keeps the DeepSeek / MiMo request shape unchanged.
 - **Transcript redesigned as a chat room**: replaced the engineering-style transcript cards with a roundtable chat view. Messages now appear in chronological bubble form, with speakers labeled as `seat name - model name`, so the page reads more like a multi-person discussion and less like a run log.
