@@ -61,6 +61,35 @@ describe("freechat roundtable mode", () => {
     expect(result.transcript.some((item) => item.content.includes("我接"))).toBe(true);
     expect(result.transcript.some((item) => item.content.includes("我不同意") || item.content.includes("我补一句"))).toBe(true);
   });
+  it("calls every provider that has assigned seats during freechat", async () => {
+    const sixSeats = [
+      ...seats,
+      makeSeat("s5", "mimo plan seat", "plan", "execution flow"),
+      makeSeat("s6", "mimo operation seat", "operation", "implementation steps")
+    ];
+    const providerAssignments = [
+      { id: "assignment-1", seatId: "s1", providerId: "deepseek" as const, reason: "test" },
+      { id: "assignment-2", seatId: "s2", providerId: "kimi" as const, reason: "test" },
+      { id: "assignment-3", seatId: "s3", providerId: "deepseek" as const, reason: "test" },
+      { id: "assignment-4", seatId: "s4", providerId: "kimi" as const, reason: "test" },
+      { id: "assignment-5", seatId: "s5", providerId: "mimo" as const, reason: "test" },
+      { id: "assignment-6", seatId: "s6", providerId: "mimo" as const, reason: "test" }
+    ];
+
+    const result = await runRoundtable({
+      topic: "low relevance competitions",
+      selectedSeats: sixSeats,
+      providerAssignments,
+      providers,
+      mode: "freechat",
+      messageBudget: 14,
+      providerClientFactory: () => createMockProviderClient()
+    });
+
+    expect(result.providerStatus.find((item) => item.providerId === "deepseek")?.calls).toBeGreaterThan(0);
+    expect(result.providerStatus.find((item) => item.providerId === "kimi")?.calls).toBeGreaterThan(0);
+    expect(result.providerStatus.find((item) => item.providerId === "mimo")?.calls).toBeGreaterThan(0);
+  });
 });
 
 function makeSeat(id: string, name: string, type: string, coreConcern: string): Seat {

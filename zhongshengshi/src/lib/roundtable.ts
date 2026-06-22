@@ -171,7 +171,7 @@ async function runFreechat({
   timeoutMs: number;
   messageBudget: number;
 }) {
-  const speakerQueue = planFreechatSpeakers(input.selectedSeats, messageBudget);
+  const speakerQueue = planFreechatSpeakers(input.selectedSeats, input.providerAssignments, messageBudget);
 
   for (let index = 0; index < speakerQueue.length; index += 1) {
     const seat = speakerQueue[index];
@@ -196,16 +196,40 @@ async function runFreechat({
   }
 }
 
-function planFreechatSpeakers(seats: Seat[], messageBudget: number): Seat[] {
+function planFreechatSpeakers(seats: Seat[], providerAssignments: SeatAssignment[], messageBudget: number): Seat[] {
   if (seats.length === 0) {
     return [];
   }
 
-  const activeSeatCount = Math.max(1, Math.min(seats.length, seats.length > 3 ? seats.length - 1 : seats.length));
-  const activeSeats = seats.slice(0, activeSeatCount);
+  const activeSeats = selectFreechatActiveSeats(seats, providerAssignments);
   const pattern = [0, 1, 0, 2, 1, 0, 2, 2, 0, 1, 2, 0, 1, 0, 2, 1, 0, 2];
 
   return Array.from({ length: messageBudget }, (_, index) => activeSeats[pattern[index % pattern.length] % activeSeats.length]);
+}
+
+function selectFreechatActiveSeats(seats: Seat[], providerAssignments: SeatAssignment[]): Seat[] {
+  const seatsById = new Map(seats.map((seat) => [seat.id, seat]));
+  const providerRepresentatives: Seat[] = [];
+  const seenProviders = new Set<ProviderId>();
+
+  for (const assignment of providerAssignments) {
+    if (seenProviders.has(assignment.providerId)) {
+      continue;
+    }
+
+    const seat = seatsById.get(assignment.seatId);
+    if (seat) {
+      providerRepresentatives.push(seat);
+      seenProviders.add(assignment.providerId);
+    }
+  }
+
+  if (providerRepresentatives.length > 0) {
+    return providerRepresentatives;
+  }
+
+  const activeSeatCount = Math.max(1, Math.min(seats.length, seats.length > 3 ? seats.length - 1 : seats.length));
+  return seats.slice(0, activeSeatCount);
 }
 
 async function runSeatCall({
