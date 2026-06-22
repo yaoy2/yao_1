@@ -2,6 +2,7 @@
 
 ## 2026-06-21
 
+- **修复 Kimi K2.x 模型 HTTP 400**：Kimi K2.7 Code 会拒绝非默认采样参数，而通用 OpenAI-compatible adapter 之前会给所有 provider 都发送 `temperature: 0.7`。现在 adapter 对 Kimi K2.7 / K2.6 / K2.5 模型名不再主动传 temperature，同时保持 DeepSeek / MiMo 请求形态不变。
 - **Transcript 改为聊天室形态**：将原来偏工程日志感的 transcript 卡片改成“圆桌聊天室”。消息按时间顺序以气泡展示，发言人显示为 `席位名 - 模型名`，让页面读起来更像多人讨论，而不是运行记录。
 - **修复 freechat provider 覆盖问题**：切换到短消息自由讨论后，第一版轻量说话人规划可能只选到分配给 DeepSeek 和 Kimi 的席位，导致 MiMo 即使已有分配席位也一直显示 `idle`、调用 0 次。现在规划器会先确保每个已分配 provider 至少有一个活跃席位，再套用不规则发言顺序。
 - **众声室默认流程改为 `freechat`**：用户反馈原来的 opening / debate 结构仍然像“一个 LLM 回答拆给多个席位”。现在页面点击“开始圆桌”时会调用 `/api/roundtable/run` 的 `mode: "freechat"`，按短消息预算生成更接近聊天流的 transcript，而不是固定排队小作文。

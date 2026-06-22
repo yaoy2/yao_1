@@ -68,6 +68,12 @@ export function buildProviderConfigs(env: Env = process.env): ModelProvider[] {
 export function createChatCompletionAdapter(provider: ModelProvider) {
   return {
     buildRequest({ apiKey, messages, temperature = 0.7 }: { apiKey: string; messages: ChatMessage[]; temperature?: number }) {
+      const body = {
+        model: provider.modelName,
+        messages,
+        ...buildSamplingParameters(provider, temperature)
+      };
+
       return {
         url: `${provider.baseUrl.replace(/\/$/, "")}/chat/completions`,
         init: {
@@ -76,15 +82,19 @@ export function createChatCompletionAdapter(provider: ModelProvider) {
             Authorization: `Bearer ${apiKey}`,
             "Content-Type": "application/json"
           },
-          body: JSON.stringify({
-            model: provider.modelName,
-            messages,
-            temperature
-          })
+          body: JSON.stringify(body)
         }
       };
     }
   };
+}
+
+function buildSamplingParameters(provider: ModelProvider, temperature: number) {
+  if (provider.id === "kimi" && /^kimi-k2\.(7|6|5)/.test(provider.modelName)) {
+    return {};
+  }
+
+  return { temperature };
 }
 
 function readFirstEnvValue(env: Env, keys: string[]): string {

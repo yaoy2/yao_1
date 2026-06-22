@@ -80,4 +80,27 @@ describe("createChatCompletionAdapter", () => {
       }
     });
   });
+
+  it("omits temperature for Kimi K2.7 Code because the API rejects non-default values", () => {
+    const adapter = createChatCompletionAdapter({
+      id: "kimi",
+      displayName: "Kimi",
+      baseUrl: "https://api.moonshot.cn/v1",
+      modelName: "kimi-k2.7-code",
+      providerType: "openai-compatible",
+      isConfigured: true
+    });
+
+    const request = adapter.buildRequest({
+      apiKey: "secret",
+      messages: [{ role: "user", content: "hello" }]
+    });
+    const body = JSON.parse(request.init.body);
+
+    expect(body).toEqual({
+      model: "kimi-k2.7-code",
+      messages: [{ role: "user", content: "hello" }]
+    });
+    expect(body).not.toHaveProperty("temperature");
+  });
 });
