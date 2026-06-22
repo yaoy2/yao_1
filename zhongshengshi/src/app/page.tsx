@@ -207,7 +207,7 @@ export default function Home() {
     setTranscript([]);
     setErrors([]);
     setProviderStatus([]);
-    setMessage("圆桌运行中：opening + 1 轮 debate。");
+    setMessage("自由圆桌运行中：短消息接话、反驳、补充和追问。");
 
     try {
       const response = await fetch("/api/roundtable/run", {
@@ -219,6 +219,8 @@ export default function Home() {
           topic,
           selectedSeats,
           providerAssignments: nextAssignments,
+          mode: "freechat",
+          messageBudget: 14,
           rounds: 1,
           useMock
         })
@@ -234,7 +236,7 @@ export default function Home() {
       setErrors(result.errors);
       setProviderStatus(result.providerStatus);
       setRunStatus(result.status);
-      setMessage(result.status === "success" ? "圆桌已完成 opening + 1 轮 debate。" : "圆桌已完成，但部分席位调用失败。");
+      setMessage(result.status === "success" ? "自由圆桌已完成。" : "自由圆桌已完成，但部分席位调用失败。");
     } catch (error) {
       setRunStatus("failed");
       setMessage(error instanceof Error ? error.message : "圆桌运行失败。");
@@ -266,7 +268,7 @@ export default function Home() {
             <p className="text-sm font-semibold text-rust">本地 MVP · 最小圆桌链路</p>
             <h1 className="text-3xl font-bold">众声室</h1>
           </div>
-          <div className="text-sm text-ink/70">opening + 1 轮 debate</div>
+          <div className="text-sm text-ink/70">自由讨论 · 短消息流</div>
         </header>
 
         <Panel title="项目说明书 / 使用指南">
@@ -458,7 +460,7 @@ export default function Home() {
                 <p className="whitespace-pre-wrap text-sm leading-7 text-ink/80">{item.status === "failed" ? item.error : item.content}</p>
               </article>
             ))}
-            {!transcript.length && <EmptyState text="圆桌运行后会显示每个席位的 opening 和 debate 发言。" />}
+            {!transcript.length && <EmptyState text="圆桌运行后会显示自由讨论消息流。" />}
           </div>
         </Panel>
 

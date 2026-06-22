@@ -46,6 +46,35 @@ export function buildDebatePrompt({
     .join("\n\n");
 }
 
+export function buildFreechatPrompt({
+  topic,
+  seat,
+  transcript,
+  messageIndex,
+  totalMessages
+}: {
+  topic: string;
+  seat: Seat;
+  transcript: RoundtableTranscriptItem[];
+  messageIndex: number;
+  totalMessages: number;
+}): string {
+  return [
+    "你正在参加一个自由圆桌聊天。你不是写作文，不是提交正式发言，而是在群聊里接一句话。",
+    seatBlock(seat),
+    `本次话题：${topic}`,
+    `当前是第 ${messageIndex} / ${totalMessages} 条消息。`,
+    "前面聊天：",
+    renderTranscript(transcript.slice(-8)),
+    "请以这个席位像一个活人一样接话。你可以反驳、补一句、追问、把话拉回现实、承认对方有一点道理但指出边界。",
+    "长度控制在 80 到 220 个中文字符。只输出这一条聊天消息，不要写标题，不要列提纲。",
+    "禁止：复述题目、完整总结大家观点、用“我认为/我的判断”开头写小作文、套用固定结构、说“综合看待”。",
+    "优先使用自然接话开头，例如：我接一句、我不同意、等一下、这里要分开看、我补一句、这个说法漏了一点。"
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+}
+
 function seatBlock(seat: Seat): string {
   return [
     `seat_name：${seat.name}`,

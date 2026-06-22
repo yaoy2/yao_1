@@ -15,7 +15,7 @@
 
 - **线上入口**：[yao-1.streamlit.app](https://yao-1.streamlit.app/)
 - **仓库地址**：[github.com/yaoy2/yao_1](https://github.com/yaoy2/yao_1)
-- **众声室 MVP**：`zhongshengshi/`，本地 Next.js 子项目，用于验证多模型圆桌群聊流程；当前已支持 opening + 1 轮 debate 的最小可用链路。
+- **众声室 MVP**：`zhongshengshi/`，本地 Next.js 子项目，用于验证多模型圆桌群聊流程；当前页面默认改为自由短消息讨论流，不再默认展示固定 opening / debate 排队发言。
 - **Codex雷达**：第 12 个工具板块，读取 `data/codex_radar_current.json` 展示 Codex 重置窗口状态。
 - **首页风格**：Command Center 深色封面；工具入口按时间倒序展示，首页每页固定 3 x 3。
 - **侧边导航**：全部工具按创建/上线时间倒序排列，越晚做的项目越靠上。
@@ -35,15 +35,16 @@
 - 支持 DeepSeek、MiMo、Kimi 的 provider 配置读取；API Key 只从 `.env.local` / 服务端环境变量读取，不返回前端。
 - 提供 OpenAI-compatible Chat Completions adapter 基础封装，后续可替换不兼容 provider。
 - 实现自动席位分配：每个模型最多 2 个席位，并按 DeepSeek / MiMo / Kimi 的偏好关键词做初步匹配。
-- 新增 `/api/roundtable/run`，支持最小圆桌运行：每个入选席位先完成 opening，再完成 1 轮 debate。
+- 新增 `/api/roundtable/run`，支持原有结构化 opening / debate 流程，也支持页面当前默认使用的 `freechat` 自由讨论模式。
 - 新增 prompt builder，根据席位名称、类型、核心关切、典型问题、应做/不应做、反驳对象、盲点、风格、例子偏好和自定义提示词生成模型提示。
 - 新增 mock provider，用于本地验证和测试，不消耗真实 API；真实 provider 仍走服务端环境变量和 OpenAI-compatible Chat Completions 调用。
-- 前端可展示运行状态、provider 调用状态、错误日志和完整 transcript；单个 provider 或席位失败不会中断整场圆桌。
+- 前端可按消息流展示运行状态、provider 调用状态、错误日志和完整 transcript；单个 provider 或席位失败不会中断整场圆桌。
 - 页面顶部新增“项目说明书 / 使用指南”板块，集中说明最快跑通方式、真实模型配置、席位池格式、结果解读和当前边界。
 - 支持 compact seat pool：只需要 `seats` 数组，每个席位至少包含 `seat_name`、`type`、`core_concern`、`typical_questions`、`must_do`、`must_not_do`、`speaking_style`。
 - 新增“载入示例席位池”按钮，内置 `low_relevance_competition` 示例，载入后自动填入主题和 6 个短席位；解析后页面只展示席位卡片，长 JSON 默认收起。
 - 新增浏览器本地草稿恢复：自动暂存话题、席位池、已解析席位、已选席位、席位分配、mock 模式和 JSON 编辑区状态，页面刷新或开发服务 Fast Refresh 后不需要从头重填。
 - 重写 mock provider 输出和真实模型 prompt 质量约束：mock 模式只作为流程测试，不再输出“链路连通”类废话；真实模型 prompt 明确禁止复述题目、泛泛“综合看待”和无对象表态。
+- 新增 `freechat` 圆桌模式：页面现在默认让席位用更短的聊天式发言接话、打断、反驳或补充，而不是按席位顺序写一组可预见的小作文。
 
 本地运行：
 
@@ -76,13 +77,13 @@ KIMI_MODEL=
 
 当前限制：
 
-- 目前只实现 opening + 1 轮 debate，不做复杂多轮编排。
-- 还没有发言价值评估、缺席视角检测、总结和持久化。
+- 页面当前默认是轻量 `freechat` 消息流；原 opening / debate 结构化流程仍保留在 engine 中，方便测试和后续对照。
+- 说话人选择目前仍是规则驱动，还不是真正由模型主持人自主控场；真正的自主接话、发言价值评估、缺席视角检测、总结和持久化仍待后续实现。
 - 真实 provider 默认按 OpenAI-compatible Chat Completions 调用；如果某家 API 不兼容，需要继续扩展 adapter。
 
 下一步计划：
 
-- 实现发言价值评估，让 debate 阶段不是所有席位都发言。
+- 把当前轻量规则说话人选择升级为模型辅助主持，让每一轮不再机械要求所有席位发言。
 - 实现缺席视角检测和总结。
 - 引入 SQLite / Prisma 保存房间、席位、消息和总结。
 - 核心流程跑通后，再评估是否迁入 Streamlit 工具箱或继续保留为独立本地 Web 工具。

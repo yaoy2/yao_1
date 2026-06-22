@@ -9,7 +9,7 @@ export const projectGuideSections: GuideSection[] = [
     items: [
       "可以先保持 mock provider 勾选，输入话题，解析示例席位池，选择 4 到 6 个席位。",
       "点击“生成席位分配”，确认每个模型最多承载 2 个席位。",
-      "点击“开始圆桌”，页面会生成 opening 和 1 轮 debate 的 transcript。mock 只验证流程，不代表真实讨论质量。"
+      "点击“开始圆桌”，页面会生成一串自由讨论消息；mock 只验证流程，不代表真实讨论质量。"
     ]
   },
   {
@@ -25,22 +25,22 @@ export const projectGuideSections: GuideSection[] = [
     items: [
       "JSON 顶层可以是数组，也可以包含 seats、席位池、候选席位、seatPool 或 candidates。",
       "每个席位至少需要名称和核心关切；建议补充类型、典型问题、应做/不应做、反驳对象、盲点和发言风格。",
-      "系统会把这些字段写入 prompt，约束模型按席位身份发言。"
+      "系统会把这些字段写入 prompt，让每个席位像有独立判断的人一样接话。"
     ]
   },
   {
     title: "结果解读",
     items: [
-      "Transcript 按 round、phase、seat、provider 展示每条发言。",
-      "运行日志显示 provider 调用次数和失败次数。",
+      "Transcript 按消息顺序展示 seat、provider、phase 和发言内容。",
+      "当前默认 phase 是 freechat，表示短消息自由讨论，不再是固定 opening / debate 排队发言。",
       "某个席位调用失败时会显示错误，但其他席位会继续完成。"
     ]
   },
   {
     title: "当前边界",
     items: [
-      "当前只实现 opening + 1 轮 debate，还没有总结、缺席视角检测和数据保存。",
-      "下一阶段适合做发言价值评估，让交锋轮不必每个席位都发言。",
+      "当前先实现自由讨论消息流，还没有主持人总结、缺席视角检测和数据保存。",
+      "speaker planner 仍是轻量规则版，只能模拟插话、沉默和重复接话；后续可升级为模型判断谁最该发言。",
       "先不做 Streamlit 适配，等核心圆桌流程稳定后再决定。"
     ]
   }

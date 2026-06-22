@@ -2,6 +2,10 @@
 
 ## 2026-06-21
 
+- **众声室默认流程改为 `freechat`**：用户反馈原来的 opening / debate 结构仍然像“一个 LLM 回答拆给多个席位”。现在页面点击“开始圆桌”时会调用 `/api/roundtable/run` 的 `mode: "freechat"`，按短消息预算生成更接近聊天流的 transcript，而不是固定排队小作文。
+- **新增自由讨论 prompt 和 mock 行为**：新增 `buildFreechatPrompt`、freechat engine 路径和 mock freechat 样例；每一轮都会读取附近 transcript，要求席位接话、打断、反驳、区分、追问或补一个具体角度，避免复述题目。
+- **记录当前限制**：新说话顺序仍然是轻量规则，不是真正由模型主持人自主控场。这能改善默认体感，但真正的自主接话和发言价值评估仍待后续实现。
+- **验证结果**：新增 `tests/freechat.test.ts`，并扩展 API 和指南测试，覆盖 freechat 模式、短消息输出、非线性说话顺序和新版说明文字。
 - **修复众声室 mock 输出低质误导问题**：用户反馈点击“开始圆桌”后 transcript 充满复述题目、空泛表态和“链路连通”测试话术。定位原因是当前运行勾选了 mock provider，而 mock 输出硬编码为通路验证文本，容易被误认为圆桌真实质量。已重写 `src/lib/mock-provider.ts`，让 mock 生成更像席位样例的 opening / debate 内容，并在页面明确提示 mock 只用于流程测试。
 - **强化真实模型 prompt 质量底线**：`src/lib/prompt-builder.ts` 新增明确约束，要求 opening 第一句直接给判断，禁止复述题目、禁止“综合看待”式糊弄；debate 必须点名回应具体席位观点，不能只说同意或复述前文。新增 `tests/prompt-quality.test.ts` 和 mock 质量测试，防止回退到低质模板。
 - **隔离 Next.js dev / build 缓存目录**：排查到一边运行 `next dev` 一边执行 `next build` 会共同写入 `.next`，造成开发服务找不到临时 chunk 并让首页 500。新增 `next.config.mjs`，开发模式继续使用 `.next`，生产构建改用 `.next-build`，并加入 `.gitignore`；验证 build 后 3000 首页仍返回 200。

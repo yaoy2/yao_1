@@ -9,7 +9,12 @@ export function createMockProviderClient(options: { failSeatIds?: string[] } = {
         throw new Error(`Mock provider failed for ${input.seat.name}`);
       }
 
-      const content = input.phase === "opening" ? buildOpeningSample(input) : buildDebateSample(input);
+      const content =
+        input.phase === "opening"
+          ? buildOpeningSample(input)
+          : input.phase === "freechat"
+            ? buildFreechatSample(input)
+            : buildDebateSample(input);
 
       return {
         content,
@@ -49,6 +54,28 @@ function buildDebateSample(input: ProviderGenerateInput): string {
     `因此我补充一个判断标准：先设退出线和复盘线，再谈鼓励参与。`,
     `我追问一句：${question}如果回答仍然停留在“综合看有意义”，那就还没有进入真正的决策。`
   ].join("");
+}
+
+function buildFreechatSample(input: ProviderGenerateInput): string {
+  const target = findPriorTarget(input);
+  const concern = input.seat.coreConcern || "这件事的真实代价";
+  const question = input.seat.typicalQuestions[0] || "这一步谁受益、谁承担成本？";
+  const starters = ["我接一句", "我不同意这个默认前提", "等一下，这里要分开看", "我补一句", "这个说法漏了一点"];
+  const starter = starters[(input.round - 1) % starters.length];
+
+  if (input.round === 1) {
+    return `${starter}：别先急着问利大还是弊大，我更想先把账摊开。站在「${input.seat.name}」这边，关键是${concern}；如果这个说不清，后面所有鼓励参加都会变成口号。`;
+  }
+
+  if (input.round % 3 === 0) {
+    return `${starter}。${target.seatName}刚才那句“${target.summary}”我只认一半：机会当然可能存在，但不能默认每个学生都适合拿时间去换这个机会。${question}`;
+  }
+
+  if (input.round % 3 === 1) {
+    return `${starter}，如果把它做成自愿、小规模、可退出的试水，我能接受；但一旦变成学院要数据、班级要动员、教师要交成果，那它就不是机会，是任务。`;
+  }
+
+  return `${starter}：我会看两个证据，一是学生最后有没有可复用作品或表达材料，二是有没有挤掉专业学习。如果只有参与截图和新闻稿素材，我倾向于直接砍掉。`;
 }
 
 function findPriorTarget(input: ProviderGenerateInput): { seatName: string; summary: string } {

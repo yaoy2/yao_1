@@ -41,4 +41,26 @@ describe("POST /api/roundtable/run", () => {
     expect(JSON.stringify(payload)).not.toContain("secret");
     expect(payload.providerStatus.length).toBeGreaterThan(0);
   });
+
+  it("runs freechat mode as a short message stream", async () => {
+    const request = new Request("http://localhost/api/roundtable/run", {
+      method: "POST",
+      body: JSON.stringify({
+        topic: "低相关竞赛对学生利大还是弊大",
+        selectedSeats: seats,
+        providerAssignments: assignSeatsToProviders(seats),
+        mode: "freechat",
+        messageBudget: 12,
+        useMock: true
+      })
+    });
+
+    const response = await POST(request);
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.transcript).toHaveLength(12);
+    expect(payload.transcript.every((item: { phase: string }) => item.phase === "freechat")).toBe(true);
+    expect(JSON.stringify(payload)).not.toContain("secret");
+  });
 });

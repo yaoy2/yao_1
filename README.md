@@ -17,7 +17,7 @@ The project is built around real administrative, teaching-support, competition-g
 
 - **Online app**: [yao-1.streamlit.app](https://yao-1.streamlit.app/)
 - **Repository**: [github.com/yaoy2/yao_1](https://github.com/yaoy2/yao_1)
-- **Zhongshengshi MVP**: `zhongshengshi/`, a local Next.js subproject for validating the multi-model roundtable flow. The current version can run opening statements plus one debate round.
+- **Zhongshengshi MVP**: `zhongshengshi/`, a local Next.js subproject for validating the multi-model roundtable flow. The current page now defaults to a freer short-message discussion stream instead of fixed opening/debate speeches.
 - **Codex Radar**: the 12th tool panel, reading `data/codex_radar_current.json` to display Codex reset-window status.
 - **Home style**: a dark Command Center cover; tools are listed in reverse launch order, with a fixed 3 x 3 grid per page.
 - **Sidebar navigation**: all tools are ordered from newest to oldest, so recently added modules appear first.
@@ -37,15 +37,16 @@ Completed so far:
 - Added DeepSeek, MiMo, and Kimi provider configuration status. API keys are read only from `.env.local` / server environment variables and are not returned to the browser.
 - Added a basic OpenAI-compatible Chat Completions adapter so incompatible providers can be swapped later.
 - Added automatic seat assignment: each model gets at most two seats, with keyword preferences for DeepSeek, MiMo, and Kimi.
-- Added `/api/roundtable/run`, which runs the minimum roundtable flow: opening statements for every selected seat, then one debate round.
+- Added `/api/roundtable/run`, which can run the original structured opening/debate flow and the newer `freechat` mode used by the page by default.
 - Added a prompt builder using seat name, type, core concern, typical questions, must-do / must-not-do rules, likely opponents, blind spots, speaking style, example preference, and seat-specific prompts.
 - Added a mock provider for local verification and tests without spending real API calls. Real providers still run through server-side environment variables and OpenAI-compatible Chat Completions calls.
-- The frontend now displays run status, provider status, error logs, and the full transcript. A failed provider or seat call does not stop the rest of the roundtable.
+- The frontend now displays run status, provider status, error logs, and the full transcript as a message stream. A failed provider or seat call does not stop the rest of the roundtable.
 - The page now includes a "Project Manual / User Guide" section covering the fastest local workflow, real-provider setup, seat-pool format, result interpretation, and current limits.
 - Added compact seat-pool support: the runtime only needs a `seats` array, with each seat containing `seat_name`, `type`, `core_concern`, `typical_questions`, `must_do`, `must_not_do`, and `speaking_style`.
 - Added a "Load sample seat pool" button backed by the `low_relevance_competition` preset. It fills the topic and six compact seats, then hides the long JSON after parsing so the user works from seat cards.
 - Added browser-local draft recovery for the topic, seat pool, parsed seats, selected seats, seat assignments, mock mode, and JSON editor state, so a page reload or development-server Fast Refresh does not force the user to rebuild the setup from scratch.
 - Reworked mock-provider output and real-model prompt quality rules: mock mode is now clearly positioned as a flow test and no longer emits plumbing-test filler; real prompts explicitly forbid topic repetition, generic "balanced view" answers, and agreement without a concrete target.
+- Added `freechat` roundtable mode: the page now asks seats to speak in short, conversational turns, respond to nearby messages, interrupt or add concrete distinctions, and avoid predictable one-seat-after-another essays.
 
 Local run:
 
@@ -78,13 +79,13 @@ Compatibility note: legacy `MINIMAX_API_KEY` / `MINIMAX_BASE_URL` / `MINIMAX_MOD
 
 Current limits:
 
-- The flow currently runs opening plus one debate round only; there is no complex multi-round orchestration yet.
-- Speech-value evaluation, missing-view detection, final summary, and persistence are still pending.
+- The page now defaults to a lightweight `freechat` message flow; the older opening/debate path remains available in the engine for tests and later comparison.
+- Speaker selection is still rules-based, not a real model-driven moderator. True autonomous turn-taking, speech-value evaluation, missing-view detection, final summary, and persistence are still pending.
 - Real providers use OpenAI-compatible Chat Completions by default. Any incompatible provider will need its own adapter extension.
 
 Next steps:
 
-- Add speech-value evaluation so not every seat has to speak in every debate round.
+- Upgrade speaker selection from a fixed lightweight rule to a model-assisted moderator so not every seat has to speak on every turn.
 - Add missing-view detection and final summary.
 - Add SQLite / Prisma persistence for rooms, seats, messages, and summaries.
 - After the core flow works, decide whether to adapt it into Streamlit or keep it as an independent local Web tool.

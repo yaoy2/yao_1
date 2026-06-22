@@ -3,7 +3,7 @@ import { assignSeatsToProviders } from "../../../../lib/assignment";
 import { createMockProviderClient } from "../../../../lib/mock-provider";
 import { createProviderClient } from "../../../../lib/provider-client";
 import { buildProviderConfigs } from "../../../../lib/providers";
-import { runRoundtable } from "../../../../lib/roundtable";
+import { runRoundtable, type RoundtableMode } from "../../../../lib/roundtable";
 import type { ModelProvider, Seat, SeatAssignment } from "../../../../lib/types";
 
 interface RoundtableRunBody {
@@ -11,6 +11,8 @@ interface RoundtableRunBody {
   selectedSeats?: Seat[];
   providerAssignments?: SeatAssignment[];
   rounds?: number;
+  mode?: RoundtableMode;
+  messageBudget?: number;
   useMock?: boolean;
 }
 
@@ -35,6 +37,8 @@ export async function POST(request: Request) {
       selectedSeats,
       providerAssignments,
       providers,
+      mode: body.mode ?? "structured",
+      messageBudget: body.messageBudget,
       rounds: body.rounds ?? 1,
       providerClientFactory: (provider) => (body.useMock ? createMockProviderClient() : createProviderClient(provider, process.env))
     });

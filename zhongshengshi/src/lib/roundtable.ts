@@ -1,8 +1,9 @@
-import { buildDebatePrompt, buildOpeningPrompt } from "./prompt-builder";
+import { buildDebatePrompt, buildFreechatPrompt, buildOpeningPrompt } from "./prompt-builder";
 import type { ModelProvider, ProviderId, Seat, SeatAssignment } from "./types";
 
-export type RoundtablePhase = "opening" | "debate";
+export type RoundtablePhase = "opening" | "debate" | "freechat";
 export type RoundtableStatus = "pending" | "running" | "success" | "failed";
+export type RoundtableMode = "structured" | "freechat";
 
 export interface RoundtableTranscriptItem {
   id: string;
@@ -67,6 +68,8 @@ export interface RunRoundtableInput {
   providerAssignments: SeatAssignment[];
   providers: ModelProvider[];
   rounds?: number;
+  mode?: RoundtableMode;
+  messageBudget?: number;
   timeoutMs?: number;
   providerClientFactory: (provider: ModelProvider) => ProviderClient;
 }
@@ -93,6 +96,24 @@ export async function runRoundtable(input: RunRoundtableInput): Promise<RunRound
       calls: 0,
       failures: 0
     });
+  }
+
+  if (input.mode === "freechat") {
+    await runFreechat({
+      input,
+      transcript,
+      errors,
+      providerStatus,
+      timeoutMs,
+      messageBudget: input.messageBudget ?? 14
+    });
+
+    return {
+      status: errors.length ? "failed" : "success",
+      transcript,
+      errors,
+      providerStatus: Array.from(providerStatus.values())
+    };
   }
 
   for (const seat of input.selectedSeats) {
@@ -133,6 +154,58 @@ export async function runRoundtable(input: RunRoundtableInput): Promise<RunRound
     errors,
     providerStatus: Array.from(providerStatus.values())
   };
+}
+
+async function runFreechat({
+  input,
+  transcript,
+  errors,
+  providerStatus,
+  timeoutMs,
+  messageBudget
+}: {
+  input: RunRoundtableInput;
+  transcript: RoundtableTranscriptItem[];
+  errors: RoundtableError[];
+  providerStatus: Map<ProviderId, RoundtableProviderStatus>;
+  timeoutMs: number;
+  messageBudget: number;
+}) {
+  const speakerQueue = planFreechatSpeakers(input.selectedSeats, messageBudget);
+
+  for (let index = 0; index < speakerQueue.length; index += 1) {
+    const seat = speakerQueue[index];
+    await runSeatCall({
+      topic: input.topic,
+      seat,
+      phase: "freechat",
+      round: index + 1,
+      prompt: buildFreechatPrompt({
+        topic: input.topic,
+        seat,
+        transcript,
+        messageIndex: index + 1,
+        totalMessages: speakerQueue.length
+      }),
+      input,
+      transcript,
+      errors,
+      providerStatus,
+      timeoutMs
+    });
+  }
+}
+
+function planFreechatSpeakers(seats: Seat[], messageBudget: number): Seat[] {
+  if (seats.length === 0) {
+    return [];
+  }
+
+  const activeSeatCount = Math.max(1, Math.min(seats.length, seats.length > 3 ? seats.length - 1 : seats.length));
+  const activeSeats = seats.slice(0, activeSeatCount);
+  const pattern = [0, 1, 0, 2, 1, 0, 2, 2, 0, 1, 2, 0, 1, 0, 2, 1, 0, 2];
+
+  return Array.from({ length: messageBudget }, (_, index) => activeSeats[pattern[index % pattern.length] % activeSeats.length]);
 }
 
 async function runSeatCall({
