@@ -418,11 +418,11 @@ export default function Home() {
             </div>
           </Panel>
 
-          <Panel title="运行日志">
+          <Panel title="运行控制">
             <div className="flex flex-wrap items-center gap-3">
               <button
                 type="button"
-                className="rounded bg-moss px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-ink/30"
+                className="rounded bg-moss px-4 py-2 text-sm font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:bg-ink/30"
                 onClick={handleStartRoundtable}
                 disabled={runStatus === "running"}
               >
@@ -430,18 +430,13 @@ export default function Home() {
               </button>
               <StatusBadge status={runStatus} />
             </div>
-            <div className="mt-4 grid gap-2 text-sm">
-              {providerStatus.map((item) => (
-                <div key={item.providerId} className="rounded border border-ink/10 bg-paper p-3">
-                  <strong>{item.providerName}</strong>：{item.status}，调用 {item.calls} 次，失败 {item.failures} 次
-                </div>
-              ))}
+            <div className="mt-4 space-y-3">
+              <ProviderStatusStrip providerStatus={providerStatus} />
               {errors.map((error) => (
-                <div key={`${error.phase}-${error.round}-${error.seatId}`} className="rounded border border-rust/30 bg-rust/10 p-3 text-rust">
+                <div key={`${error.phase}-${error.round}-${error.seatId}`} className="rounded-lg border border-rust/20 bg-rust/5 px-3 py-2 text-xs leading-5 text-rust">
                   {error.phase} R{error.round}｜{error.providerName}｜{error.seatName}：{error.message}
                 </div>
               ))}
-              {!providerStatus.length && !errors.length && <EmptyState text="点击开始后，这里显示 provider 调用状态和错误。" />}
             </div>
           </Panel>
         </section>
@@ -470,20 +465,39 @@ function EmptyState({ text }: { text: string }) {
   return <div className="rounded border border-dashed border-ink/20 bg-paper p-4 text-sm text-ink/55">{text}</div>;
 }
 
+function ProviderStatusStrip({ providerStatus }: { providerStatus: RoundtableProviderStatus[] }) {
+  if (!providerStatus.length) {
+    return <p className="text-xs text-ink/45">点击开始后，这里显示模型调用状态。</p>;
+  }
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {providerStatus.map((item) => (
+        <div key={item.providerId} className="flex items-center gap-2 rounded-full bg-paper px-3 py-1.5 text-xs text-ink/70 ring-1 ring-ink/10">
+          <span className={`h-2 w-2 rounded-full ${providerDotClassName(item.status)}`} />
+          <strong className="text-ink">{item.providerName}</strong>
+          <span>调用 {item.calls}</span>
+          {item.failures > 0 && <span className="text-rust">失败 {item.failures}</span>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function ChatTranscript({ transcript }: { transcript: RoundtableTranscriptItem[] }) {
   return (
-    <section className="overflow-hidden rounded bg-[#ededed] shadow-[0_1px_8px_rgba(15,23,42,0.08)] ring-1 ring-ink/10">
-      <div className="flex h-12 items-center justify-between border-b border-[#dedede] bg-[#f7f7f7] px-4">
-        <h2 className="truncate text-[15px] font-semibold text-ink">众声室圆桌群聊{transcript.length ? `（${transcript.length}）` : ""}</h2>
-        <div className="flex items-center gap-4 text-xl leading-none text-ink/50" aria-hidden="true">
-          <span className="-mt-1">⌕</span>
-          <span>⋯</span>
+    <section className="overflow-hidden rounded-[10px] bg-[#e9e9e9] shadow-[0_12px_30px_rgba(15,23,42,0.08)] ring-1 ring-black/5">
+      <div className="flex h-12 items-center justify-between border-b border-black/10 bg-[#f7f7f7] px-4">
+        <h2 className="truncate text-[15px] font-semibold text-[#1f2328]">众声室圆桌群聊{transcript.length ? `（${transcript.length}）` : ""}</h2>
+        <div className="flex items-center gap-4 text-[20px] leading-none text-[#6b7280]" aria-hidden="true">
+          <span className="text-[17px]">⌕</span>
+          <span className="-mt-1">⋯</span>
         </div>
       </div>
 
-      <div className="min-h-[640px] max-h-[780px] overflow-y-auto bg-[#ededed] px-4 py-6 sm:px-8">
+      <div className="min-h-[680px] max-h-[820px] overflow-y-auto bg-[#ededed] px-4 py-6 sm:px-8">
         {transcript.length ? (
-          <div className="space-y-5">
+          <div className="space-y-5 pb-4">
             {transcript.map((item, index) => (
               <div key={item.id}>
                 {shouldShowTimeDivider(index) && <ChatTimeDivider label={formatChatTime(index)} />}
@@ -492,7 +506,7 @@ function ChatTranscript({ transcript }: { transcript: RoundtableTranscriptItem[]
             ))}
           </div>
         ) : (
-          <div className="flex min-h-[500px] items-center justify-center text-sm text-ink/40">等待圆桌开始</div>
+          <div className="flex min-h-[540px] items-center justify-center text-sm text-[#9b9b9b]">等待圆桌开始</div>
         )}
       </div>
     </section>
@@ -505,16 +519,16 @@ function ChatMessage({ item }: { item: RoundtableTranscriptItem }) {
 
   return (
     <article className="flex items-start gap-3">
-      <div className={`mt-5 flex h-10 w-10 shrink-0 items-center justify-center rounded-[4px] text-sm font-semibold shadow-sm ${avatarClassName(item.providerId, failed)}`}>
+      <div className={`mt-[22px] flex h-10 w-10 shrink-0 items-center justify-center rounded-[7px] text-sm font-semibold shadow-[0_1px_2px_rgba(0,0,0,0.08)] ${avatarClassName(item.providerId, failed)}`}>
         {item.seatName.trim().slice(0, 1) || "席"}
       </div>
       <div className="min-w-0 max-w-[min(620px,calc(100%-3.5rem))]">
-        <div className="mb-1 min-h-4 text-xs leading-4 text-[#8a8a8a]">
+        <div className="mb-1.5 min-h-4 text-xs leading-4 text-[#8b8b8b]">
           <span>{speakerName}</span>
           {failed && <span className="ml-2 font-semibold text-rust">调用失败</span>}
         </div>
-        <div className={`rounded-2xl px-4 py-2.5 shadow-[0_1px_1px_rgba(0,0,0,0.04)] ${bubbleClassName(item.providerId, failed)}`}>
-          <p className="whitespace-pre-wrap text-[15px] leading-[1.75]">{failed ? item.error : item.content}</p>
+        <div className={`rounded-[18px] px-4 py-2.5 ${bubbleClassName(item.providerId, failed)}`}>
+          <p className="whitespace-pre-wrap text-[15px] leading-[1.72]">{failed ? item.error : item.content}</p>
         </div>
       </div>
     </article>
@@ -522,7 +536,7 @@ function ChatMessage({ item }: { item: RoundtableTranscriptItem }) {
 }
 
 function ChatTimeDivider({ label }: { label: string }) {
-  return <div className="mb-5 text-center text-xs text-[#a7a7a7]">{label}</div>;
+  return <div className="mb-5 text-center text-xs text-[#a6a6a6]">{label}</div>;
 }
 
 function shouldShowTimeDivider(index: number) {
@@ -555,10 +569,20 @@ function avatarClassName(providerId: string, failed: boolean) {
 
 function bubbleClassName(providerId: string, failed: boolean) {
   if (failed) {
-    return "bg-rust/10 text-rust";
+    return "bg-[#fdecec] text-rust";
   }
 
-  return "bg-white text-ink";
+  return "bg-white text-[#111827]";
+}
+
+function providerDotClassName(status: RoundtableProviderStatus["status"]) {
+  if (status === "success") {
+    return "bg-moss";
+  }
+  if (status === "failed") {
+    return "bg-rust";
+  }
+  return "bg-ink/25";
 }
 
 function StatusBadge({ status }: { status: RoundtableStatus }) {
