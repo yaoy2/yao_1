@@ -58,8 +58,9 @@ describe("freechat roundtable mode", () => {
     const speakerSequence = result.transcript.map((item) => item.seatId);
     expect(speakerSequence.slice(0, 4)).not.toEqual(seats.map((seat) => seat.id));
     expect(new Set(speakerSequence).size).toBeLessThan(seats.length);
-    expect(result.transcript.some((item) => item.content.includes("我接"))).toBe(true);
-    expect(result.transcript.some((item) => item.content.includes("我不同意") || item.content.includes("我补一句"))).toBe(true);
+    expect(speakerSequence.slice(1).every((seatId, index) => seatId !== speakerSequence[index])).toBe(true);
+    expect(result.transcript.filter((item) => /我接一句|我补一句/.test(item.content))).toHaveLength(0);
+    expect(result.transcript.some((item) => /别急|先看|问题在于|这里真正/.test(item.content))).toBe(true);
   });
   it("calls every provider that has assigned seats during freechat", async () => {
     const sixSeats = [

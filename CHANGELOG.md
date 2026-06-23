@@ -7,6 +7,8 @@ This English change log mirrors the project history maintained in `CHANGELOG_ZH-
 
 ## 2026-06-21
 
+- **Freechat speech pattern de-AI-ed**: removed the prompt and mock examples that encouraged repetitive starts such as "I add one point" / "I jump in". Freechat now asks for more natural openings based on the previous message and the speaker planner prevents the same seat from speaking twice in a row.
+- **Chat bubbles rounded**: changed the chat message bubbles to softer four-corner rounded rectangles instead of pointed speech bubbles, matching a more familiar social-chat visual style.
 - **Kimi timeout handling improved**: later freechat turns include longer transcript context and Kimi K2.x responses can take longer than the original 45-second default. The roundtable engine now gives Kimi K2.7 / K2.6 / K2.5 calls a 90-second timeout while keeping the shorter default for other providers.
 - **Chat room styling moved closer to desktop social apps**: reduced the web-card feel with a lighter group header, larger gray chat canvas, narrower message bubbles, square avatars, subtle bubble tails, and softer time dividers.
 - **Chat room visual style tightened**: adjusted the roundtable transcript from a web-card layout into a more familiar social-chat surface, with a white group header, light gray conversation area, square avatars, subtle time dividers, and plain gray-white message bubbles.

@@ -204,7 +204,21 @@ function planFreechatSpeakers(seats: Seat[], providerAssignments: SeatAssignment
   const activeSeats = selectFreechatActiveSeats(seats, providerAssignments);
   const pattern = [0, 1, 0, 2, 1, 0, 2, 2, 0, 1, 2, 0, 1, 0, 2, 1, 0, 2];
 
-  return Array.from({ length: messageBudget }, (_, index) => activeSeats[pattern[index % pattern.length] % activeSeats.length]);
+  const speakerQueue: Seat[] = [];
+
+  for (let index = 0; index < messageBudget; index += 1) {
+    const preferredIndex = pattern[index % pattern.length] % activeSeats.length;
+    const previousSeat = speakerQueue[speakerQueue.length - 1];
+    const preferredSeat = activeSeats[preferredIndex];
+
+    if (activeSeats.length > 1 && previousSeat?.id === preferredSeat.id) {
+      speakerQueue.push(activeSeats[(preferredIndex + 1) % activeSeats.length]);
+    } else {
+      speakerQueue.push(preferredSeat);
+    }
+  }
+
+  return speakerQueue;
 }
 
 function selectFreechatActiveSeats(seats: Seat[], providerAssignments: SeatAssignment[]): Seat[] {

@@ -513,7 +513,7 @@ function ChatMessage({ item }: { item: RoundtableTranscriptItem }) {
           <span>{speakerName}</span>
           {failed && <span className="ml-2 font-semibold text-rust">调用失败</span>}
         </div>
-        <div className={`relative rounded-[4px] px-3.5 py-2.5 shadow-[0_1px_1px_rgba(0,0,0,0.04)] before:absolute before:left-[-5px] before:top-3 before:h-2.5 before:w-2.5 before:rotate-45 ${bubbleClassName(item.providerId, failed)}`}>
+        <div className={`rounded-2xl px-4 py-2.5 shadow-[0_1px_1px_rgba(0,0,0,0.04)] ${bubbleClassName(item.providerId, failed)}`}>
           <p className="whitespace-pre-wrap text-[15px] leading-[1.75]">{failed ? item.error : item.content}</p>
         </div>
       </div>
@@ -555,10 +555,10 @@ function avatarClassName(providerId: string, failed: boolean) {
 
 function bubbleClassName(providerId: string, failed: boolean) {
   if (failed) {
-    return "bg-rust/10 text-rust before:bg-rust/10";
+    return "bg-rust/10 text-rust";
   }
 
-  return "bg-white text-ink before:bg-white";
+  return "bg-white text-ink";
 }
 
 function StatusBadge({ status }: { status: RoundtableStatus }) {
