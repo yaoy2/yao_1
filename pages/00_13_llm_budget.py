@@ -69,7 +69,7 @@ def render_account_editor(key: str) -> None:
             key=f"account_{key}",
         )
     with save_col:
-        save_clicked = st.button("保存账号", key=f"save_account_{key}", use_container_width=True)
+        save_clicked = st.button("保存", key=f"save_account_{key}", use_container_width=True)
     expiration_value = st.text_input(
         "expiration date: yy_mm_dd",
         value=current_expiration,

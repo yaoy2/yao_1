@@ -61,6 +61,8 @@ class LLMBudgetAccountsTest(unittest.TestCase):
         self.assertIn("account_col, save_col = st.columns([3, 1]", page_source)
         self.assertIn('key=f"account_{key}"', page_source)
         self.assertIn('key=f"expiration_{key}"', page_source)
+        self.assertIn('st.button("保存"', page_source)
+        self.assertNotIn('st.button("保存账号"', page_source)
         self.assertIn('key=f"save_account_{key}"', page_source)
         self.assertIn("sync_llm_budget_accounts_to_github()", page_source)
 
