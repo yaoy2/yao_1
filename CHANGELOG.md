@@ -5,6 +5,15 @@
 
 This English change log mirrors the project history maintained in `CHANGELOG_ZH-CN.md`. It keeps the same dated structure and preserves the operational notes that matter for later troubleshooting: what changed, why it changed, what failed or detoured, and how the work was verified.
 
+## 2026-06-24
+
+- **Streamlit sidebar ordering rebuilt**: renamed the `pages/` files to use a stable "sidebar sort index + module number" pattern. The newest LLM Budget page is now `pages/00_13_llm_budget.py`, followed by Codex Radar at `pages/01_12_codex.py`, so newer projects appear above older ones while module numbers still reflect launch order.
+- **Home navigation and tests aligned**: updated `hello.py` page references and added regression coverage to ensure `TOOLS` is sorted by `created` date descending and the actual `pages/` filenames match the homepage order.
+- **LLM Budget login-account labels added**: each provider card now has an editable login-account field and save button for an email or phone number. The values are stored in `data/llm_budget_accounts.json`, separate from code and API keys.
+- **Account backup path added**: saving an account attempts to sync `data/llm_budget_accounts.json` through the existing `GITHUB_BACKUP_TOKEN` GitHub Contents API path, so redeploys, repository refreshes, or file updates do not wipe the labels. Without the token, the value still persists to the current local file.
+- **Docs updated**: README now describes thirteen core modules, adds the LLM Budget Tracker section, and corrects the current Codex Radar page filename.
+- **Verification**: `tests.test_home_page`, `tests.test_llm_budget_page`, `tests.test_color_palette_preview`, `tests.test_budget_db`, and `tests.test_ding_minutes` passed. `hello.py`, `utils/llm_budget_accounts.py`, and the affected pages passed `py_compile`. The full `tests.test_web_memo_db` suite still fails in this environment because the pre-existing PDF export test requires missing `reportlab`; Streamlit was not started.
+
 ## 2026-06-21
 
 - **WeChat-like chat surface refined**: the roundtable chat area now uses a flatter desktop-chat shell, lighter header, larger gray conversation canvas, softer rounded bubbles, subtler avatars, and a compact provider status strip so the chat remains the primary visual focus.

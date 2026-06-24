@@ -16,6 +16,7 @@
 - **线上入口**：[yao-1.streamlit.app](https://yao-1.streamlit.app/)
 - **仓库地址**：[github.com/yaoy2/yao_1](https://github.com/yaoy2/yao_1)
 - **众声室 MVP**：`zhongshengshi/`，本地 Next.js 子项目，用于验证多模型圆桌群聊流程；当前页面默认改为自由短消息讨论流，不再默认展示固定 opening / debate 排队发言。
+- **LLM 余额管理**：第 13 个工具板块，集中查看各家 LLM 余额，并把每家登录账号标签保存到 `data/llm_budget_accounts.json`。
 - **Codex雷达**：第 12 个工具板块，读取 `data/codex_radar_current.json` 展示 Codex 重置窗口状态。
 - **首页风格**：Command Center 深色封面；工具入口按时间倒序展示，首页每页固定 3 x 3。
 - **侧边导航**：全部工具按创建/上线时间倒序排列，越晚做的项目越靠上。
@@ -91,9 +92,9 @@ KIMI_MODEL=
 
 ---
 
-## 十二个核心模块
+## 十三个核心模块
 
-模块编号与页面侧边栏保持一致：越晚上线的工具编号越大，侧边栏按 12 → 1 倒序展示。
+模块编号记录上线顺序；Streamlit 页面文件名前半段是侧边栏排序位，后半段保留模块编号，所以越晚上线的工具会排在侧边栏越上方，同时模块编号保持稳定。
 
 ### 1. 📝 报告评分系统 (Grading System)
 - **场景**：期末大作业、实验报告批量打分。
@@ -180,6 +181,14 @@ KIMI_MODEL=
     - **钉钉提醒**：高概率、窗口开启或窗口关闭时，通过钉钉机器人主动推送。
     - **密钥保护**：钉钉 webhook 和加签密钥只放 GitHub Secrets，不写入代码。
 
+### 13. 💰 LLM 余额管理 (LLM Budget Tracker)
+- **场景**：集中查看 DeepSeek、Kimi、MiMo、ChatGPT 等 LLM API / 订阅余额，避免忘记是哪一个账号在扣费。
+- **功能**：
+    - **自动余额**：从 Streamlit Secrets 读取 API Key，查询支持自动查询的厂商余额。
+    - **手动余额**：对暂未接入余额 API 的厂商保留手动录入入口。
+    - **登录账号标签**：每个厂商卡片下方可填写邮箱或手机号，保存到 `data/llm_budget_accounts.json`。
+    - **GitHub 备份**：配置 `GITHUB_BACKUP_TOKEN` 后，保存账号会同步到 GitHub，避免刷新仓库或重新部署后丢失。
+
 ---
 
 ## Codex Radar Lite
@@ -189,7 +198,7 @@ KIMI_MODEL=
 - **运行方式**：`.github/workflows/codex-radar.yml` 每小时运行一次。
 - **判断方式**：优先用规则引擎读取公开来源，不默认调用大模型。
 - **展示数据**：`data/codex_radar_current.json`、`data/codex_radar_history.json`、`data/codex_radar_signals.json`。
-- **工具页面**：`pages/00_12、📡_Codex雷达.py`。
+- **工具页面**：`pages/01_12_codex.py`。
 - **静态页面**：`codex_radar_lite/site/index.html`，作为轻量备用展示入口。
 - **钉钉推送**：只在高概率、窗口开启或窗口关闭时推送。
 

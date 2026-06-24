@@ -73,25 +73,47 @@ class HomePageTest(unittest.TestCase):
         _page_source, namespace = load_homepage_bits()
         tools = namespace["TOOLS"]
 
-        self.assertEqual("Codex雷达", tools[0]["title"])
-        self.assertEqual("M12", tools[0]["code"])
-        self.assertEqual("Recorder_笔记", tools[1]["title"])
-        self.assertTrue(tools[1]["locked"])
-        self.assertEqual("灵感便签盒", tools[2]["title"])
+        self.assertEqual("LLM 余额管理", tools[0]["title"])
+        self.assertEqual("M13", tools[0]["code"])
+        self.assertEqual("Codex雷达", tools[1]["title"])
+        self.assertEqual("M12", tools[1]["code"])
+        self.assertEqual("Recorder_笔记", tools[2]["title"])
+        self.assertTrue(tools[2]["locked"])
+        self.assertEqual("灵感便签盒", tools[3]["title"])
         budget_tool = next(tool for tool in tools if tool["title"] == "预算速记台账")
         self.assertTrue(budget_tool["locked"])
         blocked_codes = {tool["code"] for tool in tools if tool.get("blocked")}
         self.assertEqual({"M02", "M03", "M04", "M05"}, blocked_codes)
         self.assertEqual("报告评分", tools[-1]["title"])
-        self.assertEqual(12, len(tools))
+        self.assertEqual(13, len(tools))
         self.assertEqual(9, len(tools[:9]))
+
+    def test_page_files_are_sorted_by_created_date_newest_first(self):
+        _page_source, namespace = load_homepage_bits()
+        tools = namespace["TOOLS"]
+        pages_dir = Path(__file__).resolve().parents[1] / "pages"
+
+        created_values = [tool["created"] for tool in tools]
+        self.assertEqual(sorted(created_values, reverse=True), created_values)
+
+        expected_pages = [tool["page"] for tool in tools]
+        actual_pages = [f"pages/{path.name}" for path in sorted(pages_dir.glob("*.py"))]
+        self.assertEqual(expected_pages, actual_pages)
+
+        for sort_index, tool in enumerate(tools):
+            page_name = Path(tool["page"]).name
+            module_number = int(tool["code"].removeprefix("M"))
+            self.assertTrue(
+                page_name.startswith(f"{sort_index:02d}_{module_number}_"),
+                f"{page_name} should use sidebar sort index {sort_index:02d} and module number {module_number}",
+            )
 
     def test_homepage_defers_red_x_cards_without_changing_nav_order(self):
         _page_source, namespace = load_homepage_bits()
         tools = namespace["TOOLS"]
         homepage_pages = namespace["get_homepage_pages"](tools)
 
-        self.assertEqual("M12", tools[0]["code"])
+        self.assertEqual("M13", tools[0]["code"])
         self.assertEqual("M01", tools[-1]["code"])
         self.assertEqual("M01", homepage_pages[0][-1]["code"])
         self.assertEqual(["M05", "M04", "M03", "M02"], [tool["code"] for tool in homepage_pages[1]])

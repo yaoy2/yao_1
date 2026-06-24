@@ -18,6 +18,7 @@ The project is built around real administrative, teaching-support, competition-g
 - **Online app**: [yao-1.streamlit.app](https://yao-1.streamlit.app/)
 - **Repository**: [github.com/yaoy2/yao_1](https://github.com/yaoy2/yao_1)
 - **Zhongshengshi MVP**: `zhongshengshi/`, a local Next.js subproject for validating the multi-model roundtable flow. The current page now defaults to a freer short-message discussion stream instead of fixed opening/debate speeches.
+- **LLM Budget Tracker**: the 13th tool panel, showing balances for supported LLM providers and keeping editable login-account labels in `data/llm_budget_accounts.json`.
 - **Codex Radar**: the 12th tool panel, reading `data/codex_radar_current.json` to display Codex reset-window status.
 - **Home style**: a dark Command Center cover; tools are listed in reverse launch order, with a fixed 3 x 3 grid per page.
 - **Sidebar navigation**: all tools are ordered from newest to oldest, so recently added modules appear first.
@@ -93,9 +94,9 @@ Next steps:
 
 ---
 
-## Twelve Core Modules
+## Thirteen Core Modules
 
-The module numbers match the Streamlit sidebar. Newer tools have larger numbers and appear higher in the sidebar.
+The module numbers track launch order. Streamlit page filenames use a leading sidebar sort index plus the module number, so newer tools appear higher in the sidebar while the displayed module number remains stable.
 
 ### 1. Report Grading System
 
@@ -194,6 +195,15 @@ The module numbers match the Streamlit sidebar. Newer tools have larger numbers 
   - **DingTalk alerts**: sends alerts when a high-probability window appears, opens, or closes.
   - **Secret protection**: DingTalk webhook and signing secret live only in GitHub Secrets.
 
+### 13. LLM Budget Tracker
+
+- **Use case**: tracking LLM API balances and subscription-plan spending across DeepSeek, Kimi, MiMo, and ChatGPT.
+- **What it does**:
+  - **Automatic balances**: reads configured API keys from Streamlit Secrets and queries supported providers.
+  - **Manual balances**: keeps manual balance entries for providers that do not expose a supported balance API.
+  - **Login-account labels**: each provider card has an editable account field for an email or phone number, saved in `data/llm_budget_accounts.json`.
+  - **GitHub backup**: when `GITHUB_BACKUP_TOKEN` is configured, saved account labels are synced back to GitHub so redeploys or repository refreshes do not wipe them.
+
 ---
 
 ## Codex Radar Lite
@@ -203,7 +213,7 @@ Codex Radar Lite is the monitoring module behind the 12th toolbox panel.
 - **Workflow**: `.github/workflows/codex-radar.yml` runs hourly.
 - **Judgment**: a rule engine reads public sources first; it does not call a large model by default.
 - **Data files**: `data/codex_radar_current.json`, `data/codex_radar_history.json`, and `data/codex_radar_signals.json`.
-- **Streamlit page**: `pages/00_12、📡_Codex雷达.py`.
+- **Streamlit page**: `pages/01_12_codex.py`.
 - **Static fallback**: `codex_radar_lite/site/index.html`.
 - **DingTalk push**: alerts only for high-probability, open, or closed reset windows.
 

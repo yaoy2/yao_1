@@ -3,7 +3,7 @@ from pathlib import Path
 import unittest
 
 
-PAGE_PATH = Path(__file__).resolve().parents[1] / "pages" / "02_9_palette.py"
+PAGE_PATH = Path(__file__).resolve().parents[1] / "pages" / "04_9_palette.py"
 
 
 def load_page_module():

@@ -22,7 +22,7 @@ def patched_budget_storage(tmpdir):
 
 class BudgetDbReplaceAllRecordsTest(unittest.TestCase):
     def test_budget_page_syncs_backup_to_github_after_writes(self):
-        page_path = Path(__file__).resolve().parents[1] / "pages" / "03_8、💰_预算速记台账.py"
+        page_path = Path(__file__).resolve().parents[1] / "pages" / "05_8_budget.py"
         page_source = page_path.read_text(encoding="utf-8")
 
         self.assertIn("github_backup_sync", page_source)

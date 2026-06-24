@@ -1,5 +1,14 @@
 # 更新日志 (CHANGELOG)
 
+## 2026-06-24
+
+- **重建 Streamlit 侧边栏排序规则**：将 `pages/` 文件名统一改为“侧边栏排序位 + 模块编号”的格式，例如最新的 LLM 余额管理为 `pages/00_13_llm_budget.py`，Codex 雷达为 `pages/01_12_codex.py`。这样新项目会自动显示在旧项目前面，同时 M13、M12 等模块编号保持上线顺序含义。
+- **首页导航与测试同步**：`hello.py` 的工具入口同步到新文件名，并新增测试确认 `TOOLS` 按 `created` 创建时间倒序排列，且 `pages/` 实际文件排序与首页入口一致，防止以后新增项目时再次乱序。
+- **LLM 余额管理增加登录账号保存**：每个 LLM 厂商卡片下方新增“登录账号”输入框和“保存账号”按钮，可填写邮箱或手机号。账号保存到 `data/llm_budget_accounts.json`，不写进代码，也不和 API Key 混在一起。
+- **账号备份链路**：保存账号后会尝试通过已有 `GITHUB_BACKUP_TOKEN` 走 GitHub Contents API 同步 `data/llm_budget_accounts.json`，用于避免线上刷新仓库、重新部署或本地更新文件后账号标签丢失；未配置 token 时仍会保存到当前本地文件。
+- **文档同步**：README 中核心模块从十二个更新为十三个，补充 LLM 余额管理说明，并更正 Codex 雷达当前页面文件名。
+- **验证结果**：`tests.test_home_page`、`tests.test_llm_budget_page`、`tests.test_color_palette_preview`、`tests.test_budget_db`、`tests.test_ding_minutes` 通过；`hello.py`、`utils/llm_budget_accounts.py` 和受影响页面通过 `py_compile`。`tests.test_web_memo_db` 全量测试仍因当前环境缺少既有依赖 `reportlab` 在 PDF 导出用例失败，本次改动未启动 Streamlit。
+
 ## 2026-06-21
 
 - **微信群聊风格继续细化**：圆桌聊天区改为更扁平的桌面聊天窗口，更轻的顶栏、更大面积灰色聊天画布、更柔和的圆角气泡、更弱化的头像和紧凑 provider 状态条，让聊天内容成为主视觉。

@@ -189,7 +189,7 @@ class DingMinutesTest(unittest.TestCase):
         self.assertEqual("分类：学生座谈", payload["records"][0]["remark"])
 
     def test_recorder_page_uses_budget_password_gate_and_new_name(self):
-        page_path = Path(__file__).resolve().parents[1] / "pages" / "00_11、🎙️_Recorder_笔记.py"
+        page_path = Path(__file__).resolve().parents[1] / "pages" / "02_11_recorder.py"
         page_source = page_path.read_text(encoding="utf-8")
 
         self.assertIn("Recorder_笔记", page_source)

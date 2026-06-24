@@ -10,12 +10,14 @@ import streamlit as st
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+from utils import github_backup_sync, llm_budget_accounts
 from utils.llm_budget_providers import PROVIDERS, MANUAL_PROVIDERS
 from utils.ui_theme import render_home_link
 
 # ── 路径 ──
 ROOT = Path(__file__).parent.parent
 RECORDS_PATH = ROOT / "data" / "llm_budget_records.json"
+ACCOUNTS_REPO_PATH = "data/llm_budget_accounts.json"
 
 
 # ── 数据读写 ──
@@ -45,6 +47,32 @@ def save_record(record: dict):
         json.dump(records, f, ensure_ascii=False, indent=2)
 
 
+def sync_llm_budget_accounts_to_github():
+    return github_backup_sync.sync_file_to_github(
+        llm_budget_accounts.ACCOUNTS_PATH,
+        ACCOUNTS_REPO_PATH,
+        "data: sync llm budget login accounts",
+        st.secrets,
+        os.environ,
+    )
+
+
+def render_account_editor(key: str) -> None:
+    current_account = llm_budget_accounts.get_login_account(key)
+    account_value = st.text_input(
+        "登录账号",
+        value=current_account,
+        placeholder="邮箱或手机号",
+        key=f"account_{key}",
+    )
+    if st.button("保存账号", key=f"save_account_{key}"):
+        llm_budget_accounts.save_login_account(key, account_value)
+        sync_result = sync_llm_budget_accounts_to_github()
+        if sync_result.get("ok") or sync_result.get("skipped"):
+            st.success("账号已保存")
+        st.rerun()
+
+
 # ── 页面配置 ──
 st.set_page_config(page_title="LLM 余额管理", page_icon="💰", layout="wide")
 
@@ -65,9 +93,10 @@ with st.sidebar:
     st.divider()
     st.caption("API Key 在 Streamlit Cloud 的 Secrets 中配置：")
     st.code(
-        'DEEPSEEK_API_KEY = "sk-xxx"\nKIMI_API_KEY = "sk-xxx"',
+        'DEEPSEEK_API_KEY = "sk-xxx"\nKIMI_API_KEY = "sk-xxx"\nGITHUB_BACKUP_TOKEN = "ghp_xxx"',
         language="toml",
     )
+    st.caption("登录账号在页面中填写并保存；有 GITHUB_BACKUP_TOKEN 时会同步到 GitHub。")
 
 # ── 自动查询区 ──
 st.header("📊 实时余额")
@@ -77,10 +106,12 @@ cols = st.columns(len(PROVIDERS) + len(MANUAL_PROVIDERS))
 # 自动查询的厂商
 for i, (key, provider) in enumerate(PROVIDERS.items()):
     with cols[i]:
+        st.subheader(provider.display_name)
+        render_account_editor(key)
         api_key = get_api_key(key)
 
         if not api_key:
-            st.warning(f"**{provider.display_name}**\n\n未配置 API Key")
+            st.warning("未配置 API Key")
             st.caption("在 Manage app → Secrets 中添加")
             continue
 
@@ -88,9 +119,9 @@ for i, (key, provider) in enumerate(PROVIDERS.items()):
 
         if result.is_ok:
             if result.available < alert_threshold:
-                st.error(f"**{provider.display_name}** ⚠️ 低余额")
+                st.error("⚠️ 低余额")
             else:
-                st.success(f"**{provider.display_name}**")
+                st.success("余额正常")
 
             st.metric(label="可用余额", value=f"¥{result.available:.2f}")
             if result.granted is not None:
@@ -104,14 +135,16 @@ for i, (key, provider) in enumerate(PROVIDERS.items()):
                 "source": "auto",
             })
         else:
-            st.error(f"**{provider.display_name}**\n\n查询失败: {result.error}")
+            st.error(f"查询失败: {result.error}")
 
         st.link_button(f"🔗 {provider.display_name} 控制台", provider.console_url)
 
 # 手动录入的厂商
 for j, (key, info) in enumerate(MANUAL_PROVIDERS.items()):
     with cols[len(PROVIDERS) + j]:
-        st.warning(f"**{info['name']}** (手动)")
+        st.subheader(info["name"])
+        render_account_editor(key)
+        st.warning("手动录入")
 
         records = load_records()
         last_manual = [r for r in records if r.get("provider") == key and r.get("source") == "manual"]

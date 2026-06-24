@@ -471,7 +471,7 @@ class WebMemoDbTest(unittest.TestCase):
         )
 
     def test_page_uses_today_without_visible_date_input_and_native_three_columns(self):
-        page_path = Path(__file__).resolve().parents[1] / "pages" / "01_10_memos.py"
+        page_path = Path(__file__).resolve().parents[1] / "pages" / "03_10_memos.py"
         page_source = page_path.read_text(encoding="utf-8")
 
         self.assertNotIn("date_input", page_source)
@@ -480,7 +480,7 @@ class WebMemoDbTest(unittest.TestCase):
         self.assertIn("st.columns(3", page_source)
 
     def test_page_exposes_manual_tag_controls(self):
-        page_path = Path(__file__).resolve().parents[1] / "pages" / "01_10_memos.py"
+        page_path = Path(__file__).resolve().parents[1] / "pages" / "03_10_memos.py"
         page_source = page_path.read_text(encoding="utf-8")
 
         self.assertIn("st.multiselect(", page_source)
@@ -490,7 +490,7 @@ class WebMemoDbTest(unittest.TestCase):
         self.assertIn("manual_tags=manual_tags", page_source)
 
     def test_page_syncs_web_memo_backup_to_github_after_writes(self):
-        page_path = Path(__file__).resolve().parents[1] / "pages" / "01_10_memos.py"
+        page_path = Path(__file__).resolve().parents[1] / "pages" / "03_10_memos.py"
         page_source = page_path.read_text(encoding="utf-8")
 
         self.assertIn("github_backup_sync", page_source)
@@ -498,7 +498,7 @@ class WebMemoDbTest(unittest.TestCase):
         self.assertIn("GITHUB_BACKUP_TOKEN", page_source)
 
     def test_page_restores_web_memo_backup_from_github_before_init(self):
-        page_path = Path(__file__).resolve().parents[1] / "pages" / "01_10_memos.py"
+        page_path = Path(__file__).resolve().parents[1] / "pages" / "03_10_memos.py"
         page_source = page_path.read_text(encoding="utf-8")
 
         self.assertIn("restore_web_memo_backup_from_github()", page_source)
@@ -510,7 +510,7 @@ class WebMemoDbTest(unittest.TestCase):
 
     def test_page_merges_remote_web_memos_and_blocks_empty_overwrite(self):
         pages_dir = Path(__file__).resolve().parents[1] / "pages"
-        page_path = next(pages_dir.glob("01_10*.py"))
+        page_path = next(pages_dir.glob("03_10*.py"))
         page_source = page_path.read_text(encoding="utf-8")
 
         self.assertIn("merge_remote_web_memos_from_github()", page_source)
@@ -521,7 +521,7 @@ class WebMemoDbTest(unittest.TestCase):
 
     def test_page_exposes_edit_archive_and_move_controls(self):
         pages_dir = Path(__file__).resolve().parents[1] / "pages"
-        page_path = next(pages_dir.glob("01_10*.py"))
+        page_path = next(pages_dir.glob("03_10*.py"))
         page_source = page_path.read_text(encoding="utf-8")
 
         self.assertIn('button("↑"', page_source)
