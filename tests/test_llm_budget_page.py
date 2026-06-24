@@ -30,6 +30,31 @@ class LLMBudgetAccountsTest(unittest.TestCase):
                     llm_budget_accounts.get_expiration_date("deepseek"),
                 )
 
+    def test_save_provider_profile_keeps_multiple_accounts_for_one_provider(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            accounts_path = Path(tmpdir) / "llm_budget_accounts.json"
+
+            with patch.object(llm_budget_accounts, "ACCOUNTS_PATH", accounts_path):
+                llm_budget_accounts.save_provider_profile("gemini", "a@gmail.com", "26_09_30")
+                llm_budget_accounts.save_provider_profile("gemini", "b@gmail.com", "26_12_31")
+
+                self.assertEqual(["a@gmail.com", "b@gmail.com"], llm_budget_accounts.list_login_accounts("gemini"))
+                self.assertEqual("b@gmail.com", llm_budget_accounts.get_login_account("gemini"))
+                self.assertEqual("26_12_31", llm_budget_accounts.get_expiration_date("gemini"))
+                self.assertEqual("26_09_30", llm_budget_accounts.get_expiration_date("gemini", "a@gmail.com"))
+
+    def test_set_active_login_account_switches_expiration_date(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            accounts_path = Path(tmpdir) / "llm_budget_accounts.json"
+
+            with patch.object(llm_budget_accounts, "ACCOUNTS_PATH", accounts_path):
+                llm_budget_accounts.save_provider_profile("gemini", "a@gmail.com", "26_09_30")
+                llm_budget_accounts.save_provider_profile("gemini", "b@gmail.com", "26_12_31")
+                llm_budget_accounts.set_active_login_account("gemini", "a@gmail.com")
+
+                self.assertEqual("a@gmail.com", llm_budget_accounts.get_login_account("gemini"))
+                self.assertEqual("26_09_30", llm_budget_accounts.get_expiration_date("gemini"))
+
     def test_blank_profile_removes_saved_provider(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             accounts_path = Path(tmpdir) / "llm_budget_accounts.json"
@@ -55,12 +80,15 @@ class LLMBudgetAccountsTest(unittest.TestCase):
 
         self.assertIn("登录账号", page_source)
         self.assertIn("llm_budget_accounts.get_login_account(key)", page_source)
+        self.assertIn("llm_budget_accounts.list_login_accounts(key)", page_source)
         self.assertIn("expiration date: yy_mm_dd", page_source)
-        self.assertIn("llm_budget_accounts.get_expiration_date(key)", page_source)
+        self.assertIn("llm_budget_accounts.get_expiration_date(key, account_value)", page_source)
+        self.assertIn("st.selectbox(", page_source)
+        self.assertIn("accept_new_options=True", page_source)
         self.assertIn("llm_budget_accounts.save_provider_profile(", page_source)
         self.assertIn("account_col, save_col = st.columns([3, 1]", page_source)
         self.assertIn('key=f"account_{key}"', page_source)
-        self.assertIn('key=f"expiration_{key}"', page_source)
+        self.assertIn('key=f"expiration_{key}_{account_value}"', page_source)
         self.assertIn('st.button("保存"', page_source)
         self.assertNotIn('st.button("保存账号"', page_source)
         self.assertIn('key=f"save_account_{key}"', page_source)

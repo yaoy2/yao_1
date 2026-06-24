@@ -59,22 +59,29 @@ def sync_llm_budget_accounts_to_github():
 
 def render_account_editor(key: str) -> None:
     current_account = llm_budget_accounts.get_login_account(key)
-    current_expiration = llm_budget_accounts.get_expiration_date(key)
+    account_options = llm_budget_accounts.list_login_accounts(key)
+    if current_account and current_account not in account_options:
+        account_options.append(current_account)
+    account_index = account_options.index(current_account) if current_account in account_options else None
     account_col, save_col = st.columns([3, 1], vertical_alignment="bottom")
     with account_col:
-        account_value = st.text_input(
+        account_value = st.selectbox(
             "登录账号",
-            value=current_account,
+            options=account_options,
+            index=account_index,
             placeholder="邮箱或手机号",
             key=f"account_{key}",
+            accept_new_options=True,
         )
     with save_col:
         save_clicked = st.button("保存", key=f"save_account_{key}", use_container_width=True)
+    account_value = str(account_value or "").strip()
+    current_expiration = llm_budget_accounts.get_expiration_date(key, account_value)
     expiration_value = st.text_input(
         "expiration date: yy_mm_dd",
         value=current_expiration,
         placeholder="26_09_30",
-        key=f"expiration_{key}",
+        key=f"expiration_{key}_{account_value}",
     )
     if save_clicked:
         llm_budget_accounts.save_provider_profile(
