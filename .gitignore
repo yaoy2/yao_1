@@ -26,3 +26,6 @@ marvis_report*.pdf
 
 # Local run logs
 logs/*.log
+
+# LLM Budget Tracker - 保护 API Key
+config/llm_budget.yaml

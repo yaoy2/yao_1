@@ -1,0 +1,24 @@
+# LLM Budget Tracker 配置文件
+# 复制此文件为 llm_budget.yaml 并填入你的 API Key
+# ⚠️ llm_budget.yaml 已加入 .gitignore，不会提交到仓库
+
+providers:
+  deepseek:
+    api_key: "sk-your-deepseek-key"
+    enabled: true
+
+  kimi:
+    api_key: "sk-your-kimi-key"
+    enabled: true
+
+  # 以下厂商不支持自动查询，只需填显示名称和备注
+  mimo:
+    enabled: true
+    note: "Token Plan"
+
+  chatgpt:
+    enabled: true
+    note: "Plus 订阅"
+
+# 低余额预警阈值（元）
+alert_threshold: 10
