@@ -18,7 +18,7 @@ The project is built around real administrative, teaching-support, competition-g
 - **Online app**: [yao-1.streamlit.app](https://yao-1.streamlit.app/)
 - **Repository**: [github.com/yaoy2/yao_1](https://github.com/yaoy2/yao_1)
 - **Zhongshengshi MVP**: `zhongshengshi/`, a local Next.js subproject for validating the multi-model roundtable flow. The current page now defaults to a freer short-message discussion stream instead of fixed opening/debate speeches.
-- **LLM Budget Tracker**: the 13th tool panel, showing balances for supported LLM providers and keeping editable login-account labels in `data/llm_budget_accounts.json`.
+- **LLM Budget Tracker**: the 13th tool panel, showing balances for supported LLM providers, including Gemini, and keeping editable login-account and expiration-date labels in `data/llm_budget_accounts.json`.
 - **Codex Radar**: the 12th tool panel, reading `data/codex_radar_current.json` to display Codex reset-window status.
 - **Home style**: a dark Command Center cover; tools are listed in reverse launch order, with a fixed 3 x 3 grid per page.
 - **Sidebar navigation**: all tools are ordered from newest to oldest, so recently added modules appear first.
@@ -197,11 +197,12 @@ The module numbers track launch order. Streamlit page filenames use a leading si
 
 ### 13. LLM Budget Tracker
 
-- **Use case**: tracking LLM API balances and subscription-plan spending across DeepSeek, Kimi, MiMo, and ChatGPT.
+- **Use case**: tracking LLM API balances and subscription-plan spending across DeepSeek, Kimi, MiMo, ChatGPT, and Gemini.
 - **What it does**:
   - **Automatic balances**: reads configured API keys from Streamlit Secrets and queries supported providers.
   - **Manual balances**: keeps manual balance entries for providers that do not expose a supported balance API.
-  - **Login-account labels**: each provider card has an editable account field for an email or phone number, saved in `data/llm_budget_accounts.json`.
+  - **Login-account labels**: each provider card has an editable account field for an email or phone number, with the input and save button kept on the same row.
+  - **Expiration labels**: each provider can store a manual `expiration date: yy_mm_dd` value below the account field, saved with the account in `data/llm_budget_accounts.json`.
   - **GitHub backup**: when `GITHUB_BACKUP_TOKEN` is configured, saved account labels are synced back to GitHub so redeploys or repository refreshes do not wipe them.
 
 ---

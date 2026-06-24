@@ -7,6 +7,9 @@ This English change log mirrors the project history maintained in `CHANGELOG_ZH-
 
 ## 2026-06-24
 
+- **LLM Budget account area tightened**: based on the page screenshot feedback, the login-account input and save-account button now share one row instead of wasting vertical space across separate rows.
+- **Expiration date added to LLM account labels**: each provider can now store a manual `expiration date: yy_mm_dd` value under the account field, saved together in `data/llm_budget_accounts.json`; legacy string-only account files still read correctly.
+- **Gemini panel added**: LLM Budget now includes Gemini as a manual provider with account, expiration-date, balance entry, and Google AI Studio link support.
 - **Streamlit sidebar ordering rebuilt**: renamed the `pages/` files to use a stable "sidebar sort index + module number" pattern. The newest LLM Budget page is now `pages/00_13_llm_budget.py`, followed by Codex Radar at `pages/01_12_codex.py`, so newer projects appear above older ones while module numbers still reflect launch order.
 - **Home navigation and tests aligned**: updated `hello.py` page references and added regression coverage to ensure `TOOLS` is sorted by `created` date descending and the actual `pages/` filenames match the homepage order.
 - **LLM Budget login-account labels added**: each provider card now has an editable login-account field and save button for an email or phone number. The values are stored in `data/llm_budget_accounts.json`, separate from code and API keys.

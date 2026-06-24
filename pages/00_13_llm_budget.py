@@ -59,14 +59,29 @@ def sync_llm_budget_accounts_to_github():
 
 def render_account_editor(key: str) -> None:
     current_account = llm_budget_accounts.get_login_account(key)
-    account_value = st.text_input(
-        "登录账号",
-        value=current_account,
-        placeholder="邮箱或手机号",
-        key=f"account_{key}",
+    current_expiration = llm_budget_accounts.get_expiration_date(key)
+    account_col, save_col = st.columns([3, 1], vertical_alignment="bottom")
+    with account_col:
+        account_value = st.text_input(
+            "登录账号",
+            value=current_account,
+            placeholder="邮箱或手机号",
+            key=f"account_{key}",
+        )
+    with save_col:
+        save_clicked = st.button("保存账号", key=f"save_account_{key}", use_container_width=True)
+    expiration_value = st.text_input(
+        "expiration date: yy_mm_dd",
+        value=current_expiration,
+        placeholder="26_09_30",
+        key=f"expiration_{key}",
     )
-    if st.button("保存账号", key=f"save_account_{key}"):
-        llm_budget_accounts.save_login_account(key, account_value)
+    if save_clicked:
+        llm_budget_accounts.save_provider_profile(
+            key,
+            account=account_value,
+            expiration_date=expiration_value,
+        )
         sync_result = sync_llm_budget_accounts_to_github()
         if sync_result.get("ok") or sync_result.get("skipped"):
             st.success("账号已保存")

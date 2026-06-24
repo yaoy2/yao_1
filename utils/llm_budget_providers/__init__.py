@@ -20,6 +20,10 @@ MANUAL_PROVIDERS = {
         "name": "ChatGPT Plus",
         "console_url": "https://chat.openai.com/#settings/subscription",
     },
+    "gemini": {
+        "name": "Gemini",
+        "console_url": "https://aistudio.google.com/",
+    },
 }
 
 __all__ = ["PROVIDERS", "MANUAL_PROVIDERS", "BaseProvider", "BalanceResult"]
