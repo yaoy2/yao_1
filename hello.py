@@ -22,7 +22,7 @@ TOOLS = [
         "desc": "统一管理各家 LLM API / Token Plan 余额，自动查询 DeepSeek、Kimi，手动录入 MiMo 和 ChatGPT。",
         "tag": "AI 工具管理",
         "created": "2026_06_22",
-        "page": "pages/11_0_llm_budget.py",
+        "page": "pages/11_13_llm_budget.py",
         "code": "M13",
         "accent": "cyan",
     },

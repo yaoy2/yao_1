@@ -7,7 +7,6 @@ from datetime import datetime
 from pathlib import Path
 
 import streamlit as st
-import yaml
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -16,21 +15,20 @@ from utils.ui_theme import render_home_link
 
 # ── 路径 ──
 ROOT = Path(__file__).parent.parent
-CONFIG_PATH = ROOT / "config" / "llm_budget.yaml"
 RECORDS_PATH = ROOT / "data" / "llm_budget_records.json"
 
 
 # ── 数据读写 ──
-def load_config() -> dict:
-    if CONFIG_PATH.exists():
-        with open(CONFIG_PATH, encoding="utf-8") as f:
-            return yaml.safe_load(f) or {}
-    return {}
-
-
-def save_config(cfg: dict):
-    with open(CONFIG_PATH, "w", encoding="utf-8") as f:
-        yaml.dump(cfg, f, allow_unicode=True, default_flow_style=False)
+def get_api_key(provider_key: str) -> str:
+    """从 st.secrets 读取 API Key"""
+    secret_map = {
+        "deepseek": "DEEPSEEK_API_KEY",
+        "kimi": "KIMI_API_KEY",
+    }
+    secret_name = secret_map.get(provider_key, "")
+    if secret_name:
+        return st.secrets.get(secret_name, "")
+    return ""
 
 
 def load_records() -> list:
@@ -55,24 +53,20 @@ render_home_link()
 st.title("💰 LLM 余额管理")
 st.caption("各家 LLM API / Token Plan 余额统一管理")
 
-config = load_config()
-alert_threshold = config.get("alert_threshold", 10)
-
-# ── 侧栏：配置 ──
+# ── 侧栏 ──
 with st.sidebar:
     st.header("⚙️ 配置")
-    if not CONFIG_PATH.exists():
-        st.warning("未找到配置文件，请复制模板并填入 API Key")
-        st.code("cp config/llm_budget.yaml.example config/llm_budget.yaml", language="bash")
-    else:
-        st.success("llm_budget.yaml 已加载")
-
-    st.divider()
     alert_threshold = st.number_input(
         "低余额预警阈值（元）",
         min_value=0.0,
-        value=float(alert_threshold),
+        value=10.0,
         step=1.0,
+    )
+    st.divider()
+    st.caption("API Key 在 Streamlit Cloud 的 Secrets 中配置：")
+    st.code(
+        'DEEPSEEK_API_KEY = "sk-xxx"\nKIMI_API_KEY = "sk-xxx"',
+        language="toml",
     )
 
 # ── 自动查询区 ──
@@ -83,16 +77,11 @@ cols = st.columns(len(PROVIDERS) + len(MANUAL_PROVIDERS))
 # 自动查询的厂商
 for i, (key, provider) in enumerate(PROVIDERS.items()):
     with cols[i]:
-        provider_cfg = config.get("providers", {}).get(key, {})
-        api_key = provider_cfg.get("api_key", "")
-        enabled = provider_cfg.get("enabled", True)
-
-        if not enabled:
-            st.info(f"**{provider.display_name}**\n\n未启用")
-            continue
+        api_key = get_api_key(key)
 
         if not api_key:
             st.warning(f"**{provider.display_name}**\n\n未配置 API Key")
+            st.caption("在 Manage app → Secrets 中添加")
             continue
 
         result = provider.query(api_key)
@@ -122,17 +111,7 @@ for i, (key, provider) in enumerate(PROVIDERS.items()):
 # 手动录入的厂商
 for j, (key, info) in enumerate(MANUAL_PROVIDERS.items()):
     with cols[len(PROVIDERS) + j]:
-        provider_cfg = config.get("providers", {}).get(key, {})
-        enabled = provider_cfg.get("enabled", True)
-        note = provider_cfg.get("note", "")
-
-        if not enabled:
-            st.info(f"**{info['name']}**\n\n未启用")
-            continue
-
         st.warning(f"**{info['name']}** (手动)")
-        if note:
-            st.caption(note)
 
         records = load_records()
         last_manual = [r for r in records if r.get("provider") == key and r.get("source") == "manual"]
