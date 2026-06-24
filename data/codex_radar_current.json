@@ -3,7 +3,7 @@
   "probability_24h": 95,
   "probability_48h": 98,
   "reason": "多个 Codex 限额或事故信号叠加，进入高概率关注。",
-  "checked_at": "2026-06-24T04:40:20.670612Z",
+  "checked_at": "2026-06-24T08:35:05.910150Z",
   "alert_level": "push",
   "signals": [
     {
@@ -46,26 +46,13 @@
       ]
     },
     {
-      "id": "ff160ee11287a9b4",
-      "source_id": "openai_status_history",
-      "source_name": "OpenAI Status Incidents",
-      "title": "Increased latency for Codex compaction for a subset of users",
-      "summary": "Increased latency for Codex compaction for a subset of users resolved All impacted services have now fully recovered. We have identified that users are experiencing elevated latency for the impacted services. We are working on implementing a mitigation.",
-      "url": "https://status.openai.com/api/v2/incidents.json",
-      "observed_at": "2026-06-04T04:37:16Z",
-      "weight": 40,
-      "tags": [
-        "codex"
-      ]
-    },
-    {
-      "id": "922e98b59437abe1",
+      "id": "e39474f6b9eaa151",
       "source_id": "openai_community",
       "source_name": "OpenAI Community Forum",
       "title": "Source fetch failed",
       "summary": "HTTPError: 429 Client Error: Too Many Requests for url: https://community.openai.com/search.json?q=codex+limit&order=latest",
       "url": "https://community.openai.com/search.json?q=codex+limit&order=latest",
-      "observed_at": "2026-06-24T04:40:20.669833Z",
+      "observed_at": "2026-06-24T08:35:05.909284Z",
       "weight": 0,
       "tags": [
         "fetch_error"
