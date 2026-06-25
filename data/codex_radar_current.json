@@ -3,7 +3,7 @@
   "probability_24h": 95,
   "probability_48h": 98,
   "reason": "多个 Codex 限额或事故信号叠加，进入高概率关注。",
-  "checked_at": "2026-06-25T08:32:13.089253Z",
+  "checked_at": "2026-06-25T11:58:11.466645Z",
   "alert_level": "push",
   "signals": [
     {
@@ -46,27 +46,13 @@
       ]
     },
     {
-      "id": "005c1aa6776a651a",
-      "source_id": "openai_status_components",
-      "source_name": "OpenAI Status Components",
-      "title": "Codex Web: degraded_performance",
-      "summary": "Component 'Codex Web' status: degraded_performance",
-      "url": "https://status.openai.com/",
-      "observed_at": "2026-06-25T08:32:12.587718Z",
-      "weight": 25,
-      "tags": [
-        "codex",
-        "degraded"
-      ]
-    },
-    {
-      "id": "94c4da2f820b4ca8",
+      "id": "41f470286e52426a",
       "source_id": "openai_community",
       "source_name": "OpenAI Community Forum",
       "title": "Source fetch failed",
       "summary": "HTTPError: 429 Client Error: Too Many Requests for url: https://community.openai.com/search.json?q=codex+limit&order=latest",
       "url": "https://community.openai.com/search.json?q=codex+limit&order=latest",
-      "observed_at": "2026-06-25T08:32:13.088302Z",
+      "observed_at": "2026-06-25T11:58:11.465620Z",
       "weight": 0,
       "tags": [
         "fetch_error"
