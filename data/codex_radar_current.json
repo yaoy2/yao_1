@@ -3,7 +3,7 @@
   "probability_24h": 95,
   "probability_48h": 98,
   "reason": "多个 Codex 限额或事故信号叠加，进入高概率关注。",
-  "checked_at": "2026-06-25T11:58:11.466645Z",
+  "checked_at": "2026-06-25T15:18:49.465990Z",
   "alert_level": "push",
   "signals": [
     {
@@ -46,13 +46,26 @@
       ]
     },
     {
-      "id": "41f470286e52426a",
+      "id": "6c48565148077690",
+      "source_id": "reddit_openai",
+      "source_name": "Reddit r/OpenAI",
+      "title": "Codex says I already used 94% of my limit on first launch. I haven’t coded anything yet. Bug or hidden usage?",
+      "summary": "Codex says I already used 94% of my limit on first launch. I haven’t coded anything yet. Bug or hidden usage? ",
+      "url": "https://www.reddit.com/r/OpenAI/new/.rss?limit=10",
+      "observed_at": "2026-06-25T14:24:04+00:00",
+      "weight": 15,
+      "tags": [
+        "codex"
+      ]
+    },
+    {
+      "id": "d32a0f7e1caa3c35",
       "source_id": "openai_community",
       "source_name": "OpenAI Community Forum",
       "title": "Source fetch failed",
       "summary": "HTTPError: 429 Client Error: Too Many Requests for url: https://community.openai.com/search.json?q=codex+limit&order=latest",
       "url": "https://community.openai.com/search.json?q=codex+limit&order=latest",
-      "observed_at": "2026-06-25T11:58:11.465620Z",
+      "observed_at": "2026-06-25T15:18:49.464681Z",
       "weight": 0,
       "tags": [
         "fetch_error"
