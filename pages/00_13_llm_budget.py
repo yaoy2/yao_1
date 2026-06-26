@@ -10,9 +10,12 @@ import streamlit as st
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from utils import github_backup_sync, llm_budget_accounts
+from utils import budget_auth, github_backup_sync, llm_budget_accounts
 from utils.llm_budget_providers import PROVIDERS, MANUAL_PROVIDERS
 from utils.ui_theme import render_home_link
+
+# ── 页面配置（必须在任何 st 命令之前）──
+st.set_page_config(page_title="LLM 余额管理", page_icon="💰", layout="wide")
 
 # ── 路径 ──
 ROOT = Path(__file__).parent.parent
@@ -95,8 +98,34 @@ def render_account_editor(key: str) -> None:
         st.rerun()
 
 
-# ── 页面配置 ──
-st.set_page_config(page_title="LLM 余额管理", page_icon="💰", layout="wide")
+# ── 密码验证 ──
+def require_llm_budget_auth():
+    configured_password = budget_auth.get_budget_password(st.secrets, os.environ)
+    if not configured_password:
+        st.title("💰 LLM 余额管理")
+        st.warning("密码还没有配置。请在 Streamlit secrets 中设置 budget_password，或在本机设置 BUDGET_PASSWORD。")
+        st.stop()
+
+    if st.session_state.get("llm_budget_authenticated"):
+        return
+
+    st.title("💰 LLM 余额管理")
+    st.info("请输入密码后查看 LLM 余额。")
+    with st.form("llm_budget_auth_form"):
+        input_password = st.text_input("密码", type="password")
+        submitted = st.form_submit_button("进入", use_container_width=True)
+
+    if submitted:
+        if budget_auth.is_budget_password_valid(input_password, configured_password):
+            st.session_state["llm_budget_authenticated"] = True
+            st.rerun()
+        else:
+            st.error("密码不正确，请重新输入。")
+
+    st.stop()
+
+
+require_llm_budget_auth()
 
 render_home_link()
 
