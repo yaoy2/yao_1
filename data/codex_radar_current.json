@@ -3,7 +3,7 @@
   "probability_24h": 95,
   "probability_48h": 98,
   "reason": "多个 Codex 限额或事故信号叠加，进入高概率关注。",
-  "checked_at": "2026-06-26T19:07:56.949460Z",
+  "checked_at": "2026-06-26T20:57:22.583635Z",
   "alert_level": "push",
   "signals": [
     {
@@ -60,13 +60,13 @@
       ]
     },
     {
-      "id": "4a0ea7e2f3d3f846",
+      "id": "019ac1e5521b177c",
       "source_id": "openai_status_components",
       "source_name": "OpenAI Status Components",
       "title": "Codex Web: degraded_performance",
       "summary": "Component 'Codex Web' status: degraded_performance",
       "url": "https://status.openai.com/",
-      "observed_at": "2026-06-26T19:07:56.379805Z",
+      "observed_at": "2026-06-26T20:57:22.080486Z",
       "weight": 25,
       "tags": [
         "codex",
@@ -74,13 +74,13 @@
       ]
     },
     {
-      "id": "28648828e0719d1b",
+      "id": "573e3a0306b3f962",
       "source_id": "openai_status_components",
       "source_name": "OpenAI Status Components",
       "title": "Codex API: degraded_performance",
       "summary": "Component 'Codex API' status: degraded_performance",
       "url": "https://status.openai.com/",
-      "observed_at": "2026-06-26T19:07:56.379805Z",
+      "observed_at": "2026-06-26T20:57:22.080486Z",
       "weight": 25,
       "tags": [
         "codex",
@@ -88,13 +88,13 @@
       ]
     },
     {
-      "id": "89eb655ae39a7412",
+      "id": "dad538c23ef26ba7",
       "source_id": "openai_community",
       "source_name": "OpenAI Community Forum",
       "title": "Source fetch failed",
       "summary": "HTTPError: 429 Client Error: Too Many Requests for url: https://community.openai.com/search.json?q=codex+limit&order=latest",
       "url": "https://community.openai.com/search.json?q=codex+limit&order=latest",
-      "observed_at": "2026-06-26T19:07:56.948461Z",
+      "observed_at": "2026-06-26T20:57:22.582686Z",
       "weight": 0,
       "tags": [
         "fetch_error"
