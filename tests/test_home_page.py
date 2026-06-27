@@ -83,8 +83,10 @@ class HomePageTest(unittest.TestCase):
         budget_tool = next(tool for tool in tools if tool["title"] == "预算速记台账")
         self.assertTrue(budget_tool["locked"])
         blocked_codes = {tool["code"] for tool in tools if tool.get("blocked")}
-        self.assertEqual({"M02", "M03", "M04", "M05"}, blocked_codes)
+        self.assertEqual({"M01", "M02", "M03", "M04", "M05"}, blocked_codes)
         self.assertEqual("报告评分", tools[-1]["title"])
+        self.assertEqual("pages/12_1_scoring❌.py", tools[-1]["page"])
+        self.assertTrue(tools[-1]["blocked"])
         self.assertEqual(13, len(tools))
         self.assertEqual(9, len(tools[:9]))
 
@@ -115,8 +117,8 @@ class HomePageTest(unittest.TestCase):
 
         self.assertEqual("M13", tools[0]["code"])
         self.assertEqual("M01", tools[-1]["code"])
-        self.assertEqual("M01", homepage_pages[0][-1]["code"])
-        self.assertEqual(["M05", "M04", "M03", "M02"], [tool["code"] for tool in homepage_pages[1]])
+        self.assertEqual("M06", homepage_pages[0][-1]["code"])
+        self.assertEqual(["M05", "M04", "M03", "M02", "M01"], [tool["code"] for tool in homepage_pages[1]])
         self.assertTrue(all(not tool.get("blocked") for tool in homepage_pages[0]))
         self.assertTrue(all(tool.get("blocked") for tool in homepage_pages[1]))
 

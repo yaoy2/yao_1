@@ -133,12 +133,13 @@ TOOLS = [
     },
     {
         "title": "报告评分",
-        "desc": "辅助检查材料结构、表达和完成度，适合初稿打磨与批量评阅前的预处理。",
-        "tag": "材料质量",
+        "desc": "已弃用：旧版提示词评分流程过期，后续改用 DeepSeek 网页版完成评分。",
+        "tag": "已弃用",
         "created": "2025_12_12",
-        "page": "pages/12_1_scoring.py",
+        "page": "pages/12_1_scoring❌.py",
         "code": "M01",
         "accent": "amber",
+        "blocked": True,
     },
 ]
 
