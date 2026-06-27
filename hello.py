@@ -28,12 +28,13 @@ TOOLS = [
     },
     {
         "title": "Codex雷达",
-        "desc": "每小时观察 Codex 重置窗口信号，展示当前概率，并在高概率或窗口变化时推送钉钉。",
-        "tag": "AI 工具监控",
+        "desc": "已弃用：实际意义不大，偏投机取巧，后续不再作为推荐工具使用。",
+        "tag": "已弃用",
         "created": "2026_06_05",
-        "page": "pages/01_12_codex.py",
+        "page": "pages/01_12_codex❌.py",
         "code": "M12",
         "accent": "magenta",
+        "blocked": True,
     },
     {
         "title": "Recorder_笔记",
