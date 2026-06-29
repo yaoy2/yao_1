@@ -165,36 +165,15 @@ def sort_tool_key(tool):
 
 
 def get_homepage_tools(tools):
-    visible_first = sorted(
-        [tool for tool in tools if not tool.get("blocked")],
-        key=sort_tool_key,
-        reverse=True,
-    )
-    deferred = sorted(
-        [tool for tool in tools if tool.get("blocked")],
-        key=sort_tool_key,
-        reverse=True,
-    )
-    return visible_first + deferred
+    return sorted(tools, key=sort_tool_key, reverse=True)
 
 
 def get_homepage_pages(tools, page_size=9):
-    visible_first = sorted(
-        [tool for tool in tools if not tool.get("blocked")],
-        key=sort_tool_key,
-        reverse=True,
-    )
-    deferred = sorted(
-        [tool for tool in tools if tool.get("blocked")],
-        key=sort_tool_key,
-        reverse=True,
-    )
+    ordered_tools = get_homepage_tools(tools)
     pages = [
-        visible_first[index : index + page_size]
-        for index in range(0, len(visible_first), page_size)
+        ordered_tools[index : index + page_size]
+        for index in range(0, len(ordered_tools), page_size)
     ]
-    if deferred:
-        pages.append(deferred)
     return pages or [[]]
 
 

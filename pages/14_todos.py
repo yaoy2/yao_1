@@ -260,6 +260,28 @@ def _escape_html(value):
     )
 
 
+def save_todo_due_fields(record_id):
+    new_due_date = st.session_state.get(f"todo_due_date_{record_id}")
+    new_due_time = st.session_state.get(f"todo_due_time_{record_id}")
+    due_date_val = new_due_date.isoformat() if new_due_date else ""
+    due_time_val = new_due_time.strftime("%H:%M") if new_due_time else ""
+    todo_db.update_todo(record_id, due_date=due_date_val, due_time=due_time_val)
+    sync_todo_backup_to_github()
+
+
+def delete_todo_record(record_id):
+    todo_db.delete_todo(record_id)
+    sync_todo_backup_to_github()
+
+
+def toggle_todo_done(record_id, checkbox_key):
+    if st.session_state.get(checkbox_key):
+        todo_db.complete_todo(record_id)
+    else:
+        todo_db.reopen_todo(record_id)
+    sync_todo_backup_to_github()
+
+
 def render_todo_record(record):
     done = record.get("status") == "done"
     stored_due_date = _date_value(record.get("due_date"))
@@ -271,20 +293,15 @@ def render_todo_record(record):
         vertical_alignment="top",
     )
     with check_col:
+        checkbox_key = f"todo_done_{record['id']}_{record.get('status')}"
         checked = st.checkbox(
             "完成",
             value=done,
-            key=f"todo_done_{record['id']}_{record.get('status')}",
+            key=checkbox_key,
             label_visibility="collapsed",
+            on_change=toggle_todo_done,
+            args=(record["id"], checkbox_key),
         )
-    if checked and not done:
-        todo_db.complete_todo(record["id"])
-        sync_todo_backup_to_github()
-        st.rerun()
-    if not checked and done:
-        todo_db.reopen_todo(record["id"])
-        sync_todo_backup_to_github()
-        st.rerun()
 
     with body_col:
         css_class = "todo-line done" if done else "todo-line"
@@ -325,14 +342,22 @@ def render_todo_record(record):
             label_visibility="collapsed",
         )
     with save_col:
-        st.markdown(
-            f'<a href="?action=save_{record["id"]}" class="todo-icon-btn todo-save-btn" title="保存截止日期/时间">&#10003;</a>',
-            unsafe_allow_html=True,
+        st.button(
+            "✓",
+            key=f"save_due_{record['id']}",
+            help="保存截止日期/时间",
+            use_container_width=True,
+            on_click=save_todo_due_fields,
+            args=(record["id"],),
         )
     with delete_col:
-        st.markdown(
-            f'<a href="?action=delete_{record["id"]}" class="todo-icon-btn todo-delete-btn" title="删除这条待办">&#10005;</a>',
-            unsafe_allow_html=True,
+        st.button(
+            "×",
+            key=f"delete_todo_{record['id']}",
+            help="删除这条待办",
+            use_container_width=True,
+            on_click=delete_todo_record,
+            args=(record["id"],),
         )
 
     st.markdown('<div class="todo-row-separator"></div>', unsafe_allow_html=True)
@@ -344,30 +369,6 @@ render_home_link()
 restore_todo_backup_from_github()
 todo_db.init_db()
 merge_remote_todos_from_github()
-
-action = st.query_params.get("action")
-if action:
-    if action.startswith("save_"):
-        record_id = int(action[len("save_"):])
-        new_due_date = st.session_state.get(f"todo_due_date_{record_id}")
-        new_due_time = st.session_state.get(f"todo_due_time_{record_id}")
-        stored = next((r for r in todo_db.get_todos(view="all") if r["id"] == record_id), None)
-        if stored is not None:
-            stored_dd = _date_value(stored.get("due_date"))
-            stored_dt = _time_value(stored.get("due_time"))
-            if (new_due_date or None) != (stored_dd or None) or (new_due_time or None) != (stored_dt or None):
-                due_date_val = new_due_date.isoformat() if new_due_date else ""
-                due_time_val = new_due_time.strftime("%H:%M") if new_due_time else ""
-                todo_db.update_todo(record_id, due_date=due_date_val, due_time=due_time_val)
-                sync_todo_backup_to_github()
-        st.query_params.clear()
-        st.rerun()
-    elif action.startswith("delete_"):
-        record_id = int(action[len("delete_"):])
-        todo_db.delete_todo(record_id)
-        sync_todo_backup_to_github()
-        st.query_params.clear()
-        st.rerun()
 
 records_all = todo_db.get_todos(view="all")
 active_count = len([record for record in records_all if not record.get("is_archived")])

@@ -68,7 +68,8 @@ class HomePageTest(unittest.TestCase):
         self.assertEqual("pages/14_todos.py", tools[0]["page"])
         self.assertTrue(tools[0]["locked"])
         self.assertEqual("M13", tools[1]["code"])
-        self.assertEqual("M11", tools[2]["code"])
+        self.assertEqual("M12", tools[2]["code"])
+        self.assertTrue(tools[2]["blocked"])
         blocked_codes = {tool["code"] for tool in tools if tool.get("blocked")}
         self.assertEqual({"M01", "M02", "M03", "M04", "M05", "M12"}, blocked_codes)
         self.assertEqual("M01", tools[-1]["code"])
@@ -88,17 +89,20 @@ class HomePageTest(unittest.TestCase):
         self.assertEqual(sorted(active_sort_keys, reverse=True), active_sort_keys)
         self.assertFalse(Path(tools[0]["page"]).name.startswith("00_"))
 
-    def test_homepage_defers_red_x_cards_to_later_page(self):
+    def test_homepage_keeps_blocked_cards_in_metadata_order(self):
         _page_source, namespace = load_homepage_bits()
         tools = namespace["get_homepage_tools"](namespace["TOOLS"])
         homepage_pages = namespace["get_homepage_pages"](namespace["TOOLS"])
 
         self.assertEqual("M14", tools[0]["code"])
-        self.assertEqual("M01", tools[-1]["code"])
-        self.assertEqual("M06", homepage_pages[0][-1]["code"])
-        self.assertEqual(["M12", "M05", "M04", "M03", "M02", "M01"], [tool["code"] for tool in homepage_pages[1]])
-        self.assertTrue(all(not tool.get("blocked") for tool in homepage_pages[0]))
-        self.assertTrue(all(tool.get("blocked") for tool in homepage_pages[1]))
+        self.assertEqual("M13", tools[1]["code"])
+        self.assertEqual("M12", tools[2]["code"])
+        self.assertTrue(tools[2]["blocked"])
+        self.assertEqual("M06", tools[8]["code"])
+        self.assertEqual("M05", tools[9]["code"])
+        self.assertTrue(tools[9]["blocked"])
+        self.assertEqual(["M14", "M13", "M12", "M11", "M10", "M09", "M08", "M07", "M06"], [tool["code"] for tool in homepage_pages[0]])
+        self.assertEqual(["M05", "M04", "M03", "M02", "M01"], [tool["code"] for tool in homepage_pages[1]])
 
 
 if __name__ == "__main__":

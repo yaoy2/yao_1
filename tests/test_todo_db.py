@@ -54,6 +54,22 @@ class TodoDbTest(unittest.TestCase):
                 self.assertEqual(1, len(todo_db.get_todos(keyword="15:00")))
                 self.assertEqual([], todo_db.get_todos(keyword="不存在"))
 
+    def test_update_todo_persists_due_date_time_to_database_and_backup(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patched_todo_storage(tmpdir) as tmp_path:
+                todo_db.init_db()
+                record_id = todo_db.add_todo("更新截止时间", record_date="2026-06-29")
+
+                changed = todo_db.update_todo(record_id, due_date="2026-07-02", due_time="16:30")
+                record = todo_db.get_todos(view="all")[0]
+                backup_text = (tmp_path / "todo_items_backup.md").read_text(encoding="utf-8")
+
+        self.assertEqual(1, changed)
+        self.assertEqual("2026-07-02", record["due_date"])
+        self.assertEqual("16:30", record["due_time"])
+        self.assertIn("2026-07-02", backup_text)
+        self.assertIn("16:30", backup_text)
+
     def test_complete_todo_archives_without_deleting(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             with patched_todo_storage(tmpdir):
@@ -243,8 +259,15 @@ class TodoDbTest(unittest.TestCase):
         self.assertIn("delete_col", page_source)
         self.assertIn("todo_due_date_", page_source)
         self.assertIn("todo_due_time_", page_source)
-        self.assertIn("action=save_", page_source)
-        self.assertIn("action=delete_", page_source)
+        self.assertIn("save_todo_due_fields", page_source)
+        self.assertIn("delete_todo_record", page_source)
+        self.assertIn("toggle_todo_done", page_source)
+        self.assertIn("on_click=save_todo_due_fields", page_source)
+        self.assertIn("on_click=delete_todo_record", page_source)
+        self.assertIn("on_change=toggle_todo_done", page_source)
+        self.assertNotIn("action=save_", page_source)
+        self.assertNotIn("action=delete_", page_source)
+        self.assertNotIn("st.query_params.get(\"action\")", page_source)
         self.assertIn("todo-icon-btn", page_source)
         self.assertIn("todo-save-btn", page_source)
         self.assertIn("todo-delete-btn", page_source)

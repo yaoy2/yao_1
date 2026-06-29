@@ -47,8 +47,7 @@ def render_sidebar_nav() -> None:
     tools = _load_homepage_tools()
     if not tools:
         return
-    active = sorted([tool for tool in tools if not tool.get("blocked")], key=_nav_sort_key, reverse=True)
-    blocked = sorted([tool for tool in tools if tool.get("blocked")], key=_nav_sort_key, reverse=True)
+    ordered_tools = sorted(tools, key=_nav_sort_key, reverse=True)
 
     def item_html(tool):
         title = escape(str(tool.get("title", "")))
@@ -64,11 +63,17 @@ def render_sidebar_nav() -> None:
             "</a>"
         )
 
-    active_html = "".join(item_html(tool) for tool in active)
-    blocked_html = "".join(item_html(tool) for tool in blocked)
+    nav_html = "".join(item_html(tool) for tool in ordered_tools)
     st.sidebar.markdown(
         f"""
         <style>
+        [data-testid="stSidebar"] {{
+            background: linear-gradient(180deg, #07111f 0%, #05090f 100%) !important;
+            border-right: 1px solid rgba(115, 238, 255, .18) !important;
+        }}
+        [data-testid="stSidebar"] * {{
+            color: rgba(234, 247, 255, .86);
+        }}
         [data-testid="stSidebar"] [data-testid="stSidebarNav"] {{
             display: none;
         }}
@@ -131,10 +136,8 @@ def render_sidebar_nav() -> None:
         }}
         </style>
         <div class="custom-nav-title">YaoYao 工具箱</div>
-        <div class="custom-nav-section">常用入口</div>
-        {active_html}
-        <div class="custom-nav-section">暂不开放</div>
-        {blocked_html}
+        <div class="custom-nav-section">按需排序</div>
+        {nav_html}
         """,
         unsafe_allow_html=True,
     )
