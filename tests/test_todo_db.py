@@ -74,6 +74,93 @@ class TodoDbTest(unittest.TestCase):
         self.assertTrue(archived_records[0]["is_archived"])
         self.assertTrue(archived_records[0]["completed_at"])
 
+    def test_all_view_keeps_pending_above_done_then_newest_first(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patched_todo_storage(tmpdir):
+                todo_db.init_db()
+                old_id = todo_db.add_todo("较早登记的未完成", record_date="2026-06-29")
+                newer_id = todo_db.add_todo("较晚登记的未完成", record_date="2026-06-29")
+                todo_db.complete_todo(newer_id)
+
+                records = todo_db.get_todos(view="all")
+
+        self.assertEqual(["较早登记的未完成", "较晚登记的未完成"], [record["content"] for record in records])
+        self.assertEqual("pending", records[0]["status"])
+        self.assertEqual("done", records[1]["status"])
+        self.assertEqual(old_id, records[0]["id"])
+
+    def test_list_view_hides_archived_pending_split_parents(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patched_todo_storage(tmpdir):
+                todo_db.init_db()
+                parent_id = todo_db.add_todo("# 今日重点待办\n- 第一条\n- 第二条", record_date="2026-06-29")
+                todo_db.split_multiline_todos()
+                first_id = next(record["id"] for record in todo_db.get_todos(view="active") if record["content"] == "第一条")
+                todo_db.complete_todo(first_id)
+
+                list_records = todo_db.get_todos(view="list")
+                all_records = todo_db.get_todos(view="all")
+
+        self.assertEqual(["第二条", "第一条"], [record["content"] for record in list_records])
+        self.assertIn(parent_id, [record["id"] for record in all_records])
+        self.assertNotIn(parent_id, [record["id"] for record in list_records])
+
+    def test_add_todos_from_text_splits_markdown_list_and_skips_heading(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patched_todo_storage(tmpdir):
+                todo_db.init_db()
+                ids = todo_db.add_todos_from_text(
+                    """
+                    # 今日重点待办
+                    - 处理高静交际费 300 元
+                    - 处理眉山打车费 400 元
+                    """
+                )
+                records = todo_db.get_todos(view="all")
+
+        self.assertEqual(2, len(ids))
+        self.assertEqual(["处理眉山打车费 400 元", "处理高静交际费 300 元"], [record["content"] for record in records])
+        self.assertNotIn("今日重点待办", [record["content"] for record in records])
+
+    def test_init_db_splits_existing_multiline_todo_and_hides_original(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patched_todo_storage(tmpdir) as tmp_path:
+                (tmp_path / "todo_items_backup.md").write_text(
+                    "\n".join(
+                        [
+                            "# 待办清单备份",
+                            "",
+                            "## TODO-7",
+                            "",
+                            "- 发布日期：2026-06-29",
+                            "- 截止日期：2026-06-30",
+                            "- 截止时间：13:20",
+                            "- 状态：pending",
+                            "- 归档：否",
+                            "- 完成时间：",
+                            "- 创建时间：2026-06-29 09:00:00",
+                            "- 更新时间：2026-06-29 09:00:00",
+                            "",
+                            "### 内容",
+                            "",
+                            "# 今日重点待办",
+                            "- 第一条",
+                            "- 第二条",
+                            "",
+                        ]
+                    ),
+                    encoding="utf-8",
+                )
+
+                todo_db.init_db()
+                active_records = todo_db.get_todos(view="active")
+                all_records = todo_db.get_todos(view="all")
+
+        self.assertEqual(["第二条", "第一条"], [record["content"] for record in active_records])
+        self.assertEqual(3, len(all_records))
+        self.assertEqual(1, sum(1 for record in all_records if record["content"].startswith("# 今日重点待办")))
+        self.assertTrue(next(record for record in all_records if record["content"].startswith("# 今日重点待办"))["is_archived"])
+
     def test_init_db_restores_records_from_markdown_backup_when_empty(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             with patched_todo_storage(tmpdir) as tmp_path:
@@ -138,22 +225,24 @@ class TodoDbTest(unittest.TestCase):
         self.assertIn("time_input", page_source)
         self.assertIn("keyword", page_source)
         self.assertIn("complete_todo", page_source)
-        self.assertIn("归档", page_source)
+        self.assertIn("add_todos_from_text", page_source)
         self.assertIn("restore_todo_backup_from_github()", page_source)
         self.assertIn("merge_remote_todos_from_github()", page_source)
         self.assertIn("sync_todo_backup_to_github()", page_source)
 
-    def test_page_places_due_fields_in_right_column_not_under_text(self):
+    def test_page_renders_single_list_without_view_switch_or_inline_due_editors(self):
         page_path = Path(__file__).resolve().parents[1] / "pages" / "14_todos.py"
         page_source = page_path.read_text(encoding="utf-8")
 
-        self.assertIn("due_date_col", page_source)
-        self.assertIn("due_time_col", page_source)
-        self.assertIn("save_due", page_source)
-        self.assertIn("todo_due_date_", page_source)
-        self.assertIn("todo_due_time_", page_source)
+        self.assertIn('todo_db.get_todos(keyword=keyword, view="list")', page_source)
+        self.assertIn("_created_time(record)", page_source)
+        self.assertNotIn('st.radio("视图"', page_source)
+        self.assertNotIn("due_date_col", page_source)
+        self.assertNotIn("due_time_col", page_source)
+        self.assertNotIn("save_due", page_source)
+        self.assertNotIn("todo_due_date_", page_source)
+        self.assertNotIn("todo_due_time_", page_source)
         self.assertNotIn("截止：{_escape_html(due_label)}", page_source)
-        self.assertNotIn("due_label = ", page_source)
 
 
 if __name__ == "__main__":

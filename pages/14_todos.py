@@ -140,7 +140,7 @@ def apply_style():
             display: flex;
             gap: .75rem;
             align-items: flex-start;
-            padding: .25rem .2rem .45rem;
+            padding: .18rem .2rem .35rem;
         }
         .todo-line.done .todo-content {
             text-decoration: line-through;
@@ -151,6 +151,10 @@ def apply_style():
             font-weight: 650;
             color: #182230;
             line-height: 1.45;
+        }
+        .todo-content.done {
+            text-decoration: line-through;
+            color: #98A2B3;
         }
         .todo-meta {
             display: flex;
@@ -168,8 +172,21 @@ def apply_style():
         }
         .todo-row-separator {
             height: 1px;
-            margin: .32rem 0 .58rem;
+            margin: .22rem 0 .46rem;
             background: rgba(24,34,48,.08);
+        }
+        .todo-date-stack {
+            color: #475467;
+            font-size: .86rem;
+            line-height: 1.45;
+            text-align: right;
+            white-space: nowrap;
+            padding-top: .2rem;
+        }
+        .todo-date-stack span {
+            display: block;
+            color: #98A2B3;
+            font-size: .78rem;
         }
         </style>
         """,
@@ -195,10 +212,30 @@ def _time_value(value):
         return None
 
 
-def render_todo_record(record, archived=False):
+def _created_time(record):
+    created_at = str(record.get("created_at") or "")
+    try:
+        return datetime.strptime(created_at, "%Y-%m-%d %H:%M:%S").strftime("%H:%M")
+    except ValueError:
+        return ""
+
+
+def _due_label(record):
+    due_date = str(record.get("due_date") or "").strip()
+    due_time = str(record.get("due_time") or "").strip()
+    if due_date and due_time:
+        return f"截止 {due_date} {due_time}"
+    if due_date:
+        return f"截止 {due_date}"
+    if due_time:
+        return f"截止 {due_time}"
+    return ""
+
+
+def render_todo_record(record):
     done = record.get("status") == "done"
-    check_col, body_col, due_date_col, due_time_col, action_col = st.columns(
-        [0.10, 1.35, 0.34, 0.28, 0.18],
+    check_col, body_col, created_col, action_col = st.columns(
+        [0.08, 1.35, 0.34, 0.18],
         gap="small",
         vertical_alignment="top",
     )
@@ -208,56 +245,46 @@ def render_todo_record(record, archived=False):
             value=done,
             key=f"todo_done_{record['id']}_{record.get('status')}",
             label_visibility="collapsed",
-            disabled=done,
         )
     if checked and not done:
         todo_db.complete_todo(record["id"])
         sync_todo_backup_to_github()
         st.rerun()
+    if not checked and done:
+        todo_db.reopen_todo(record["id"])
+        sync_todo_backup_to_github()
+        st.rerun()
 
     with body_col:
         css_class = "todo-line done" if done else "todo-line"
+        content_class = "todo-content done" if done else "todo-content"
+        due_label = _due_label(record)
+        due_html = f'<span class="todo-pill">{_escape_html(due_label)}</span>' if due_label else ""
         st.markdown(
             f"""
             <div class="{css_class}">
               <div>
-                <div class="todo-content">{_escape_html(record.get('content', ''))}</div>
+                <div class="{content_class}">{_escape_html(record.get('content', ''))}</div>
                 <div class="todo-meta">
-                  <span class="todo-pill">发布：{_escape_html(record.get('record_date', ''))}</span>
-                  <span class="todo-pill">{_escape_html(record.get('status', 'pending'))}</span>
+                  {due_html}
                 </div>
               </div>
             </div>
             """,
             unsafe_allow_html=True,
         )
-    with due_date_col:
-        edited_due_date = st.date_input(
-            "截止日期",
-            value=_date_value(record.get("due_date")),
-            key=f"todo_due_date_{record['id']}",
-            disabled=done,
-        )
-    with due_time_col:
-        edited_due_time = st.time_input(
-            "截止时间",
-            value=_time_value(record.get("due_time")),
-            key=f"todo_due_time_{record['id']}",
-            step=900,
-            disabled=done,
+    with created_col:
+        st.markdown(
+            f"""
+            <div class="todo-date-stack">
+              {_escape_html(record.get('record_date', ''))}
+              <span>{_escape_html(_created_time(record))}</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
     with action_col:
-        save_due = st.button(
-            "保存",
-            key=f"save_due_{record['id']}",
-            use_container_width=True,
-            disabled=done,
-        )
-        if save_due:
-            todo_db.update_todo(record["id"], due_date=edited_due_date, due_time=edited_due_time)
-            sync_todo_backup_to_github()
-            st.rerun()
-        if archived and st.button("恢复", key=f"todo_reopen_{record['id']}", use_container_width=True):
+        if done and st.button("恢复", key=f"todo_reopen_{record['id']}", use_container_width=True):
             todo_db.reopen_todo(record["id"])
             sync_todo_backup_to_github()
             st.rerun()
@@ -289,7 +316,7 @@ st.markdown(
     f"""
     <div>
       <div class="todo-title">✓ 待办清单</div>
-      <div class="todo-subtitle">新增在上，勾选即完成；本地备份和 GitHub 同步一起兜底。</div>
+      <div class="todo-subtitle">新增在上，勾选即完成；完成项自动沉到未完成待办下面。</div>
     </div>
     """,
     unsafe_allow_html=True,
@@ -314,7 +341,7 @@ with st.container(border=True):
             submitted = st.form_submit_button("保存待办", type="primary", use_container_width=True)
         if submitted:
             try:
-                todo_db.add_todo(
+                todo_db.add_todos_from_text(
                     todo_text,
                     record_date=date.today().isoformat(),
                     due_date=due_date,
@@ -328,18 +355,14 @@ with st.container(border=True):
                 st.rerun()
 
 with st.container(border=True):
-    top_col, search_col = st.columns([1, 1.4], gap="medium", vertical_alignment="bottom")
-    with top_col:
-        view_label = st.radio("视图", ["未完成", "归档", "全部"], horizontal=True)
+    search_col, = st.columns([1], gap="medium", vertical_alignment="bottom")
     with search_col:
         keyword = st.text_input("搜索", placeholder="搜索内容、发布日期、截止日期或时间")
 
-    view_map = {"未完成": "active", "归档": "archived", "全部": "all"}
-    current_view = view_map[view_label]
-    display_records = todo_db.get_todos(keyword=keyword, view=current_view)
+    display_records = todo_db.get_todos(keyword=keyword, view="list")
 
     if not display_records:
         st.info("当前没有匹配的待办。")
     else:
         for record in display_records:
-            render_todo_record(record, archived=current_view == "archived")
+            render_todo_record(record)

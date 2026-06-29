@@ -39,6 +39,7 @@ def init_db():
     conn.close()
     if should_restore:
         restore_from_markdown_backup()
+    split_multiline_todos()
     sync_backup_file()
 
 
@@ -94,6 +95,59 @@ def add_todo(content, record_date=None, due_date=None, due_time=None):
     return record_id
 
 
+def add_todos_from_text(content, record_date=None, due_date=None, due_time=None):
+    items = split_todo_text(content)
+    if not items:
+        raise ValueError("content cannot be empty")
+    return [add_todo(item, record_date=record_date, due_date=due_date, due_time=due_time) for item in items]
+
+
+def split_todo_text(content):
+    items = []
+    for raw_line in str(content or "").splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        if line.lstrip("#").strip() in {"今日重点待办", "待办", "待办清单"}:
+            continue
+        line = re.sub(r"^[-*•]\s+", "", line)
+        line = re.sub(r"^\d+[.)、]\s*", "", line)
+        line = re.sub(r"^\[[ xX]\]\s*", "", line)
+        line = line.strip()
+        if line and line not in items:
+            items.append(line)
+    return items
+
+
+def split_multiline_todos():
+    records = get_todos(view="all")
+    changed = 0
+    for record in records:
+        if record.get("is_archived"):
+            continue
+        content = str(record.get("content") or "")
+        items = split_todo_text(content)
+        if len(items) <= 1 or len(items) == 1 and items[0] == content.strip():
+            continue
+        for item in items:
+            _insert_todo_record(
+                {
+                    "content": item,
+                    "record_date": record.get("record_date"),
+                    "due_date": record.get("due_date"),
+                    "due_time": record.get("due_time"),
+                    "status": record.get("status") or "pending",
+                    "is_archived": bool(record.get("is_archived")),
+                    "completed_at": record.get("completed_at") or "",
+                    "created_at": record.get("created_at"),
+                    "updated_at": record.get("updated_at"),
+                }
+            )
+        archive_todo(record["id"])
+        changed += 1
+    return changed
+
+
 def update_todo(record_id, content=None, due_date=None, due_time=None):
     fields = []
     values = []
@@ -144,6 +198,25 @@ def complete_todo(record_id):
     return changed
 
 
+def archive_todo(record_id):
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = get_connection()
+    cur = conn.execute(
+        """
+        UPDATE todo_items
+        SET is_archived = 1, updated_at = ?
+        WHERE id = ?
+        """,
+        (now, record_id),
+    )
+    conn.commit()
+    changed = cur.rowcount
+    conn.close()
+    if changed:
+        sync_backup_file()
+    return changed
+
+
 def reopen_todo(record_id):
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     conn = get_connection()
@@ -171,8 +244,10 @@ def get_todos(keyword=None, view="active"):
         conditions.append("is_archived = 0")
     elif view == "archived":
         conditions.append("is_archived = 1")
+    elif view == "list":
+        conditions.append("(is_archived = 0 OR status = 'done')")
     elif view != "all":
-        raise ValueError("view must be active, archived, or all")
+        raise ValueError("view must be active, archived, all, or list")
 
     keyword = str(keyword or "").strip()
     if keyword:
@@ -187,7 +262,7 @@ def get_todos(keyword=None, view="active"):
         f"""
         SELECT * FROM todo_items
         {where}
-        ORDER BY datetime(created_at) DESC, id DESC
+        ORDER BY is_archived ASC, datetime(created_at) DESC, id DESC
         """,
         values,
     ).fetchall()
