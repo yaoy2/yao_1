@@ -36,10 +36,16 @@ def init_db():
     )
     conn.commit()
     should_restore = _count_records(conn) == 0 and os.path.exists(BACKUP_MD_PATH)
+    migration_version = conn.execute("PRAGMA user_version").fetchone()[0]
     conn.close()
     if should_restore:
         restore_from_markdown_backup()
-    split_multiline_todos()
+    if migration_version < 1:
+        split_multiline_todos()
+        conn = get_connection()
+        conn.execute("PRAGMA user_version = 1")
+        conn.commit()
+        conn.close()
     sync_backup_file()
 
 
@@ -127,7 +133,7 @@ def split_multiline_todos():
             continue
         content = str(record.get("content") or "")
         items = split_todo_text(content)
-        if len(items) <= 1 or len(items) == 1 and items[0] == content.strip():
+        if len(items) <= 1:
             continue
         for item in items:
             _insert_todo_record(

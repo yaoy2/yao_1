@@ -232,6 +232,16 @@ def _due_label(record):
     return ""
 
 
+def _escape_html(value):
+    return (
+        str(value)
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+    )
+
+
 def render_todo_record(record):
     done = record.get("status") == "done"
     check_col, body_col, created_col, action_col = st.columns(
@@ -289,16 +299,6 @@ def render_todo_record(record):
             sync_todo_backup_to_github()
             st.rerun()
     st.markdown('<div class="todo-row-separator"></div>', unsafe_allow_html=True)
-
-
-def _escape_html(value):
-    return (
-        str(value)
-        .replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace('"', "&quot;")
-    )
 
 
 require_todo_auth()
