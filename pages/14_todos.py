@@ -229,12 +229,13 @@ def apply_style():
         }
         .todo-date-inline {
             min-height: 20px;
+            height: 20px;
             display: flex;
             align-items: center;
             justify-content: flex-end;
             color: #475467;
             font-size: .78rem;
-            line-height: 1;
+            line-height: 20px;
             white-space: nowrap;
             padding-top: 0;
         }
@@ -335,8 +336,8 @@ def render_todo_record(record):
     stored_due_date = _date_value(record.get("due_date"))
     stored_due_time = str(record.get("due_time") or "")
 
-    check_col, body_col, created_col, due_date_col, due_time_col, save_col, delete_col = st.columns(
-        [0.045, 1.2, 0.16, 0.24, 0.16, 0.045, 0.045],
+    check_col, body_col, created_col, spacer_col, due_date_col, due_time_col, save_col, delete_col = st.columns(
+        [0.045, 1.12, 0.16, 0.07, 0.25, 0.16, 0.045, 0.045],
         gap="small",
         vertical_alignment="center",
     )
@@ -362,6 +363,8 @@ def render_todo_record(record):
             f"""<div class="todo-date-inline">{_escape_html(record.get('record_date', ''))}</div>""",
             unsafe_allow_html=True,
         )
+    with spacer_col:
+        st.empty()
     with due_date_col:
         new_due_date = st.date_input(
             "截止日期",
@@ -407,7 +410,9 @@ merge_remote_todos_from_github()
 
 records_all = todo_db.get_todos(view="all")
 active_count = len([record for record in records_all if not record.get("is_archived")])
-archived_count = len([record for record in records_all if record.get("is_archived")])
+archived_count = len(
+    [record for record in records_all if record.get("is_archived") and record.get("status") != "deleted"]
+)
 
 st.markdown(
     f"""

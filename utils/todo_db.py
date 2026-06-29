@@ -224,8 +224,16 @@ def archive_todo(record_id):
 
 
 def delete_todo(record_id):
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     conn = get_connection()
-    cur = conn.execute("DELETE FROM todo_items WHERE id = ?", (record_id,))
+    cur = conn.execute(
+        """
+        UPDATE todo_items
+        SET status = 'deleted', is_archived = 1, updated_at = ?
+        WHERE id = ?
+        """,
+        (now, record_id),
+    )
     conn.commit()
     changed = cur.rowcount
     conn.close()
@@ -261,8 +269,10 @@ def get_todos(keyword=None, view="active"):
         conditions.append("is_archived = 0")
     elif view == "archived":
         conditions.append("is_archived = 1")
+        conditions.append("status != 'deleted'")
     elif view == "list":
         conditions.append("(is_archived = 0 OR status = 'done')")
+        conditions.append("status != 'deleted'")
     elif view != "all":
         raise ValueError("view must be active, archived, all, or list")
 

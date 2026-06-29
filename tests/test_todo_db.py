@@ -90,6 +90,25 @@ class TodoDbTest(unittest.TestCase):
         self.assertTrue(archived_records[0]["is_archived"])
         self.assertTrue(archived_records[0]["completed_at"])
 
+    def test_deleted_todo_blocks_stale_remote_backup_reimport(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patched_todo_storage(tmpdir):
+                todo_db.init_db()
+                todo_db.add_todo("删除后不能被远端旧备份导回", record_date="2026-06-29")
+                stale_remote_records = todo_db.get_todos(view="all")
+                record_id = stale_remote_records[0]["id"]
+
+                changed = todo_db.delete_todo(record_id)
+                inserted = todo_db.import_todo_records(stale_remote_records)
+                active_records = todo_db.get_todos()
+                deleted_records = todo_db.get_todos(view="all")
+
+        self.assertEqual(1, changed)
+        self.assertEqual(0, inserted)
+        self.assertEqual([], active_records)
+        self.assertEqual("deleted", deleted_records[0]["status"])
+        self.assertTrue(deleted_records[0]["is_archived"])
+
     def test_all_view_keeps_pending_above_done_then_newest_first(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             with patched_todo_storage(tmpdir):
@@ -256,6 +275,7 @@ class TodoDbTest(unittest.TestCase):
         self.assertNotIn("def _created_time", page_source)
         self.assertIn("todo-row-text", page_source)
         self.assertIn("todo-date-inline", page_source)
+        self.assertIn("spacer_col", page_source)
         self.assertIn("font-weight: 400", page_source)
         self.assertIn("min-height: 20px", page_source)
         self.assertIn('DUE_TIME_OPTIONS = ["", "09:30", "10:00", "11:30", "14:00", "17:00"]', page_source)
