@@ -14,6 +14,9 @@ from utils.ui_theme import render_home_link
 st.set_page_config(page_title="待办清单", page_icon="✓", layout="wide")
 
 
+DUE_TIME_OPTIONS = ["", "09:30", "10:00", "11:30", "14:00", "17:00"]
+
+
 def require_todo_auth():
     configured_password = budget_auth.get_budget_password(st.secrets, os.environ)
     if not configured_password:
@@ -125,6 +128,13 @@ def apply_style():
             border-color: rgba(24,34,48,.12) !important;
             box-shadow: 0 10px 24px rgba(24,34,48,.06);
         }
+        div[data-testid="stHorizontalBlock"] {
+            gap: .25rem !important;
+        }
+        div[data-testid="stMarkdown"],
+        div[data-testid="stMarkdownContainer"] p {
+            margin-bottom: 0 !important;
+        }
         .todo-title {
             font-size: 2rem;
             line-height: 1.15;
@@ -137,48 +147,60 @@ def apply_style():
             margin-bottom: .9rem;
         }
         div[data-testid="stCheckbox"] {
-            min-height: 24px !important;
+            min-height: 20px !important;
+            margin-bottom: 0 !important;
         }
         div[data-testid="stCheckbox"] label {
-            min-height: 24px !important;
+            min-height: 20px !important;
             padding: 0 !important;
         }
         div[data-testid="stDateInput"],
-        div[data-testid="stTimeInput"] {
+        div[data-testid="stSelectbox"] {
             margin-bottom: 0 !important;
         }
         div[data-testid="stDateInput"] div[data-baseweb="input"],
-        div[data-testid="stTimeInput"] div[data-baseweb="input"],
-        div[data-testid="stTimeInput"] div[data-baseweb="select"] {
-            min-height: 24px !important;
-            height: 24px !important;
+        div[data-testid="stSelectbox"] div[data-baseweb="select"] {
+            min-height: 20px !important;
+            height: 20px !important;
+            border: 0 !important;
+            background: transparent !important;
+            box-shadow: none !important;
         }
         div[data-testid="stDateInput"] div[data-baseweb="input"] > div,
-        div[data-testid="stTimeInput"] div[data-baseweb="input"] > div,
-        div[data-testid="stTimeInput"] div[data-baseweb="select"] > div {
-            min-height: 24px !important;
-            height: 24px !important;
+        div[data-testid="stSelectbox"] div[data-baseweb="select"] > div {
+            min-height: 20px !important;
+            height: 20px !important;
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
         }
         div[data-testid="stDateInput"] input,
-        div[data-testid="stTimeInput"] input {
-            min-height: 24px !important;
-            height: 24px !important;
-            padding: 0 .45rem !important;
-            font-size: .82rem !important;
+        div[data-testid="stSelectbox"] input {
+            min-height: 20px !important;
+            height: 20px !important;
+            padding: 0 .25rem !important;
+            font-size: .78rem !important;
             line-height: 1 !important;
+            border: 0 !important;
+            background: transparent !important;
+        }
+        div[data-testid="stSelectbox"] svg {
+            width: 14px !important;
+            height: 14px !important;
         }
         div[data-testid="stButton"] button {
-            min-height: 24px !important;
-            height: 24px !important;
-            padding: 0 .2rem !important;
-            border-radius: 6px !important;
+            min-height: 20px !important;
+            height: 20px !important;
+            padding: 0 .12rem !important;
+            border: 0 !important;
+            border-radius: 4px !important;
+            background: transparent !important;
             line-height: 1 !important;
         }
         .todo-row-text {
-            min-height: 24px;
+            min-height: 20px;
             display: flex;
             align-items: center;
-            font-size: .9rem;
+            font-size: .82rem;
             font-weight: 400;
             color: #182230;
             line-height: 1;
@@ -206,12 +228,12 @@ def apply_style():
             background: rgba(255,255,255,.68);
         }
         .todo-date-inline {
-            min-height: 24px;
+            min-height: 20px;
             display: flex;
             align-items: center;
             justify-content: flex-end;
             color: #475467;
-            font-size: .82rem;
+            font-size: .78rem;
             line-height: 1;
             white-space: nowrap;
             padding-top: 0;
@@ -261,13 +283,19 @@ def _date_value(value):
         return None
 
 
-def _time_value(value):
-    if not value:
-        return None
+def _due_time_options(value=""):
+    stored_value = str(value or "").strip()
+    if stored_value and stored_value not in DUE_TIME_OPTIONS:
+        return ["", stored_value, *DUE_TIME_OPTIONS[1:]]
+    return DUE_TIME_OPTIONS
+
+
+def _due_time_index(value, options):
+    stored_value = str(value or "").strip()
     try:
-        return datetime.strptime(value, "%H:%M").time()
+        return options.index(stored_value)
     except ValueError:
-        return None
+        return 0
 
 
 def _escape_html(value):
@@ -284,7 +312,7 @@ def save_todo_due_fields(record_id):
     new_due_date = st.session_state.get(f"todo_due_date_{record_id}")
     new_due_time = st.session_state.get(f"todo_due_time_{record_id}")
     due_date_val = new_due_date.isoformat() if new_due_date else ""
-    due_time_val = new_due_time.strftime("%H:%M") if new_due_time else ""
+    due_time_val = str(new_due_time or "")
     todo_db.update_todo(record_id, due_date=due_date_val, due_time=due_time_val)
     sync_todo_backup_to_github()
 
@@ -305,7 +333,7 @@ def toggle_todo_done(record_id, checkbox_key):
 def render_todo_record(record):
     done = record.get("status") == "done"
     stored_due_date = _date_value(record.get("due_date"))
-    stored_due_time = _time_value(record.get("due_time"))
+    stored_due_time = str(record.get("due_time") or "")
 
     check_col, body_col, created_col, due_date_col, due_time_col, save_col, delete_col = st.columns(
         [0.045, 1.2, 0.16, 0.24, 0.16, 0.045, 0.045],
@@ -342,11 +370,12 @@ def render_todo_record(record):
             label_visibility="collapsed",
         )
     with due_time_col:
-        new_due_time = st.time_input(
+        due_time_options = _due_time_options(stored_due_time)
+        new_due_time = st.selectbox(
             "截止时间",
-            value=stored_due_time,
+            options=due_time_options,
+            index=_due_time_index(stored_due_time, due_time_options),
             key=f"todo_due_time_{record['id']}",
-            step=900,
             label_visibility="collapsed",
         )
     with save_col:
@@ -404,7 +433,12 @@ with st.container(border=True):
         with col_date:
             due_date = st.date_input("截止日期", value=_date_value(parsed_due_date))
         with col_time:
-            due_time = st.time_input("截止时间", value=_time_value(parsed_due_time), step=900)
+            quick_due_time_options = _due_time_options(parsed_due_time)
+            due_time = st.selectbox(
+                "截止时间",
+                options=quick_due_time_options,
+                index=_due_time_index(parsed_due_time, quick_due_time_options),
+            )
         with col_save:
             submitted = st.form_submit_button("保存待办", type="primary", use_container_width=True)
         if submitted:
