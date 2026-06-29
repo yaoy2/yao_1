@@ -140,8 +140,7 @@ def apply_style():
             display: flex;
             gap: .75rem;
             align-items: flex-start;
-            padding: .55rem .2rem;
-            border-bottom: 1px solid rgba(24,34,48,.08);
+            padding: .25rem .2rem .45rem;
         }
         .todo-line.done .todo-content {
             text-decoration: line-through;
@@ -166,6 +165,11 @@ def apply_style():
             border-radius: 999px;
             padding: .08rem .45rem;
             background: rgba(255,255,255,.68);
+        }
+        .todo-row-separator {
+            height: 1px;
+            margin: .32rem 0 .58rem;
+            background: rgba(24,34,48,.08);
         }
         </style>
         """,
@@ -193,7 +197,11 @@ def _time_value(value):
 
 def render_todo_record(record, archived=False):
     done = record.get("status") == "done"
-    check_col, body_col, action_col = st.columns([0.12, 1.0, 0.18], gap="small", vertical_alignment="top")
+    check_col, body_col, due_date_col, due_time_col, action_col = st.columns(
+        [0.10, 1.35, 0.34, 0.28, 0.18],
+        gap="small",
+        vertical_alignment="top",
+    )
     with check_col:
         checked = st.checkbox(
             "完成",
@@ -207,8 +215,6 @@ def render_todo_record(record, archived=False):
         sync_todo_backup_to_github()
         st.rerun()
 
-    due_parts = [part for part in [record.get("due_date"), record.get("due_time")] if part]
-    due_label = " ".join(due_parts) if due_parts else "未设截止"
     with body_col:
         css_class = "todo-line done" if done else "todo-line"
         st.markdown(
@@ -218,7 +224,6 @@ def render_todo_record(record, archived=False):
                 <div class="todo-content">{_escape_html(record.get('content', ''))}</div>
                 <div class="todo-meta">
                   <span class="todo-pill">发布：{_escape_html(record.get('record_date', ''))}</span>
-                  <span class="todo-pill">截止：{_escape_html(due_label)}</span>
                   <span class="todo-pill">{_escape_html(record.get('status', 'pending'))}</span>
                 </div>
               </div>
@@ -226,11 +231,37 @@ def render_todo_record(record, archived=False):
             """,
             unsafe_allow_html=True,
         )
+    with due_date_col:
+        edited_due_date = st.date_input(
+            "截止日期",
+            value=_date_value(record.get("due_date")),
+            key=f"todo_due_date_{record['id']}",
+            disabled=done,
+        )
+    with due_time_col:
+        edited_due_time = st.time_input(
+            "截止时间",
+            value=_time_value(record.get("due_time")),
+            key=f"todo_due_time_{record['id']}",
+            step=900,
+            disabled=done,
+        )
     with action_col:
+        save_due = st.button(
+            "保存",
+            key=f"save_due_{record['id']}",
+            use_container_width=True,
+            disabled=done,
+        )
+        if save_due:
+            todo_db.update_todo(record["id"], due_date=edited_due_date, due_time=edited_due_time)
+            sync_todo_backup_to_github()
+            st.rerun()
         if archived and st.button("恢复", key=f"todo_reopen_{record['id']}", use_container_width=True):
             todo_db.reopen_todo(record["id"])
             sync_todo_backup_to_github()
             st.rerun()
+    st.markdown('<div class="todo-row-separator"></div>', unsafe_allow_html=True)
 
 
 def _escape_html(value):

@@ -143,6 +143,18 @@ class TodoDbTest(unittest.TestCase):
         self.assertIn("merge_remote_todos_from_github()", page_source)
         self.assertIn("sync_todo_backup_to_github()", page_source)
 
+    def test_page_places_due_fields_in_right_column_not_under_text(self):
+        page_path = Path(__file__).resolve().parents[1] / "pages" / "14_todos.py"
+        page_source = page_path.read_text(encoding="utf-8")
+
+        self.assertIn("due_date_col", page_source)
+        self.assertIn("due_time_col", page_source)
+        self.assertIn("save_due", page_source)
+        self.assertIn("todo_due_date_", page_source)
+        self.assertIn("todo_due_time_", page_source)
+        self.assertNotIn("截止：{_escape_html(due_label)}", page_source)
+        self.assertNotIn("due_label = ", page_source)
+
 
 if __name__ == "__main__":
     unittest.main()
