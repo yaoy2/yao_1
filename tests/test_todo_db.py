@@ -281,7 +281,7 @@ class TodoDbTest(unittest.TestCase):
         self.assertIn("todo-row-text", page_source)
         self.assertIn("todo-date-inline", page_source)
         self.assertIn("spacer_col", page_source)
-        self.assertIn("[0.045, 0.64, 0.12, 0.52, 0.18, 0.11, 0.045, 0.045]", page_source)
+        self.assertIn("[0.045, 0.76, 0.12, 0.40, 0.18, 0.11, 0.045, 0.045]", page_source)
         self.assertIn("font-weight: 400", page_source)
         self.assertIn("min-height: 20px", page_source)
         self.assertIn('DUE_TIME_OPTIONS = ["", "09:30", "10:00", "11:30", "14:00", "17:00"]', page_source)
