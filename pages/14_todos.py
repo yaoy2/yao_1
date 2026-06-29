@@ -363,7 +363,7 @@ def render_todo_record(record):
     stored_due_time = str(record.get("due_time") or "")
 
     check_col, body_col, created_col, spacer_col, due_date_col, due_time_col, save_col, delete_col = st.columns(
-        [0.045, 1.22, 0.12, 0.06, 0.18, 0.11, 0.045, 0.045],
+        [0.045, 0.64, 0.12, 0.52, 0.18, 0.11, 0.045, 0.045],
         gap="small",
         vertical_alignment="center",
     )
