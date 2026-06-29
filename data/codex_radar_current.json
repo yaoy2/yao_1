@@ -1,19 +1,19 @@
 {
-  "status": "high_probability",
+  "status": "closed",
   "probability_24h": 95,
   "probability_48h": 98,
-  "reason": "多个 Codex 限额或事故信号叠加，进入高概率关注。",
-  "checked_at": "2026-06-29T14:30:20.515015Z",
+  "reason": "发现疑似额度已恢复或窗口关闭信号。",
+  "checked_at": "2026-06-29T17:49:27.709789Z",
   "alert_level": "push",
   "signals": [
     {
-      "id": "a11faf300204bc69",
+      "id": "c6e09ab3f4065dc5",
       "source_id": "openai_status_history",
       "source_name": "OpenAI Status Incidents",
       "title": "Codex Usage Limits Depleting Faster Than Expected",
-      "summary": "Codex Usage Limits Depleting Faster Than Expected monitoring We have identified that some reports of Codex usage limits depleting faster than expected are related to our abuse and fraud prevention systems incorrectly rate limiting certain accounts. The impact appears limited, and we have not observed broader degradation to Codex usage. We are continuing to monitor the situation. We are investigating reports that Codex usage limits are being consumed faster than expected.",
+      "summary": "Codex Usage Limits Depleting Faster Than Expected resolved All impacted services have now fully recovered. We have identified that some reports of Codex usage limits depleting faster than expected are related to our abuse and fraud prevention systems incorrectly rate limiting certain accounts. The impact appears limited, and we have not observed broader degradation to Codex usage. We are continuing to monitor the situation. We are investigating reports that Codex usage limits are being consumed ",
       "url": "https://status.openai.com/api/v2/incidents.json",
-      "observed_at": "2026-06-26T23:24:31Z",
+      "observed_at": "2026-06-29T17:06:33Z",
       "weight": 40,
       "tags": [
         "codex",

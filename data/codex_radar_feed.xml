@@ -5,11 +5,11 @@
     <link>https://github.com/yaoy2/yao_1</link>
     <description>Codex quota reset radar alerts</description>
     <item>
-      <title>Codex Radar Lite: high_probability</title>
+      <title>Codex Radar Lite: closed</title>
       <link>https://github.com/yaoy2/yao_1</link>
-      <guid>2026-06-29T14:30:20.515015Z-high_probability</guid>
-      <pubDate>2026-06-29T14:30:20.515015Z</pubDate>
-      <description>多个 Codex 限额或事故信号叠加，进入高概率关注。 24h=95%, 48h=98%</description>
+      <guid>2026-06-29T17:49:27.709789Z-closed</guid>
+      <pubDate>2026-06-29T17:49:27.709789Z</pubDate>
+      <description>发现疑似额度已恢复或窗口关闭信号。 24h=95%, 48h=98%</description>
     </item>
   </channel>
 </rss>
