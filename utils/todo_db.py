@@ -223,6 +223,17 @@ def archive_todo(record_id):
     return changed
 
 
+def delete_todo(record_id):
+    conn = get_connection()
+    cur = conn.execute("DELETE FROM todo_items WHERE id = ?", (record_id,))
+    conn.commit()
+    changed = cur.rowcount
+    conn.close()
+    if changed:
+        sync_backup_file()
+    return changed
+
+
 def reopen_todo(record_id):
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     conn = get_connection()

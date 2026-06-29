@@ -235,8 +235,8 @@ def render_todo_record(record):
     stored_due_date = _date_value(record.get("due_date"))
     stored_due_time = _time_value(record.get("due_time"))
 
-    check_col, body_col, created_col, due_date_col, due_time_col, save_col = st.columns(
-        [0.06, 1.0, 0.24, 0.28, 0.2, 0.08],
+    check_col, body_col, created_col, due_date_col, due_time_col, save_col, delete_col = st.columns(
+        [0.06, 1.0, 0.24, 0.26, 0.18, 0.06, 0.06],
         gap="small",
         vertical_alignment="top",
     )
@@ -297,13 +297,18 @@ def render_todo_record(record):
     with save_col:
         date_changed = (new_due_date or None) != (stored_due_date or None)
         time_changed = (new_due_time or None) != (stored_due_time or None)
-        if st.button("保存", key=f"todo_save_due_{record['id']}"):
+        if st.button("✅", key=f"todo_save_due_{record['id']}", help="保存截止日期/时间"):
             if date_changed or time_changed:
                 due_date_val = new_due_date.isoformat() if new_due_date else ""
                 due_time_val = new_due_time.strftime("%H:%M") if new_due_time else ""
                 todo_db.update_todo(record["id"], due_date=due_date_val, due_time=due_time_val)
                 sync_todo_backup_to_github()
                 st.rerun()
+    with delete_col:
+        if st.button("❌", key=f"todo_delete_{record['id']}", help="删除这条待办"):
+            todo_db.delete_todo(record["id"])
+            sync_todo_backup_to_github()
+            st.rerun()
 
     st.markdown('<div class="todo-row-separator"></div>', unsafe_allow_html=True)
 
