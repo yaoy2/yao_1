@@ -86,13 +86,24 @@ class LLMBudgetAccountsTest(unittest.TestCase):
         self.assertIn("st.selectbox(", page_source)
         self.assertIn("accept_new_options=True", page_source)
         self.assertIn("llm_budget_accounts.save_provider_profile(", page_source)
-        self.assertIn("account_col, save_col = st.columns([3, 1]", page_source)
+        self.assertIn("account_col, save_col = st.columns([4.2, 1.2]", page_source)
         self.assertIn('key=f"account_{key}"', page_source)
         self.assertIn('key=f"expiration_{key}_{account_value}"', page_source)
         self.assertIn('st.button("保存"', page_source)
         self.assertNotIn('st.button("保存账号"', page_source)
         self.assertIn('key=f"save_account_{key}"', page_source)
         self.assertIn("sync_llm_budget_accounts_to_github()", page_source)
+
+    def test_page_uses_fixed_provider_panel_alignment(self):
+        page_source = PAGE_PATH.read_text(encoding="utf-8")
+
+        self.assertIn("apply_llm_budget_style()", page_source)
+        self.assertIn("render_provider_title(", page_source)
+        self.assertIn("llm-provider-title", page_source)
+        self.assertIn("min-height: 3.25rem", page_source)
+        self.assertIn("white-space: nowrap", page_source)
+        self.assertIn("render_provider_title(provider.display_name)", page_source)
+        self.assertIn('render_provider_title(info["name"])', page_source)
 
     def test_gemini_provider_is_available(self):
         from utils.llm_budget_providers import MANUAL_PROVIDERS

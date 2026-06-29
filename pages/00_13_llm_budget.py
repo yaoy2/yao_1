@@ -60,13 +60,57 @@ def sync_llm_budget_accounts_to_github():
     )
 
 
+def apply_llm_budget_style():
+    st.markdown(
+        """
+        <style>
+        div[data-testid="stHorizontalBlock"] {
+            align-items: stretch;
+        }
+        div[data-testid="stButton"] button,
+        div[data-testid="stLinkButton"] a {
+            white-space: nowrap !important;
+        }
+        div[data-testid="stButton"] button {
+            min-height: 2.5rem !important;
+        }
+        div[data-testid="stSelectbox"],
+        div[data-testid="stTextInput"],
+        div[data-testid="stNumberInput"] {
+            margin-bottom: .65rem !important;
+        }
+        div[data-testid="stAlert"] {
+            min-height: 4.25rem;
+            display: flex;
+            align-items: center;
+        }
+        .llm-provider-title {
+            min-height: 3.25rem;
+            display: flex;
+            align-items: flex-start;
+            color: #182230;
+            font-size: 1.55rem;
+            font-weight: 750;
+            line-height: 1.16;
+            margin: 0 0 .35rem;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_provider_title(title: str):
+    st.markdown(f'<div class="llm-provider-title">{title}</div>', unsafe_allow_html=True)
+
+
 def render_account_editor(key: str) -> None:
     current_account = llm_budget_accounts.get_login_account(key)
     account_options = llm_budget_accounts.list_login_accounts(key)
     if current_account and current_account not in account_options:
         account_options.append(current_account)
     account_index = account_options.index(current_account) if current_account in account_options else None
-    account_col, save_col = st.columns([3, 1], vertical_alignment="bottom")
+    account_col, save_col = st.columns([4.2, 1.2], vertical_alignment="bottom")
     with account_col:
         account_value = st.selectbox(
             "登录账号",
@@ -127,6 +171,8 @@ def require_llm_budget_auth():
 
 require_llm_budget_auth()
 
+apply_llm_budget_style()
+
 render_home_link()
 
 st.title("💰 LLM 余额管理")
@@ -157,7 +203,7 @@ cols = st.columns(len(PROVIDERS) + len(MANUAL_PROVIDERS))
 # 自动查询的厂商
 for i, (key, provider) in enumerate(PROVIDERS.items()):
     with cols[i]:
-        st.subheader(provider.display_name)
+        render_provider_title(provider.display_name)
         render_account_editor(key)
         api_key = get_api_key(key)
 
@@ -193,7 +239,7 @@ for i, (key, provider) in enumerate(PROVIDERS.items()):
 # 手动录入的厂商
 for j, (key, info) in enumerate(MANUAL_PROVIDERS.items()):
     with cols[len(PROVIDERS) + j]:
-        st.subheader(info["name"])
+        render_provider_title(info["name"])
         render_account_editor(key)
         st.warning("手动录入")
 
