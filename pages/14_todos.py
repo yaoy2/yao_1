@@ -136,16 +136,54 @@ def apply_style():
             color: #667085;
             margin-bottom: .9rem;
         }
+        div[data-testid="stCheckbox"] {
+            min-height: 24px !important;
+        }
+        div[data-testid="stCheckbox"] label {
+            min-height: 24px !important;
+            padding: 0 !important;
+        }
+        div[data-testid="stDateInput"],
+        div[data-testid="stTimeInput"] {
+            margin-bottom: 0 !important;
+        }
+        div[data-testid="stDateInput"] div[data-baseweb="input"],
+        div[data-testid="stTimeInput"] div[data-baseweb="input"],
+        div[data-testid="stTimeInput"] div[data-baseweb="select"] {
+            min-height: 24px !important;
+            height: 24px !important;
+        }
+        div[data-testid="stDateInput"] div[data-baseweb="input"] > div,
+        div[data-testid="stTimeInput"] div[data-baseweb="input"] > div,
+        div[data-testid="stTimeInput"] div[data-baseweb="select"] > div {
+            min-height: 24px !important;
+            height: 24px !important;
+        }
+        div[data-testid="stDateInput"] input,
+        div[data-testid="stTimeInput"] input {
+            min-height: 24px !important;
+            height: 24px !important;
+            padding: 0 .45rem !important;
+            font-size: .82rem !important;
+            line-height: 1 !important;
+        }
+        div[data-testid="stButton"] button {
+            min-height: 24px !important;
+            height: 24px !important;
+            padding: 0 .2rem !important;
+            border-radius: 6px !important;
+            line-height: 1 !important;
+        }
         .todo-row-text {
-            min-height: 30px;
+            min-height: 24px;
             display: flex;
             align-items: center;
-            font-size: 1rem;
-            font-weight: 650;
+            font-size: .9rem;
+            font-weight: 400;
             color: #182230;
-            line-height: 1.18;
+            line-height: 1;
             overflow: hidden;
-            padding-top: .05rem;
+            padding-top: 0;
             text-overflow: ellipsis;
             white-space: nowrap;
         }
@@ -167,21 +205,16 @@ def apply_style():
             padding: .08rem .45rem;
             background: rgba(255,255,255,.68);
         }
-        .todo-row-separator {
-            height: 1px;
-            margin: .06rem 0 .32rem;
-            background: rgba(24,34,48,.08);
-        }
         .todo-date-inline {
-            min-height: 30px;
+            min-height: 24px;
             display: flex;
             align-items: center;
             justify-content: flex-end;
             color: #475467;
-            font-size: .86rem;
+            font-size: .82rem;
             line-height: 1;
             white-space: nowrap;
-            padding-top: .05rem;
+            padding-top: 0;
         }
         .todo-icon-btn {
             display: inline-flex;
@@ -334,8 +367,6 @@ def render_todo_record(record):
             on_click=delete_todo_record,
             args=(record["id"],),
         )
-
-    st.markdown('<div class="todo-row-separator"></div>', unsafe_allow_html=True)
 
 
 require_todo_auth()
