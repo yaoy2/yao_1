@@ -284,6 +284,13 @@ def _date_value(value):
         return None
 
 
+def _compact_date_label(value):
+    date_value = _date_value(value)
+    if date_value:
+        return date_value.strftime("%m-%d")
+    return str(value or "")
+
+
 def _due_time_options(value=""):
     stored_value = str(value or "").strip()
     if stored_value and stored_value not in DUE_TIME_OPTIONS:
@@ -337,7 +344,7 @@ def render_todo_record(record):
     stored_due_time = str(record.get("due_time") or "")
 
     check_col, body_col, created_col, spacer_col, due_date_col, due_time_col, save_col, delete_col = st.columns(
-        [0.045, 1.12, 0.16, 0.07, 0.25, 0.16, 0.045, 0.045],
+        [0.045, 1.22, 0.12, 0.06, 0.18, 0.11, 0.045, 0.045],
         gap="small",
         vertical_alignment="center",
     )
@@ -360,7 +367,7 @@ def render_todo_record(record):
         )
     with created_col:
         st.markdown(
-            f"""<div class="todo-date-inline">{_escape_html(record.get('record_date', ''))}</div>""",
+            f"""<div class="todo-date-inline">{_escape_html(_compact_date_label(record.get('record_date', '')))}</div>""",
             unsafe_allow_html=True,
         )
     with spacer_col:
@@ -370,6 +377,7 @@ def render_todo_record(record):
             "截止日期",
             value=stored_due_date,
             key=f"todo_due_date_{record['id']}",
+            format="MM-DD",
             label_visibility="collapsed",
         )
     with due_time_col:
@@ -436,7 +444,7 @@ with st.container(border=True):
         parsed_due_date, parsed_due_time = todo_db.extract_due_fields(todo_text, date.today())
         col_date, col_time, col_save = st.columns([1, 1, 1], vertical_alignment="bottom")
         with col_date:
-            due_date = st.date_input("截止日期", value=_date_value(parsed_due_date))
+            due_date = st.date_input("截止日期", value=_date_value(parsed_due_date), format="MM-DD")
         with col_time:
             quick_due_time_options = _due_time_options(parsed_due_time)
             due_time = st.selectbox(
