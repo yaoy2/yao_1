@@ -251,7 +251,11 @@ class TodoDbTest(unittest.TestCase):
         page_source = page_path.read_text(encoding="utf-8")
 
         self.assertIn('todo_db.get_todos(keyword=keyword, view="list")', page_source)
-        self.assertIn("_created_time(record)", page_source)
+        self.assertNotIn("_created_time(record)", page_source)
+        self.assertNotIn("def _created_time", page_source)
+        self.assertIn("todo-row-text", page_source)
+        self.assertIn("todo-date-inline", page_source)
+        self.assertNotIn("todo-date-stack", page_source)
         self.assertNotIn('st.radio("视图"', page_source)
         self.assertIn("due_date_col", page_source)
         self.assertIn("due_time_col", page_source)

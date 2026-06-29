@@ -136,23 +136,20 @@ def apply_style():
             color: #667085;
             margin-bottom: .9rem;
         }
-        .todo-line {
+        .todo-row-text {
+            min-height: 30px;
             display: flex;
-            gap: .75rem;
-            align-items: flex-start;
-            padding: .18rem .2rem .35rem;
-        }
-        .todo-line.done .todo-content {
-            text-decoration: line-through;
-            color: #98A2B3;
-        }
-        .todo-content {
+            align-items: center;
             font-size: 1rem;
             font-weight: 650;
             color: #182230;
-            line-height: 1.45;
+            line-height: 1.18;
+            overflow: hidden;
+            padding-top: .05rem;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
-        .todo-content.done {
+        .todo-row-text.done {
             text-decoration: line-through;
             color: #98A2B3;
         }
@@ -172,21 +169,19 @@ def apply_style():
         }
         .todo-row-separator {
             height: 1px;
-            margin: .22rem 0 .46rem;
+            margin: .06rem 0 .32rem;
             background: rgba(24,34,48,.08);
         }
-        .todo-date-stack {
+        .todo-date-inline {
+            min-height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
             color: #475467;
             font-size: .86rem;
-            line-height: 1.45;
-            text-align: right;
+            line-height: 1;
             white-space: nowrap;
-            padding-top: .2rem;
-        }
-        .todo-date-stack span {
-            display: block;
-            color: #98A2B3;
-            font-size: .78rem;
+            padding-top: .05rem;
         }
         .todo-icon-btn {
             display: inline-flex;
@@ -242,14 +237,6 @@ def _time_value(value):
         return None
 
 
-def _created_time(record):
-    created_at = str(record.get("created_at") or "")
-    try:
-        return datetime.strptime(created_at, "%Y-%m-%d %H:%M:%S").strftime("%H:%M")
-    except ValueError:
-        return ""
-
-
 def _escape_html(value):
     return (
         str(value)
@@ -288,9 +275,9 @@ def render_todo_record(record):
     stored_due_time = _time_value(record.get("due_time"))
 
     check_col, body_col, created_col, due_date_col, due_time_col, save_col, delete_col = st.columns(
-        [0.06, 1.0, 0.24, 0.26, 0.18, 0.05, 0.05],
+        [0.045, 1.2, 0.16, 0.24, 0.16, 0.045, 0.045],
         gap="small",
-        vertical_alignment="top",
+        vertical_alignment="center",
     )
     with check_col:
         checkbox_key = f"todo_done_{record['id']}_{record.get('status')}"
@@ -304,26 +291,14 @@ def render_todo_record(record):
         )
 
     with body_col:
-        css_class = "todo-line done" if done else "todo-line"
-        content_class = "todo-content done" if done else "todo-content"
+        content_class = "todo-row-text done" if done else "todo-row-text"
         st.markdown(
-            f"""
-            <div class="{css_class}">
-              <div>
-                <div class="{content_class}">{_escape_html(record.get('content', ''))}</div>
-              </div>
-            </div>
-            """,
+            f"""<div class="{content_class}">{_escape_html(record.get('content', ''))}</div>""",
             unsafe_allow_html=True,
         )
     with created_col:
         st.markdown(
-            f"""
-            <div class="todo-date-stack">
-              {_escape_html(record.get('record_date', ''))}
-              <span>{_escape_html(_created_time(record))}</span>
-            </div>
-            """,
+            f"""<div class="todo-date-inline">{_escape_html(record.get('record_date', ''))}</div>""",
             unsafe_allow_html=True,
         )
     with due_date_col:
