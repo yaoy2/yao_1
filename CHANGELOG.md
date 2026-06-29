@@ -5,6 +5,14 @@
 
 This English change log mirrors the project history maintained in `CHANGELOG_ZH-CN.md`. It keeps the same dated structure and preserves the operational notes that matter for later troubleshooting: what changed, why it changed, what failed or detoured, and how the work was verified.
 
+## 2026-06-29
+
+- **Locked Todo List added**: added the 14th Streamlit tool panel for daily to-dos. It stores tasks newest-first, lets the left checkbox complete an item, strikes completed text, and moves completed items into the archive view without deleting data.
+- **Due date and time extraction**: todo text can prefill common Chinese date/time hints such as absolute dates, month-day dates, tomorrow / the day after tomorrow, next Monday, `14:30`, and afternoon / morning hour phrases. Manual date and time fields remain available.
+- **Durable todo backups**: added `utils/todo_db.py`, local SQLite storage, `data/todo_items_backup.md`, Markdown restore, duplicate-safe imports, and GitHub Contents API sync hooks through the existing `GITHUB_BACKUP_TOKEN` path. Empty local data is blocked from overwriting a non-empty remote backup.
+- **Navigation order no longer depends on page renames**: homepage ordering is now computed from `hello.py` metadata (`created`, module code, and `blocked`) instead of requiring every new page to rename all older `pages/` files. The new page uses the stable filename `pages/14_todos.py`.
+- **Verification plan updated**: added todo data tests and rewrote homepage tests to assert metadata-driven ordering and deferred blocked cards. Streamlit was not started, following project rules.
+
 ## 2026-06-24
 
 - **LLM Budget account area tightened**: based on the page screenshot feedback, the login-account input and save-account button now share one row instead of wasting vertical space across separate rows.

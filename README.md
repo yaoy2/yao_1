@@ -7,7 +7,7 @@
 
 > **"There is no victory ahead; holding the line is everything."**
 
-`yao_1` is a Streamlit toolkit for the day-to-day work of a college-level academic office. It covers document processing, roster checks, schedule lookup, budget tracking, WeChat article archiving, color-palette reference, web memos, DingTalk recorder note cleanup, and Codex reset-window monitoring.
+`yao_1` is a Streamlit toolkit for the day-to-day work of a college-level academic office. It covers to-do tracking, document processing, roster checks, schedule lookup, budget tracking, WeChat article archiving, color-palette reference, web memos, DingTalk recorder note cleanup, and Codex reset-window monitoring.
 
 The project is built around real administrative, teaching-support, competition-guidance, and knowledge-management workflows. The default design preference is local-first, simple, maintainable, and practical enough to become a stable button instead of a one-off script.
 
@@ -18,10 +18,11 @@ The project is built around real administrative, teaching-support, competition-g
 - **Online app**: [yao-1.streamlit.app](https://yao-1.streamlit.app/)
 - **Repository**: [github.com/yaoy2/yao_1](https://github.com/yaoy2/yao_1)
 - **Zhongshengshi MVP**: `zhongshengshi/`, a local Next.js subproject for validating the multi-model roundtable flow. The current page now defaults to a freer short-message discussion stream instead of fixed opening/debate speeches.
+- **Todo List**: the 14th locked tool panel. It records tasks newest-first, extracts common Chinese date/time hints, supports search, soft-archives completed tasks, and keeps `data/todo_items_backup.md` as a GitHub-syncable recovery file.
 - **LLM Budget Tracker**: the 13th tool panel, showing balances for supported LLM providers, including Gemini, and keeping editable login-account and expiration-date labels in `data/llm_budget_accounts.json`.
 - **Codex Radar**: the 12th tool panel, reading `data/codex_radar_current.json` to display Codex reset-window status.
 - **Home style**: a dark Command Center cover; tools are listed in reverse launch order, with a fixed 3 x 3 grid per page.
-- **Sidebar navigation**: all tools are ordered from newest to oldest, so recently added modules appear first.
+- **Navigation order**: homepage cards are now sorted from `hello.py` module metadata instead of page filename prefixes. New modules can use stable readable page filenames while still appearing first by `created` date and module code.
 
 ---
 

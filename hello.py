@@ -18,6 +18,16 @@ apply_global_theme()
 
 TOOLS = [
     {
+        "title": "待办清单",
+        "desc": "记录日常待办、自动识别截止日期和时间，完成后软归档，并通过本地备份和 GitHub 同步保护数据。",
+        "tag": "任务管理",
+        "created": "2026_06_29",
+        "page": "pages/14_todos.py",
+        "code": "M14",
+        "accent": "green",
+        "locked": True,
+    },
+    {
         "title": "LLM 余额管理",
         "desc": "统一管理各家 LLM API / Token Plan 余额，自动查询 DeepSeek、Kimi，手动录入 MiMo 和 ChatGPT。",
         "tag": "AI 工具管理",
@@ -144,15 +154,41 @@ TOOLS = [
     },
 ]
 
+
+def sort_tool_key(tool):
+    code = str(tool.get("code", "M0")).removeprefix("M")
+    try:
+        module_number = int(code)
+    except ValueError:
+        module_number = 0
+    return (str(tool.get("created", "")), module_number)
+
+
 def get_homepage_tools(tools):
-    visible_first = [tool for tool in tools if not tool.get("blocked")]
-    deferred = [tool for tool in tools if tool.get("blocked")]
+    visible_first = sorted(
+        [tool for tool in tools if not tool.get("blocked")],
+        key=sort_tool_key,
+        reverse=True,
+    )
+    deferred = sorted(
+        [tool for tool in tools if tool.get("blocked")],
+        key=sort_tool_key,
+        reverse=True,
+    )
     return visible_first + deferred
 
 
 def get_homepage_pages(tools, page_size=9):
-    visible_first = [tool for tool in tools if not tool.get("blocked")]
-    deferred = [tool for tool in tools if tool.get("blocked")]
+    visible_first = sorted(
+        [tool for tool in tools if not tool.get("blocked")],
+        key=sort_tool_key,
+        reverse=True,
+    )
+    deferred = sorted(
+        [tool for tool in tools if tool.get("blocked")],
+        key=sort_tool_key,
+        reverse=True,
+    )
     pages = [
         visible_first[index : index + page_size]
         for index in range(0, len(visible_first), page_size)

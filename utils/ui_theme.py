@@ -1,7 +1,147 @@
+import ast
+import re
+from html import escape
+from pathlib import Path
+from urllib.parse import quote
+
 import streamlit as st
 
 
+def _load_homepage_tools():
+    hello_path = Path(__file__).resolve().parents[1] / "hello.py"
+    try:
+        module = ast.parse(hello_path.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+    for node in module.body:
+        if not isinstance(node, ast.Assign):
+            continue
+        if not any(isinstance(target, ast.Name) and target.id == "TOOLS" for target in node.targets):
+            continue
+        try:
+            return ast.literal_eval(node.value)
+        except Exception:
+            return []
+    return []
+
+
+def _nav_sort_key(tool):
+    code = str(tool.get("code", "M0")).removeprefix("M")
+    try:
+        module_number = int(code)
+    except ValueError:
+        module_number = 0
+    return (str(tool.get("created", "")), module_number)
+
+
+def _streamlit_page_href(page_path):
+    page_name = Path(str(page_path)).name
+    match = re.match(r"([0-9]*)[_ -]*(.*)\.py$", page_name)
+    if not match:
+        return "#"
+    url_path = re.sub(r"[_ ]+", "_", match.group(2)).strip() or match.group(1)
+    return f"/{quote(url_path)}"
+
+
+def render_sidebar_nav() -> None:
+    tools = _load_homepage_tools()
+    if not tools:
+        return
+    active = sorted([tool for tool in tools if not tool.get("blocked")], key=_nav_sort_key, reverse=True)
+    blocked = sorted([tool for tool in tools if tool.get("blocked")], key=_nav_sort_key, reverse=True)
+
+    def item_html(tool):
+        title = escape(str(tool.get("title", "")))
+        code = escape(str(tool.get("code", "")))
+        tag = escape(str(tool.get("tag", "")))
+        href = escape(_streamlit_page_href(tool.get("page", "")), quote=True)
+        lock = " 🔒" if tool.get("locked") else ""
+        blocked_mark = " ❌" if tool.get("blocked") else ""
+        return (
+            f'<a class="custom-nav-item" href="{href}" target="_self">'
+            f'<span class="custom-nav-code">{code}</span>'
+            f'<span class="custom-nav-main"><strong>{title}{lock}{blocked_mark}</strong><em>{tag}</em></span>'
+            "</a>"
+        )
+
+    active_html = "".join(item_html(tool) for tool in active)
+    blocked_html = "".join(item_html(tool) for tool in blocked)
+    st.sidebar.markdown(
+        f"""
+        <style>
+        [data-testid="stSidebar"] [data-testid="stSidebarNav"] {{
+            display: none;
+        }}
+        .custom-nav-title {{
+            margin: .35rem .45rem .6rem;
+            color: #EAF7FF;
+            font-size: .92rem;
+            font-weight: 850;
+        }}
+        .custom-nav-item {{
+            display: grid;
+            grid-template-columns: 2.75rem minmax(0, 1fr);
+            gap: .55rem;
+            align-items: center;
+            margin: .18rem .35rem;
+            padding: .54rem .58rem;
+            border: 1px solid rgba(57, 223, 247, .14);
+            border-radius: 8px;
+            background: rgba(255,255,255,.025);
+            text-decoration: none !important;
+        }}
+        .custom-nav-item:hover {{
+            border-color: rgba(57, 223, 247, .32);
+            background: rgba(57, 223, 247, .09);
+        }}
+        .custom-nav-code {{
+            color: #39DFF7;
+            font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+            font-size: .78rem;
+            font-weight: 850;
+        }}
+        .custom-nav-main {{
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: .08rem;
+        }}
+        .custom-nav-main strong {{
+            overflow: hidden;
+            color: #EAF7FF;
+            font-size: .86rem;
+            line-height: 1.24;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }}
+        .custom-nav-main em {{
+            overflow: hidden;
+            color: rgba(234, 247, 255, .56);
+            font-size: .72rem;
+            font-style: normal;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }}
+        .custom-nav-section {{
+            margin: .75rem .48rem .25rem;
+            color: rgba(234, 247, 255, .52);
+            font-size: .72rem;
+            font-weight: 780;
+            letter-spacing: .08em;
+        }}
+        </style>
+        <div class="custom-nav-title">YaoYao 工具箱</div>
+        <div class="custom-nav-section">常用入口</div>
+        {active_html}
+        <div class="custom-nav-section">暂不开放</div>
+        {blocked_html}
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def render_home_link() -> None:
+    render_sidebar_nav()
     st.markdown(
         """
         <style>
@@ -45,6 +185,7 @@ def render_home_link() -> None:
 
 
 def apply_global_theme() -> None:
+    render_sidebar_nav()
     st.markdown(
         """
         <style>
