@@ -188,6 +188,36 @@ def apply_style():
             color: #98A2B3;
             font-size: .78rem;
         }
+        .todo-icon-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            text-decoration: none !important;
+            font-size: 14px;
+            line-height: 1;
+            transition: background .15s;
+        }
+        .todo-save-btn {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        .todo-save-btn:hover {
+            background: #c8e6c9;
+            color: #1b5e20;
+            text-decoration: none !important;
+        }
+        .todo-delete-btn {
+            background: #ffebee;
+            color: #c62828;
+        }
+        .todo-delete-btn:hover {
+            background: #ffcdd2;
+            color: #b71c1c;
+            text-decoration: none !important;
+        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -236,7 +266,7 @@ def render_todo_record(record):
     stored_due_time = _time_value(record.get("due_time"))
 
     check_col, body_col, created_col, due_date_col, due_time_col, save_col, delete_col = st.columns(
-        [0.06, 1.0, 0.24, 0.26, 0.18, 0.06, 0.06],
+        [0.06, 1.0, 0.24, 0.26, 0.18, 0.05, 0.05],
         gap="small",
         vertical_alignment="top",
     )
@@ -295,20 +325,15 @@ def render_todo_record(record):
             label_visibility="collapsed",
         )
     with save_col:
-        date_changed = (new_due_date or None) != (stored_due_date or None)
-        time_changed = (new_due_time or None) != (stored_due_time or None)
-        if st.button("✅", key=f"todo_save_due_{record['id']}", help="保存截止日期/时间"):
-            if date_changed or time_changed:
-                due_date_val = new_due_date.isoformat() if new_due_date else ""
-                due_time_val = new_due_time.strftime("%H:%M") if new_due_time else ""
-                todo_db.update_todo(record["id"], due_date=due_date_val, due_time=due_time_val)
-                sync_todo_backup_to_github()
-                st.rerun()
+        st.markdown(
+            f'<a href="?action=save_{record["id"]}" class="todo-icon-btn todo-save-btn" title="保存截止日期/时间">&#10003;</a>',
+            unsafe_allow_html=True,
+        )
     with delete_col:
-        if st.button("❌", key=f"todo_delete_{record['id']}", help="删除这条待办"):
-            todo_db.delete_todo(record["id"])
-            sync_todo_backup_to_github()
-            st.rerun()
+        st.markdown(
+            f'<a href="?action=delete_{record["id"]}" class="todo-icon-btn todo-delete-btn" title="删除这条待办">&#10005;</a>',
+            unsafe_allow_html=True,
+        )
 
     st.markdown('<div class="todo-row-separator"></div>', unsafe_allow_html=True)
 
@@ -319,6 +344,30 @@ render_home_link()
 restore_todo_backup_from_github()
 todo_db.init_db()
 merge_remote_todos_from_github()
+
+action = st.query_params.get("action")
+if action:
+    if action.startswith("save_"):
+        record_id = int(action[len("save_"):])
+        new_due_date = st.session_state.get(f"todo_due_date_{record_id}")
+        new_due_time = st.session_state.get(f"todo_due_time_{record_id}")
+        stored = next((r for r in todo_db.get_todos(view="all") if r["id"] == record_id), None)
+        if stored is not None:
+            stored_dd = _date_value(stored.get("due_date"))
+            stored_dt = _time_value(stored.get("due_time"))
+            if (new_due_date or None) != (stored_dd or None) or (new_due_time or None) != (stored_dt or None):
+                due_date_val = new_due_date.isoformat() if new_due_date else ""
+                due_time_val = new_due_time.strftime("%H:%M") if new_due_time else ""
+                todo_db.update_todo(record_id, due_date=due_date_val, due_time=due_time_val)
+                sync_todo_backup_to_github()
+        st.query_params.clear()
+        st.rerun()
+    elif action.startswith("delete_"):
+        record_id = int(action[len("delete_"):])
+        todo_db.delete_todo(record_id)
+        sync_todo_backup_to_github()
+        st.query_params.clear()
+        st.rerun()
 
 records_all = todo_db.get_todos(view="all")
 active_count = len([record for record in records_all if not record.get("is_archived")])
