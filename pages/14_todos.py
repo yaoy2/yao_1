@@ -155,10 +155,12 @@ def apply_style():
             padding: 0 !important;
         }
         div[data-testid="stDateInput"],
+        div[data-testid="stTextInput"],
         div[data-testid="stSelectbox"] {
             margin-bottom: 0 !important;
         }
         div[data-testid="stDateInput"] div[data-baseweb="input"],
+        div[data-testid="stTextInput"] div[data-baseweb="input"],
         div[data-testid="stSelectbox"] div[data-baseweb="select"] {
             min-height: 20px !important;
             height: 20px !important;
@@ -167,6 +169,7 @@ def apply_style():
             box-shadow: none !important;
         }
         div[data-testid="stDateInput"] div[data-baseweb="input"] > div,
+        div[data-testid="stTextInput"] div[data-baseweb="input"] > div,
         div[data-testid="stSelectbox"] div[data-baseweb="select"] > div {
             min-height: 20px !important;
             height: 20px !important;
@@ -174,6 +177,7 @@ def apply_style():
             padding-bottom: 0 !important;
         }
         div[data-testid="stDateInput"] input,
+        div[data-testid="stTextInput"] input,
         div[data-testid="stSelectbox"] input {
             min-height: 20px !important;
             height: 20px !important;
@@ -291,6 +295,21 @@ def _compact_date_label(value):
     return str(value or "")
 
 
+def _full_date_from_compact(value, fallback_year=None):
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    if _date_value(text):
+        return text
+    normalized = text.replace("/", "-").replace(".", "-")
+    try:
+        parsed = datetime.strptime(normalized, "%m-%d").date()
+    except ValueError:
+        return ""
+    year = fallback_year or date.today().year
+    return date(year, parsed.month, parsed.day).isoformat()
+
+
 def _due_time_options(value=""):
     stored_value = str(value or "").strip()
     if stored_value and stored_value not in DUE_TIME_OPTIONS:
@@ -319,7 +338,7 @@ def _escape_html(value):
 def save_todo_due_fields(record_id):
     new_due_date = st.session_state.get(f"todo_due_date_{record_id}")
     new_due_time = st.session_state.get(f"todo_due_time_{record_id}")
-    due_date_val = new_due_date.isoformat() if new_due_date else ""
+    due_date_val = _full_date_from_compact(new_due_date)
     due_time_val = str(new_due_time or "")
     todo_db.update_todo(record_id, due_date=due_date_val, due_time=due_time_val)
     sync_todo_backup_to_github()
@@ -340,7 +359,7 @@ def toggle_todo_done(record_id, checkbox_key):
 
 def render_todo_record(record):
     done = record.get("status") == "done"
-    stored_due_date = _date_value(record.get("due_date"))
+    stored_due_date = _compact_date_label(record.get("due_date"))
     stored_due_time = str(record.get("due_time") or "")
 
     check_col, body_col, created_col, spacer_col, due_date_col, due_time_col, save_col, delete_col = st.columns(
@@ -373,11 +392,10 @@ def render_todo_record(record):
     with spacer_col:
         st.empty()
     with due_date_col:
-        new_due_date = st.date_input(
+        new_due_date = st.text_input(
             "截止日期",
             value=stored_due_date,
             key=f"todo_due_date_{record['id']}",
-            format="MM-DD",
             label_visibility="collapsed",
         )
     with due_time_col:
@@ -444,7 +462,7 @@ with st.container(border=True):
         parsed_due_date, parsed_due_time = todo_db.extract_due_fields(todo_text, date.today())
         col_date, col_time, col_save = st.columns([1, 1, 1], vertical_alignment="bottom")
         with col_date:
-            due_date = st.date_input("截止日期", value=_date_value(parsed_due_date), format="MM-DD")
+            due_date = st.date_input("截止日期", value=_date_value(parsed_due_date))
         with col_time:
             quick_due_time_options = _due_time_options(parsed_due_time)
             due_time = st.selectbox(
