@@ -220,18 +220,6 @@ def _created_time(record):
         return ""
 
 
-def _due_label(record):
-    due_date = str(record.get("due_date") or "").strip()
-    due_time = str(record.get("due_time") or "").strip()
-    if due_date and due_time:
-        return f"截止 {due_date} {due_time}"
-    if due_date:
-        return f"截止 {due_date}"
-    if due_time:
-        return f"截止 {due_time}"
-    return ""
-
-
 def _escape_html(value):
     return (
         str(value)
@@ -244,8 +232,11 @@ def _escape_html(value):
 
 def render_todo_record(record):
     done = record.get("status") == "done"
-    check_col, body_col, created_col, action_col = st.columns(
-        [0.08, 1.35, 0.34, 0.18],
+    stored_due_date = _date_value(record.get("due_date"))
+    stored_due_time = _time_value(record.get("due_time"))
+
+    check_col, body_col, created_col, due_date_col, due_time_col, save_col = st.columns(
+        [0.06, 1.0, 0.24, 0.28, 0.2, 0.08],
         gap="small",
         vertical_alignment="top",
     )
@@ -268,16 +259,11 @@ def render_todo_record(record):
     with body_col:
         css_class = "todo-line done" if done else "todo-line"
         content_class = "todo-content done" if done else "todo-content"
-        due_label = _due_label(record)
-        due_html = f'<span class="todo-pill">{_escape_html(due_label)}</span>' if due_label else ""
         st.markdown(
             f"""
             <div class="{css_class}">
               <div>
                 <div class="{content_class}">{_escape_html(record.get('content', ''))}</div>
-                <div class="todo-meta">
-                  {due_html}
-                </div>
               </div>
             </div>
             """,
@@ -293,11 +279,32 @@ def render_todo_record(record):
             """,
             unsafe_allow_html=True,
         )
-    with action_col:
-        if done and st.button("恢复", key=f"todo_reopen_{record['id']}", use_container_width=True):
-            todo_db.reopen_todo(record["id"])
-            sync_todo_backup_to_github()
-            st.rerun()
+    with due_date_col:
+        new_due_date = st.date_input(
+            "截止日期",
+            value=stored_due_date,
+            key=f"todo_due_date_{record['id']}",
+            label_visibility="collapsed",
+        )
+    with due_time_col:
+        new_due_time = st.time_input(
+            "截止时间",
+            value=stored_due_time,
+            key=f"todo_due_time_{record['id']}",
+            step=900,
+            label_visibility="collapsed",
+        )
+    with save_col:
+        date_changed = (new_due_date or None) != (stored_due_date or None)
+        time_changed = (new_due_time or None) != (stored_due_time or None)
+        if st.button("保存", key=f"todo_save_due_{record['id']}"):
+            if date_changed or time_changed:
+                due_date_val = new_due_date.isoformat() if new_due_date else ""
+                due_time_val = new_due_time.strftime("%H:%M") if new_due_time else ""
+                todo_db.update_todo(record["id"], due_date=due_date_val, due_time=due_time_val)
+                sync_todo_backup_to_github()
+                st.rerun()
+
     st.markdown('<div class="todo-row-separator"></div>', unsafe_allow_html=True)
 
 

@@ -230,19 +230,22 @@ class TodoDbTest(unittest.TestCase):
         self.assertIn("merge_remote_todos_from_github()", page_source)
         self.assertIn("sync_todo_backup_to_github()", page_source)
 
-    def test_page_renders_single_list_without_view_switch_or_inline_due_editors(self):
+    def test_page_renders_single_list_with_due_date_time_inputs_per_row(self):
         page_path = Path(__file__).resolve().parents[1] / "pages" / "14_todos.py"
         page_source = page_path.read_text(encoding="utf-8")
 
         self.assertIn('todo_db.get_todos(keyword=keyword, view="list")', page_source)
         self.assertIn("_created_time(record)", page_source)
         self.assertNotIn('st.radio("视图"', page_source)
-        self.assertNotIn("due_date_col", page_source)
-        self.assertNotIn("due_time_col", page_source)
-        self.assertNotIn("save_due", page_source)
-        self.assertNotIn("todo_due_date_", page_source)
-        self.assertNotIn("todo_due_time_", page_source)
-        self.assertNotIn("截止：{_escape_html(due_label)}", page_source)
+        self.assertIn("due_date_col", page_source)
+        self.assertIn("due_time_col", page_source)
+        self.assertIn("save_col", page_source)
+        self.assertIn("todo_due_date_", page_source)
+        self.assertIn("todo_due_time_", page_source)
+        self.assertIn("todo_save_due_", page_source)
+        self.assertIn("stored_due_date", page_source)
+        self.assertIn("stored_due_time", page_source)
+        self.assertNotIn("_due_label", page_source)
 
 
 if __name__ == "__main__":
