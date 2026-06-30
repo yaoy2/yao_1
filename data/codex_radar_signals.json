@@ -54,13 +54,13 @@
     ]
   },
   {
-    "id": "aa7371e3c8daee17",
+    "id": "78b46b5c07b8f78b",
     "source_id": "openai_community",
     "source_name": "OpenAI Community Forum",
     "title": "Source fetch failed",
     "summary": "HTTPError: 429 Client Error: Too Many Requests for url: https://community.openai.com/search.json?q=codex+limit&order=latest",
     "url": "https://community.openai.com/search.json?q=codex+limit&order=latest",
-    "observed_at": "2026-06-30T06:34:53.483321Z",
+    "observed_at": "2026-06-30T10:40:41.284915Z",
     "weight": 0,
     "tags": [
       "fetch_error"
