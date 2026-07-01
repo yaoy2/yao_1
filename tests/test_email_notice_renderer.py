@@ -6,9 +6,9 @@ from utils.email_notice_renderer import build_notice_html, build_notice_number, 
 
 class EmailNoticeRendererTest(unittest.TestCase):
     def test_text_to_body_html_wraps_non_empty_lines(self):
-        html = text_to_body_html("各位老师：\n\n请按时提交材料。")
+        html = text_to_body_html("各位老师：\n\n一、材料要求\n请按时提交材料。")
 
-        self.assertEqual(html, "<p>各位老师：</p>\n<p>请按时提交材料。</p>")
+        self.assertEqual(html, "<p>各位老师：</p>\n<p><b>一、材料要求</b></p>\n<p>请按时提交材料。</p>")
 
     def test_build_notice_html_contains_core_notice_fields_and_dimensions(self):
         html = build_notice_html(
@@ -30,6 +30,10 @@ class EmailNoticeRendererTest(unittest.TestCase):
         self.assertIn("height:80px", html)
         self.assertIn("width:526.0pt", html)
         self.assertIn("<p>请按时提交材料。</p>", html)
+        self.assertIn("<p style=\"margin:0;\">健康医疗科技学院</p>", html)
+        self.assertIn("<p style=\"margin:0;\">2026年7月1日</p>", html)
+        self.assertNotIn("<b>健康医疗科技学院</b>", html)
+        self.assertNotIn("<b>2026年7月1日</b>", html)
 
     def test_build_notice_number_keeps_prefix_and_suffix_while_user_enters_digits(self):
         self.assertEqual(build_notice_number("41"), "健康医疗科技学院通知〔2026〕41号")

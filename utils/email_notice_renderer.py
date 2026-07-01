@@ -1,9 +1,11 @@
 from html import escape
 from datetime import date
+import re
 
 
 NOTICE_NUMBER_PREFIX = "健康医疗科技学院通知〔2026〕"
 NOTICE_NUMBER_SUFFIX = "号"
+SECTION_HEADING_RE = re.compile(r"^[一二三四五六七八九十]+、")
 
 
 def build_notice_number(number_digits):
@@ -13,7 +15,14 @@ def build_notice_number(number_digits):
 
 def text_to_body_html(body_text):
     lines = [line.strip() for line in str(body_text or "").splitlines() if line.strip()]
-    return "\n".join(f"<p>{escape(line)}</p>" for line in lines)
+    paragraphs = []
+    for line in lines:
+        escaped_line = escape(line)
+        if SECTION_HEADING_RE.match(line):
+            paragraphs.append(f"<p><b>{escaped_line}</b></p>")
+        else:
+            paragraphs.append(f"<p>{escaped_line}</p>")
+    return "\n".join(paragraphs)
 
 
 def format_chinese_date(date_value):
@@ -123,8 +132,8 @@ def build_notice_html(
                             {body_html or ""}
                         </div>
                         <div style="text-align:right; margin-top:20px; font-family:仿宋, FangSong, serif; font-size:19px; color:#000000; line-height:1.8;">
-                            <p style="margin:0;"><b>{unit_text}</b></p>
-                            <p style="margin:0;"><b>{date_text}</b></p>
+                            <p style="margin:0;">{unit_text}</p>
+                            <p style="margin:0;">{date_text}</p>
                         </div>
                     </td>
                 </tr>
