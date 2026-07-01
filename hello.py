@@ -18,6 +18,15 @@ apply_global_theme()
 
 TOOLS = [
     {
+        "title": "邮件通知编辑器",
+        "desc": "粘贴通知全文后自动识别标题、编号、正文、落款和日期，并嵌入现有邮件排版工具一键预览与导出。",
+        "tag": "通知排版",
+        "created": "2026_07_01",
+        "page": "pages/15_0_email_notice.py",
+        "code": "M15",
+        "accent": "amber",
+    },
+    {
         "title": "待办清单",
         "desc": "记录日常待办、自动识别截止日期和时间，完成后软归档，并通过本地备份和 GitHub 同步保护数据。",
         "tag": "任务管理",

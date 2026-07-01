@@ -63,17 +63,18 @@ class HomePageTest(unittest.TestCase):
         _page_source, namespace = load_homepage_bits()
         tools = namespace["get_homepage_tools"](namespace["TOOLS"])
 
-        self.assertEqual("待办清单", tools[0]["title"])
-        self.assertEqual("M14", tools[0]["code"])
-        self.assertEqual("pages/14_todos.py", tools[0]["page"])
-        self.assertTrue(tools[0]["locked"])
-        self.assertEqual("M13", tools[1]["code"])
-        self.assertEqual("M12", tools[2]["code"])
-        self.assertTrue(tools[2]["blocked"])
+        self.assertEqual("邮件通知编辑器", tools[0]["title"])
+        self.assertEqual("M15", tools[0]["code"])
+        self.assertEqual("pages/15_0_email_notice.py", tools[0]["page"])
+        self.assertEqual("待办清单", tools[1]["title"])
+        self.assertEqual("M14", tools[1]["code"])
+        self.assertTrue(tools[1]["locked"])
+        self.assertEqual("M12", tools[3]["code"])
+        self.assertTrue(tools[3]["blocked"])
         blocked_codes = {tool["code"] for tool in tools if tool.get("blocked")}
         self.assertEqual({"M01", "M02", "M03", "M04", "M05", "M12"}, blocked_codes)
         self.assertEqual("M01", tools[-1]["code"])
-        self.assertEqual(14, len(tools))
+        self.assertEqual(15, len(tools))
 
     def test_homepage_order_is_metadata_driven_instead_of_filename_driven(self):
         _page_source, namespace = load_homepage_bits()
@@ -81,7 +82,7 @@ class HomePageTest(unittest.TestCase):
         pages_dir = Path(__file__).resolve().parents[1] / "pages"
 
         actual_pages = [f"pages/{path.name}" for path in sorted(pages_dir.glob("*.py"))]
-        self.assertIn("pages/14_todos.py", actual_pages)
+        self.assertIn("pages/15_0_email_notice.py", actual_pages)
         self.assertNotEqual([tool["page"] for tool in tools], actual_pages)
 
         active_tools = [tool for tool in tools if not tool.get("blocked")]
@@ -94,15 +95,15 @@ class HomePageTest(unittest.TestCase):
         tools = namespace["get_homepage_tools"](namespace["TOOLS"])
         homepage_pages = namespace["get_homepage_pages"](namespace["TOOLS"])
 
-        self.assertEqual("M14", tools[0]["code"])
-        self.assertEqual("M13", tools[1]["code"])
-        self.assertEqual("M12", tools[2]["code"])
-        self.assertTrue(tools[2]["blocked"])
-        self.assertEqual("M06", tools[8]["code"])
-        self.assertEqual("M05", tools[9]["code"])
-        self.assertTrue(tools[9]["blocked"])
-        self.assertEqual(["M14", "M13", "M12", "M11", "M10", "M09", "M08", "M07", "M06"], [tool["code"] for tool in homepage_pages[0]])
-        self.assertEqual(["M05", "M04", "M03", "M02", "M01"], [tool["code"] for tool in homepage_pages[1]])
+        self.assertEqual("M15", tools[0]["code"])
+        self.assertEqual("M14", tools[1]["code"])
+        self.assertEqual("M12", tools[3]["code"])
+        self.assertTrue(tools[3]["blocked"])
+        self.assertEqual("M06", tools[9]["code"])
+        self.assertEqual("M05", tools[10]["code"])
+        self.assertTrue(tools[10]["blocked"])
+        self.assertEqual(["M15", "M14", "M13", "M12", "M11", "M10", "M09", "M08", "M07"], [tool["code"] for tool in homepage_pages[0]])
+        self.assertEqual(["M06", "M05", "M04", "M03", "M02", "M01"], [tool["code"] for tool in homepage_pages[1]])
 
 
 if __name__ == "__main__":
