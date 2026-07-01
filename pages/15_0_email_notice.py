@@ -145,7 +145,7 @@ apply_style()
 
 st.markdown('<h1 class="notice-title">邮件通知编辑器</h1>', unsafe_allow_html=True)
 st.markdown(
-    '<p class="notice-subtitle">先粘贴原始通知，一键识别后会自动填入下方编辑器；识别不准的字段可以继续手动调整。</p>',
+    '<p class="notice-subtitle">表头固定为“成都东软学院健康医疗科技学院”；粘贴内容请从通知主题开始，一键识别后会自动填入下方编辑器。</p>',
     unsafe_allow_html=True,
 )
 
@@ -153,20 +153,20 @@ if "email_notice_parsed" not in st.session_state:
     st.session_state["email_notice_parsed"] = {}
 
 raw_notice = st.text_area(
-    "粘贴原始通知",
+    "粘贴通知内容（从通知主题开始）",
     height=190,
-    placeholder="把通知全文粘贴到这里，例如标题、编号、正文、落款单位和日期。",
+    placeholder="第一行粘贴通知主题，后面继续粘贴编号、正文、落款单位和日期。",
 )
 
 left, right = st.columns([1, 5])
 with left:
     recognize = st.button("一键识别并填入", type="primary", use_container_width=True)
 with right:
-    st.caption("规则会优先识别“通知〔年份〕编号”、末尾中文日期和日期上一行落款单位。")
+    st.caption("规则会把第一行识别为通知主题，并继续识别“通知〔年份〕编号”、末尾中文日期和日期上一行落款单位。")
 
 if recognize:
     parsed = parse_notice_text(raw_notice)
-    if not any(parsed.values()):
+    if not raw_notice.strip():
         st.warning("还没有识别到有效内容，请先粘贴通知全文。")
     else:
         st.session_state["email_notice_parsed"] = parsed

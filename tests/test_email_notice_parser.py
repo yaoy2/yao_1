@@ -4,10 +4,8 @@ from utils.email_notice_parser import parse_notice_text
 
 
 class EmailNoticeParserTest(unittest.TestCase):
-    def test_parse_typical_notice_with_number_unit_and_chinese_date(self):
+    def test_parse_typical_notice_from_subject_with_number_unit_and_chinese_date(self):
         raw_text = """
-成都东软学院科研管理部通知
-
 关于组织申报2026年度校级科研项目的通知
 
 科研通知〔2026〕41号
@@ -22,7 +20,7 @@ class EmailNoticeParserTest(unittest.TestCase):
 
         parsed = parse_notice_text(raw_text)
 
-        self.assertEqual(parsed["header"], "成都东软学院科研管理部通知")
+        self.assertEqual(parsed["header"], "成都东软学院健康医疗科技学院")
         self.assertEqual(parsed["subject"], "关于组织申报2026年度校级科研项目的通知")
         self.assertEqual(parsed["number"], "科研通知〔2026〕41号")
         self.assertEqual(parsed["unit"], "成都东软学院科研管理部")
@@ -32,9 +30,8 @@ class EmailNoticeParserTest(unittest.TestCase):
         self.assertNotIn("科研通知〔2026〕41号", parsed["body_text"])
         self.assertNotIn("2026年7月1日", parsed["body_text"])
 
-    def test_parse_notice_without_number_uses_subject_as_first_non_header_line(self):
+    def test_parse_notice_without_number_uses_first_line_as_subject(self):
         raw_text = """
-学院工作通知
 关于提交竞赛指导材料的通知
 
 各位老师：
@@ -46,7 +43,7 @@ class EmailNoticeParserTest(unittest.TestCase):
 
         parsed = parse_notice_text(raw_text)
 
-        self.assertEqual(parsed["header"], "学院工作通知")
+        self.assertEqual(parsed["header"], "成都东软学院健康医疗科技学院")
         self.assertEqual(parsed["subject"], "关于提交竞赛指导材料的通知")
         self.assertEqual(parsed["number"], "")
         self.assertEqual(parsed["unit"], "健康医疗科技学院")

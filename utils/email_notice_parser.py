@@ -4,6 +4,7 @@ from html import escape
 
 NOTICE_NUMBER_RE = re.compile(r"^[^\n]{0,12}通知〔\d{4}〕\d+号$")
 CHINESE_DATE_RE = re.compile(r"^(\d{4})年(\d{1,2})月(\d{1,2})日$")
+DEFAULT_HEADER = "成都东软学院健康医疗科技学院"
 
 
 def _clean_lines(raw_text):
@@ -36,7 +37,7 @@ def parse_notice_text(raw_text):
     lines = _clean_lines(raw_text)
     if not lines:
         return {
-            "header": "",
+            "header": DEFAULT_HEADER,
             "subject": "",
             "number": "",
             "unit": "",
@@ -48,6 +49,8 @@ def parse_notice_text(raw_text):
     working = list(lines)
     unit, date_value = _pop_date_and_unit(working)
 
+    subject = working.pop(0) if working else ""
+
     number = ""
     for index, line in enumerate(list(working)):
         if NOTICE_NUMBER_RE.match(line):
@@ -55,12 +58,10 @@ def parse_notice_text(raw_text):
             working.pop(index)
             break
 
-    header = working.pop(0) if working else ""
-    subject = working.pop(0) if working else header
     body_text = "\n".join(working)
 
     return {
-        "header": header,
+        "header": DEFAULT_HEADER,
         "subject": subject,
         "number": number,
         "unit": unit,
