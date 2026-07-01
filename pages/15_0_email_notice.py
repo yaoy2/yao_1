@@ -1,6 +1,7 @@
 import os
 import re
 import sys
+from datetime import date, datetime
 
 import streamlit as st
 import streamlit.components.v1 as components
@@ -9,7 +10,7 @@ import streamlit.components.v1 as components
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from utils.email_notice_parser import DEFAULT_HEADER, parse_notice_text
-from utils.email_notice_renderer import build_notice_html, text_to_body_html
+from utils.email_notice_renderer import build_notice_html, build_notice_number, text_to_body_html
 from utils.ui_theme import render_home_link
 
 
@@ -56,10 +57,26 @@ def _session_default(key, value):
 def apply_parsed_notice(parsed):
     st.session_state["notice_header"] = parsed.get("header") or DEFAULT_HEADER
     st.session_state["notice_subject"] = parsed.get("subject", "")
-    st.session_state["notice_number"] = parsed.get("number", "")
-    st.session_state["notice_unit"] = parsed.get("unit", "")
-    st.session_state["notice_date"] = parsed.get("date", "")
+    st.session_state["notice_number_digits"] = extract_notice_number_digits(parsed.get("number", ""))
+    parsed_unit = parsed.get("unit", "")
+    if parsed_unit in NOTICE_UNIT_OPTIONS:
+        st.session_state["notice_unit"] = parsed_unit
+    st.session_state["notice_date"] = parse_date_value(parsed.get("date", ""))
     st.session_state["notice_body"] = parsed.get("body_text", "")
+
+
+def extract_notice_number_digits(notice_number):
+    match = re.search(r"〔2026〕\s*(\d+)\s*号", str(notice_number or ""))
+    return match.group(1) if match else ""
+
+
+def parse_date_value(value):
+    if isinstance(value, date):
+        return value
+    try:
+        return datetime.strptime(str(value), "%Y-%m-%d").date()
+    except (TypeError, ValueError):
+        return date.today()
 
 
 def safe_filename(number, subject):
@@ -73,9 +90,10 @@ apply_style()
 
 _session_default("notice_header", DEFAULT_HEADER)
 _session_default("notice_subject", "")
-_session_default("notice_number", "")
-_session_default("notice_unit", "")
-_session_default("notice_date", "")
+_session_default("notice_number_digits", "")
+NOTICE_UNIT_OPTIONS = ["健康医疗科技学院", "健康医疗科技学院党政办"]
+_session_default("notice_unit", NOTICE_UNIT_OPTIONS[0])
+_session_default("notice_date", date.today())
 _session_default("notice_body", "")
 _session_default("notice_table_width", 521.3)
 _session_default("notice_header_height", 58)
@@ -111,12 +129,17 @@ with left:
     st.subheader("编辑")
     st.text_input("表头", key="notice_header", disabled=True)
     st.text_input("通知主题", key="notice_subject")
-    st.text_input("通知编号", key="notice_number")
+    number_col, number_preview_col = st.columns([1, 2])
+    with number_col:
+        st.text_input("通知编号数字", key="notice_number_digits", placeholder="例如：41")
+    notice_number = build_notice_number(st.session_state["notice_number_digits"])
+    with number_preview_col:
+        st.text_input("完整通知编号", value=notice_number, disabled=True)
     unit_col, date_col = st.columns(2)
     with unit_col:
-        st.text_input("落款单位", key="notice_unit")
+        st.selectbox("落款单位", NOTICE_UNIT_OPTIONS, key="notice_unit")
     with date_col:
-        st.text_input("落款日期", key="notice_date", placeholder="2026-07-01")
+        st.date_input("落款日期", key="notice_date", format="YYYY-MM-DD")
     st.text_area("正文", key="notice_body", height=360)
     size_col, height_col = st.columns(2)
     with size_col:
@@ -128,7 +151,7 @@ body_html = text_to_body_html(st.session_state["notice_body"])
 notice_html = build_notice_html(
     header=st.session_state["notice_header"],
     subject=st.session_state["notice_subject"],
-    number=st.session_state["notice_number"],
+    number=notice_number,
     unit=st.session_state["notice_unit"],
     date_value=st.session_state["notice_date"],
     body_html=body_html,
@@ -144,7 +167,7 @@ with right:
         st.download_button(
             "保存 HTML 文件",
             data=notice_html.encode("utf-8"),
-            file_name=safe_filename(st.session_state["notice_number"], st.session_state["notice_subject"]),
+            file_name=safe_filename(notice_number, st.session_state["notice_subject"]),
             mime="text/html",
             use_container_width=True,
         )

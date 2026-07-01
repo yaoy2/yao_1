@@ -1,4 +1,14 @@
 from html import escape
+from datetime import date
+
+
+NOTICE_NUMBER_PREFIX = "健康医疗科技学院通知〔2026〕"
+NOTICE_NUMBER_SUFFIX = "号"
+
+
+def build_notice_number(number_digits):
+    digits = str(number_digits or "").strip()
+    return f"{NOTICE_NUMBER_PREFIX}{digits}号" if digits else f"{NOTICE_NUMBER_PREFIX} 号"
 
 
 def text_to_body_html(body_text):
@@ -9,6 +19,8 @@ def text_to_body_html(body_text):
 def format_chinese_date(date_value):
     if not date_value:
         return ""
+    if isinstance(date_value, date):
+        return f"{date_value.year}年{date_value.month}月{date_value.day}日"
     parts = str(date_value).split("-")
     if len(parts) != 3:
         return str(date_value)
