@@ -157,17 +157,18 @@ st.markdown(
 if "email_notice_parsed" not in st.session_state:
     st.session_state["email_notice_parsed"] = {}
 
-raw_notice = st.text_area(
-    "粘贴通知内容（从通知主题开始）",
-    height=190,
-    placeholder="第一行粘贴通知主题，后面继续粘贴编号、正文、落款单位和日期。",
-)
+with st.form("email_notice_parse_form", clear_on_submit=False):
+    raw_notice = st.text_area(
+        "粘贴通知内容（从通知主题开始）",
+        height=190,
+        placeholder="第一行粘贴通知主题，后面继续粘贴编号、正文、落款单位和日期。",
+    )
 
-left, right = st.columns([1, 5])
-with left:
-    recognize = st.button("一键识别并填入", type="primary", use_container_width=True)
-with right:
-    st.caption("规则会把第一行识别为通知主题，并继续识别“通知〔年份〕编号”、末尾中文日期和日期上一行落款单位。")
+    left, right = st.columns([1, 5])
+    with left:
+        recognize = st.form_submit_button("一键识别并填入", type="primary", use_container_width=True)
+    with right:
+        st.caption("规则会把第一行识别为通知主题，并继续识别“通知〔年份〕编号”、末尾中文日期和日期上一行落款单位。")
 
 if recognize:
     parsed = parse_notice_text(raw_notice)

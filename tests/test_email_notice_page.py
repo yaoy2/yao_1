@@ -21,6 +21,13 @@ def load_page_helpers():
 
 
 class EmailNoticePageTest(unittest.TestCase):
+    def test_paste_input_is_wrapped_in_form_to_avoid_component_reruns(self):
+        page_source, _namespace = load_page_helpers()
+
+        self.assertIn('st.form("email_notice_parse_form"', page_source)
+        self.assertIn("form_submit_button", page_source)
+        self.assertNotIn('st.button("一键识别并填入"', page_source)
+
     def test_prefill_script_retries_refresh_after_component_load(self):
         _page_source, namespace = load_page_helpers()
 
