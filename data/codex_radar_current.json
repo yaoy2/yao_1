@@ -3,7 +3,7 @@
   "probability_24h": 95,
   "probability_48h": 98,
   "reason": "发现疑似额度已恢复或窗口关闭信号。",
-  "checked_at": "2026-07-01T16:41:18.753555Z",
+  "checked_at": "2026-07-01T19:13:34.025259Z",
   "alert_level": "push",
   "signals": [
     {
@@ -61,13 +61,27 @@
       ]
     },
     {
-      "id": "c9a016d225168c1e",
+      "id": "2d45680f317fff20",
+      "source_id": "reddit_openai",
+      "source_name": "Reddit r/OpenAI",
+      "title": "Quick question about Codex resets — 5‑hour limit or weekly limit?",
+      "summary": "Quick question about Codex resets — 5‑hour limit or weekly limit? I’m trying to understand how Codex resets actually work so I don’t accidentally waste them.\nSome people say it’s a\n5‑hour rolling limit\n, others say it’s a\nweekly quota\n, and I can’t find anything official that clearly explains",
+      "url": "https://www.reddit.com/r/OpenAI/new/.rss?limit=10",
+      "observed_at": "2026-07-01T17:40:17+00:00",
+      "weight": 15,
+      "tags": [
+        "codex",
+        "quota"
+      ]
+    },
+    {
+      "id": "92a26719a8fbd6df",
       "source_id": "openai_community",
       "source_name": "OpenAI Community Forum",
       "title": "Source fetch failed",
       "summary": "HTTPError: 429 Client Error: Too Many Requests for url: https://community.openai.com/search.json?q=codex+limit&order=latest",
       "url": "https://community.openai.com/search.json?q=codex+limit&order=latest",
-      "observed_at": "2026-07-01T16:41:18.752577Z",
+      "observed_at": "2026-07-01T19:13:34.024339Z",
       "weight": 0,
       "tags": [
         "fetch_error"
