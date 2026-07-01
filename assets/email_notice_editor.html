@@ -403,8 +403,12 @@
 <div id="toast" class="toast"></div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        document.execCommand('styleWithCSS', false, true);
+    function initEditor() {
+        if (window.__emailNoticeEditorReady) return;
+        window.__emailNoticeEditorReady = true;
+        if (document.execCommand) {
+            document.execCommand('styleWithCSS', false, true);
+        }
 
         // 落款日期默认今天
         var today = new Date();
@@ -436,7 +440,13 @@
                 refreshPreview();
             }
         });
-    });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initEditor);
+    } else {
+        initEditor();
+    }
 
     function execCmd(command, value = null) {
         document.execCommand(command, false, value);

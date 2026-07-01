@@ -114,11 +114,16 @@ def build_prefill_script(parsed):
     if (editor && payload.editorContent) {{
         editor.innerHTML = payload.editorContent;
     }}
-    if (typeof applyStylesToEditor === "function") {{
-        applyStylesToEditor();
-    }} else if (typeof refreshPreview === "function") {{
-        refreshPreview();
+    function refreshEditorPreview() {{
+        if (typeof applyStylesToEditor === "function") {{
+            applyStylesToEditor();
+        }} else if (typeof refreshPreview === "function") {{
+            refreshPreview();
+        }}
     }}
+    refreshEditorPreview();
+    setTimeout(refreshEditorPreview, 0);
+    setTimeout(refreshEditorPreview, 150);
 }})();
 </script>
 """
