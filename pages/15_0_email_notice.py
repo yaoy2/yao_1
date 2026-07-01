@@ -1,7 +1,6 @@
-import json
 import os
+import re
 import sys
-from pathlib import Path
 
 import streamlit as st
 import streamlit.components.v1 as components
@@ -9,14 +8,12 @@ import streamlit.components.v1 as components
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from utils.email_notice_parser import parse_notice_text
+from utils.email_notice_parser import DEFAULT_HEADER, parse_notice_text
+from utils.email_notice_renderer import build_notice_html, text_to_body_html
 from utils.ui_theme import render_home_link
 
 
 st.set_page_config(page_title="邮件通知编辑器", page_icon="✉️", layout="wide")
-
-ROOT_DIR = Path(__file__).resolve().parents[1]
-EDITOR_HTML_PATH = ROOT_DIR / "assets" / "email_notice_editor.html"
 
 
 def apply_style():
@@ -40,40 +37,10 @@ def apply_style():
             color: #667085;
             line-height: 1.65;
         }
-        .parsed-grid {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: .65rem;
-            margin: .4rem 0 .8rem;
-        }
-        .parsed-item {
-            min-height: 72px;
-            padding: .65rem .75rem;
-            border: 1px solid rgba(24, 34, 48, .12);
-            border-radius: 8px;
-            background: #fff;
-        }
-        .parsed-item span {
-            display: block;
-            color: #667085;
-            font-size: .78rem;
-            font-weight: 750;
-        }
-        .parsed-item strong {
-            display: block;
-            margin-top: .28rem;
-            color: #182230;
-            font-size: .95rem;
-            line-height: 1.42;
-            word-break: break-word;
-        }
         iframe {
             border-radius: 8px;
-        }
-        @media (max-width: 900px) {
-            .parsed-grid {
-                grid-template-columns: 1fr;
-            }
+            background: #fff;
+            box-shadow: 0 8px 24px rgba(24, 34, 48, .08);
         }
         </style>
         """,
@@ -81,109 +48,106 @@ def apply_style():
     )
 
 
-def load_editor_html():
-    return EDITOR_HTML_PATH.read_text(encoding="utf-8")
+def _session_default(key, value):
+    if key not in st.session_state:
+        st.session_state[key] = value
 
 
-def build_prefill_script(parsed):
-    payload = {
-        "inputHeader": parsed.get("header", ""),
-        "inputSubject": parsed.get("subject", ""),
-        "inputNumber": parsed.get("number", ""),
-        "inputUnit": parsed.get("unit", ""),
-        "inputDate": parsed.get("date", ""),
-        "editorContent": parsed.get("body_html", ""),
-    }
-    payload_json = json.dumps(payload, ensure_ascii=False)
-    return f"""
-<script>
-(function() {{
-    const payload = {payload_json};
-    function setValue(id, value) {{
-        const el = document.getElementById(id);
-        if (el && value !== undefined) {{
-            el.value = value;
-        }}
-    }}
-    setValue("inputHeader", payload.inputHeader);
-    setValue("inputSubject", payload.inputSubject);
-    setValue("inputNumber", payload.inputNumber);
-    setValue("inputUnit", payload.inputUnit);
-    setValue("inputDate", payload.inputDate);
-    const editor = document.getElementById("editorContent");
-    if (editor && payload.editorContent) {{
-        editor.innerHTML = payload.editorContent;
-    }}
-    function refreshEditorPreview() {{
-        if (typeof applyStylesToEditor === "function") {{
-            applyStylesToEditor();
-        }} else if (typeof refreshPreview === "function") {{
-            refreshPreview();
-        }}
-    }}
-    refreshEditorPreview();
-    setTimeout(refreshEditorPreview, 0);
-    setTimeout(refreshEditorPreview, 150);
-}})();
-</script>
-"""
+def apply_parsed_notice(parsed):
+    st.session_state["notice_header"] = parsed.get("header") or DEFAULT_HEADER
+    st.session_state["notice_subject"] = parsed.get("subject", "")
+    st.session_state["notice_number"] = parsed.get("number", "")
+    st.session_state["notice_unit"] = parsed.get("unit", "")
+    st.session_state["notice_date"] = parsed.get("date", "")
+    st.session_state["notice_body"] = parsed.get("body_text", "")
 
 
-def render_parsed_summary(parsed):
-    fields = [
-        ("表头", parsed.get("header") or "未识别"),
-        ("主题", parsed.get("subject") or "未识别"),
-        ("编号", parsed.get("number") or "未识别"),
-        ("落款单位", parsed.get("unit") or "未识别"),
-        ("落款日期", parsed.get("date") or "未识别"),
-        ("正文行数", str(len([line for line in parsed.get("body_text", "").splitlines() if line.strip()]))),
-    ]
-    cards = "".join(
-        f'<div class="parsed-item"><span>{label}</span><strong>{value}</strong></div>'
-        for label, value in fields
-    )
-    st.markdown(f'<div class="parsed-grid">{cards}</div>', unsafe_allow_html=True)
+def safe_filename(number, subject):
+    raw_name = f"{number}_{subject}" if number else subject
+    raw_name = raw_name or "通知"
+    return re.sub(r'[\\/:*?"<>|]', "_", raw_name) + ".html"
 
 
 render_home_link()
 apply_style()
 
+_session_default("notice_header", DEFAULT_HEADER)
+_session_default("notice_subject", "")
+_session_default("notice_number", "")
+_session_default("notice_unit", "")
+_session_default("notice_date", "")
+_session_default("notice_body", "")
+_session_default("notice_table_width", 521.3)
+_session_default("notice_header_height", 58)
+
 st.markdown('<h1 class="notice-title">邮件通知编辑器</h1>', unsafe_allow_html=True)
 st.markdown(
-    '<p class="notice-subtitle">表头固定为“成都东软学院健康医疗科技学院”；粘贴内容请从通知主题开始，一键识别后会自动填入下方编辑器。</p>',
+    '<p class="notice-subtitle">表头固定为“成都东软学院健康医疗科技学院”；粘贴内容请从通知主题开始。预览、源码和下载由 Streamlit 原生生成，避免嵌套按钮失效。</p>',
     unsafe_allow_html=True,
 )
-
-if "email_notice_parsed" not in st.session_state:
-    st.session_state["email_notice_parsed"] = {}
 
 with st.form("email_notice_parse_form", clear_on_submit=False):
     raw_notice = st.text_area(
         "粘贴通知内容（从通知主题开始）",
-        height=190,
+        height=170,
         placeholder="第一行粘贴通知主题，后面继续粘贴编号、正文、落款单位和日期。",
     )
-
-    left, right = st.columns([1, 5])
-    with left:
+    parse_col, hint_col = st.columns([1, 5])
+    with parse_col:
         recognize = st.form_submit_button("一键识别并填入", type="primary", use_container_width=True)
-    with right:
-        st.caption("规则会把第一行识别为通知主题，并继续识别“通知〔年份〕编号”、末尾中文日期和日期上一行落款单位。")
+    with hint_col:
+        st.caption("识别规则：第一行是通知主题；继续识别“通知〔年份〕编号”、末尾中文日期和日期上一行落款单位。")
 
 if recognize:
-    parsed = parse_notice_text(raw_notice)
     if not raw_notice.strip():
-        st.warning("还没有识别到有效内容，请先粘贴通知全文。")
+        st.warning("还没有识别到有效内容，请先粘贴通知内容。")
     else:
-        st.session_state["email_notice_parsed"] = parsed
-        st.success("已识别并填入下方编辑器，可继续微调后保存 HTML 或 PDF。")
+        apply_parsed_notice(parse_notice_text(raw_notice))
+        st.success("已识别并填入下方字段。")
 
-parsed_notice = st.session_state.get("email_notice_parsed", {})
-if parsed_notice:
-    render_parsed_summary(parsed_notice)
+left, right = st.columns([0.92, 1.08], gap="large")
 
-editor_html = load_editor_html()
-if parsed_notice:
-    editor_html = editor_html.replace("</body>", build_prefill_script(parsed_notice) + "\n</body>")
+with left:
+    st.subheader("编辑")
+    st.text_input("表头", key="notice_header", disabled=True)
+    st.text_input("通知主题", key="notice_subject")
+    st.text_input("通知编号", key="notice_number")
+    unit_col, date_col = st.columns(2)
+    with unit_col:
+        st.text_input("落款单位", key="notice_unit")
+    with date_col:
+        st.text_input("落款日期", key="notice_date", placeholder="2026-07-01")
+    st.text_area("正文", key="notice_body", height=360)
+    size_col, height_col = st.columns(2)
+    with size_col:
+        st.number_input("表格宽度(pt)", min_value=360.0, max_value=700.0, step=1.0, key="notice_table_width")
+    with height_col:
+        st.number_input("表头高度(px)", min_value=40, max_value=120, step=1, key="notice_header_height")
 
-components.html(editor_html, height=980, scrolling=True)
+body_html = text_to_body_html(st.session_state["notice_body"])
+notice_html = build_notice_html(
+    header=st.session_state["notice_header"],
+    subject=st.session_state["notice_subject"],
+    number=st.session_state["notice_number"],
+    unit=st.session_state["notice_unit"],
+    date_value=st.session_state["notice_date"],
+    body_html=body_html,
+    table_width_pt=st.session_state["notice_table_width"],
+    header_height_px=st.session_state["notice_header_height"],
+)
+
+with right:
+    st.subheader("实时预览")
+    components.html(notice_html, height=720, scrolling=True)
+    action_col, source_col = st.columns([1, 1])
+    with action_col:
+        st.download_button(
+            "保存 HTML 文件",
+            data=notice_html.encode("utf-8"),
+            file_name=safe_filename(st.session_state["notice_number"], st.session_state["notice_subject"]),
+            mime="text/html",
+            use_container_width=True,
+        )
+    with source_col:
+        with st.popover("查看源代码", use_container_width=True):
+            st.text_area("HTML 源代码", value=notice_html, height=420)
