@@ -1,8 +1,8 @@
 [
   {
     "status": "closed",
-    "checked_at": "2026-07-02T12:22:25.500555Z",
-    "closed_at": "2026-07-02T12:22:25.500555Z",
+    "checked_at": "2026-07-02T15:34:19.245878Z",
+    "closed_at": "2026-07-02T15:34:19.245878Z",
     "probability_24h": 95,
     "probability_48h": 98,
     "reason": "发现疑似额度已恢复或窗口关闭信号。"
