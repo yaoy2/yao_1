@@ -3,7 +3,7 @@
   "probability_24h": 95,
   "probability_48h": 98,
   "reason": "发现疑似额度已恢复或窗口关闭信号。",
-  "checked_at": "2026-07-03T11:02:19.835615Z",
+  "checked_at": "2026-07-03T13:14:22.779170Z",
   "alert_level": "push",
   "signals": [
     {
@@ -61,27 +61,13 @@
       ]
     },
     {
-      "id": "975fdc553c1bad77",
-      "source_id": "reddit_openai",
-      "source_name": "Reddit r/OpenAI",
-      "title": "How do I access my banked resets on Codex desktop?",
-      "summary": "How do I access my banked resets on Codex desktop? I opened Codex today and was greeted by\nthis\n. Thing is, my weekly usage limit just reset yesterday and I already have over 90% usage left. Can I save this reset for later? If so, how do I b",
-      "url": "https://www.reddit.com/r/OpenAI/new/.rss?limit=10",
-      "observed_at": "2026-07-03T05:55:40+00:00",
-      "weight": 15,
-      "tags": [
-        "codex",
-        "usage limit"
-      ]
-    },
-    {
-      "id": "768b1ac680347640",
+      "id": "641629f8619c6b33",
       "source_id": "openai_community",
       "source_name": "OpenAI Community Forum",
       "title": "Source fetch failed",
       "summary": "HTTPError: 429 Client Error: Too Many Requests for url: https://community.openai.com/search.json?q=codex+limit&order=latest",
       "url": "https://community.openai.com/search.json?q=codex+limit&order=latest",
-      "observed_at": "2026-07-03T11:02:19.834816Z",
+      "observed_at": "2026-07-03T13:14:22.778254Z",
       "weight": 0,
       "tags": [
         "fetch_error"
