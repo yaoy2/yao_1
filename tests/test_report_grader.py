@@ -72,6 +72,49 @@ class ReportGraderTest(unittest.TestCase):
         self.assertEqual(members[1].weight, 0.8)
         self.assertFalse(members[1].needs_review)
 
+    def test_extracts_vertical_member_roster_blocks(self):
+        text = """
+商业计划书
+成员名单
+
+姓名
+学号
+专业、班级
+权重系数
+
+曾诗涵
+24023420101
+供应链管理，供应链24201
+1
+
+石静怡
+24023420107
+供应链管理，供应链24201
+1
+
+刘莹
+24023420109
+供应链管理，供应链24201
+1
+
+晏思雨
+24023420112
+供应链管理，供应链24201
+1
+"""
+
+        members = report_grader.extract_members(text, "第5组")
+
+        self.assertEqual(
+            [(member.name, member.student_id, member.weight, member.needs_review) for member in members],
+            [
+                ("曾诗涵", "24023420101", 1.0, False),
+                ("石静怡", "24023420107", 1.0, False),
+                ("刘莹", "24023420109", 1.0, False),
+                ("晏思雨", "24023420112", 1.0, False),
+            ],
+        )
+
     def test_group_score_multiplies_member_weight_and_keeps_same_weight_equal(self):
         members = [
             report_grader.Member("第一组", "张三", "24032420501", 1.0, False),

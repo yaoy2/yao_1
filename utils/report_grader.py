@@ -190,10 +190,11 @@ def split_markdown_reports(markdown: str) -> list[ReportSection]:
 
 def extract_members(text: str, group_name: str = "") -> list[Member]:
     table_members = _extract_members_from_tables(text, group_name)
+    vertical_members = _extract_members_from_vertical_roster(text, group_name)
     free_members = _extract_members_from_free_text(text, group_name)
     seen: set[str] = set()
     members: list[Member] = []
-    for member in [*table_members, *free_members]:
+    for member in [*table_members, *vertical_members, *free_members]:
         if member.student_id in seen:
             continue
         seen.add(member.student_id)
@@ -420,6 +421,22 @@ def _extract_members_from_tables(text: str, group_name: str) -> list[Member]:
     return members
 
 
+def _extract_members_from_vertical_roster(text: str, group_name: str) -> list[Member]:
+    lines = [line.strip() for line in text.splitlines()]
+    members: list[Member] = []
+    for index, line in enumerate(lines):
+        if not _looks_like_chinese_name(line):
+            continue
+        if index + 1 >= len(lines):
+            continue
+        student_id = _clean_student_id(lines[index + 1])
+        if not student_id:
+            continue
+        weight, needs_review = _find_vertical_weight(lines, index + 2)
+        members.append(Member(group_name, line, student_id, weight, needs_review))
+    return members
+
+
 def _extract_members_from_free_text(text: str, group_name: str) -> list[Member]:
     members: list[Member] = []
     pattern = re.compile(
@@ -434,6 +451,34 @@ def _extract_members_from_free_text(text: str, group_name: str) -> list[Member]:
             weight, needs_review = 1.0, True
         members.append(Member(group_name, match.group("name"), _clean_student_id(match.group("id")), weight, needs_review))
     return members
+
+
+def _find_vertical_weight(lines: list[str], start_index: int) -> tuple[float, bool]:
+    for offset in range(0, 4):
+        line_index = start_index + offset
+        if line_index >= len(lines):
+            break
+        line = lines[line_index].strip()
+        if not line:
+            continue
+        if _clean_student_id(line) or _looks_like_chinese_name(line):
+            break
+        if re.fullmatch(r"\d+(?:\.\d+)?", line):
+            return float(line), False
+        if "权重" in line.lower() or "weight" in line.lower():
+            return _parse_weight(line)
+    return 1.0, True
+
+
+def _looks_like_chinese_name(value: str) -> bool:
+    text = str(value or "").strip()
+    return bool(re.fullmatch(r"[\u4e00-\u9fff]{2,4}", text)) and text not in {
+        "姓名",
+        "学号",
+        "成员名单",
+        "商业计划",
+        "商业计划书",
+    }
 
 
 def _split_markdown_row(line: str) -> list[str]:
