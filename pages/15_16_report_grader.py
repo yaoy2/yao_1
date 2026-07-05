@@ -17,9 +17,7 @@ st.set_page_config(page_title="报告评分与成绩表联动", page_icon="🧮"
 render_home_link()
 
 
-DEFAULT_RUBRIC = """请按课程评分标准统一评价报告内容质量，满分100分。
-重点关注：问题理解、方案完整度、商业逻辑、财务与风险、创新性、可行性、表达清晰度。
-同一小组只给一个报告基础分，成员个人分由系统按权重换算。"""
+DEFAULT_RUBRIC = report_grader.DEFAULT_BUSINESS_PLAN_RUBRIC
 
 
 def dataframe_download(df: pd.DataFrame, file_name: str, label: str):

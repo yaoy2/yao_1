@@ -7,6 +7,21 @@ from utils import report_grader
 
 
 class ReportGraderTest(unittest.TestCase):
+    def test_default_rubric_embeds_business_plan_score_table(self):
+        rubric = report_grader.DEFAULT_BUSINESS_PLAN_RUBRIC
+
+        self.assertIn("创业计划书评分标准（满分100分）", rubric)
+        self.assertIn("项目可行性分析（15分）", rubric)
+        self.assertIn("产品或服务的创新性（15分）", rubric)
+        self.assertIn("市场机会及竞争（20分）", rubric)
+        self.assertIn("营销策略（20分）", rubric)
+        self.assertIn("财务分析的正确性及合理性（10分）", rubric)
+        self.assertIn("团队管理（5分）", rubric)
+        self.assertIn("风险分析与对策（5分）", rubric)
+        self.assertIn("计划书内容完整、格式规范、AI使用规范（10分）", rubric)
+        self.assertIn("合理使用AI工具辅助", rubric)
+        self.assertEqual(100, sum(int(value) for value in __import__("re").findall(r"（(\d+)分）", rubric)))
+
     def test_splits_markdown_reports_and_extracts_members_with_weights(self):
         markdown = """
 # 第一组 智慧养老项目
