@@ -1,5 +1,6 @@
 import unittest
 from io import BytesIO
+from pathlib import Path
 
 from openpyxl import Workbook, load_workbook
 
@@ -7,6 +8,16 @@ from utils import report_grader
 
 
 class ReportGraderTest(unittest.TestCase):
+    def test_report_grader_page_uses_human_readable_table_headers(self):
+        page_source = (Path(__file__).resolve().parents[1] / "pages" / "15_16_report_grader.py").read_text(
+            encoding="utf-8"
+        )
+
+        for label in ["小组名", "报告标题", "起始行", "结束行", "报告字数", "识别成员数", "需复核权重数"]:
+            self.assertIn(label, page_source)
+        for label in ["学生姓名", "学号", "成员权重", "个人报告基础分", "目标总成绩", "公式回算成绩"]:
+            self.assertIn(label, page_source)
+
     def test_default_rubric_embeds_business_plan_score_table(self):
         rubric = report_grader.DEFAULT_BUSINESS_PLAN_RUBRIC
 

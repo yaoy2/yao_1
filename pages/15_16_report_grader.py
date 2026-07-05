@@ -19,6 +19,75 @@ render_home_link()
 
 DEFAULT_RUBRIC = report_grader.DEFAULT_BUSINESS_PLAN_RUBRIC
 
+REPORT_OVERVIEW_LABELS = {
+    "group_name": "小组名",
+    "title": "报告标题",
+    "start_line": "起始行",
+    "end_line": "结束行",
+    "char_count": "报告字数",
+    "member_count": "识别成员数",
+    "review_needed": "需复核权重数",
+}
+
+MEMBER_LABELS = {
+    "group_name": "小组名",
+    "name": "学生姓名",
+    "student_id": "学号",
+    "weight": "成员权重",
+    "needs_review": "需复核",
+}
+
+GROUP_SCORE_LABELS = {
+    "group_name": "小组名",
+    "report_score": "小组报告分",
+    "dimension_scores": "维度分",
+    "comment": "评分说明",
+    "warnings": "风险提醒",
+}
+
+STUDENT_SCORE_LABELS = {
+    "group_name": "小组名",
+    "name": "学生姓名",
+    "student_id": "学号",
+    "weight": "成员权重",
+    "group_report_score": "小组报告分",
+    "report_score": "个人报告基础分",
+    "needs_review": "需复核",
+}
+
+ADJUSTMENT_LABELS = {
+    "student_id": "学号",
+    "name": "学生姓名",
+    "bonus": "个别加分",
+    "target_final_score": "目标总成绩",
+    "reason": "调整原因",
+}
+
+GRADE_LABELS = {
+    "group_name": "小组名",
+    "name": "学生姓名",
+    "student_id": "学号",
+    "report_score": "个人报告基础分",
+    "target_final_score": "目标总成绩",
+    "calculated_final_score": "公式回算成绩",
+    "formative_average": "形成性均分",
+    "terminal_average": "终结性均分",
+    "classroom": "课堂表现",
+    "online_test": "线上测试",
+    "cost_budget": "成本预算与财务计划",
+    "org_risk": "组织架构与风险识别",
+    "legal_form": "企业法律形态选择",
+    "mind_map": "思维导图",
+    "business_canvas": "商业模式画布",
+    "marketing_plan": "市场营销计划",
+    "roadshow": "项目路演",
+    "business_plan": "创业计划书",
+    "deduction": "扣分项",
+    "addition": "加分项",
+    "reason": "调整原因",
+    "warnings": "配平提醒",
+}
+
 
 def dataframe_download(df: pd.DataFrame, file_name: str, label: str):
     if df.empty:
@@ -30,6 +99,10 @@ def dataframe_download(df: pd.DataFrame, file_name: str, label: str):
         mime="text/csv",
         use_container_width=True,
     )
+
+
+def display_dataframe(df: pd.DataFrame, labels: dict[str, str]) -> pd.DataFrame:
+    return df.rename(columns=labels)
 
 
 def reports_to_dataframe(reports):
@@ -197,10 +270,11 @@ with tab_report:
     if reports:
         report_df = reports_to_dataframe(reports)
         member_df = members_to_dataframe(reports)
-        st.dataframe(report_df, use_container_width=True, hide_index=True)
+        st.dataframe(display_dataframe(report_df, REPORT_OVERVIEW_LABELS), use_container_width=True, hide_index=True)
         with st.expander("成员权重识别结果", expanded=False):
-            st.dataframe(member_df, use_container_width=True, hide_index=True)
-            dataframe_download(member_df, "成员权重识别表.csv", "导出成员权重识别表")
+            member_display_df = display_dataframe(member_df, MEMBER_LABELS)
+            st.dataframe(member_display_df, use_container_width=True, hide_index=True)
+            dataframe_download(member_display_df, "成员权重识别表.csv", "导出成员权重识别表")
 
         selected_title = st.selectbox("选择报告生成AI评分提示词", [item.title for item in reports])
         selected_report = next(item for item in reports if item.title == selected_title)
@@ -210,7 +284,7 @@ with tab_report:
         ai_text = st.text_area(
             "粘贴AI返回的CSV/JSON评分结果",
             height=180,
-            placeholder="group_name,report_score,dimension_scores,comment,warnings",
+            placeholder="CSV表头仍按系统要求使用：group_name,report_score,dimension_scores,comment,warnings",
         )
         if st.button("导入AI小组评分", use_container_width=True):
             group_scores = report_grader.parse_group_scores(ai_text)
@@ -219,9 +293,10 @@ with tab_report:
     group_scores = st.session_state.get("report_grader_group_scores", [])
     if group_scores:
         score_df = group_scores_to_dataframe(group_scores)
+        score_display_df = display_dataframe(score_df, GROUP_SCORE_LABELS)
         st.subheader("小组报告评分")
-        st.dataframe(score_df, use_container_width=True, hide_index=True)
-        dataframe_download(score_df, "小组报告评分表.csv", "导出小组报告评分表")
+        st.dataframe(score_display_df, use_container_width=True, hide_index=True)
+        dataframe_download(score_display_df, "小组报告评分表.csv", "导出小组报告评分表")
 
         members = [member for report in reports for member in report.members]
         group_score_map = {score.group_name: score for score in group_scores}
@@ -233,8 +308,9 @@ with tab_report:
         if warnings:
             st.warning("；".join(warnings))
         st.subheader("学生个人报告基础分")
-        st.dataframe(student_df, use_container_width=True, hide_index=True)
-        dataframe_download(student_df, "学生报告基础分.csv", "导出学生报告基础分")
+        student_display_df = display_dataframe(student_df, STUDENT_SCORE_LABELS)
+        st.dataframe(student_display_df, use_container_width=True, hide_index=True)
+        dataframe_download(student_display_df, "学生报告基础分.csv", "导出学生报告基础分")
 
 with tab_gradebook:
     student_df = st.session_state.get("report_grader_student_df", pd.DataFrame())
@@ -248,14 +324,18 @@ with tab_gradebook:
             use_container_width=True,
             hide_index=True,
             column_config={
-                "bonus": st.column_config.NumberColumn("bonus", min_value=0.0, max_value=20.0, step=0.5),
+                "student_id": st.column_config.TextColumn("学号"),
+                "name": st.column_config.TextColumn("学生姓名"),
+                "bonus": st.column_config.NumberColumn("个别加分", min_value=0.0, max_value=20.0, step=0.5),
                 "target_final_score": st.column_config.NumberColumn(
-                    "target_final_score（留空=报告分+加分）", min_value=0.0, max_value=100.0, step=0.5
+                    "目标总成绩（留空=报告分+加分）", min_value=0.0, max_value=100.0, step=0.5
                 ),
+                "reason": st.column_config.TextColumn("调整原因"),
             },
         )
         grade_rows = compose_grade_rows(student_df, adjustment_df)
         grade_df = grade_rows_to_dataframe(grade_rows)
+        grade_display_df = display_dataframe(grade_df, GRADE_LABELS)
 
         mismatch_count = int((grade_df["target_final_score"].round(1) != grade_df["calculated_final_score"].round(1)).sum())
         review_count = int(grade_df["warnings"].astype(str).str.len().gt(0).sum())
@@ -270,8 +350,8 @@ with tab_gradebook:
         if review_count:
             st.info("部分记录触发配平提醒，可在明细表 warnings 列查看。")
 
-        st.dataframe(grade_df, use_container_width=True, hide_index=True)
-        dataframe_download(grade_df, "成绩总表联动明细.csv", "导出成绩总表联动明细")
+        st.dataframe(grade_display_df, use_container_width=True, hide_index=True)
+        dataframe_download(grade_display_df, "成绩总表联动明细.csv", "导出成绩总表联动明细")
 
         template = st.file_uploader("上传学校成绩Excel模板", type=["xlsx"])
         if template and st.button("填入模板并生成Excel", type="primary", use_container_width=True):
