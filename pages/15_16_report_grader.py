@@ -30,11 +30,13 @@ REPORT_OVERVIEW_LABELS = {
 }
 
 MEMBER_LABELS = {
+    "include": "是否纳入",
     "group_name": "小组名",
     "name": "学生姓名",
     "student_id": "学号",
     "weight": "成员权重",
     "needs_review": "需复核",
+    "review_note": "复核说明",
 }
 
 GROUP_SCORE_LABELS = {
@@ -128,14 +130,48 @@ def members_to_dataframe(reports):
         for member in item.members:
             rows.append(
                 {
+                    "include": not member.needs_review,
                     "group_name": member.group_name,
                     "name": member.name,
                     "student_id": member.student_id,
                     "weight": member.weight,
                     "needs_review": member.needs_review,
+                    "review_note": "缺少或需确认权重" if member.needs_review else "",
                 }
             )
     return pd.DataFrame(rows)
+
+
+def members_from_dataframe(member_df: pd.DataFrame) -> list[report_grader.Member]:
+    if member_df.empty:
+        return []
+    required_columns = ["include", "group_name", "name", "student_id", "weight", "needs_review"]
+    for column in required_columns:
+        if column not in member_df.columns:
+            member_df[column] = False if column in {"include", "needs_review"} else ""
+    members = []
+    for _, row in member_df.fillna("").iterrows():
+        if not bool(row.get("include")):
+            continue
+        student_id = str(row.get("student_id", "")).strip()
+        name = str(row.get("name", "")).strip()
+        group_name = str(row.get("group_name", "")).strip()
+        if not student_id or not name or not group_name:
+            continue
+        try:
+            weight = float(row.get("weight") or 1.0)
+        except (TypeError, ValueError):
+            weight = 1.0
+        members.append(
+            report_grader.Member(
+                group_name=group_name,
+                name=name,
+                student_id=student_id,
+                weight=weight,
+                needs_review=bool(row.get("needs_review")),
+            )
+        )
+    return members
 
 
 def group_scores_to_dataframe(group_scores):
@@ -272,8 +308,24 @@ with tab_report:
         member_df = members_to_dataframe(reports)
         st.dataframe(display_dataframe(report_df, REPORT_OVERVIEW_LABELS), use_container_width=True, hide_index=True)
         with st.expander("成员权重识别结果", expanded=False):
-            member_display_df = display_dataframe(member_df, MEMBER_LABELS)
-            st.dataframe(member_display_df, use_container_width=True, hide_index=True)
+            st.caption("可直接改姓名、学号、权重；取消“是否纳入”可排除误识别项；底部可新增漏识别学生。")
+            edited_member_df = st.data_editor(
+                member_df,
+                use_container_width=True,
+                hide_index=True,
+                num_rows="dynamic",
+                column_config={
+                    "include": st.column_config.CheckboxColumn("是否纳入"),
+                    "group_name": st.column_config.TextColumn("小组名"),
+                    "name": st.column_config.TextColumn("学生姓名"),
+                    "student_id": st.column_config.TextColumn("学号"),
+                    "weight": st.column_config.NumberColumn("成员权重", min_value=0.0, max_value=1.5, step=0.05),
+                    "needs_review": st.column_config.CheckboxColumn("需复核"),
+                    "review_note": st.column_config.TextColumn("复核说明"),
+                },
+            )
+            st.session_state["report_grader_member_df"] = edited_member_df
+            member_display_df = display_dataframe(edited_member_df, MEMBER_LABELS)
             dataframe_download(member_display_df, "成员权重识别表.csv", "导出成员权重识别表")
 
         selected_title = st.selectbox("选择报告生成AI评分提示词", [item.title for item in reports])
@@ -298,7 +350,8 @@ with tab_report:
         st.dataframe(score_display_df, use_container_width=True, hide_index=True)
         dataframe_download(score_display_df, "小组报告评分表.csv", "导出小组报告评分表")
 
-        members = [member for report in reports for member in report.members]
+        edited_member_df = st.session_state.get("report_grader_member_df", members_to_dataframe(reports))
+        members = members_from_dataframe(edited_member_df)
         group_score_map = {score.group_name: score for score in group_scores}
         student_scores = report_grader.build_student_report_scores(group_score_map, members)
         warnings = report_grader.validate_same_weight_scores(student_scores)

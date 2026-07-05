@@ -199,7 +199,7 @@ def extract_members(text: str, group_name: str = "") -> list[Member]:
             continue
         seen.add(member.student_id)
         members.append(member)
-    return members
+    return _mark_id_length_outliers(members)
 
 
 def parse_group_scores(raw_text: str) -> list[GroupScore]:
@@ -470,8 +470,34 @@ def _find_vertical_weight(lines: list[str], start_index: int) -> tuple[float, bo
     return 1.0, True
 
 
+def _mark_id_length_outliers(members: list[Member]) -> list[Member]:
+    if len(members) < 2:
+        return members
+    lengths = sorted(len(member.student_id) for member in members if member.student_id)
+    if not lengths:
+        return members
+    typical_length = lengths[len(lengths) // 2]
+    normalized: list[Member] = []
+    for member in members:
+        if abs(len(member.student_id) - typical_length) > 1:
+            normalized.append(
+                Member(
+                    group_name=member.group_name,
+                    name=member.name,
+                    student_id=member.student_id,
+                    weight=member.weight,
+                    needs_review=True,
+                )
+            )
+        else:
+            normalized.append(member)
+    return normalized
+
+
 def _looks_like_chinese_name(value: str) -> bool:
     text = str(value or "").strip()
+    if re.fullmatch(r"第[一二三四五六七八九十\d]+年", text):
+        return False
     return bool(re.fullmatch(r"[\u4e00-\u9fff]{2,4}", text)) and text not in {
         "姓名",
         "学号",

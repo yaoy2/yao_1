@@ -15,8 +15,9 @@ class ReportGraderTest(unittest.TestCase):
 
         for label in ["小组名", "报告标题", "起始行", "结束行", "报告字数", "识别成员数", "需复核权重数"]:
             self.assertIn(label, page_source)
-        for label in ["学生姓名", "学号", "成员权重", "个人报告基础分", "目标总成绩", "公式回算成绩"]:
+        for label in ["学生姓名", "学号", "成员权重", "是否纳入", "个人报告基础分", "目标总成绩", "公式回算成绩"]:
             self.assertIn(label, page_source)
+        self.assertIn('num_rows="dynamic"', page_source)
 
     def test_default_rubric_embeds_business_plan_score_table(self):
         rubric = report_grader.DEFAULT_BUSINESS_PLAN_RUBRIC
@@ -114,6 +115,37 @@ class ReportGraderTest(unittest.TestCase):
                 ("晏思雨", "24023420112", 1.0, False),
             ],
         )
+
+    def test_vertical_roster_does_not_treat_year_labels_as_students(self):
+        text = """
+第四年
+11115000
+1
+第五年
+15600000
+1
+李欣雨
+24052920113
+电子商务，电商24201
+0.95
+"""
+
+        members = report_grader.extract_members(text, "第二十三组")
+
+        self.assertEqual([(member.name, member.student_id) for member in members], [("李欣雨", "24052920113")])
+
+    def test_marks_student_id_length_outliers_for_review(self):
+        text = """
+张三 12345678 权重 1
+李四 24052920113 权重 1
+王五 24052920114 权重 1
+"""
+
+        members = report_grader.extract_members(text, "第一组")
+
+        self.assertTrue(members[0].needs_review)
+        self.assertFalse(members[1].needs_review)
+        self.assertFalse(members[2].needs_review)
 
     def test_group_score_multiplies_member_weight_and_keeps_same_weight_equal(self):
         members = [
