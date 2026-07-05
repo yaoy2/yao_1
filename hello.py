@@ -18,6 +18,15 @@ apply_global_theme()
 
 TOOLS = [
     {
+        "title": "报告评分与成绩表联动",
+        "desc": "第16个项目：把小组报告评分、成员权重、个别加分和学校成绩总表合成放在同一个流程中处理。",
+        "tag": "成绩处理",
+        "created": "2026_07_05",
+        "page": "pages/15_16_report_grader.py",
+        "code": "M16",
+        "accent": "cyan",
+    },
+    {
         "title": "待办清单",
         "desc": "记录日常待办、自动识别截止日期和时间，完成后软归档，并通过本地备份和 GitHub 同步保护数据。",
         "tag": "任务管理",
