@@ -54,16 +54,83 @@
     ]
   },
   {
-    "id": "97a7eb23caae474b",
+    "id": "725bf89f26df730f",
     "source_id": "openai_community",
     "source_name": "OpenAI Community Forum",
-    "title": "Source fetch failed",
-    "summary": "HTTPError: 429 Client Error: Too Many Requests for url: https://community.openai.com/search.json?q=codex+limit&order=latest",
-    "url": "https://community.openai.com/search.json?q=codex+limit&order=latest",
-    "observed_at": "2026-07-08T00:14:32.505690Z",
-    "weight": 0,
+    "title": "Business Tier missing 5-hour/weekly Codex limits",
+    "summary": "Business Tier missing 5-hour/weekly Codex limits HKE-DGTXYAAECVc Hi everyone, I'm currently facing a frustrating provisioning issue with my Business subscription and wanted to see if anyone else is experiencing the same situation. According to the standard Business plan, our workspaces should display rolling 5-hour and weekly usage limits for C...",
+    "url": "https://community.openai.com/t/business-tier-missing-5-hour-weekly-codex-limits/1383064",
+    "observed_at": "2026-06-08T14:25:56.134Z",
+    "weight": 10,
     "tags": [
-      "fetch_error"
+      "codex",
+      "usage limit"
+    ]
+  },
+  {
+    "id": "d56b859920888d47",
+    "source_id": "openai_community",
+    "source_name": "OpenAI Community Forum",
+    "title": "WE ARE TIRED! Codex Limits drainage",
+    "summary": "WE ARE TIRED! Codex Limits drainage Dear OpenAI. Could you please stop releasing features that causes massive drainage of limits. Why you are not allowing us to simply work? Every single time you are releasing some new features our limits are being burned instantly. Why are you not allowing us to simply have routines and work. Righ...",
+    "url": "https://community.openai.com/t/we-are-tired-codex-limits-drainage/1379740",
+    "observed_at": "2026-04-25T10:15:46.837Z",
+    "weight": 10,
+    "tags": [
+      "codex"
+    ]
+  },
+  {
+    "id": "dd1d33b861b3853b",
+    "source_id": "openai_community",
+    "source_name": "OpenAI Community Forum",
+    "title": "Understanding the New Codex Limit System After the April 9 Update",
+    "summary": "Understanding the New Codex Limit System After the April 9 Update After about a week of testing, I think I finally understand how the new Codex limit system works in practice. I'm writing this post because many people are still trying to interpret the new system using the old mental model. They see...",
+    "url": "https://community.openai.com/t/understanding-the-new-codex-limit-system-after-the-april-9-update/1378768",
+    "observed_at": "2026-04-10T17:48:26.898Z",
+    "weight": 10,
+    "tags": [
+      "codex"
+    ]
+  },
+  {
+    "id": "8e496cd26bd7ef12",
+    "source_id": "openai_community",
+    "source_name": "OpenAI Community Forum",
+    "title": "ChatGPT Plus Codex limits penalize honest weekend open-source use",
+    "summary": "ChatGPT Plus Codex limits penalize honest weekend open-source use I am posting this separately because my earlier reply was in the rate-limit discussion thread, which had been active for about two weeks. After my reply, the only response that followed was off-topic, and the thread was closed a few hours later. That left me with no real opportunity to bring the ...",
+    "url": "https://community.openai.com/t/chatgpt-plus-codex-limits-penalize-honest-weekend-open-source-use/1379384",
+    "observed_at": "2026-04-20T15:57:34.812Z",
+    "weight": 10,
+    "tags": [
+      "codex"
+    ]
+  },
+  {
+    "id": "c572a09f427d3e56",
+    "source_id": "openai_community",
+    "source_name": "OpenAI Community Forum",
+    "title": "Hitting Codex limits after a few prompts",
+    "summary": "Hitting Codex limits after a few prompts I created a few codex tasks and my 5 hour limit was full, I bought $40 credits since it was urgent and after few prompts more they were gone as well. Now my limits are used for the entire week despite me buying a 1000 credits (which I honestly assumed would last the entire month). Reddit was full...",
+    "url": "https://community.openai.com/t/hitting-codex-limits-after-a-few-prompts/1364963",
+    "observed_at": "2025-11-03T21:31:53.957Z",
+    "weight": 10,
+    "tags": [
+      "codex",
+      "credit"
+    ]
+  },
+  {
+    "id": "707451884ddcff81",
+    "source_id": "openai_community",
+    "source_name": "OpenAI Community Forum",
+    "title": "Codex limits the screen to 80 char width",
+    "summary": "Codex limits the screen to 80 char width Is anyone else using the codex cli and noticing that the screen width maxes out at 80 chars, despite your terminal being much greater like ~208 chars? Have you figured out a solution?",
+    "url": "https://community.openai.com/t/codex-limits-the-screen-to-80-char-width/1337584",
+    "observed_at": "2025-08-08T01:46:07.520Z",
+    "weight": 10,
+    "tags": [
+      "codex"
     ]
   }
 ]
