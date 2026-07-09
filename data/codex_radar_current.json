@@ -3,7 +3,7 @@
   "probability_24h": 95,
   "probability_48h": 98,
   "reason": "发现疑似额度已恢复或窗口关闭信号。",
-  "checked_at": "2026-07-09T20:08:53.786686Z",
+  "checked_at": "2026-07-09T21:48:46.682506Z",
   "alert_level": "push",
   "signals": [
     {
@@ -61,27 +61,27 @@
       ]
     },
     {
-      "id": "fd372283c7638347",
+      "id": "17a5b792523b265f",
       "source_id": "reddit_openai",
       "source_name": "Reddit r/OpenAI",
-      "title": "Reset PLZ I'm out of credits and I haven't even used it.",
-      "summary": "Reset PLZ I'm out of credits and I haven't even used it. Uses codex credits I guess... unlike reglar jippity.\nsubmitted by\n/u/Eternality",
+      "title": "Warning: ChatGPT Work on the new desktop app burns usage limits (shared with Codex) - ChatGPT web does not",
+      "summary": "Warning: ChatGPT Work on the new desktop app burns usage limits (shared with Codex) - ChatGPT web does not ChatGPT web does not burn usage limits, but ChatGPT Work on the desktop app does. Best to use the web version of ChatGPT.\nsubmitted by\n/u/Endonium",
       "url": "https://www.reddit.com/r/OpenAI/new/.rss?limit=10",
-      "observed_at": "2026-07-09T19:35:36+00:00",
+      "observed_at": "2026-07-09T20:59:20+00:00",
       "weight": 15,
       "tags": [
         "codex",
-        "credit"
+        "usage limit"
       ]
     },
     {
-      "id": "5b0bb566f2da5d47",
+      "id": "1bd91f3f1f49eb4c",
       "source_id": "openai_community",
       "source_name": "OpenAI Community Forum",
       "title": "Source fetch failed",
       "summary": "HTTPError: 429 Client Error: Too Many Requests for url: https://community.openai.com/search.json?q=codex+limit&order=latest",
       "url": "https://community.openai.com/search.json?q=codex+limit&order=latest",
-      "observed_at": "2026-07-09T20:08:53.785716Z",
+      "observed_at": "2026-07-09T21:48:46.681482Z",
       "weight": 0,
       "tags": [
         "fetch_error"
