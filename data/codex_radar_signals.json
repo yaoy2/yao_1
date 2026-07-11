@@ -54,27 +54,27 @@
     ]
   },
   {
-    "id": "f317c0281731b7ef",
+    "id": "8a0a2a1722c7bc2c",
     "source_id": "reddit_openai",
     "source_name": "Reddit r/OpenAI",
-    "title": "Is 5.6 sol in chatgpt browser counted against the quota of codex?",
-    "summary": "Is 5.6 sol in chatgpt browser counted against the quota of codex? Before 5.6 , 5.5 in the browser didnt' count against quota. Now with 5.6, I can't tell if it's diminishing quota or not, when i return to 'codex' (now chatgpt desktop app)... to check\nsubmitted by",
+    "title": "OpenAI casually informed me I hit my $2,500 monthly auto-recharge limit. They meant 2,500 Codex credits.",
+    "summary": "OpenAI casually informed me I hit my $2,500 monthly auto-recharge limit. They meant 2,500 Codex credits. ",
     "url": "https://www.reddit.com/r/OpenAI/new/.rss?limit=10",
-    "observed_at": "2026-07-11T15:20:03+00:00",
+    "observed_at": "2026-07-11T17:49:32+00:00",
     "weight": 15,
     "tags": [
       "codex",
-      "quota"
+      "credit"
     ]
   },
   {
-    "id": "2a3ddb62b857839c",
+    "id": "f3971585a27a2ef8",
     "source_id": "openai_community",
     "source_name": "OpenAI Community Forum",
     "title": "Source fetch failed",
     "summary": "HTTPError: 429 Client Error: Too Many Requests for url: https://community.openai.com/search.json?q=codex+limit&order=latest",
     "url": "https://community.openai.com/search.json?q=codex+limit&order=latest",
-    "observed_at": "2026-07-11T17:18:12.616112Z",
+    "observed_at": "2026-07-11T19:34:57.429682Z",
     "weight": 0,
     "tags": [
       "fetch_error"
