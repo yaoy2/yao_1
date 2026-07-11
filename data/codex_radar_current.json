@@ -3,7 +3,7 @@
   "probability_24h": 95,
   "probability_48h": 98,
   "reason": "发现疑似额度已恢复或窗口关闭信号。",
-  "checked_at": "2026-07-11T22:09:35.717275Z",
+  "checked_at": "2026-07-11T23:12:58.735854Z",
   "alert_level": "push",
   "signals": [
     {
@@ -61,27 +61,13 @@
       ]
     },
     {
-      "id": "8a0a2a1722c7bc2c",
-      "source_id": "reddit_openai",
-      "source_name": "Reddit r/OpenAI",
-      "title": "OpenAI casually informed me I hit my $2,500 monthly auto-recharge limit. They meant 2,500 Codex credits.",
-      "summary": "OpenAI casually informed me I hit my $2,500 monthly auto-recharge limit. They meant 2,500 Codex credits. ",
-      "url": "https://www.reddit.com/r/OpenAI/new/.rss?limit=10",
-      "observed_at": "2026-07-11T17:49:32+00:00",
-      "weight": 15,
-      "tags": [
-        "codex",
-        "credit"
-      ]
-    },
-    {
-      "id": "e814b614e3461b6f",
+      "id": "c4ba939a360b79d6",
       "source_id": "openai_community",
       "source_name": "OpenAI Community Forum",
       "title": "Source fetch failed",
       "summary": "HTTPError: 429 Client Error: Too Many Requests for url: https://community.openai.com/search.json?q=codex+limit&order=latest",
       "url": "https://community.openai.com/search.json?q=codex+limit&order=latest",
-      "observed_at": "2026-07-11T22:09:35.716342Z",
+      "observed_at": "2026-07-11T23:12:58.734879Z",
       "weight": 0,
       "tags": [
         "fetch_error"
