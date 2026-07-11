@@ -3,7 +3,7 @@
   "probability_24h": 95,
   "probability_48h": 98,
   "reason": "发现疑似额度已恢复或窗口关闭信号。",
-  "checked_at": "2026-07-11T12:07:55.691403Z",
+  "checked_at": "2026-07-11T13:57:17.039570Z",
   "alert_level": "push",
   "signals": [
     {
@@ -61,26 +61,26 @@
       ]
     },
     {
-      "id": "78ff5adacf932e44",
+      "id": "5a8dce4802ab6dfa",
       "source_id": "reddit_openai",
       "source_name": "Reddit r/OpenAI",
-      "title": "OOPS! The GPT5.6 Sol model is really too expensive! With the Plus subscription, GPT5.6 Sol couldn't even finish the Plan I requested in the ",
-      "summary": "OOPS! The GPT5.6 Sol model is really too expensive! With the Plus subscription, GPT5.6 Sol couldn't even finish the Plan I requested in the Codex. I haven't seen any results from GPT-5.6 Sol yet with even 2 limit resets that would convince me to upgrade from the Plus plan to the Pro /x5/x20, but I can already see that it's a really expensive tool that won't compete with the Claude Fable 5 or perhap",
+      "title": "Chat using Codex limits (not in Work mode)",
+      "summary": "Chat using Codex limits (not in Work mode) Has anybody noticed that when using Chat (not Work mode), certain questions now seem to make it silently switch to Work mode?\nFor example, with 5.5, if the thinking chain of thought used Python to perform a precise calculation (like when I ask a finance quest",
       "url": "https://www.reddit.com/r/OpenAI/new/.rss?limit=10",
-      "observed_at": "2026-07-11T09:54:41+00:00",
+      "observed_at": "2026-07-11T12:38:17+00:00",
       "weight": 15,
       "tags": [
         "codex"
       ]
     },
     {
-      "id": "2249608675eafc71",
+      "id": "2396838fad63a124",
       "source_id": "openai_community",
       "source_name": "OpenAI Community Forum",
       "title": "Source fetch failed",
       "summary": "HTTPError: 429 Client Error: Too Many Requests for url: https://community.openai.com/search.json?q=codex+limit&order=latest",
       "url": "https://community.openai.com/search.json?q=codex+limit&order=latest",
-      "observed_at": "2026-07-11T12:07:55.690372Z",
+      "observed_at": "2026-07-11T13:57:17.038670Z",
       "weight": 0,
       "tags": [
         "fetch_error"
