@@ -23,6 +23,7 @@ marvis_report*.pdf
 
 # Data
 *.db
+data/grade_workbench/
 
 # Local run logs
 logs/*.log

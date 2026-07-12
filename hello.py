@@ -18,13 +18,23 @@ apply_global_theme()
 
 TOOLS = [
     {
-        "title": "报告评分与成绩表联动",
-        "desc": "第16个项目：把小组报告评分、成员权重、个别加分和学校成绩总表合成放在同一个流程中处理。",
-        "tag": "成绩处理",
+        "title": "教学评分工作台",
+        "desc": "第17个项目：持久化管理花名册、小组路演与报告原始分、个人系数和各层调整，校验后导出审核工作簿。",
+        "tag": "成绩审核",
+        "created": "2026_07_12",
+        "page": "pages/16_17_grade_workbench.py",
+        "code": "M17",
+        "accent": "green",
+    },
+    {
+        "title": "旧版报告评分与成绩联动",
+        "desc": "已由M17教学评分工作台替代，仅保留旧流程作历史对照，不再用于正式成绩处理。",
+        "tag": "已替代",
         "created": "2026_07_05",
         "page": "pages/15_16_report_grader.py",
         "code": "M16",
         "accent": "cyan",
+        "blocked": True,
     },
     {
         "title": "邮件通知编辑器",
