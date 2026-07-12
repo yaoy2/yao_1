@@ -140,11 +140,32 @@ def editor_config_groups() -> dict:
 st.title("教学评分工作台")
 st.caption("原始小组分、个人贡献折算和最终调整分开保存；校验通过后再导出。")
 
+tasks = list_tasks()
+if not tasks:
+    st.subheader("先创建第一个评分任务")
+    st.write("每个班级或教学批次单独建一个任务，花名册、评分、调整记录和导出文件不会互相混在一起。")
+    step1, step2, step3 = st.columns(3)
+    step1.info("① 创建任务\n\n填写学期、课程和任务名称")
+    step2.info("② 导入资料\n\n上传花名册和小组评分表")
+    step3.info("③ 审核导出\n\n校验通过后生成审核工作簿")
+    with st.form("create_first_task"):
+        task_name = st.text_input("任务名称", placeholder="例如：2026春季内班评分")
+        term = st.text_input("学期", value="2025-2026学年第2学期")
+        course = st.text_input("课程", value="从非商业计划到商业计划")
+        submitted = st.form_submit_button("创建并进入评分任务", type="primary", use_container_width=True)
+        if submitted:
+            if not task_name.strip():
+                st.error("请填写任务名称。")
+            else:
+                created = create_task(task_name, term, course)
+                st.session_state["active_task"] = created
+                st.rerun()
+    st.stop()
+
 with st.sidebar:
     st.header("评分任务")
-    tasks = list_tasks()
-    with st.expander("新建任务", expanded=not tasks):
-        with st.form("create_task"):
+    with st.expander("新建其他任务"):
+        with st.form("create_additional_task"):
             task_name = st.text_input("任务名称", placeholder="例如：2026春季内班评分")
             term = st.text_input("学期", value="2025-2026学年第2学期")
             course = st.text_input("课程", value="从非商业计划到商业计划")
@@ -158,9 +179,6 @@ with st.sidebar:
                     st.rerun()
 
     tasks = list_tasks()
-    if not tasks:
-        st.info("请先创建一个评分任务。")
-        st.stop()
     labels = {item["task_id"]: item.get("name", item["task_id"]) for item in tasks}
     task_ids = list(labels)
     active = st.session_state.get("active_task", task_ids[0])
