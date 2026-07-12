@@ -18,6 +18,15 @@ apply_global_theme()
 
 TOOLS = [
     {
+        "title": "评分工作台使用说明",
+        "desc": "第18个项目：集中说明M17操作流程、分数口径、数据位置、跨电脑状态和常见问题。",
+        "tag": "使用说明",
+        "created": "2026_07_12",
+        "page": "pages/17_18_grade_workbench_guide.py",
+        "code": "M18",
+        "accent": "amber",
+    },
+    {
         "title": "教学评分工作台",
         "desc": "第17个项目：持久化管理花名册、小组路演与报告原始分、个人系数和各层调整，校验后导出审核工作簿。",
         "tag": "成绩审核",
