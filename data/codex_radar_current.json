@@ -3,7 +3,7 @@
   "probability_24h": 95,
   "probability_48h": 98,
   "reason": "发现疑似额度已恢复或窗口关闭信号。",
-  "checked_at": "2026-07-12T00:13:15.964074Z",
+  "checked_at": "2026-07-12T04:02:47.888305Z",
   "alert_level": "push",
   "signals": [
     {
@@ -61,13 +61,26 @@
       ]
     },
     {
-      "id": "366dadcda5bd1e6b",
+      "id": "4d45fafb580a17e5",
+      "source_id": "reddit_openai",
+      "source_name": "Reddit r/OpenAI",
+      "title": "One Codex task used over 70% of my 5-hour limit in about 20 minutes — is this normal?",
+      "summary": "One Codex task used over 70% of my 5-hour limit in about 20 minutes — is this normal? ",
+      "url": "https://www.reddit.com/r/OpenAI/new/.rss?limit=10",
+      "observed_at": "2026-07-12T02:06:18+00:00",
+      "weight": 15,
+      "tags": [
+        "codex"
+      ]
+    },
+    {
+      "id": "4725290c1364b6f4",
       "source_id": "openai_community",
       "source_name": "OpenAI Community Forum",
       "title": "Source fetch failed",
       "summary": "HTTPError: 429 Client Error: Too Many Requests for url: https://community.openai.com/search.json?q=codex+limit&order=latest",
       "url": "https://community.openai.com/search.json?q=codex+limit&order=latest",
-      "observed_at": "2026-07-12T00:13:15.963234Z",
+      "observed_at": "2026-07-12T04:02:47.887197Z",
       "weight": 0,
       "tags": [
         "fetch_error"
