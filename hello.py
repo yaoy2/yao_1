@@ -44,6 +44,7 @@ TOOLS = [
         "code": "M16",
         "accent": "cyan",
         "blocked": True,
+        "second_page": True,
     },
     {
         "title": "邮件通知编辑器",
@@ -202,7 +203,22 @@ def sort_tool_key(tool):
 
 
 def get_homepage_tools(tools):
-    return sorted(tools, key=sort_tool_key, reverse=True)
+    normal_tools = sorted(
+        (tool for tool in tools if not tool.get("second_page")),
+        key=sort_tool_key,
+        reverse=True,
+    )
+    second_page_tools = sorted(
+        (tool for tool in tools if tool.get("second_page")),
+        key=sort_tool_key,
+        reverse=True,
+    )
+    first_page_size = 9
+    return [
+        *normal_tools[:first_page_size],
+        *second_page_tools,
+        *normal_tools[first_page_size:],
+    ]
 
 
 def get_homepage_pages(tools, page_size=9):
