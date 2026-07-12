@@ -3,7 +3,7 @@
   "probability_24h": 95,
   "probability_48h": 98,
   "reason": "发现疑似额度已恢复或窗口关闭信号。",
-  "checked_at": "2026-07-12T19:33:30.986295Z",
+  "checked_at": "2026-07-12T21:08:17.818410Z",
   "alert_level": "push",
   "signals": [
     {
@@ -61,13 +61,41 @@
       ]
     },
     {
-      "id": "bead79fd68862437",
+      "id": "d92cf87445b2a1c2",
+      "source_id": "reddit_openai",
+      "source_name": "Reddit r/OpenAI",
+      "title": "If you noticed that in Codex you no longer a see a 5-hour usage limit, that's not a bug.",
+      "summary": "If you noticed that in Codex you no longer a see a 5-hour usage limit, that's not a bug. ",
+      "url": "https://www.reddit.com/r/OpenAI/new/.rss?limit=10",
+      "observed_at": "2026-07-12T20:24:35+00:00",
+      "weight": 15,
+      "tags": [
+        "codex",
+        "usage limit"
+      ]
+    },
+    {
+      "id": "68fad54ec2c1e53d",
+      "source_id": "reddit_openai",
+      "source_name": "Reddit r/OpenAI",
+      "title": "Chat usage limits",
+      "summary": "Chat usage limits Does standard GPT chat not drain codex usage pool?\nI'm having Sol high review some PR's via Github plug-in and my Codex limits haven't been touched.\nsubmitted by",
+      "url": "https://www.reddit.com/r/OpenAI/new/.rss?limit=10",
+      "observed_at": "2026-07-12T20:15:51+00:00",
+      "weight": 15,
+      "tags": [
+        "codex",
+        "usage limit"
+      ]
+    },
+    {
+      "id": "9d6de1a0269d83a8",
       "source_id": "openai_community",
       "source_name": "OpenAI Community Forum",
       "title": "Source fetch failed",
       "summary": "HTTPError: 429 Client Error: Too Many Requests for url: https://community.openai.com/search.json?q=codex+limit&order=latest",
       "url": "https://community.openai.com/search.json?q=codex+limit&order=latest",
-      "observed_at": "2026-07-12T19:33:30.985407Z",
+      "observed_at": "2026-07-12T21:08:17.817218Z",
       "weight": 0,
       "tags": [
         "fetch_error"
