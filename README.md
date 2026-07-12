@@ -17,6 +17,9 @@ The project is built around real administrative, teaching-support, competition-g
 
 - **Online app**: [yao-1.streamlit.app](https://yao-1.streamlit.app/)
 - **Repository**: [github.com/yaoy2/yao_1](https://github.com/yaoy2/yao_1)
+- **Grade Workbench Guide (M18)**: explains the M17 workflow, score definitions, file locations, cross-computer status, and common questions.
+- **Teaching Grade Workbench (M17)**: manages rosters, group roadshow/report source scores, contribution coefficients, adjustment layers, validation, and review-workbook export.
+- **Legacy Grade Linkage (M16)**: replaced by M17, marked with a red cross, and pinned to the second homepage page for historical reference only.
 - **Zhongshengshi MVP**: `zhongshengshi/`, a local Next.js subproject for validating the multi-model roundtable flow. The current page now defaults to a freer short-message discussion stream instead of fixed opening/debate speeches.
 - **Todo List**: the 14th locked tool panel. It records tasks newest-first, extracts common Chinese date/time hints, supports search, soft-archives completed tasks, and keeps `data/todo_items_backup.md` as a GitHub-syncable recovery file.
 - **LLM Budget Tracker**: the 13th tool panel, showing balances for supported LLM providers, including Gemini, and keeping editable login-account and expiration-date labels in `data/llm_budget_accounts.json`.
@@ -95,9 +98,9 @@ Next steps:
 
 ---
 
-## Thirteen Core Modules
+## Eighteen Tool Modules
 
-The module numbers track launch order. Streamlit page filenames use a leading sidebar sort index plus the module number, so newer tools appear higher in the sidebar while the displayed module number remains stable.
+Module numbers track launch order. Homepage order comes from metadata in `hello.py`, with nine cards per page. Tools marked `second_page` are pinned to page two. Red-cross modules are retained for history only and should not be used for new work.
 
 ### 1. Report Grading System
 
@@ -206,6 +209,32 @@ The module numbers track launch order. Streamlit page filenames use a leading si
   - **Expiration labels**: each provider can store a manual `expiration date: yy_mm_dd` value below the account field, saved with the account in `data/llm_budget_accounts.json`.
   - **GitHub backup**: when `GITHUB_BACKUP_TOKEN` is configured, saved account labels are synced back to GitHub so redeploys or repository refreshes do not wipe them.
 
+### 14. Todo List
+
+- **Use case**: tracking daily tasks, due dates, completion status, and archived records.
+- **What it does**: recognizes common Chinese date/time phrases, supports search and soft archive, stores local SQLite data, and maintains a Markdown recovery backup.
+
+### 15. Email Notice Editor
+
+- **Use case**: turning a pasted notice into a structured, previewable, exportable email page.
+- **What it does**: recognizes subject, notice number, body, signature, and date, with browser preview and HTML export.
+
+### 16. Legacy Report Grading and Grade Linkage (Replaced)
+
+- **Status**: replaced by M17, kept only for historical reference, marked with a red cross, and pinned to homepage page two.
+- **Rule**: do not create new official grading tasks in M16.
+
+### 17. Teaching Grade Workbench
+
+- **Use case**: managing rosters, roadshows, level-three project reports, personal contribution coefficients, and final-score adjustments.
+- **Rule**: group source scores, personal converted scores, and global/group/personal adjustments are stored separately. Adjustments never rewrite roadshow or report source scores.
+- **Data status**: tasks currently live under local `data/grade_workbench/`; cross-computer grading-data sync is not enabled yet.
+
+### 18. Grade Workbench Guide
+
+- **Use case**: quickly confirming what M18, M17, and M16 mean after a long gap between grading sessions.
+- **What it does**: documents the six-step workflow, score definitions, file locations, cross-computer cautions, and common questions.
+
 ---
 
 ## Codex Radar Lite
@@ -215,7 +244,7 @@ Codex Radar Lite is the monitoring module behind the 12th toolbox panel.
 - **Workflow**: `.github/workflows/codex-radar.yml` runs hourly.
 - **Judgment**: a rule engine reads public sources first; it does not call a large model by default.
 - **Data files**: `data/codex_radar_current.json`, `data/codex_radar_history.json`, and `data/codex_radar_signals.json`.
-- **Streamlit page**: `pages/01_12_codex.py`.
+- **Streamlit page**: `pages/01_12_codex❌.py` (this module is currently deprecated).
 - **Static fallback**: `codex_radar_lite/site/index.html`.
 - **DingTalk push**: alerts only for high-probability, open, or closed reset windows.
 
@@ -251,19 +280,17 @@ Local deployment is recommended for WeChat archiving and large batches of privat
    cd yao_1
    ```
 
-2. Create a virtual environment and install dependencies.
+2. Run the first-time installer.
 
-   ```bash
-   python -m venv .venv
-   .venv\Scripts\activate
-   pip install -r requirements.txt
-   ```
+   Double-click `首次安装.bat`. It creates the project-local `.venv` and installs both runtime and test dependencies.
 
 3. Start the toolbox.
 
-   ```bash
-   streamlit run hello.py
-   ```
+   Double-click `启动YaoYao工具箱.bat`.
+
+4. Verify the project.
+
+   Double-click `运行测试.bat`. If it reports a failure, keep the error text and pass it to Codex for diagnosis.
 
 ### Recorder Notes Local Setup
 
@@ -358,7 +385,7 @@ For L-laptop migration and detailed Task Scheduler setup, see [docs/ding_minutes
 
 ## License
 
-This project is documented as using the [MIT License](LICENSE).
+The repository does not currently include a standalone `LICENSE` file. Choose and add a license before formally redistributing the project or granting reuse rights.
 
 ## Change Log
 

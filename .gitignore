@@ -3,6 +3,9 @@ __pycache__/
 *.pyc
 *.pyo
 .venv/
+node_modules/
+.next/
+.next-build/
 
 # IDE / Agent
 .claude/
@@ -20,6 +23,7 @@ CONVERSATION_LOG.md
 *.tmp
 marvis_report*.pdf
 立即Recorder真实测试.bat
+outputs/
 
 # Data
 *.db

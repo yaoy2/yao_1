@@ -15,6 +15,9 @@
 
 - **线上入口**：[yao-1.streamlit.app](https://yao-1.streamlit.app/)
 - **仓库地址**：[github.com/yaoy2/yao_1](https://github.com/yaoy2/yao_1)
+- **评分工作台使用说明（M18）**：说明M17操作流程、分数口径、文件位置、跨电脑状态和常见问题；忘记怎么操作时先看M18。
+- **教学评分工作台（M17）**：持久化管理花名册、小组路演与报告原始分、个人贡献系数、各层调整、校验和审核工作簿导出。
+- **旧版评分联动（M16）**：已由M17替代，保留红叉作为历史对照，并固定放在首页第二页，不再用于新任务。
 - **众声室 MVP**：`zhongshengshi/`，本地 Next.js 子项目，用于验证多模型圆桌群聊流程；当前页面默认改为自由短消息讨论流，不再默认展示固定 opening / debate 排队发言。
 - **待办清单**：第 14 个上锁工具板块。支持新增在上、从文本自动识别常见中文日期和时间、关键字搜索、完成后软归档，并用 `data/todo_items_backup.md` 做可同步恢复的硬备份。
 - **LLM 余额管理**：第 13 个工具板块，集中查看各家 LLM 余额，并把每家登录账号和到期日标签保存到 `data/llm_budget_accounts.json`，当前包含 Gemini。
@@ -93,9 +96,9 @@ KIMI_MODEL=
 
 ---
 
-## 十三个核心模块
+## 十八个工具模块
 
-模块编号记录上线顺序；Streamlit 页面文件名前半段是侧边栏排序位，后半段保留模块编号，所以越晚上线的工具会排在侧边栏越上方，同时模块编号保持稳定。
+模块编号记录上线顺序。首页入口以 `hello.py` 的元数据为准，每页固定9张卡片；标记 `second_page` 的已替代工具固定进入第二页。带红色叉号的模块仅保留历史对照，不再用于新任务。
 
 ### 1. 📝 报告评分系统 (Grading System)
 - **场景**：期末大作业、实验报告批量打分。
@@ -191,6 +194,27 @@ KIMI_MODEL=
     - **到期日标签**：账号下方可手动填写 `expiration date: yy_mm_dd`，和账号一起保存到 `data/llm_budget_accounts.json`。
     - **GitHub 备份**：配置 `GITHUB_BACKUP_TOKEN` 后，保存账号会同步到 GitHub，避免刷新仓库或重新部署后丢失。
 
+### 14. ✓ 待办清单 (Todo List)
+- **场景**：记录日常待办、截止日期、完成状态和归档记录。
+- **功能**：支持中文日期时间识别、搜索、软归档、本地SQLite存储及Markdown恢复备份。
+
+### 15. ✉️ 邮件通知编辑器 (Email Notice Editor)
+- **场景**：把通知原文整理成结构清楚、可预览和可导出的邮件页面。
+- **功能**：识别标题、编号、正文、落款和日期，支持在线预览及HTML导出。
+
+### 16. 🧮 旧版报告评分与成绩联动（已替代）
+- **状态**：已由M17替代，仅保留历史对照；首页显示红叉并固定在第二页。
+- **说明**：不要再在M16建立正式成绩任务。
+
+### 17. 📘 教学评分工作台 (Teaching Grade Workbench)
+- **场景**：处理花名册、小组路演、三级项目报告、个人贡献系数和最终成绩调整。
+- **原则**：小组原始分、个人折算分和统一/小组/个人调整分开保存，调整不会改写原始路演分和报告分。
+- **数据状态**：当前任务保存在本机 `data/grade_workbench/`；跨电脑评分数据同步尚未启用。
+
+### 18. 📖 评分工作台使用说明 (Grade Workbench Guide)
+- **场景**：长期未使用后快速确认M18、M17、M16分别是什么，以及完整操作顺序。
+- **功能**：集中展示六步流程、分数定义、文件位置、跨电脑注意事项和常见问题。
+
 ---
 
 ## Codex Radar Lite
@@ -200,7 +224,7 @@ KIMI_MODEL=
 - **运行方式**：`.github/workflows/codex-radar.yml` 每小时运行一次。
 - **判断方式**：优先用规则引擎读取公开来源，不默认调用大模型。
 - **展示数据**：`data/codex_radar_current.json`、`data/codex_radar_history.json`、`data/codex_radar_signals.json`。
-- **工具页面**：`pages/01_12_codex.py`。
+- **工具页面**：`pages/01_12_codex❌.py`（该模块当前已弃用）。
 - **静态页面**：`codex_radar_lite/site/index.html`，作为轻量备用展示入口。
 - **钉钉推送**：只在高概率、窗口开启或窗口关闭时推送。
 
@@ -233,17 +257,17 @@ python -m codex_radar_lite.cli --dry-run
    cd yao_1
    ```
 
-2. **创建虚拟环境**
-   ```bash
-   python -m venv .venv
-   .venv\Scripts\activate
-   pip install -r requirements.txt
-   ```
+2. **首次安装**
+
+   双击根目录的 `首次安装.bat`。脚本会创建项目自己的 `.venv` 环境，并安装运行依赖和测试依赖。
 
 3. **启动工具箱**
-   ```bash
-   streamlit run hello.py
-   ```
+
+   双击 `启动YaoYao工具箱.bat`。
+
+4. **检查项目是否正常**
+
+   双击 `运行测试.bat`。显示“全部测试通过”即可；如果失败，保留窗口中的错误信息交给Codex排查。
 
 ### Recorder_笔记本地配置
 `Recorder_笔记` 是第 11 个板块，适合放在固定电脑上本地运行。继续配置时按下面顺序处理：
@@ -326,8 +350,8 @@ L 电脑迁移和更详细的任务计划设置见 [docs/ding_minutes_L_setup.md
 - **上锁板块**：预算速记台账和 `Recorder_笔记` 共用同一套访问密码，建议只配置在 Streamlit secrets 或本机 `BUDGET_PASSWORD`。
 - **备份说明**：预算台账和灵感便签盒都会在当前运行环境内同步本地备份文件，并可通过 `GITHUB_BACKUP_TOKEN` 写回 GitHub 备份账本；灵感便签会先合并远端备份再写回，避免空环境把远端已有便签覆盖掉。重要数据仍建议定期导出，作为 GitHub 备份之外的人工兜底。
 
-## 📄 开源协议
-本项目采用 [MIT License](LICENSE) 开源。
+## 📄 使用许可
+仓库当前尚未添加独立的 `LICENSE` 文件。若后续需要正式对外分发或允许他人复用，再单独确定并补充开源协议。
 
 ## 📅 更新日志
 详情请参阅 [CHANGELOG_ZH-CN.md](CHANGELOG_ZH-CN.md)；英文版见 [CHANGELOG_EN.md](CHANGELOG_EN.md)。

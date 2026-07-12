@@ -13,10 +13,18 @@ echo [3/4] Installing pip tools...
 ".venv\Scripts\python.exe" -m pip install --upgrade pip
 
 echo.
-echo [4/4] Installing requirements...
-".venv\Scripts\python.exe" -m pip install -r requirements.txt
+echo [4/4] Installing runtime and test requirements...
+".venv\Scripts\python.exe" -m pip install -r requirements-dev.txt
+if errorlevel 1 (
+  echo.
+  echo Installation failed. Check the network connection and the error message above.
+  pause
+  exit /b 1
+)
 
 echo.
 echo Done.
-echo You can now double click: start_wechat_archiver.bat
+echo You can now double click:
+echo   启动YaoYao工具箱.bat
+echo   运行测试.bat
 pause

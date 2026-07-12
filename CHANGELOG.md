@@ -5,6 +5,18 @@
 
 This English change log mirrors the project history maintained in `CHANGELOG_ZH-CN.md`. It keeps the same dated structure and preserves the operational notes that matter for later troubleshooting: what changed, why it changed, what failed or detoured, and how the work was verified.
 
+## 2026-07-12
+
+- **Added the M17 Teaching Grade Workbench**: added independent grading tasks, roster import, group roadshow/report source scores, personal contribution coefficients, global/group/personal adjustments, hard validation, SQLite persistence, audit logs, and review-workbook export. Group source scores and final adjustments are stored separately, so adjustments never rewrite roadshow or report source scores.
+- **Added the M18 Grade Workbench Guide**: documented the roles of M18, M17, and M16, the six-step workflow, score definitions, file locations, cross-computer status, and common questions. M16 is explicitly replaced, keeps its red cross, and is pinned to homepage page two.
+- **Fixed the blank M17 first visit**: the first version placed task creation at the bottom of the custom sidebar and stopped the page when no task existed, leaving only the title in the main area. The first-task form now appears in the main page and has a dedicated first-visit page test.
+- **Fixed grading database connection release**: end-to-end temporary-task verification found that completed SQLite operations did not immediately close connections, causing Windows cleanup to report a locked file. Database access now uses a transaction session that always closes the connection.
+- **Added beginner-friendly install and test entry points**: added `requirements-dev.txt`, `启动YaoYao工具箱.bat`, and `运行测试.bat`. `首次安装.bat` now installs both runtime and test dependencies and points to launch files that actually exist.
+- **Stopped future Git growth from generated files**: the root `.gitignore` now excludes `outputs/`, `node_modules/`, `.next/`, and `.next-build/`. This prevents future commits but does not remove objects already stored in history. No history rewrite or force push was performed.
+- **Updated README documentation through M18**: English and Chinese READMEs now list 18 modules, document M14-M18, correct the legacy Codex Radar path, update local installation/testing instructions, and state accurately that the repository has no standalone `LICENSE` file yet.
+- **Recorded the test-environment detour**: the system Python had `pytest` but not `python-slugify`, while the project virtual environment had runtime dependencies but not `pytest`. The new development requirements and `.venv`-bound batch entry point remove reliance on accidental global packages.
+- **Verification**: after installing development dependencies into the project `.venv`, all 140 Python tests in the repository passed, including new checks for documentation mirrors, batch entry points, and ignore rules. Streamlit was not started according to repository rules.
+
 ## 2026-06-29
 
 - **Locked Todo List added**: added the 14th Streamlit tool panel for daily to-dos. It stores tasks newest-first, lets the left checkbox complete an item, strikes completed text, and moves completed items into the archive view without deleting data.
