@@ -34,6 +34,10 @@ def _nav_sort_key(tool):
     return (str(tool.get("created", "")), module_number)
 
 
+def _get_sidebar_tools(tools):
+    return sorted(tools, key=_nav_sort_key, reverse=True)
+
+
 def _streamlit_page_href(page_path):
     page_name = Path(str(page_path)).name
     match = re.match(r"([0-9]*)[_ -]*(.*)\.py$", page_name)
@@ -47,17 +51,7 @@ def render_sidebar_nav() -> None:
     tools = _load_homepage_tools()
     if not tools:
         return
-    normal_tools = sorted(
-        (tool for tool in tools if not tool.get("second_page")),
-        key=_nav_sort_key,
-        reverse=True,
-    )
-    second_page_tools = sorted(
-        (tool for tool in tools if tool.get("second_page")),
-        key=_nav_sort_key,
-        reverse=True,
-    )
-    ordered_tools = [*normal_tools[:9], *second_page_tools, *normal_tools[9:]]
+    ordered_tools = _get_sidebar_tools(tools)
 
     def item_html(tool):
         title = escape(str(tool.get("title", "")))
