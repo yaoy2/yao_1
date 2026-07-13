@@ -3,7 +3,7 @@
   "probability_24h": 95,
   "probability_48h": 98,
   "reason": "发现疑似额度已恢复或窗口关闭信号。",
-  "checked_at": "2026-07-13T11:31:41.573823Z",
+  "checked_at": "2026-07-13T15:14:34.850798Z",
   "alert_level": "push",
   "signals": [
     {
@@ -48,26 +48,13 @@
       ]
     },
     {
-      "id": "fefe1e28f03ee2d4",
-      "source_id": "openai_status_history",
-      "source_name": "OpenAI Status Incidents",
-      "title": "Users may experience issue with Codex Cloud tasks",
-      "summary": "Users may experience issue with Codex Cloud tasks resolved All impacted services have now fully recovered. We are investigating the issue for the listed services.",
-      "url": "https://status.openai.com/api/v2/incidents.json",
-      "observed_at": "2026-06-16T00:55:57Z",
-      "weight": 40,
-      "tags": [
-        "codex"
-      ]
-    },
-    {
-      "id": "90ede56d4faed840",
+      "id": "e6d49365a8c0c27b",
       "source_id": "openai_community",
       "source_name": "OpenAI Community Forum",
       "title": "Source fetch failed",
       "summary": "HTTPError: 429 Client Error: Too Many Requests for url: https://community.openai.com/search.json?q=codex+limit&order=latest",
       "url": "https://community.openai.com/search.json?q=codex+limit&order=latest",
-      "observed_at": "2026-07-13T11:31:41.572801Z",
+      "observed_at": "2026-07-13T15:14:34.849949Z",
       "weight": 0,
       "tags": [
         "fetch_error"
