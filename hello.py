@@ -44,7 +44,6 @@ TOOLS = [
         "code": "M16",
         "accent": "cyan",
         "blocked": True,
-        "second_page": True,
     },
     {
         "title": "邮件通知编辑器",
@@ -199,26 +198,11 @@ def sort_tool_key(tool):
         module_number = int(code)
     except ValueError:
         module_number = 0
-    return (str(tool.get("created", "")), module_number)
+    return module_number
 
 
 def get_homepage_tools(tools):
-    normal_tools = sorted(
-        (tool for tool in tools if not tool.get("second_page")),
-        key=sort_tool_key,
-        reverse=True,
-    )
-    second_page_tools = sorted(
-        (tool for tool in tools if tool.get("second_page")),
-        key=sort_tool_key,
-        reverse=True,
-    )
-    first_page_size = 9
-    return [
-        *normal_tools[:first_page_size],
-        *second_page_tools,
-        *normal_tools[first_page_size:],
-    ]
+    return sorted(tools, key=sort_tool_key, reverse=True)
 
 
 def get_homepage_pages(tools, page_size=9):

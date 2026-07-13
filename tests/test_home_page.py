@@ -59,7 +59,7 @@ class HomePageTest(unittest.TestCase):
         self.assertLess(page_source.index("for row_start in range(0, 9, 3)"), pagination_render)
         self.assertLess(pagination_render, page_source.index("quote-strip"))
 
-    def test_tools_are_metadata_sorted_with_grade_guide_first(self):
+    def test_tools_are_module_number_sorted_with_grade_guide_first(self):
         _page_source, namespace = load_homepage_bits()
         tools = namespace["get_homepage_tools"](namespace["TOOLS"])
 
@@ -67,23 +67,22 @@ class HomePageTest(unittest.TestCase):
         self.assertEqual("pages/17_18_grade_workbench_guide.py", tools[0]["page"])
         self.assertEqual("M17", tools[1]["code"])
         self.assertEqual("pages/16_17_grade_workbench.py", tools[1]["page"])
-        self.assertEqual("M15", tools[2]["code"])
-        self.assertEqual("pages/15_0_email_notice.py", tools[2]["page"])
-        self.assertEqual("M14", tools[3]["code"])
-        self.assertTrue(tools[3]["locked"])
-        self.assertEqual("M13", tools[4]["code"])
-        self.assertEqual("M12", tools[5]["code"])
-        self.assertTrue(tools[5]["blocked"])
-        self.assertEqual("M16", tools[9]["code"])
-        self.assertEqual("pages/15_16_report_grader.py", tools[9]["page"])
-        self.assertTrue(tools[9]["blocked"])
-        self.assertTrue(tools[9]["second_page"])
+        self.assertEqual("M16", tools[2]["code"])
+        self.assertEqual("pages/15_16_report_grader.py", tools[2]["page"])
+        self.assertTrue(tools[2]["blocked"])
+        self.assertEqual("M15", tools[3]["code"])
+        self.assertEqual("pages/15_0_email_notice.py", tools[3]["page"])
+        self.assertEqual("M14", tools[4]["code"])
+        self.assertTrue(tools[4]["locked"])
+        self.assertEqual("M13", tools[5]["code"])
+        self.assertEqual("M12", tools[6]["code"])
+        self.assertTrue(tools[6]["blocked"])
         blocked_codes = {tool["code"] for tool in tools if tool.get("blocked")}
         self.assertEqual({"M01", "M02", "M03", "M04", "M05", "M12", "M16"}, blocked_codes)
         self.assertEqual("M01", tools[-1]["code"])
         self.assertEqual(18, len(tools))
 
-    def test_homepage_order_is_metadata_driven_instead_of_filename_driven(self):
+    def test_homepage_order_is_module_number_driven_instead_of_filename_driven(self):
         _page_source, namespace = load_homepage_bits()
         tools = namespace["get_homepage_tools"](namespace["TOOLS"])
         pages_dir = Path(__file__).resolve().parents[1] / "pages"
@@ -93,32 +92,30 @@ class HomePageTest(unittest.TestCase):
         self.assertIn("pages/15_16_report_grader.py", actual_pages)
         self.assertNotEqual([tool["page"] for tool in tools], actual_pages)
 
-        active_tools = [tool for tool in tools if not tool.get("blocked")]
-        active_sort_keys = [(tool["created"], int(tool["code"].removeprefix("M"))) for tool in active_tools]
-        self.assertEqual(sorted(active_sort_keys, reverse=True), active_sort_keys)
+        module_numbers = [int(tool["code"].removeprefix("M")) for tool in tools]
+        self.assertEqual(sorted(module_numbers, reverse=True), module_numbers)
         self.assertFalse(Path(tools[0]["page"]).name.startswith("00_"))
 
-    def test_homepage_keeps_blocked_cards_in_metadata_order(self):
+    def test_homepage_keeps_blocked_cards_in_module_number_order(self):
         _page_source, namespace = load_homepage_bits()
         tools = namespace["get_homepage_tools"](namespace["TOOLS"])
         homepage_pages = namespace["get_homepage_pages"](namespace["TOOLS"])
 
         self.assertEqual("M18", tools[0]["code"])
         self.assertEqual("M17", tools[1]["code"])
-        self.assertEqual("M15", tools[2]["code"])
-        self.assertEqual("M14", tools[3]["code"])
-        self.assertEqual("M13", tools[4]["code"])
-        self.assertEqual("M12", tools[5]["code"])
-        self.assertTrue(tools[5]["blocked"])
-        self.assertEqual("M09", tools[8]["code"])
-        self.assertEqual("M16", tools[9]["code"])
-        self.assertTrue(tools[9]["blocked"])
-        self.assertTrue(tools[9]["second_page"])
+        self.assertEqual("M16", tools[2]["code"])
+        self.assertTrue(tools[2]["blocked"])
+        self.assertEqual("M15", tools[3]["code"])
+        self.assertEqual("M14", tools[4]["code"])
+        self.assertEqual("M13", tools[5]["code"])
+        self.assertEqual("M12", tools[6]["code"])
+        self.assertTrue(tools[6]["blocked"])
+        self.assertEqual("M09", tools[9]["code"])
         self.assertEqual("M08", tools[10]["code"])
         self.assertEqual("M05", tools[13]["code"])
         self.assertTrue(tools[13]["blocked"])
-        self.assertEqual(["M18", "M17", "M15", "M14", "M13", "M12", "M11", "M10", "M09"], [tool["code"] for tool in homepage_pages[0]])
-        self.assertEqual(["M16", "M08", "M07", "M06", "M05", "M04", "M03", "M02", "M01"], [tool["code"] for tool in homepage_pages[1]])
+        self.assertEqual(["M18", "M17", "M16", "M15", "M14", "M13", "M12", "M11", "M10"], [tool["code"] for tool in homepage_pages[0]])
+        self.assertEqual(["M09", "M08", "M07", "M06", "M05", "M04", "M03", "M02", "M01"], [tool["code"] for tool in homepage_pages[1]])
 
 
 if __name__ == "__main__":

@@ -5,6 +5,10 @@
 
 This English change log mirrors the project history maintained in `CHANGELOG_ZH-CN.md`. It keeps the same dated structure and preserves the operational notes that matter for later troubleshooting: what changed, why it changed, what failed or detoured, and how the work was verified.
 
+## 2026-07-13
+
+- **Fixed the misplaced M16 homepage card**: removed the special rule that forced M16 onto page two and standardized homepage ordering by descending module number. M16 now appears between M17 and M15, while page two starts with M09, eliminating the `M09 → M16 → M08` sequence. Homepage and sidebar ordering tests were updated accordingly.
+
 ## 2026-07-12
 
 - **Added the M17 Teaching Grade Workbench**: added independent grading tasks, roster import, group roadshow/report source scores, personal contribution coefficients, global/group/personal adjustments, hard validation, SQLite persistence, audit logs, and review-workbook export. Group source scores and final adjustments are stored separately, so adjustments never rewrite roadshow or report source scores.

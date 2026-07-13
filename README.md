@@ -19,13 +19,13 @@ The project is built around real administrative, teaching-support, competition-g
 - **Repository**: [github.com/yaoy2/yao_1](https://github.com/yaoy2/yao_1)
 - **Grade Workbench Guide (M18)**: explains the M17 workflow, score definitions, file locations, cross-computer status, and common questions.
 - **Teaching Grade Workbench (M17)**: manages rosters, group roadshow/report source scores, contribution coefficients, adjustment layers, validation, and review-workbook export.
-- **Legacy Grade Linkage (M16)**: replaced by M17, marked with a red cross, and pinned to the second homepage page for historical reference only.
+- **Legacy Grade Linkage (M16)**: replaced by M17 and marked with a red cross for historical reference; it remains between M17 and M15 in module-number order.
 - **Zhongshengshi MVP**: `zhongshengshi/`, a local Next.js subproject for validating the multi-model roundtable flow. The current page now defaults to a freer short-message discussion stream instead of fixed opening/debate speeches.
 - **Todo List**: the 14th locked tool panel. It records tasks newest-first, extracts common Chinese date/time hints, supports search, soft-archives completed tasks, and keeps `data/todo_items_backup.md` as a GitHub-syncable recovery file.
 - **LLM Budget Tracker**: the 13th tool panel, showing balances for supported LLM providers, including Gemini, and keeping editable login-account and expiration-date labels in `data/llm_budget_accounts.json`.
 - **Codex Radar**: the 12th tool panel, reading `data/codex_radar_current.json` to display Codex reset-window status.
-- **Home style**: a dark Command Center cover; tools are listed in reverse launch order, with a fixed 3 x 3 grid per page.
-- **Navigation order**: homepage cards are now sorted from `hello.py` module metadata instead of page filename prefixes. New modules can use stable readable page filenames while still appearing first by `created` date and module code.
+- **Home style**: a dark Command Center cover; tools are listed in descending module-number order, with a fixed 3 x 3 grid per page.
+- **Navigation order**: homepage cards are sorted by the module codes in `hello.py`, independent of page filename prefixes or special insertion rules. New modules can use stable readable filenames while keeping a predictable numeric order.
 
 ---
 
