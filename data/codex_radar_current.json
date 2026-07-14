@@ -3,7 +3,7 @@
   "probability_24h": 95,
   "probability_48h": 98,
   "reason": "发现疑似额度已恢复或窗口关闭信号。",
-  "checked_at": "2026-07-14T14:16:17.263211Z",
+  "checked_at": "2026-07-14T15:52:13.922990Z",
   "alert_level": "push",
   "signals": [
     {
@@ -35,26 +35,13 @@
       ]
     },
     {
-      "id": "bab1284d6f1f7dc9",
-      "source_id": "openai_status_history",
-      "source_name": "OpenAI Status Incidents",
-      "title": "Codex \"Selected Model is at Capacity\" Error",
-      "summary": "Codex \"Selected Model is at Capacity\" Error resolved All impacted services have now fully recovered. We have applied the mitigation and are monitoring the recovery. We have identified that users are experiencing elevated errors for the impacted services. We are working on implementing a mitigation.",
-      "url": "https://status.openai.com/api/v2/incidents.json",
-      "observed_at": "2026-06-16T13:48:12Z",
-      "weight": 40,
-      "tags": [
-        "codex"
-      ]
-    },
-    {
-      "id": "aa79dac3dcfc42f8",
+      "id": "fb25e3f9c8f9cc37",
       "source_id": "openai_community",
       "source_name": "OpenAI Community Forum",
       "title": "Source fetch failed",
       "summary": "HTTPError: 429 Client Error: Too Many Requests for url: https://community.openai.com/search.json?q=codex+limit&order=latest",
       "url": "https://community.openai.com/search.json?q=codex+limit&order=latest",
-      "observed_at": "2026-07-14T14:16:17.262146Z",
+      "observed_at": "2026-07-14T15:52:13.922059Z",
       "weight": 0,
       "tags": [
         "fetch_error"
