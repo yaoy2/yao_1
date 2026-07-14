@@ -3,7 +3,7 @@
   "probability_24h": 95,
   "probability_48h": 98,
   "reason": "发现疑似额度已恢复或窗口关闭信号。",
-  "checked_at": "2026-07-14T19:46:47.888486Z",
+  "checked_at": "2026-07-14T21:16:58.762270Z",
   "alert_level": "push",
   "signals": [
     {
@@ -35,27 +35,13 @@
       ]
     },
     {
-      "id": "4a71b68fa61135a6",
-      "source_id": "reddit_openai",
-      "source_name": "Reddit r/OpenAI",
-      "title": "How to Stop Burning Your GPT-5.6 Usage Limits",
-      "summary": "How to Stop Burning Your GPT-5.6 Usage Limits If you’ve been testing GPT-5.6 in the new GPT app (the rebranded Codex app), you’ve probably noticed your usage limits evaporating at record speed.\nHere is how to optimize your workflow and stop bleeding tokens:\nDefault to Medium or High",
-      "url": "https://www.reddit.com/r/OpenAI/new/.rss?limit=10",
-      "observed_at": "2026-07-14T17:09:22+00:00",
-      "weight": 15,
-      "tags": [
-        "codex",
-        "usage limit"
-      ]
-    },
-    {
-      "id": "b71a50f7f890539d",
+      "id": "c4c14e9186a6cd0b",
       "source_id": "openai_community",
       "source_name": "OpenAI Community Forum",
       "title": "Source fetch failed",
       "summary": "HTTPError: 429 Client Error: Too Many Requests for url: https://community.openai.com/search.json?q=codex+limit&order=latest",
       "url": "https://community.openai.com/search.json?q=codex+limit&order=latest",
-      "observed_at": "2026-07-14T19:46:47.887629Z",
+      "observed_at": "2026-07-14T21:16:58.761336Z",
       "weight": 0,
       "tags": [
         "fetch_error"
