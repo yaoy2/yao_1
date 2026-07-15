@@ -28,26 +28,27 @@
     ]
   },
   {
-    "id": "77cee9cfb771d72c",
+    "id": "e19a58838c888281",
     "source_id": "reddit_openai",
     "source_name": "Reddit r/OpenAI",
-    "title": "at the current rate of growth codex will become restrictive just like Claude in a short period of time",
-    "summary": "at the current rate of growth codex will become restrictive just like Claude in a short period of time We are growing at a rate of 1 million new users every 2 days. OpenAI does not have unlimited compute, the reason that we are getting such generous limits is that Anthropic has such an early lead in enterprise were OpenAI is trying to break into and OpenAI lead in in",
+    "title": "Auto-recharge of credits keeps getting turned back on / is automatically selected and turned on every time you buy credits · Issue #31987 · ",
+    "summary": "Auto-recharge of credits keeps getting turned back on / is automatically selected and turned on every time you buy credits · Issue #31987 · openai/codex ",
     "url": "https://www.reddit.com/r/OpenAI/new/.rss?limit=10",
-    "observed_at": "2026-07-15T12:55:39+00:00",
+    "observed_at": "2026-07-15T16:55:06+00:00",
     "weight": 15,
     "tags": [
-      "codex"
+      "codex",
+      "credit"
     ]
   },
   {
-    "id": "baea8de5f9e73877",
+    "id": "f9009e62add8897f",
     "source_id": "openai_community",
     "source_name": "OpenAI Community Forum",
     "title": "Source fetch failed",
     "summary": "HTTPError: 429 Client Error: Too Many Requests for url: https://community.openai.com/search.json?q=codex+limit&order=latest",
     "url": "https://community.openai.com/search.json?q=codex+limit&order=latest",
-    "observed_at": "2026-07-15T15:54:47.063335Z",
+    "observed_at": "2026-07-15T17:41:01.452195Z",
     "weight": 0,
     "tags": [
       "fetch_error"
