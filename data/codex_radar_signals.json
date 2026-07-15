@@ -28,13 +28,26 @@
     ]
   },
   {
-    "id": "5cda431e184f9236",
+    "id": "77cee9cfb771d72c",
+    "source_id": "reddit_openai",
+    "source_name": "Reddit r/OpenAI",
+    "title": "at the current rate of growth codex will become restrictive just like Claude in a short period of time",
+    "summary": "at the current rate of growth codex will become restrictive just like Claude in a short period of time We are growing at a rate of 1 million new users every 2 days. OpenAI does not have unlimited compute, the reason that we are getting such generous limits is that Anthropic has such an early lead in enterprise were OpenAI is trying to break into and OpenAI lead in in",
+    "url": "https://www.reddit.com/r/OpenAI/new/.rss?limit=10",
+    "observed_at": "2026-07-15T12:55:39+00:00",
+    "weight": 15,
+    "tags": [
+      "codex"
+    ]
+  },
+  {
+    "id": "8012177e80e91ec1",
     "source_id": "openai_community",
     "source_name": "OpenAI Community Forum",
     "title": "Source fetch failed",
     "summary": "HTTPError: 429 Client Error: Too Many Requests for url: https://community.openai.com/search.json?q=codex+limit&order=latest",
     "url": "https://community.openai.com/search.json?q=codex+limit&order=latest",
-    "observed_at": "2026-07-15T11:51:55.608026Z",
+    "observed_at": "2026-07-15T14:13:33.183380Z",
     "weight": 0,
     "tags": [
       "fetch_error"
