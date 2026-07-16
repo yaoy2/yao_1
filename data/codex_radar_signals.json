@@ -28,13 +28,27 @@
     ]
   },
   {
-    "id": "63c8414f17bc7b89",
+    "id": "42125398d4f422c1",
+    "source_id": "reddit_openai",
+    "source_name": "Reddit r/OpenAI",
+    "title": "SOL 5.6 High usage limits in chat?",
+    "summary": "SOL 5.6 High usage limits in chat? since Codex has been eating up my usage way too fast, I changed to use only the chat. It keeps working on my projects seemingly without limits, but I need to copy/paste everything.\nHave you experienced any downsides other limits than the manual work?",
+    "url": "https://www.reddit.com/r/OpenAI/new/.rss?limit=10",
+    "observed_at": "2026-07-16T08:23:29+00:00",
+    "weight": 15,
+    "tags": [
+      "codex",
+      "usage limit"
+    ]
+  },
+  {
+    "id": "b801e7f691e23c98",
     "source_id": "openai_community",
     "source_name": "OpenAI Community Forum",
     "title": "Source fetch failed",
     "summary": "HTTPError: 429 Client Error: Too Many Requests for url: https://community.openai.com/search.json?q=codex+limit&order=latest",
     "url": "https://community.openai.com/search.json?q=codex+limit&order=latest",
-    "observed_at": "2026-07-16T06:34:04.521946Z",
+    "observed_at": "2026-07-16T09:31:27.254657Z",
     "weight": 0,
     "tags": [
       "fetch_error"
