@@ -3,7 +3,7 @@
   "probability_24h": 95,
   "probability_48h": 98,
   "reason": "发现疑似额度已恢复或窗口关闭信号。",
-  "checked_at": "2026-07-16T14:26:13.756516Z",
+  "checked_at": "2026-07-16T16:43:58.914366Z",
   "alert_level": "push",
   "signals": [
     {
