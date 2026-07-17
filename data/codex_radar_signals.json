@@ -1,5 +1,18 @@
 [
   {
+    "id": "01b570e52d0fc62b",
+    "source_id": "openai_status_history",
+    "source_name": "OpenAI Status Incidents",
+    "title": "Codex 5.6-sol Experiencing Increased Server-Overload Errors",
+    "summary": "Codex 5.6-sol Experiencing Increased Server-Overload Errors identified We have identified that users are experiencing elevated errors for the impacted services. We are working on implementing a mitigation.",
+    "url": "https://status.openai.com/api/v2/incidents.json",
+    "observed_at": "2026-07-17T17:19:22Z",
+    "weight": 40,
+    "tags": [
+      "codex"
+    ]
+  },
+  {
     "id": "e37592c50aa6f4f3",
     "source_id": "openai_status_history",
     "source_name": "OpenAI Status Incidents",
@@ -28,13 +41,13 @@
     ]
   },
   {
-    "id": "81c2d78c5f62557e",
+    "id": "3ddd8491eb8f237a",
     "source_id": "openai_community",
     "source_name": "OpenAI Community Forum",
     "title": "Source fetch failed",
     "summary": "HTTPError: 429 Client Error: Too Many Requests for url: https://community.openai.com/search.json?q=codex+limit&order=latest",
     "url": "https://community.openai.com/search.json?q=codex+limit&order=latest",
-    "observed_at": "2026-07-17T15:45:53.853741Z",
+    "observed_at": "2026-07-17T17:32:53.615061Z",
     "weight": 0,
     "tags": [
       "fetch_error"
