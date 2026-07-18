@@ -3,7 +3,7 @@
   "probability_24h": 95,
   "probability_48h": 98,
   "reason": "发现疑似额度已恢复或窗口关闭信号。",
-  "checked_at": "2026-07-18T09:01:43.997082Z",
+  "checked_at": "2026-07-18T10:42:45.732673Z",
   "alert_level": "push",
   "signals": [
     {
@@ -61,13 +61,13 @@
       ]
     },
     {
-      "id": "ff3ce55b8494b634",
+      "id": "c3572be31b67a2d8",
       "source_id": "openai_status_components",
       "source_name": "OpenAI Status Components",
       "title": "Codex in ChatGPT Desktop: degraded_performance",
       "summary": "Component 'Codex in ChatGPT Desktop' status: degraded_performance",
       "url": "https://status.openai.com/",
-      "observed_at": "2026-07-18T09:01:43.381648Z",
+      "observed_at": "2026-07-18T10:42:45.074559Z",
       "weight": 25,
       "tags": [
         "codex",
@@ -89,13 +89,13 @@
       ]
     },
     {
-      "id": "6e080b14581110bb",
+      "id": "c3552590c650b555",
       "source_id": "openai_community",
       "source_name": "OpenAI Community Forum",
       "title": "Source fetch failed",
       "summary": "HTTPError: 429 Client Error: Too Many Requests for url: https://community.openai.com/search.json?q=codex+limit&order=latest",
       "url": "https://community.openai.com/search.json?q=codex+limit&order=latest",
-      "observed_at": "2026-07-18T09:01:43.996317Z",
+      "observed_at": "2026-07-18T10:42:45.731834Z",
       "weight": 0,
       "tags": [
         "fetch_error"
