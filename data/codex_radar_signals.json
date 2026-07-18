@@ -54,13 +54,13 @@
     ]
   },
   {
-    "id": "c3572be31b67a2d8",
+    "id": "3cc00fe72c6ce88e",
     "source_id": "openai_status_components",
     "source_name": "OpenAI Status Components",
     "title": "Codex in ChatGPT Desktop: degraded_performance",
     "summary": "Component 'Codex in ChatGPT Desktop' status: degraded_performance",
     "url": "https://status.openai.com/",
-    "observed_at": "2026-07-18T10:42:45.074559Z",
+    "observed_at": "2026-07-18T12:07:18.503317Z",
     "weight": 25,
     "tags": [
       "codex",
@@ -68,27 +68,13 @@
     ]
   },
   {
-    "id": "d796475ceaba0356",
-    "source_id": "reddit_openai",
-    "source_name": "Reddit r/OpenAI",
-    "title": "Just got only 2% added to the usage limit on Codex. What is this about?",
-    "summary": "Just got only 2% added to the usage limit on Codex. What is this about? I had exhausted my weekly usage limit yesterday. Today I saw \"2% usage remaining\". This is not a complete reset, so what is this? Can someone elaborate.\nEdit: Usage Limit reset back to 100%. Weekend Hustle Here We Come, Woohoo!!!",
-    "url": "https://www.reddit.com/r/OpenAI/new/.rss?limit=10",
-    "observed_at": "2026-07-18T03:24:13+00:00",
-    "weight": 15,
-    "tags": [
-      "codex",
-      "usage limit"
-    ]
-  },
-  {
-    "id": "c3552590c650b555",
+    "id": "5d5ad8a5f6713ebc",
     "source_id": "openai_community",
     "source_name": "OpenAI Community Forum",
     "title": "Source fetch failed",
     "summary": "HTTPError: 429 Client Error: Too Many Requests for url: https://community.openai.com/search.json?q=codex+limit&order=latest",
     "url": "https://community.openai.com/search.json?q=codex+limit&order=latest",
-    "observed_at": "2026-07-18T10:42:45.731834Z",
+    "observed_at": "2026-07-18T12:07:19.061158Z",
     "weight": 0,
     "tags": [
       "fetch_error"
