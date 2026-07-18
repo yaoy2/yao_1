@@ -214,18 +214,52 @@ def get_homepage_pages(tools, page_size=9):
     return pages or [[]]
 
 
-def build_hero_visual_html() -> str:
+def count_tool_status(tools):
+    total = len(tools)
+    locked = sum(1 for tool in tools if tool.get("locked") and not tool.get("blocked"))
+    blocked = sum(1 for tool in tools if tool.get("blocked"))
+    available = total - locked - blocked
+    return {
+        "total": total,
+        "available": available,
+        "locked": locked,
+        "blocked": blocked,
+    }
+
+
+def build_hero_visual_html(status) -> str:
     return (
-        '<div class="hero-visual" aria-label="首页视觉">'
-        '<div class="visual-orbit">'
-        '<span class="orbit-node node-a"></span>'
-        '<span class="orbit-node node-b"></span>'
-        '<span class="orbit-node node-c"></span>'
-        '<span class="orbit-node node-d"></span>'
-        '<div class="orbit-core">YAO<br/>OPS</div>'
-        "</div>"
+        '<div class="hero-visual" aria-label="模块状态">'
+        f'<div class="meter-item"><span class="meter-label">模块</span>'
+        f'<span class="meter-value">{status["total"]}</span></div>'
+        f'<div class="meter-item green"><span class="meter-label">可用</span>'
+        f'<span class="meter-value">{status["available"]}</span></div>'
+        f'<div class="meter-item amber"><span class="meter-label">上锁</span>'
+        f'<span class="meter-value">{status["locked"]}</span></div>'
+        f'<div class="meter-item muted"><span class="meter-label">归档</span>'
+        f'<span class="meter-value">{status["blocked"]}</span></div>'
         "</div>"
     )
+
+
+def build_hero_status_html(status) -> str:
+    return (
+        '<div class="hero-status">'
+        f'<span class="hero-stat"><b>{status["total"]}</b>模块</span>'
+        f'<span class="hero-stat green"><b>{status["available"]}</b>可用</span>'
+        f'<span class="hero-stat amber"><b>{status["locked"]}</b>上锁</span>'
+        f'<span class="hero-stat muted"><b>{status["blocked"]}</b>归档</span>'
+        "</div>"
+    )
+
+
+def tool_card_classes(tool) -> str:
+    classes = [str(tool.get("accent") or "cyan")]
+    if tool.get("blocked"):
+        classes.append("is-blocked")
+    elif tool.get("locked"):
+        classes.append("is-locked")
+    return " ".join(classes)
 
 
 def coerce_page_number(raw_value, total_pages):
@@ -305,6 +339,7 @@ def build_tool_status_icon_html(tool):
     return '<span class="tool-lock-spacer" aria-hidden="true"></span>'
 
 
+_tool_status = count_tool_status(TOOLS)
 st.markdown(
     f"""
 <section class="command-hero">
@@ -313,11 +348,11 @@ st.markdown(
     <div class="hero-kicker">YAO · CAMPUS · AI OPERATIONS</div>
     <div class="hero-title">学院行政智能中枢</div>
     <div class="hero-copy">
-      面向学院日常事务的高效率工具矩阵：材料处理、数据核对、课表查询、预算台账、微信归档、灵感便签与视觉资产统一接入。
-      把重复劳动压缩成一次点击，把复杂流程沉淀为稳定入口。
+      材料、核对、课表、预算、归档与便签统一入口；重复劳动压成一次点击。
     </div>
+    {build_hero_status_html(_tool_status)}
   </div>
-  {build_hero_visual_html()}
+  {build_hero_visual_html(_tool_status)}
 </section>
     """,
     unsafe_allow_html=True,
@@ -330,76 +365,6 @@ st.markdown(
         <div class="section-label">MISSION MODULES</div>
       </div>
     </div>
-    """,
-    unsafe_allow_html=True,
-)
-
-st.markdown(
-    """
-    <style>
-    .pagination-bar {
-        display: inline-flex;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 0;
-        margin: .1rem 0 .75rem auto;
-        border: 1px solid rgba(71, 205, 190, .32);
-        border-radius: 8px;
-        background: rgba(8, 22, 36, .76);
-        box-shadow: 0 18px 36px rgba(3, 10, 18, .28), inset 0 1px 0 rgba(255,255,255,.07);
-        overflow: hidden;
-        backdrop-filter: blur(10px);
-    }
-    .pagination-dock {
-        display: flex;
-        justify-content: flex-end;
-        margin-top: .25rem;
-        margin-bottom: .15rem;
-    }
-    .pagination-item,
-    .pagination-counter {
-        min-width: 2.35rem;
-        height: 2.15rem;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0 .72rem;
-        border-right: 1px solid rgba(119, 176, 212, .18);
-        color: #D6E4F0;
-        font-size: .92rem;
-        font-weight: 750;
-        text-decoration: none !important;
-        letter-spacing: 0;
-    }
-    .pagination-item:hover {
-        color: #ffffff;
-        background: rgba(74, 144, 217, .28);
-    }
-    .pagination-item.active {
-        color: #ffffff;
-        background: linear-gradient(180deg, #2D6A4F, #22533E);
-        box-shadow: inset 0 -3px 0 rgba(71, 205, 190, .58);
-    }
-    .pagination-item.disabled {
-        color: rgba(214, 228, 240, .36);
-        background: rgba(255,255,255,.035);
-        pointer-events: none;
-    }
-    .pagination-item.text {
-        min-width: 4.6rem;
-        color: #D6E4F0;
-        font-weight: 700;
-    }
-    .pagination-counter {
-        min-width: 5.4rem;
-        color: #F8FAFC;
-        background: rgba(27, 58, 92, .45);
-        font-weight: 850;
-    }
-    .pagination-bar > :last-child {
-        border-right: 0;
-    }
-    </style>
     """,
     unsafe_allow_html=True,
 )
@@ -421,15 +386,15 @@ for row_start in range(0, 9, 3):
             st.markdown(
                 f"""
                 <div class="tool-card-shell">
-                  <div class="tool-card {tool["accent"]}">
+                  <div class="tool-card {tool_card_classes(tool)}">
                     <div class="tool-head">
                       <div class="tool-code">{tool["code"]}</div>
                       <div class="tool-date">{tool["created"]}</div>
                     </div>
                     {build_tool_title_html(tool)}
-                    <div class="tool-meta">{tool["desc"]}</div>
+                    <div class="tool-meta">{escape(tool["desc"])}</div>
                     <div class="tool-footer">
-                      <span class="tool-tag">{tool["tag"]}</span>
+                      <span class="tool-tag">{escape(tool["tag"])}</span>
                       {build_tool_status_icon_html(tool)}
                     </div>
                   </div>
