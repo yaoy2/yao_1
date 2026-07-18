@@ -3,7 +3,7 @@
   "probability_24h": 95,
   "probability_48h": 98,
   "reason": "发现疑似额度已恢复或窗口关闭信号。",
-  "checked_at": "2026-07-18T19:35:16.828770Z",
+  "checked_at": "2026-07-18T21:07:59.982093Z",
   "alert_level": "push",
   "signals": [
     {
@@ -74,26 +74,13 @@
       ]
     },
     {
-      "id": "2424b4e13a30ecbe",
-      "source_id": "reddit_openai",
-      "source_name": "Reddit r/OpenAI",
-      "title": "I made a feature request to permanently remove Codex’s 5-hour limit—let’s show OpenAI we want weekly-only usage to stay",
-      "summary": "I made a feature request to permanently remove Codex’s 5-hour limit—let’s show OpenAI we want weekly-only usage to stay A lot of us have been saying how much better Codex feels without the five-hour usage window. I searched the OpenAI Codex project on GitHub and couldn’t find an existing feature request asking for its permanent removal, so I created one.\nThis gives us one plac",
-      "url": "https://www.reddit.com/r/OpenAI/new/.rss?limit=10",
-      "observed_at": "2026-07-18T16:04:31+00:00",
-      "weight": 15,
-      "tags": [
-        "codex"
-      ]
-    },
-    {
-      "id": "61884d597e7aa29b",
+      "id": "093cdaaf3c69a763",
       "source_id": "openai_community",
       "source_name": "OpenAI Community Forum",
       "title": "Source fetch failed",
       "summary": "HTTPError: 429 Client Error: Too Many Requests for url: https://community.openai.com/search.json?q=codex+limit&order=latest",
       "url": "https://community.openai.com/search.json?q=codex+limit&order=latest",
-      "observed_at": "2026-07-18T19:35:16.827838Z",
+      "observed_at": "2026-07-18T21:07:59.980926Z",
       "weight": 0,
       "tags": [
         "fetch_error"
