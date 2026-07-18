@@ -3,9 +3,22 @@
   "probability_24h": 95,
   "probability_48h": 98,
   "reason": "发现疑似额度已恢复或窗口关闭信号。",
-  "checked_at": "2026-07-18T06:22:00.457253Z",
+  "checked_at": "2026-07-18T09:01:43.997082Z",
   "alert_level": "push",
   "signals": [
+    {
+      "id": "7f766368a88f002a",
+      "source_id": "openai_status_history",
+      "source_name": "OpenAI Status Incidents",
+      "title": "New ChatGPT App Not Available For Enterprise Users Without Codex Permissions",
+      "summary": "New ChatGPT App Not Available For Enterprise Users Without Codex Permissions resolved All impacted services have now fully recovered. We have identified that this issue has recurred for some Enterprise users. We are working to resolve this. A fix has been released. Please update to the latest version of the ChatGPT app to receive the fix.",
+      "url": "https://status.openai.com/api/v2/incidents.json",
+      "observed_at": "2026-07-18T08:24:02Z",
+      "weight": 40,
+      "tags": [
+        "codex"
+      ]
+    },
     {
       "id": "3f0e2a3f6ea76a59",
       "source_id": "openai_status_history",
@@ -48,6 +61,20 @@
       ]
     },
     {
+      "id": "ff3ce55b8494b634",
+      "source_id": "openai_status_components",
+      "source_name": "OpenAI Status Components",
+      "title": "Codex in ChatGPT Desktop: degraded_performance",
+      "summary": "Component 'Codex in ChatGPT Desktop' status: degraded_performance",
+      "url": "https://status.openai.com/",
+      "observed_at": "2026-07-18T09:01:43.381648Z",
+      "weight": 25,
+      "tags": [
+        "codex",
+        "degraded"
+      ]
+    },
+    {
       "id": "d796475ceaba0356",
       "source_id": "reddit_openai",
       "source_name": "Reddit r/OpenAI",
@@ -62,13 +89,13 @@
       ]
     },
     {
-      "id": "bfc67d01f537695a",
+      "id": "6e080b14581110bb",
       "source_id": "openai_community",
       "source_name": "OpenAI Community Forum",
       "title": "Source fetch failed",
       "summary": "HTTPError: 429 Client Error: Too Many Requests for url: https://community.openai.com/search.json?q=codex+limit&order=latest",
       "url": "https://community.openai.com/search.json?q=codex+limit&order=latest",
-      "observed_at": "2026-07-18T06:22:00.456298Z",
+      "observed_at": "2026-07-18T09:01:43.996317Z",
       "weight": 0,
       "tags": [
         "fetch_error"
