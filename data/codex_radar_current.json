@@ -3,9 +3,22 @@
   "probability_24h": 95,
   "probability_48h": 98,
   "reason": "发现疑似额度已恢复或窗口关闭信号。",
-  "checked_at": "2026-07-18T12:07:19.062308Z",
+  "checked_at": "2026-07-18T13:52:45.512402Z",
   "alert_level": "push",
   "signals": [
+    {
+      "id": "bd43da763c398642",
+      "source_id": "openai_status_history",
+      "source_name": "OpenAI Status Incidents",
+      "title": "Some users are unable to access Codex",
+      "summary": "Some users are unable to access Codex resolved All impacted services have now fully recovered. We have applied the mitigation and are monitoring the recovery. We have identified an issue causing some users to receive access-denied errors when using the Codex desktop app and CLI.",
+      "url": "https://status.openai.com/api/v2/incidents.json",
+      "observed_at": "2026-07-18T12:58:14Z",
+      "weight": 40,
+      "tags": [
+        "codex"
+      ]
+    },
     {
       "id": "7f766368a88f002a",
       "source_id": "openai_status_history",
@@ -61,27 +74,13 @@
       ]
     },
     {
-      "id": "3cc00fe72c6ce88e",
-      "source_id": "openai_status_components",
-      "source_name": "OpenAI Status Components",
-      "title": "Codex in ChatGPT Desktop: degraded_performance",
-      "summary": "Component 'Codex in ChatGPT Desktop' status: degraded_performance",
-      "url": "https://status.openai.com/",
-      "observed_at": "2026-07-18T12:07:18.503317Z",
-      "weight": 25,
-      "tags": [
-        "codex",
-        "degraded"
-      ]
-    },
-    {
-      "id": "5d5ad8a5f6713ebc",
+      "id": "e011360f4901e8c8",
       "source_id": "openai_community",
       "source_name": "OpenAI Community Forum",
       "title": "Source fetch failed",
       "summary": "HTTPError: 429 Client Error: Too Many Requests for url: https://community.openai.com/search.json?q=codex+limit&order=latest",
       "url": "https://community.openai.com/search.json?q=codex+limit&order=latest",
-      "observed_at": "2026-07-18T12:07:19.061158Z",
+      "observed_at": "2026-07-18T13:52:45.511149Z",
       "weight": 0,
       "tags": [
         "fetch_error"
