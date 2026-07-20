@@ -1,5 +1,18 @@
 [
   {
+    "id": "921f2e528fc109cc",
+    "source_id": "openai_status_history",
+    "source_name": "OpenAI Status Incidents",
+    "title": "Elevated errors for GitHub-dependent ChatGPT and Codex workflows",
+    "summary": "Elevated errors for GitHub-dependent ChatGPT and Codex workflows resolved All impacted services have now fully recovered. We are monitoring the recovery. Users may experience failures or delays in ChatGPT and Codex workflows that depend on GitHub. This mostly should impact Codex web and code review for PRs on Github. This is related to an active GitHub API partial outage and degraded GitHub Actions. [https://www.githubstatus.com/incidents/8vfyvq16hzh9](https://www.githubstatus.com/incidents/8vfy",
+    "url": "https://status.openai.com/api/v2/incidents.json",
+    "observed_at": "2026-07-20T03:34:06Z",
+    "weight": 40,
+    "tags": [
+      "codex"
+    ]
+  },
+  {
     "id": "bd43da763c398642",
     "source_id": "openai_status_history",
     "source_name": "OpenAI Status Incidents",
@@ -67,13 +80,13 @@
     ]
   },
   {
-    "id": "3834b1d811e62528",
+    "id": "bf1f1bebd13f2359",
     "source_id": "openai_community",
     "source_name": "OpenAI Community Forum",
     "title": "Source fetch failed",
     "summary": "HTTPError: 429 Client Error: Too Many Requests for url: https://community.openai.com/search.json?q=codex+limit&order=latest",
     "url": "https://community.openai.com/search.json?q=codex+limit&order=latest",
-    "observed_at": "2026-07-20T00:15:45.072424Z",
+    "observed_at": "2026-07-20T04:10:49.317585Z",
     "weight": 0,
     "tags": [
       "fetch_error"
