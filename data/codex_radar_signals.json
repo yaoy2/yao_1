@@ -80,26 +80,13 @@
     ]
   },
   {
-    "id": "e6fc970ea41ceae0",
-    "source_id": "reddit_openai",
-    "source_name": "Reddit r/OpenAI",
-    "title": "An idea: your AI remembers you, even when you switch AIs",
-    "summary": "An idea: your AI remembers you, even when you switch AIs Most of us aren't using just one AI anymore. You're on Claude until you hit a limit, then you switch to Codex, then maybe back. That's just how it works now.\nEvery time you switch, you start over. You have to re-explain who you are, how you like t",
-    "url": "https://www.reddit.com/r/OpenAI/new/.rss?limit=10",
-    "observed_at": "2026-07-20T07:03:19+00:00",
-    "weight": 15,
-    "tags": [
-      "codex"
-    ]
-  },
-  {
-    "id": "1bc04167e5f1b28d",
+    "id": "396b03740e0093f8",
     "source_id": "openai_community",
     "source_name": "OpenAI Community Forum",
     "title": "Source fetch failed",
     "summary": "HTTPError: 429 Client Error: Too Many Requests for url: https://community.openai.com/search.json?q=codex+limit&order=latest",
     "url": "https://community.openai.com/search.json?q=codex+limit&order=latest",
-    "observed_at": "2026-07-20T11:15:45.468313Z",
+    "observed_at": "2026-07-20T13:20:36.348220Z",
     "weight": 0,
     "tags": [
       "fetch_error"
