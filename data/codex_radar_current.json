@@ -1,9 +1,9 @@
 {
-  "status": "closed",
+  "status": "high_probability",
   "probability_24h": 95,
   "probability_48h": 98,
-  "reason": "发现疑似额度已恢复或窗口关闭信号。",
-  "checked_at": "2026-07-21T16:46:34.797302Z",
+  "reason": "多个 Codex 限额或事故信号叠加，进入高概率关注。",
+  "checked_at": "2026-07-21T18:42:46.196018Z",
   "alert_level": "push",
   "signals": [
     {
@@ -72,28 +72,13 @@
       ]
     },
     {
-      "id": "c6e09ab3f4065dc5",
-      "source_id": "openai_status_history",
-      "source_name": "OpenAI Status Incidents",
-      "title": "Codex Usage Limits Depleting Faster Than Expected",
-      "summary": "Codex Usage Limits Depleting Faster Than Expected resolved All impacted services have now fully recovered. We have identified that some reports of Codex usage limits depleting faster than expected are related to our abuse and fraud prevention systems incorrectly rate limiting certain accounts. The impact appears limited, and we have not observed broader degradation to Codex usage. We are continuing to monitor the situation. We are investigating reports that Codex usage limits are being consumed ",
-      "url": "https://status.openai.com/api/v2/incidents.json",
-      "observed_at": "2026-06-29T17:06:33Z",
-      "weight": 40,
-      "tags": [
-        "codex",
-        "usage limit",
-        "rate limit"
-      ]
-    },
-    {
-      "id": "90e62046af0777ed",
+      "id": "58c9fb08f875130f",
       "source_id": "openai_community",
       "source_name": "OpenAI Community Forum",
       "title": "Source fetch failed",
       "summary": "HTTPError: 429 Client Error: Too Many Requests for url: https://community.openai.com/search.json?q=codex+limit&order=latest",
       "url": "https://community.openai.com/search.json?q=codex+limit&order=latest",
-      "observed_at": "2026-07-21T16:46:34.796329Z",
+      "observed_at": "2026-07-21T18:42:46.194929Z",
       "weight": 0,
       "tags": [
         "fetch_error"

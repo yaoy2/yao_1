@@ -1,5 +1,13 @@
 [
   {
+    "status": "high_probability",
+    "checked_at": "2026-07-21T18:42:46.196018Z",
+    "closed_at": null,
+    "probability_24h": 95,
+    "probability_48h": 98,
+    "reason": "多个 Codex 限额或事故信号叠加，进入高概率关注。"
+  },
+  {
     "status": "closed",
     "checked_at": "2026-07-21T16:46:34.797302Z",
     "closed_at": "2026-07-21T16:46:34.797302Z",
