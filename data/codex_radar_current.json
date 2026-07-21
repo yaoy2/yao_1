@@ -3,7 +3,7 @@
   "probability_24h": 95,
   "probability_48h": 98,
   "reason": "发现疑似额度已恢复或窗口关闭信号。",
-  "checked_at": "2026-07-21T14:26:35.407809Z",
+  "checked_at": "2026-07-21T16:46:34.797302Z",
   "alert_level": "push",
   "signals": [
     {
@@ -87,27 +87,13 @@
       ]
     },
     {
-      "id": "49b24f068cddcec1",
-      "source_id": "reddit_openai",
-      "source_name": "Reddit r/OpenAI",
-      "title": "Enterprise Agreement, Credits and Codex",
-      "summary": "Enterprise Agreement, Credits and Codex We're a relatively small business with an Enterprise Agreement covering pooled credits and seats. We've noticed a large and increasing credit consumption — one particular area is an IT developer using large amounts of tokens and credits for Codex and code wr",
-      "url": "https://www.reddit.com/r/OpenAI/new/.rss?limit=10",
-      "observed_at": "2026-07-21T10:06:30+00:00",
-      "weight": 15,
-      "tags": [
-        "codex",
-        "credit"
-      ]
-    },
-    {
-      "id": "a694e1651d0520a6",
+      "id": "90e62046af0777ed",
       "source_id": "openai_community",
       "source_name": "OpenAI Community Forum",
       "title": "Source fetch failed",
       "summary": "HTTPError: 429 Client Error: Too Many Requests for url: https://community.openai.com/search.json?q=codex+limit&order=latest",
       "url": "https://community.openai.com/search.json?q=codex+limit&order=latest",
-      "observed_at": "2026-07-21T14:26:35.406833Z",
+      "observed_at": "2026-07-21T16:46:34.796329Z",
       "weight": 0,
       "tags": [
         "fetch_error"
