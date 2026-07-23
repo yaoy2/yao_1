@@ -52,19 +52,6 @@
     ]
   },
   {
-    "id": "e37592c50aa6f4f3",
-    "source_id": "openai_status_history",
-    "source_name": "OpenAI Status Incidents",
-    "title": "Codex, workspace analytics, conversation search, searching for custom GPTs, ChatGPT user invites, and Compliance Log Platform download endpo",
-    "summary": "Codex, workspace analytics, conversation search, searching for custom GPTs, ChatGPT user invites, and Compliance Log Platform download endpoint not working in FedRAMP workspaces resolved Core functionality in FedRAMP workspaces has been restored, and the broader incident is resolved. Core functionality has been restored but we are aware of known and ongoing issues in FedRAMP workspaces with Codex, workspace analytics, conversation search, searching for custom GPTs, ChatGPT user invites, and the ",
-    "url": "https://status.openai.com/api/v2/incidents.json",
-    "observed_at": "2026-07-11T02:11:01Z",
-    "weight": 40,
-    "tags": [
-      "codex"
-    ]
-  },
-  {
     "id": "725bf89f26df730f",
     "source_id": "openai_community",
     "source_name": "OpenAI Community Forum",
@@ -129,6 +116,19 @@
     "tags": [
       "codex",
       "credit"
+    ]
+  },
+  {
+    "id": "707451884ddcff81",
+    "source_id": "openai_community",
+    "source_name": "OpenAI Community Forum",
+    "title": "Codex limits the screen to 80 char width",
+    "summary": "Codex limits the screen to 80 char width Is anyone else using the codex cli and noticing that the screen width maxes out at 80 chars, despite your terminal being much greater like ~208 chars? Have you figured out a solution?",
+    "url": "https://community.openai.com/t/codex-limits-the-screen-to-80-char-width/1337584",
+    "observed_at": "2025-08-08T01:46:07.520Z",
+    "weight": 10,
+    "tags": [
+      "codex"
     ]
   }
 ]
