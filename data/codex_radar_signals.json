@@ -65,6 +65,20 @@
     ]
   },
   {
+    "id": "aadddd4a74caa7d1",
+    "source_id": "reddit_openai",
+    "source_name": "Reddit r/OpenAI",
+    "title": "Warning: Creating a custom pet uses a lot of Codex/Work quota",
+    "summary": "Warning: Creating a custom pet uses a lot of Codex/Work quota I was customizing my instructions, saw the Pet thing, and thought I'd make a hippo. It opened a new thread, I told it to make a hippo, and renamed it. It took a while and generated a 40MB ZIP file of assets.\nHere's the deal - I'm on the $20 Plus",
+    "url": "https://www.reddit.com/r/OpenAI/new/.rss?limit=10",
+    "observed_at": "2026-07-24T23:31:59+00:00",
+    "weight": 15,
+    "tags": [
+      "codex",
+      "quota"
+    ]
+  },
+  {
     "id": "725bf89f26df730f",
     "source_id": "openai_community",
     "source_name": "OpenAI Community Forum",
@@ -115,20 +129,6 @@
     "weight": 10,
     "tags": [
       "codex"
-    ]
-  },
-  {
-    "id": "c572a09f427d3e56",
-    "source_id": "openai_community",
-    "source_name": "OpenAI Community Forum",
-    "title": "Hitting Codex limits after a few prompts",
-    "summary": "Hitting Codex limits after a few prompts I created a few codex tasks and my 5 hour limit was full, I bought $40 credits since it was urgent and after few prompts more they were gone as well. Now my limits are used for the entire week despite me buying a 1000 credits (which I honestly assumed would last the entire month). Reddit was full...",
-    "url": "https://community.openai.com/t/hitting-codex-limits-after-a-few-prompts/1364963",
-    "observed_at": "2025-11-03T21:31:53.957Z",
-    "weight": 10,
-    "tags": [
-      "codex",
-      "credit"
     ]
   }
 ]
