@@ -65,34 +65,6 @@
     ]
   },
   {
-    "id": "332a01a7fcc6618e",
-    "source_id": "openai_status_components",
-    "source_name": "OpenAI Status Components",
-    "title": "Codex in ChatGPT Desktop: degraded_performance",
-    "summary": "Component 'Codex in ChatGPT Desktop' status: degraded_performance",
-    "url": "https://status.openai.com/",
-    "observed_at": "2026-07-25T10:47:23.175361Z",
-    "weight": 25,
-    "tags": [
-      "codex",
-      "degraded"
-    ]
-  },
-  {
-    "id": "5c3b7b183cc5e2dc",
-    "source_id": "openai_status_components",
-    "source_name": "OpenAI Status Components",
-    "title": "Codex API: degraded_performance",
-    "summary": "Component 'Codex API' status: degraded_performance",
-    "url": "https://status.openai.com/",
-    "observed_at": "2026-07-25T10:47:23.175361Z",
-    "weight": 25,
-    "tags": [
-      "codex",
-      "degraded"
-    ]
-  },
-  {
     "id": "725bf89f26df730f",
     "source_id": "openai_community",
     "source_name": "OpenAI Community Forum",
@@ -130,6 +102,33 @@
     "weight": 10,
     "tags": [
       "codex"
+    ]
+  },
+  {
+    "id": "8e496cd26bd7ef12",
+    "source_id": "openai_community",
+    "source_name": "OpenAI Community Forum",
+    "title": "ChatGPT Plus Codex limits penalize honest weekend open-source use",
+    "summary": "ChatGPT Plus Codex limits penalize honest weekend open-source use I am posting this separately because my earlier reply was in the rate-limit discussion thread, which had been active for about two weeks. After my reply, the only response that followed was off-topic, and the thread was closed a few hours later. That left me with no real opportunity to bring the ...",
+    "url": "https://community.openai.com/t/chatgpt-plus-codex-limits-penalize-honest-weekend-open-source-use/1379384",
+    "observed_at": "2026-04-20T15:57:34.812Z",
+    "weight": 10,
+    "tags": [
+      "codex"
+    ]
+  },
+  {
+    "id": "c572a09f427d3e56",
+    "source_id": "openai_community",
+    "source_name": "OpenAI Community Forum",
+    "title": "Hitting Codex limits after a few prompts",
+    "summary": "Hitting Codex limits after a few prompts I created a few codex tasks and my 5 hour limit was full, I bought $40 credits since it was urgent and after few prompts more they were gone as well. Now my limits are used for the entire week despite me buying a 1000 credits (which I honestly assumed would last the entire month). Reddit was full...",
+    "url": "https://community.openai.com/t/hitting-codex-limits-after-a-few-prompts/1364963",
+    "observed_at": "2025-11-03T21:31:53.957Z",
+    "weight": 10,
+    "tags": [
+      "codex",
+      "credit"
     ]
   }
 ]
