@@ -65,19 +65,6 @@
     ]
   },
   {
-    "id": "514120ed0e793e6a",
-    "source_id": "reddit_openai",
-    "source_name": "Reddit r/OpenAI",
-    "title": "Any guide for optimising token usage in codex/work?",
-    "summary": "Any guide for optimising token usage in codex/work? I’m on plus subscription and I’m really limited by tokens, I’m working on AI CAD projects and 5 sprints per reset without high speed is not good\nsubmitted by\n/u/Former_",
-    "url": "https://www.reddit.com/r/OpenAI/new/.rss?limit=10",
-    "observed_at": "2026-07-27T15:29:27+00:00",
-    "weight": 15,
-    "tags": [
-      "codex"
-    ]
-  },
-  {
     "id": "725bf89f26df730f",
     "source_id": "openai_community",
     "source_name": "OpenAI Community Forum",
@@ -128,6 +115,20 @@
     "weight": 10,
     "tags": [
       "codex"
+    ]
+  },
+  {
+    "id": "c572a09f427d3e56",
+    "source_id": "openai_community",
+    "source_name": "OpenAI Community Forum",
+    "title": "Hitting Codex limits after a few prompts",
+    "summary": "Hitting Codex limits after a few prompts I created a few codex tasks and my 5 hour limit was full, I bought $40 credits since it was urgent and after few prompts more they were gone as well. Now my limits are used for the entire week despite me buying a 1000 credits (which I honestly assumed would last the entire month). Reddit was full...",
+    "url": "https://community.openai.com/t/hitting-codex-limits-after-a-few-prompts/1364963",
+    "observed_at": "2025-11-03T21:31:53.957Z",
+    "weight": 10,
+    "tags": [
+      "codex",
+      "credit"
     ]
   }
 ]
