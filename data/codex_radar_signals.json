@@ -52,19 +52,6 @@
     ]
   },
   {
-    "id": "3f0e2a3f6ea76a59",
-    "source_id": "openai_status_history",
-    "source_name": "OpenAI Status Incidents",
-    "title": "Codex 5.6-sol Experiencing Increased Server-Overload Errors",
-    "summary": "Codex 5.6-sol Experiencing Increased Server-Overload Errors resolved All impacted services have now fully recovered. We have applied the mitigation and are monitoring the recovery. We have identified that users are experiencing elevated errors for the impacted services. We are working on implementing a mitigation.",
-    "url": "https://status.openai.com/api/v2/incidents.json",
-    "observed_at": "2026-07-17T20:42:53Z",
-    "weight": 40,
-    "tags": [
-      "codex"
-    ]
-  },
-  {
     "id": "725bf89f26df730f",
     "source_id": "openai_community",
     "source_name": "OpenAI Community Forum",
@@ -129,6 +116,19 @@
     "tags": [
       "codex",
       "credit"
+    ]
+  },
+  {
+    "id": "707451884ddcff81",
+    "source_id": "openai_community",
+    "source_name": "OpenAI Community Forum",
+    "title": "Codex limits the screen to 80 char width",
+    "summary": "Codex limits the screen to 80 char width Is anyone else using the codex cli and noticing that the screen width maxes out at 80 chars, despite your terminal being much greater like ~208 chars? Have you figured out a solution?",
+    "url": "https://community.openai.com/t/codex-limits-the-screen-to-80-char-width/1337584",
+    "observed_at": "2025-08-08T01:46:07.520Z",
+    "weight": 10,
+    "tags": [
+      "codex"
     ]
   }
 ]
