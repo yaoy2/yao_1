@@ -3,7 +3,7 @@
   "probability_24h": 95,
   "probability_48h": 98,
   "reason": "多个 Codex 限额或事故信号叠加，进入高概率关注。",
-  "checked_at": "2026-07-31T07:17:03.550845Z",
+  "checked_at": "2026-07-31T10:01:35.576633Z",
   "alert_level": "push",
   "signals": [
     {
@@ -30,33 +30,6 @@
       "weight": 40,
       "tags": [
         "codex"
-      ]
-    },
-    {
-      "id": "bd43da763c398642",
-      "source_id": "openai_status_history",
-      "source_name": "OpenAI Status Incidents",
-      "title": "Some users are unable to access Codex",
-      "summary": "Some users are unable to access Codex resolved All impacted services have now fully recovered. We have applied the mitigation and are monitoring the recovery. We have identified an issue causing some users to receive access-denied errors when using the Codex desktop app and CLI.",
-      "url": "https://status.openai.com/api/v2/incidents.json",
-      "observed_at": "2026-07-18T12:58:14Z",
-      "weight": 40,
-      "tags": [
-        "codex"
-      ]
-    },
-    {
-      "id": "51e6986191e4e3db",
-      "source_id": "reddit_openai",
-      "source_name": "Reddit r/OpenAI",
-      "title": "OpenAI Codex Charged Me Hundreds and Refused a Refund. I am also a teacher and dont get paid over the summer. Im so upset at myself.",
-      "summary": "OpenAI Codex Charged Me Hundreds and Refused a Refund. I am also a teacher and dont get paid over the summer. Im so upset at myself. I am a teacher, I was thrilled when I saw that Codex was a thing. I was using it heavily for the last week.\nI saw that I ran out of credits I would simply add more. I added an extra 20 dollars.\nGreat, I kept using it and it neve",
-      "url": "https://www.reddit.com/r/OpenAI/new/.rss?limit=10",
-      "observed_at": "2026-07-31T01:30:46+00:00",
-      "weight": 15,
-      "tags": [
-        "codex",
-        "credit"
       ]
     },
     {
@@ -137,6 +110,33 @@
       "weight": 10,
       "tags": [
         "codex"
+      ]
+    },
+    {
+      "id": "9cb23ca14adc921d",
+      "source_id": "openai_community",
+      "source_name": "OpenAI Community Forum",
+      "title": "Plus plan - Codex limited reached after asking one question",
+      "summary": "Plus plan - Codex limited reached after asking one question Hi all I know that there is already a Limit discussion thread. I just typed on one question to codex and I hit my rate immediately, 100% that only resent in two days. This cant be correct, even on the plus plan I should be able to use it, this efectively makes it un-usable. Not allowing me to do ...",
+      "url": "https://community.openai.com/t/plus-plan-codex-limited-reached-after-asking-one-question/1378667",
+      "observed_at": "2026-04-06T16:17:05.422Z",
+      "weight": 10,
+      "tags": [
+        "codex"
+      ]
+    },
+    {
+      "id": "08c8df62ee521680",
+      "source_id": "openai_community",
+      "source_name": "OpenAI Community Forum",
+      "title": "Issue with GPT-5 Codex Limits Despite Having Pro Subscription",
+      "summary": "Issue with GPT-5 Codex Limits Despite Having Pro Subscription Hello, I have an active ChatGPT Plus (Pro) subscription, but I am facing a serious issue when working with the GPT-5 Codex model in Codex IDE. After just a couple of hours of active use, I get a message saying that I've hit my usage limit and can't continue working with the model. At the same tim...",
+      "url": "https://community.openai.com/t/issue-with-gpt-5-codex-limits-despite-having-pro-subscription/1359497",
+      "observed_at": "2025-09-23T11:04:34.559Z",
+      "weight": 10,
+      "tags": [
+        "codex",
+        "usage limit"
       ]
     }
   ]
