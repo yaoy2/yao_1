@@ -1,0 +1,28 @@
+{
+  "poll_hours": 2,
+  "archive_type": "raw",
+  "headless": true,
+  "max_new_per_run": 10,
+  "retry_failed": true,
+  "max_fail_count": 5,
+  "request_timeout": 30,
+  "archive_interval": 2.0,
+  "state_path": "data/mp_watch_state.json",
+  "log_dir": "logs",
+  "sources": [
+    {
+      "name": "公众号A名称",
+      "kind": "rss",
+      "enabled": false,
+      "feed_url": "http://127.0.0.1:8001/rss/ACCOUNT_A",
+      "archive_type": "raw"
+    },
+    {
+      "name": "公众号B名称",
+      "kind": "rss",
+      "enabled": false,
+      "feed_url": "http://127.0.0.1:8001/rss/ACCOUNT_B",
+      "archive_type": "raw"
+    }
+  ]
+}

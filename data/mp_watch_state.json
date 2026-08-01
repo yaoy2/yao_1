@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "items": {},
+  "last_run": {
+    "at": "2026-08-01T12:12:27+08:00",
+    "discovered": 0,
+    "archived": 0,
+    "failed": 0,
+    "skipped": 0,
+    "errors": [
+      "没有启用的 sources。请编辑 config/mp_watch_sources.json，填写 feed_url 并设 enabled=true。"
+    ]
+  }
+}
