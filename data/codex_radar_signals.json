@@ -26,19 +26,6 @@
     ]
   },
   {
-    "id": "197a7134e464ad91",
-    "source_id": "reddit_openai",
-    "source_name": "Reddit r/OpenAI",
-    "title": "Pinned chats disappeared from the ChatGPT sidebar — is anyone else experiencing this?",
-    "summary": "Pinned chats disappeared from the ChatGPT sidebar — is anyone else experiencing this? My Pinned section suddenly disappeared from the ChatGPT web and codex.\nBefore this happened, I had reached the maximum of 10 pinned conversations. ChatGPT initially continued saying that the 10-pin limit had been reached even though none of the pinned chats w",
-    "url": "https://www.reddit.com/r/OpenAI/new/.rss?limit=10",
-    "observed_at": "2026-08-01T08:07:09+00:00",
-    "weight": 15,
-    "tags": [
-      "codex"
-    ]
-  },
-  {
     "id": "725bf89f26df730f",
     "source_id": "openai_community",
     "source_name": "OpenAI Community Forum",
@@ -129,6 +116,20 @@
     "weight": 10,
     "tags": [
       "codex"
+    ]
+  },
+  {
+    "id": "08c8df62ee521680",
+    "source_id": "openai_community",
+    "source_name": "OpenAI Community Forum",
+    "title": "Issue with GPT-5 Codex Limits Despite Having Pro Subscription",
+    "summary": "Issue with GPT-5 Codex Limits Despite Having Pro Subscription Hello, I have an active ChatGPT Plus (Pro) subscription, but I am facing a serious issue when working with the GPT-5 Codex model in Codex IDE. After just a couple of hours of active use, I get a message saying that I've hit my usage limit and can't continue working with the model. At the same tim...",
+    "url": "https://community.openai.com/t/issue-with-gpt-5-codex-limits-despite-having-pro-subscription/1359497",
+    "observed_at": "2025-09-23T11:04:34.559Z",
+    "weight": 10,
+    "tags": [
+      "codex",
+      "usage limit"
     ]
   }
 ]
