@@ -3,7 +3,7 @@
   "probability_24h": 95,
   "probability_48h": 98,
   "reason": "多个 Codex 限额或事故信号叠加，进入高概率关注。",
-  "checked_at": "2026-08-02T06:47:35.218377Z",
+  "checked_at": "2026-08-02T09:24:24.760503Z",
   "alert_level": "push",
   "signals": [
     {
@@ -73,6 +73,19 @@
       ]
     },
     {
+      "id": "f123a14347dea3fd",
+      "source_id": "openai_community",
+      "source_name": "OpenAI Community Forum",
+      "title": "Confused about Codex limit usage after GPT-5.6 release (Plus plan)",
+      "summary": "Confused about Codex limit usage after GPT-5.6 release (Plus plan) Hi everyone, I still can't understand why Codex limits are being used up so quickly. I'm on the $20 Plus plan, and since the GPT-5.6 family was released, the amount of work I can get done within my limit...",
+      "url": "https://community.openai.com/t/confused-about-codex-limit-usage-after-gpt-5-6-release-plus-plan/1388758",
+      "observed_at": "2026-08-02T08:31:39.897Z",
+      "weight": 10,
+      "tags": [
+        "codex"
+      ]
+    },
+    {
       "id": "8e496cd26bd7ef12",
       "source_id": "openai_community",
       "source_name": "OpenAI Community Forum",
@@ -123,20 +136,6 @@
       "weight": 10,
       "tags": [
         "codex"
-      ]
-    },
-    {
-      "id": "08c8df62ee521680",
-      "source_id": "openai_community",
-      "source_name": "OpenAI Community Forum",
-      "title": "Issue with GPT-5 Codex Limits Despite Having Pro Subscription",
-      "summary": "Issue with GPT-5 Codex Limits Despite Having Pro Subscription Hello, I have an active ChatGPT Plus (Pro) subscription, but I am facing a serious issue when working with the GPT-5 Codex model in Codex IDE. After just a couple of hours of active use, I get a message saying that I've hit my usage limit and can't continue working with the model. At the same tim...",
-      "url": "https://community.openai.com/t/issue-with-gpt-5-codex-limits-despite-having-pro-subscription/1359497",
-      "observed_at": "2025-09-23T11:04:34.559Z",
-      "weight": 10,
-      "tags": [
-        "codex",
-        "usage limit"
       ]
     }
   ]
