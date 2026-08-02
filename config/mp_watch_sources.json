@@ -2,7 +2,7 @@
   "poll_hours": 2,
   "archive_type": "raw",
   "headless": true,
-  "max_new_per_run": 10,
+  "max_new_per_run": 15,
   "retry_failed": true,
   "max_fail_count": 5,
   "request_timeout": 30,
@@ -11,18 +11,28 @@
   "log_dir": "logs",
   "sources": [
     {
-      "name": "公众号A名称",
+      "name": "雷立刚本人",
       "kind": "rss",
       "enabled": false,
-      "feed_url": "http://127.0.0.1:8001/rss/ACCOUNT_A",
-      "archive_type": "raw"
+      "feed_url": "",
+      "archive_type": "raw",
+      "note": "待填免费 RSS；enabled 在 feed 可用后改为 true"
     },
     {
-      "name": "公众号B名称",
+      "name": "财经作家雷立刚",
       "kind": "rss",
       "enabled": false,
-      "feed_url": "http://127.0.0.1:8001/rss/ACCOUNT_B",
-      "archive_type": "raw"
+      "feed_url": "",
+      "archive_type": "raw",
+      "note": "待填免费 RSS；enabled 在 feed 可用后改为 true"
+    },
+    {
+      "name": "数字生命卡兹克",
+      "kind": "rss",
+      "enabled": false,
+      "feed_url": "",
+      "archive_type": "raw",
+      "note": "待填免费 RSS；enabled 在 feed 可用后改为 true"
     }
   ]
 }

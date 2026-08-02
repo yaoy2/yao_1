@@ -81,6 +81,9 @@ def load_config(path: Path | None = None) -> Dict[str, Any]:
             raise ValueError(f"sources[{idx}] ({item['name']}) 已启用但缺少 feed_url")
         if item["kind"] not in {"rss", "json"}:
             raise ValueError(f"sources[{idx}] kind 仅支持 rss / json，收到：{item['kind']}")
+        # note 等扩展字段保留，便于配置里写备注
+        if src.get("note"):
+            item["note"] = str(src["note"])
         normalized.append(item)
     cfg["sources"] = normalized
     return cfg
