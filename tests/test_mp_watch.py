@@ -245,16 +245,15 @@ class ConfigPathTest(unittest.TestCase):
         self.assertNotIn("C:/Users", cfg["state_path"])
 
     def test_apply_target_dirs(self):
+        import sys
+        import types
         from mp_watch.runner import apply_target_dirs
-        import wechat_core
 
-        old = wechat_core.TARGET_DIRS.get("raw")
-        try:
+        fake = types.ModuleType("wechat_core")
+        fake.TARGET_DIRS = {"raw": r"E:\old"}
+        with patch.dict(sys.modules, {"wechat_core": fake}):
             apply_target_dirs({"raw": r"D:\tmp\mp_watch_raw_test"})
-            self.assertEqual(wechat_core.TARGET_DIRS["raw"], r"D:\tmp\mp_watch_raw_test")
-        finally:
-            if old is not None:
-                wechat_core.TARGET_DIRS["raw"] = old
+            self.assertEqual(fake.TARGET_DIRS["raw"], r"D:\tmp\mp_watch_raw_test")
 
 
 if __name__ == "__main__":

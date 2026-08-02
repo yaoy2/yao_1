@@ -28,11 +28,11 @@ def apply_target_dirs(target_dirs: Dict[str, str]) -> None:
     if not target_dirs:
         return
     _ensure_repo_on_syspath()
-    from wechat_core import TARGET_DIRS  # noqa: WPS433
+    import wechat_core  # noqa: WPS433
 
     for key, path in target_dirs.items():
         if key and path:
-            TARGET_DIRS[str(key)] = str(path)
+            wechat_core.TARGET_DIRS[str(key)] = str(path)
 
 
 def default_archive_fn() -> ArchiveFn:
