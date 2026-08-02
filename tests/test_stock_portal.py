@@ -3,6 +3,9 @@ import hashlib
 import json
 from pathlib import Path
 
+import duckdb
+from streamlit.testing.v1 import AppTest
+
 from stock.search_html.collector import chromium_executable, search_archive
 
 
@@ -18,9 +21,43 @@ def test_stock_page_exposes_two_sections_without_a_second_page_config():
     assert '["AStockLab", "股票搜索"]' in portal
     assert "st.set_page_config" not in online_app
     assert "materialize_astocklab_database()" in online_app
+    assert "st.radio" in online_app
+    assert "horizontal=True" in online_app
+    assert "力诺药包与信息发展" in online_app
+    assert "st.sidebar.radio" not in online_app
 
 
-def test_compressed_astocklab_snapshot_matches_manifest():
+def test_stock_page_reuses_the_shared_password_gate():
+    page = (ROOT / "pages" / "18_19_stock_portal.py").read_text(encoding="utf-8")
+    assert "from utils import budget_auth" in page
+    assert "budget_auth.get_budget_password(st.secrets, os.environ)" in page
+    assert "budget_auth.is_budget_password_valid" in page
+    assert "stock_portal_authenticated" in page
+    assert page.rindex("require_stock_portal_auth()") < page.rindex("render_stock_portal()")
+
+
+def test_stock_page_unlocks_and_switches_to_the_second_stock(monkeypatch):
+    monkeypatch.setenv("BUDGET_PASSWORD", "stock-test-password")
+    page = ROOT / "pages" / "18_19_stock_portal.py"
+    app = AppTest.from_file(str(page), default_timeout=30).run()
+
+    assert not app.exception
+    assert [field.label for field in app.text_input] == ["访问密码"]
+    app.text_input[0].input("stock-test-password")
+    app.button[0].click().run()
+
+    assert not app.exception
+    selector = next(
+        radio for radio in app.radio
+        if radio.key == "astocklab_selected_stock"
+    )
+    assert [option[-10:-4] for option in selector.options] == ["301188", "300469"]
+    selector.set_value(selector.options[1]).run()
+    assert not app.exception
+    assert any("300469" in item.value for item in app.subheader)
+
+
+def test_compressed_astocklab_snapshot_matches_manifest(tmp_path):
     online = STOCK_ROOT / "astocklab" / "data" / "online"
     manifest = json.loads((online / "snapshot_manifest.json").read_text(encoding="utf-8"))
     compressed = online / "astock.duckdb.gz"
@@ -29,12 +66,22 @@ def test_compressed_astocklab_snapshot_matches_manifest():
 
     digest = hashlib.sha256()
     size = 0
-    with gzip.open(compressed, "rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+    extracted = tmp_path / "astock.duckdb"
+    with gzip.open(compressed, "rb") as source, extracted.open("wb") as target:
+        for chunk in iter(lambda: source.read(1024 * 1024), b""):
             digest.update(chunk)
             size += len(chunk)
+            target.write(chunk)
     assert size == manifest["database_size"]
     assert digest.hexdigest() == manifest["database_sha256"]
+
+    with duckdb.connect(str(extracted), read_only=True) as connection:
+        rows = dict(connection.execute(
+            "SELECT code, COUNT(*) FROM daily_bars "
+            "WHERE code IN ('301188', '300469') GROUP BY code"
+        ).fetchall())
+    assert rows["301188"] > 0
+    assert rows["300469"] > 0
 
 
 def test_search_snapshot_and_archive_query_are_available():

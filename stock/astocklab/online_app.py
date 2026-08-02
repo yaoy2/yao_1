@@ -40,12 +40,22 @@ def load_database() -> Database:
 
 database = load_database()
 stocks = [stock for stock in watchlist.stocks if stock.enabled]
-selected = st.sidebar.radio(
+if not stocks:
+    st.error("自选股配置中没有启用的股票。")
+    st.stop()
+
+stock_options = {
+    f"{stock.name}（{stock.full_code}）": stock
+    for stock in stocks
+}
+selected_label = st.radio(
     "选择个股",
-    stocks,
-    format_func=lambda item: f"{item.name}（{item.code}）",
+    options=list(stock_options),
+    horizontal=True,
+    key="astocklab_selected_stock",
 )
-st.sidebar.caption("选择股票后页面读取同一份只读在线快照。")
+selected = stock_options[selected_label]
+st.caption("可切换力诺药包与信息发展；两只股票均读取同一份只读在线快照。")
 prediction_settings = settings.get("prediction", {})
 prediction_enabled = bool(prediction_settings.get("enabled", False))
 show_prediction = False

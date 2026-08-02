@@ -25,6 +25,7 @@ TOOLS = [
         "page": "pages/18_19_stock_portal.py",
         "code": "M19",
         "accent": "magenta",
+        "locked": True,
     },
     {
         "title": "评分工作台使用说明",

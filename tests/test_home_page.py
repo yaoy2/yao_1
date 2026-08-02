@@ -65,6 +65,7 @@ class HomePageTest(unittest.TestCase):
 
         self.assertEqual("M19", tools[0]["code"])
         self.assertEqual("pages/18_19_stock_portal.py", tools[0]["page"])
+        self.assertTrue(tools[0]["locked"])
         self.assertEqual("M18", tools[1]["code"])
         self.assertEqual("pages/17_18_grade_workbench_guide.py", tools[1]["page"])
         self.assertEqual("M17", tools[2]["code"])

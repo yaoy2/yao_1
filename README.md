@@ -17,7 +17,7 @@ The project is built around real administrative, teaching-support, competition-g
 
 - **Online app**: [yao-1.streamlit.app](https://yao-1.streamlit.app/)
 - **Repository**: [github.com/yaoy2/yao_1](https://github.com/yaoy2/yao_1)
-- **Stock Research Center (M19)**: combines the full read-only AStockLab research interface with the Xueqiu × Taoguba public-information dashboard and stock/keyword search.
+- **Stock Research Center (M19)**: a locked page that reuses the shared tool password, exposes both tracked stocks in the main content area, and combines the read-only AStockLab interface with Xueqiu × Taoguba public-information search.
 - **Grade Workbench Guide (M18)**: explains the M17 workflow, score definitions, file locations, cross-computer status, and common questions.
 - **Teaching Grade Workbench (M17)**: manages rosters, group roadshow/report source scores, contribution coefficients, adjustment layers, validation, and review-workbook export.
 - **Legacy Grade Linkage (M16)**: replaced by M17 and marked with a red cross for historical reference; it remains between M17 and M15 in module-number order.

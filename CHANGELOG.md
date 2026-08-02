@@ -7,6 +7,7 @@ This English change log mirrors the project history maintained in `CHANGELOG_ZH-
 
 ## 2026-08-02
 
+- **Exposed both M19 stocks and added the shared lock**: the online snapshot already contained both tracked stocks, but the selector lived in the collapsible sidebar and made the main view appear to contain only one. The selector now sits in the main content area, M19 reuses the existing `budget_password`, and its homepage card displays the lock marker.
 - **Added M19 Stock Research Center**: added one Streamlit page with two switchable sections instead of two unrelated sidebar entries. AStockLab preserves the existing watchlist, daily/intraday, market-linkage, money-flow, probability-research, data-health, and AI-industry-chain interface; Stock Search preserves daily hotspots, confirmed/disputed AI pools, snapshot search, and optional live seven-day public search.
 - **Separated local production from online display**: local projects under `E:\GoogleDrive\Ding2026\stock` remain authoritative for collection, calculation, prediction, and validation. The repository now carries only online runtime code, configuration, reports, public-information snapshots, and a 25.1 MB compressed DuckDB snapshot.
 - **Made the database snapshot safe for Streamlit Cloud**: the 64.8 MB DuckDB file is decompressed into a hash-specific system temporary directory, then checked against its size and SHA-256 manifest. The repository never creates a writable DuckDB, WAL, or lock file during page use.
