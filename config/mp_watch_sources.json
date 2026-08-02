@@ -1,4 +1,6 @@
 {
+  "_project_docs": "docs/mp_watch/README.md 与 docs/mp_watch/L_接手清单.md —— L 上 pull 后请先读",
+  "_status": "代码已完成；L 上待：Docker 发现源、填 feed_url、enabled=true、target_dirs、任务计划",
   "poll_hours": 2,
   "archive_type": "raw",
   "headless": true,
@@ -9,6 +11,9 @@
   "archive_interval": 2.0,
   "state_path": "data/mp_watch_state.json",
   "log_dir": "logs",
+  "target_dirs": {
+    "raw": "请改成L本机真实路径\\\\Obsidian\\\\raw"
+  },
   "sources": [
     {
       "name": "雷立刚本人",
@@ -16,7 +21,7 @@
       "enabled": false,
       "feed_url": "",
       "archive_type": "raw",
-      "note": "待填免费 RSS；enabled 在 feed 可用后改为 true"
+      "note": "L上Docker订阅后填RSS；enabled改为true。文档：docs/mp_watch/L_接手清单.md"
     },
     {
       "name": "财经作家雷立刚",
@@ -24,7 +29,7 @@
       "enabled": false,
       "feed_url": "",
       "archive_type": "raw",
-      "note": "待填免费 RSS；enabled 在 feed 可用后改为 true"
+      "note": "L上Docker订阅后填RSS；enabled改为true"
     },
     {
       "name": "数字生命卡兹克",
@@ -32,7 +37,7 @@
       "enabled": false,
       "feed_url": "",
       "archive_type": "raw",
-      "note": "待填免费 RSS；enabled 在 feed 可用后改为 true"
+      "note": "L上Docker订阅后填RSS；enabled改为true"
     }
   ]
 }
