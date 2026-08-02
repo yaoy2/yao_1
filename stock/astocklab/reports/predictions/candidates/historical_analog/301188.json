@@ -1,0 +1,366 @@
+{
+  "schema_version": 1,
+  "engine": "historical_joint_analog_v1",
+  "generated_at": "2026-07-31T10:41:31+08:00",
+  "code": "301188",
+  "name": "力诺药包",
+  "input": {
+    "adjust_type": "qfq",
+    "as_of_trade_date": "2026-07-30",
+    "history_rows": 1144,
+    "base_price": 31.62,
+    "lookback_days": 20,
+    "horizon_days": 5,
+    "analog_count": 50
+  },
+  "selection": {
+    "mode": "market_conditioned",
+    "benchmark_code": "000680",
+    "benchmark_name": "科创综指",
+    "market_value_conclusion": "历史走查显示大盘信息有增益，已纳入预测。",
+    "minimum_value_score": 0.01,
+    "benchmark_evaluations": [
+      {
+        "code": "399006",
+        "name": "创业板指",
+        "usable": false,
+        "reason": "指数行情仅到 2026-07-29，落后于个股 2026-07-30"
+      },
+      {
+        "code": "399001",
+        "name": "深证成指",
+        "usable": false,
+        "reason": "指数行情仅到 2026-07-29，落后于个股 2026-07-30"
+      },
+      {
+        "code": "000001",
+        "name": "上证指数",
+        "usable": true,
+        "value_score": 0.0212548701196321,
+        "sample_count": 100,
+        "direction_accuracy": 0.44,
+        "direction_baseline_accuracy": 0.6,
+        "direction_edge": -0.15999999999999998,
+        "mae_final": 0.13765368640483794,
+        "naive_mae_final": 0.13686327867527992,
+        "mae_skill": -0.005775162901316522,
+        "median_error_final": 0.11174637537325446,
+        "interval_target_coverage": 0.8,
+        "interval_evaluation_coverage": 0.7466666666666667,
+        "evaluation_sample_count": 30
+      },
+      {
+        "code": "000680",
+        "name": "科创综指",
+        "usable": true,
+        "value_score": 0.03801036623725359,
+        "sample_count": 100,
+        "direction_accuracy": 0.46,
+        "direction_baseline_accuracy": 0.6,
+        "direction_edge": -0.13999999999999996,
+        "mae_final": 0.13810086547645725,
+        "naive_mae_final": 0.13686327867527992,
+        "mae_skill": -0.009042504411381325,
+        "median_error_final": 0.11148011845763292,
+        "interval_target_coverage": 0.8,
+        "interval_evaluation_coverage": 0.7333333333333333,
+        "evaluation_sample_count": 30
+      }
+    ]
+  },
+  "probability": {
+    "method": "walk_forward_local_calibration_v1",
+    "calibration_sample_count": 60,
+    "shape_probabilities": {
+      "持续上行": 0.46153846153846156,
+      "震荡上行": 0.06153846153846154,
+      "区间震荡": 0.06153846153846154,
+      "震荡下行": 0.06153846153846154,
+      "持续下行": 0.35384615384615387
+    },
+    "raw_analog_shape_frequencies": {
+      "持续上行": 0.44,
+      "震荡上行": 0.1,
+      "区间震荡": 0.14,
+      "震荡下行": 0.04,
+      "持续下行": 0.28
+    }
+  },
+  "validation": {
+    "sample_count": 100,
+    "direction_accuracy": 0.46,
+    "direction_baseline_accuracy": 0.6,
+    "direction_edge": -0.13999999999999996,
+    "mae_final": 0.13810086547645725,
+    "naive_mae_final": 0.13686327867527992,
+    "mae_skill": -0.009042504411381325,
+    "median_error_final": 0.11148011845763292,
+    "interval_target_coverage": 0.8,
+    "interval_evaluation_coverage": 0.7333333333333333,
+    "evaluation_sample_count": 30
+  },
+  "reliability": {
+    "status": "rejected",
+    "message": "未通过最低历史可靠性门槛，不应据此形成交易判断。未通过项：方向命中未超过简单基线、误差未优于零收益基线。",
+    "checks": {
+      "enough_validation_samples": true,
+      "beats_direction_baseline": false,
+      "beats_zero_return_mae": false,
+      "interval_coverage_acceptable": true
+    },
+    "passed_check_count": 2,
+    "total_check_count": 4
+  },
+  "forecast_path": [
+    {
+      "day": 1,
+      "median_return": -0.0009965122072745358,
+      "lower_return": -0.08722593535940765,
+      "upper_return": 0.08523291094485858,
+      "median_price": 31.588490284005978,
+      "lower_price": 28.861915923935534,
+      "upper_price": 34.31506464407643,
+      "market_median_return": -0.0026425634863256886
+    },
+    {
+      "day": 2,
+      "median_return": -0.0006496454906289584,
+      "lower_return": -0.11162241162419823,
+      "upper_return": 0.11032312064294031,
+      "median_price": 31.599458209586313,
+      "lower_price": 28.090499344442854,
+      "upper_price": 35.10841707472977,
+      "market_median_return": 0.0007867286442335697
+    },
+    {
+      "day": 3,
+      "median_return": 0.0049439565931319596,
+      "lower_return": -0.13340503137514487,
+      "upper_return": 0.14329294456140879,
+      "median_price": 31.776327907474833,
+      "lower_price": 27.401732907917918,
+      "upper_price": 36.15092290703175,
+      "market_median_return": 0.007643037870281977
+    },
+    {
+      "day": 4,
+      "median_return": 0.008619214982672596,
+      "lower_return": -0.18706329706868058,
+      "upper_return": 0.20430172703402577,
+      "median_price": 31.892539577752103,
+      "lower_price": 25.705058546688324,
+      "upper_price": 38.08002060881589,
+      "market_median_return": 0.010240107225614414
+    },
+    {
+      "day": 5,
+      "median_return": 0.0148205143297091,
+      "lower_return": -0.21197672287332137,
+      "upper_return": 0.24161775153273957,
+      "median_price": 32.0886246631054,
+      "lower_price": 24.917296022745578,
+      "upper_price": 39.259953303465224,
+      "market_median_return": 0.005548516210801102
+    }
+  ],
+  "forecast_candles": [
+    {
+      "day": 1,
+      "label": "T+1",
+      "open": 31.32801547656665,
+      "high": 31.801606035547252,
+      "low": 31.256976892719564,
+      "close": 31.588490284005978,
+      "derivation": "analog_medoid_shape_on_median_close",
+      "representative_origin_date": "2022-12-19"
+    },
+    {
+      "day": 2,
+      "label": "T+2",
+      "open": 31.457968098200105,
+      "high": 31.717366635741485,
+      "low": 31.29289630158286,
+      "close": 31.599458209586313,
+      "derivation": "analog_medoid_shape_on_median_close",
+      "representative_origin_date": "2022-12-19"
+    },
+    {
+      "day": 3,
+      "label": "T+3",
+      "open": 32.2063834731399,
+      "high": 32.27805940075074,
+      "low": 31.680760003993697,
+      "close": 31.776327907474833,
+      "derivation": "analog_medoid_shape_on_median_close",
+      "representative_origin_date": "2022-12-19"
+    },
+    {
+      "day": 4,
+      "label": "T+4",
+      "open": 31.347165295009876,
+      "high": 32.53276156184081,
+      "low": 31.062622190970448,
+      "close": 31.892539577752103,
+      "derivation": "analog_medoid_shape_on_median_close",
+      "representative_origin_date": "2022-12-19"
+    },
+    {
+      "day": 5,
+      "label": "T+5",
+      "open": 32.01694493563755,
+      "high": 32.375343572976774,
+      "low": 32.01694493563755,
+      "close": 32.0886246631054,
+      "derivation": "analog_medoid_shape_on_median_close",
+      "representative_origin_date": "2022-12-19"
+    }
+  ],
+  "recent_history": [
+    {
+      "trade_date": "2026-07-03",
+      "open": 56.68,
+      "high": 57.44,
+      "low": 51.31,
+      "close": 51.55
+    },
+    {
+      "trade_date": "2026-07-06",
+      "open": 51.64,
+      "high": 52.55,
+      "low": 46.58,
+      "close": 47.04
+    },
+    {
+      "trade_date": "2026-07-07",
+      "open": 47.0,
+      "high": 47.6,
+      "low": 44.6,
+      "close": 45.57
+    },
+    {
+      "trade_date": "2026-07-08",
+      "open": 46.48,
+      "high": 50.56,
+      "low": 45.88,
+      "close": 47.99
+    },
+    {
+      "trade_date": "2026-07-09",
+      "open": 48.94,
+      "high": 51.87,
+      "low": 47.15,
+      "close": 50.01
+    },
+    {
+      "trade_date": "2026-07-10",
+      "open": 51.52,
+      "high": 51.89,
+      "low": 45.65,
+      "close": 45.73
+    },
+    {
+      "trade_date": "2026-07-13",
+      "open": 45.06,
+      "high": 45.5,
+      "low": 40.51,
+      "close": 41.2
+    },
+    {
+      "trade_date": "2026-07-14",
+      "open": 41.0,
+      "high": 43.73,
+      "low": 40.15,
+      "close": 43.48
+    },
+    {
+      "trade_date": "2026-07-15",
+      "open": 44.35,
+      "high": 44.44,
+      "low": 42.0,
+      "close": 42.33
+    },
+    {
+      "trade_date": "2026-07-16",
+      "open": 41.95,
+      "high": 42.03,
+      "low": 40.09,
+      "close": 40.71
+    },
+    {
+      "trade_date": "2026-07-17",
+      "open": 40.71,
+      "high": 41.52,
+      "low": 37.68,
+      "close": 38.02
+    },
+    {
+      "trade_date": "2026-07-20",
+      "open": 39.66,
+      "high": 39.8,
+      "low": 32.43,
+      "close": 33.4
+    },
+    {
+      "trade_date": "2026-07-21",
+      "open": 34.06,
+      "high": 36.55,
+      "low": 29.0,
+      "close": 36.34
+    },
+    {
+      "trade_date": "2026-07-22",
+      "open": 35.7,
+      "high": 37.88,
+      "low": 35.38,
+      "close": 36.24
+    },
+    {
+      "trade_date": "2026-07-23",
+      "open": 35.99,
+      "high": 37.79,
+      "low": 35.2,
+      "close": 35.91
+    },
+    {
+      "trade_date": "2026-07-24",
+      "open": 35.19,
+      "high": 36.33,
+      "low": 34.0,
+      "close": 34.96
+    },
+    {
+      "trade_date": "2026-07-27",
+      "open": 35.08,
+      "high": 38.56,
+      "low": 35.02,
+      "close": 38.42
+    },
+    {
+      "trade_date": "2026-07-28",
+      "open": 38.34,
+      "high": 38.43,
+      "low": 35.3,
+      "close": 35.55
+    },
+    {
+      "trade_date": "2026-07-29",
+      "open": 35.56,
+      "high": 35.65,
+      "low": 32.0,
+      "close": 33.94
+    },
+    {
+      "trade_date": "2026-07-30",
+      "open": 34.16,
+      "high": 34.96,
+      "low": 30.71,
+      "close": 31.62
+    }
+  ],
+  "controls": {
+    "research_only": true,
+    "auto_trading": false,
+    "probabilities_are_calibrated": true,
+    "interval_is_conformal_style": true
+  }
+}

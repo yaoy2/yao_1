@@ -16,10 +16,10 @@ def test_english_default_documents_match_their_named_versions():
 def test_readmes_cover_current_grade_workbench_modules():
     chinese = read("README_ZH-CN.md")
     english = read("README_EN.md")
-    assert "十八个工具模块" in chinese
-    assert "M18" in chinese and "M17" in chinese and "M16" in chinese
-    assert "Eighteen Tool Modules" in english
-    assert "M18" in english and "M17" in english and "M16" in english
+    assert "十九个工具模块" in chinese
+    assert "M19" in chinese and "M18" in chinese and "M17" in chinese and "M16" in chinese
+    assert "Nineteen Tool Modules" in english
+    assert "M19" in english and "M18" in english and "M17" in english and "M16" in english
 
 
 def test_beginner_setup_files_reference_real_entry_points():

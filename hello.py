@@ -18,6 +18,15 @@ apply_global_theme()
 
 TOOLS = [
     {
+        "title": "股票研究中心",
+        "desc": "第19个项目：统一展示 AStockLab 行情研究、概率分析、AI产业链，以及雪球 × 淘股吧公开信息搜索。",
+        "tag": "股票研究",
+        "created": "2026_08_02",
+        "page": "pages/18_19_stock_portal.py",
+        "code": "M19",
+        "accent": "magenta",
+    },
+    {
         "title": "评分工作台使用说明",
         "desc": "第18个项目：集中说明M17操作流程、分数口径、数据位置、跨电脑状态和常见问题。",
         "tag": "使用说明",

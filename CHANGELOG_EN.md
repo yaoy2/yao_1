@@ -5,6 +5,15 @@
 
 This English change log mirrors the project history maintained in `CHANGELOG_ZH-CN.md`. It keeps the same dated structure and preserves the operational notes that matter for later troubleshooting: what changed, why it changed, what failed or detoured, and how the work was verified.
 
+## 2026-08-02
+
+- **Added M19 Stock Research Center**: added one Streamlit page with two switchable sections instead of two unrelated sidebar entries. AStockLab preserves the existing watchlist, daily/intraday, market-linkage, money-flow, probability-research, data-health, and AI-industry-chain interface; Stock Search preserves daily hotspots, confirmed/disputed AI pools, snapshot search, and optional live seven-day public search.
+- **Separated local production from online display**: local projects under `E:\GoogleDrive\Ding2026\stock` remain authoritative for collection, calculation, prediction, and validation. The repository now carries only online runtime code, configuration, reports, public-information snapshots, and a 25.1 MB compressed DuckDB snapshot.
+- **Made the database snapshot safe for Streamlit Cloud**: the 64.8 MB DuckDB file is decompressed into a hash-specific system temporary directory, then checked against its size and SHA-256 manifest. The repository never creates a writable DuckDB, WAL, or lock file during page use.
+- **Updated navigation, dependencies, tests, and documentation**: added the M19 homepage/sidebar card, advanced pagination from 18 to 19 modules, added DuckDB/Plotly/Pydantic/Loguru runtime dependencies, and documented the local-versus-online boundary in both repositories.
+- **Recorded the compression detour**: the first PowerShell compression call used a .NET constructor overload unavailable in this environment and produced a zero-byte placeholder. It was immediately replaced with the compatible compression-mode constructor; the final compressed file and decompressed payload both match their recorded sizes and SHA-256 hashes.
+- **Verification**: both Streamlit sections completed code-level AppTest runs with zero exceptions; all 156 Yao_1 Python tests passed. The source SerchHTML project passed 18 tests and the source AStockLab project passed 54 tests. A live public-search check stopped cleanly when Xueqiu returned an access-limited page and marked the combined result incomplete. No Streamlit server was started, following repository rules.
+
 ## 2026-07-13
 
 - **Fixed the misplaced M16 homepage card**: removed the special rule that forced M16 onto page two and standardized homepage ordering by descending module number. M16 now appears between M17 and M15, while page two starts with M09, eliminating the `M09 → M16 → M08` sequence. Homepage and sidebar ordering tests were updated accordingly.
