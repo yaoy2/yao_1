@@ -9,6 +9,9 @@
   "archive_interval": 2.0,
   "state_path": "data/mp_watch_state.json",
   "log_dir": "logs",
+  "target_dirs": {
+    "raw": "D:\\GoogleDrive\\Obsidian Vault\\00\\LLM_WIKI\\raw"
+  },
   "sources": [
     {
       "name": "雷立刚本人",

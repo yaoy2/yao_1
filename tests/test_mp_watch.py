@@ -236,10 +236,25 @@ class ConfigPathTest(unittest.TestCase):
             self.skipTest("默认配置不存在")
         cfg = load_config(DEFAULT_CONFIG_PATH)
         self.assertEqual(cfg["poll_hours"], 2)
+        self.assertEqual(len(cfg["sources"]), 3)
+        names = {s["name"] for s in cfg["sources"]}
+        self.assertIn("数字生命卡兹克", names)
         self.assertTrue(str(cfg["state_path"]).replace("/", "\\").endswith("data\\mp_watch_state.json") or "mp_watch_state.json" in cfg["state_path"])
         # 确认状态路径在仓库树下（E 盘项目），不是用户 C:\\Users
         self.assertNotIn("C:\\Users", cfg["state_path"])
         self.assertNotIn("C:/Users", cfg["state_path"])
+
+    def test_apply_target_dirs(self):
+        from mp_watch.runner import apply_target_dirs
+        import wechat_core
+
+        old = wechat_core.TARGET_DIRS.get("raw")
+        try:
+            apply_target_dirs({"raw": r"D:\tmp\mp_watch_raw_test"})
+            self.assertEqual(wechat_core.TARGET_DIRS["raw"], r"D:\tmp\mp_watch_raw_test")
+        finally:
+            if old is not None:
+                wechat_core.TARGET_DIRS["raw"] = old
 
 
 if __name__ == "__main__":

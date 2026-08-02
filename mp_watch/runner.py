@@ -23,6 +23,18 @@ def _ensure_repo_on_syspath() -> None:
         sys.path.insert(0, root)
 
 
+def apply_target_dirs(target_dirs: Dict[str, str]) -> None:
+    """按本机配置覆盖 wechat_core 归档根目录（D/L 路径可不同）。"""
+    if not target_dirs:
+        return
+    _ensure_repo_on_syspath()
+    from wechat_core import TARGET_DIRS  # noqa: WPS433
+
+    for key, path in target_dirs.items():
+        if key and path:
+            TARGET_DIRS[str(key)] = str(path)
+
+
 def default_archive_fn() -> ArchiveFn:
     _ensure_repo_on_syspath()
     from wechat_core import archive_urls  # noqa: WPS433
@@ -222,6 +234,7 @@ def run_watch(
             _p(f"[dry-run] 将归档：{item.source_name} | {item.title} | {item.url}")
         counts["skipped"] = len(discovered)
     elif discovered:
+        apply_target_dirs(cfg.get("target_dirs") or {})
         fn = archive_fn or default_archive_fn()
         counts = archive_items(discovered, cfg, state, archive_fn=fn, progress=_p)
     else:

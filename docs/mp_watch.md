@@ -97,7 +97,23 @@ python -m mp_watch --dry-run
 - 免费优先  
 - 项目清晰，数据在 E 盘仓库内  
 
-## 尚未由你填写的两项
+## 目标公众号（已写入配置）
 
-1. 两个公众号的真实名称与对应 `feed_url`  
-2. 是否把任务计划间隔定为 1 小时还是 2 小时（默认按 2）  
+- 雷立刚本人  
+- 财经作家雷立刚  
+- 数字生命卡兹克  
+
+仍须填写：各号 `feed_url`，并 `enabled: true`。
+
+## 迁到办公笔记本 L
+
+推荐在 **L** 上用 Docker 跑发现源 + 任务计划跑 `mp_watch`。  
+分步说明见：[`docs/mp_watch_L_setup.md`](mp_watch_L_setup.md)。
+
+D/L 归档路径不同时，在配置里加：
+
+```json
+"target_dirs": {
+  "raw": "D:\\\\你的\\\\Obsidian\\\\raw路径"
+}
+```

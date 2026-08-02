@@ -25,6 +25,9 @@ def default_config() -> Dict[str, Any]:
         "archive_interval": 2.0,
         "state_path": str(DEFAULT_STATE_PATH),
         "log_dir": str(DEFAULT_LOG_DIR),
+        # 可选：覆盖 wechat_core.TARGET_DIRS，方便 D/L 两台机器路径不同
+        # 例：{"raw": "D:\\\\GoogleDrive\\\\Obsidian Vault\\\\00\\\\LLM_WIKI\\\\raw"}
+        "target_dirs": {},
         "sources": [],
     }
 
@@ -52,6 +55,7 @@ def load_config(path: Path | None = None) -> Dict[str, Any]:
         "archive_interval",
         "state_path",
         "log_dir",
+        "target_dirs",
         "sources",
     ):
         if key in data:
@@ -62,6 +66,15 @@ def load_config(path: Path | None = None) -> Dict[str, Any]:
     cfg["log_dir"] = str(_resolve_under_repo(cfg["log_dir"]))
     cfg["_config_path"] = str(cfg_path)
     cfg["_repo_root"] = str(REPO_ROOT)
+
+    target_dirs = cfg.get("target_dirs") or {}
+    if target_dirs and not isinstance(target_dirs, dict):
+        raise ValueError("target_dirs 必须是对象，例如 {\"raw\": \"D:\\\\path\\\\to\\\\raw\"}")
+    normalized_dirs: Dict[str, str] = {}
+    for k, v in dict(target_dirs).items():
+        if v:
+            normalized_dirs[str(k)] = str(v)
+    cfg["target_dirs"] = normalized_dirs
 
     sources = cfg.get("sources") or []
     if not isinstance(sources, list):
