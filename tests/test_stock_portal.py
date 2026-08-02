@@ -6,6 +6,7 @@ from pathlib import Path
 import duckdb
 from streamlit.testing.v1 import AppTest
 
+from stock.portal import is_usable_heat_payload
 from stock.search_html.collector import chromium_executable, search_archive
 
 
@@ -52,9 +53,23 @@ def test_stock_page_unlocks_and_switches_to_the_second_stock(monkeypatch):
         if radio.key == "astocklab_selected_stock"
     )
     assert [option[-10:-4] for option in selector.options] == ["301188", "300469"]
+    comparison = next(
+        radio for radio in app.radio
+        if radio.key == "market_comparison_mode"
+    )
+    assert comparison.options == ["累计收益率（%）", "归一化走势（首日=100）"]
+    assert comparison.value == "累计收益率（%）"
     selector.set_value(selector.options[1]).run()
     assert not app.exception
     assert any("300469" in item.value for item in app.subheader)
+
+    section = next(
+        control for control in app.segmented_control
+        if control.key == "stock_portal_section"
+    )
+    section.set_value(section.options[1]).run()
+    assert not app.exception
+    assert any(button.key == "refresh_stock_heat" for button in app.button)
 
 
 def test_compressed_astocklab_snapshot_matches_manifest(tmp_path):
@@ -93,6 +108,39 @@ def test_search_snapshot_and_archive_query_are_available():
     result = search_archive("300058", "heat")
     assert result["count"] >= 1
     assert {item["source"] for item in result["results"]}.issubset({"雪球", "淘股吧"})
+
+
+def test_heat_refresh_rejects_all_failed_or_empty_payloads():
+    assert not is_usable_heat_payload({
+        "source_health": [
+            {"source": "雪球", "status": "error"},
+            {"source": "淘股吧", "status": "error"},
+        ],
+        "hotspots": [],
+        "evidence": [],
+    })
+    assert not is_usable_heat_payload({
+        "source_health": [{"source": "雪球", "status": "ok"}],
+        "hotspots": [],
+        "evidence": [],
+    })
+    assert is_usable_heat_payload({
+        "source_health": [
+            {"source": "雪球", "status": "degraded"},
+            {"source": "淘股吧", "status": "error"},
+        ],
+        "hotspots": [{"source": "雪球"}],
+        "evidence": [],
+    })
+
+
+def test_search_page_exposes_manual_heat_refresh_without_writing_snapshot():
+    portal = (STOCK_ROOT / "portal.py").read_text(encoding="utf-8")
+    assert '"采集最新热度"' in portal
+    assert '"恢复发布快照"' in portal
+    assert 'st.session_state["stock_live_heat_payload"]' in portal
+    assert "is_usable_heat_payload(refreshed)" in portal
+    assert "write_snapshot" not in portal
 
 
 def test_online_search_accepts_an_explicit_chromium_path(tmp_path, monkeypatch):

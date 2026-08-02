@@ -10,7 +10,7 @@ from typing import Any, Iterable
 import streamlit as st
 
 from stock.runtime import ASTOCKLAB_ROOT, activate_astocklab_imports, snapshot_manifest
-from stock.search_html.collector import search_archive, search_live
+from stock.search_html.collector import collect, search_archive, search_live
 
 
 SEARCH_ROOT = Path(__file__).resolve().parent / "search_html"
@@ -20,6 +20,29 @@ LATEST_SEARCH_SNAPSHOT = SEARCH_ROOT / "data" / "latest.json"
 @st.cache_data(show_spinner=False)
 def load_search_snapshot() -> dict[str, Any]:
     return json.loads(LATEST_SEARCH_SNAPSHOT.read_text(encoding="utf-8"))
+
+
+def is_usable_heat_payload(payload: dict[str, Any]) -> bool:
+    """Reject an all-failed refresh so it cannot replace the published snapshot."""
+    health = payload.get("source_health") or []
+    healthy_source = any(
+        isinstance(item, dict)
+        and str(item.get("status") or "").lower() != "error"
+        for item in health
+    )
+    has_content = bool(payload.get("hotspots") or payload.get("evidence"))
+    return healthy_source and has_content
+
+
+def _heat_refresh_issues(payload: dict[str, Any]) -> list[str]:
+    issues = []
+    for item in payload.get("source_health") or []:
+        if not isinstance(item, dict):
+            continue
+        status = str(item.get("status") or "未知")
+        if status != "ok":
+            issues.append(f"{item.get('source', '来源未知')}：{status}")
+    return issues
 
 
 def _safe_url(value: object) -> str | None:
@@ -171,15 +194,72 @@ def _render_search_form() -> None:
 
 
 def render_search_dashboard() -> None:
-    payload = load_search_snapshot()
+    published_payload = load_search_snapshot()
+    live_payload = st.session_state.get("stock_live_heat_payload")
+    payload = live_payload or published_payload
+
+    st.markdown("## 雪球 × 淘股吧公开信息搜索")
+    title_col, action_col = st.columns([4, 1])
+    with title_col:
+        source_label = "本次在线采集" if live_payload else "GitHub发布快照"
+        st.caption(
+            f"当前数据：{source_label}｜快照日期：{payload.get('date', '未知')}｜"
+            f"生成时间：{payload.get('generated_at', '未知')}。"
+        )
+    with action_col:
+        refresh_clicked = st.button(
+            "采集最新热度",
+            type="primary",
+            use_container_width=True,
+            key="refresh_stock_heat",
+        )
+        restore_clicked = bool(live_payload) and st.button(
+            "恢复发布快照",
+            use_container_width=True,
+            key="restore_published_heat",
+        )
+
+    if refresh_clicked:
+        try:
+            with st.spinner("正在采集雪球与淘股吧公开热度……"):
+                refreshed = collect()
+            if not is_usable_heat_payload(refreshed):
+                st.error("本次采集没有得到可用内容，已保留原有快照，没有覆盖。")
+            else:
+                st.session_state["stock_live_heat_payload"] = refreshed
+                st.session_state.pop("stock_search_result", None)
+                st.rerun()
+        except Exception as exc:
+            st.error(
+                f"采集失败：{type(exc).__name__}: {exc}。"
+                "已保留原有快照，没有覆盖。"
+            )
+    if restore_clicked:
+        st.session_state.pop("stock_live_heat_payload", None)
+        st.session_state.pop("stock_search_result", None)
+        st.rerun()
+
+    if live_payload:
+        issues = _heat_refresh_issues(payload)
+        if issues:
+            st.warning(
+                "已显示本次在线采集结果，但部分来源不完整："
+                + "；".join(issues)
+                + "。详情见下方来源状态。"
+            )
+        else:
+            st.success("已显示本次在线采集的最新热度。")
+        st.caption(
+            "在线采集结果只在当前 Streamlit 会话中使用，不改写 GitHub 快照；"
+            "采集失败时会继续显示原有发布快照。"
+        )
+
     ai_pool = payload.get("ai_pool") or {}
     confirmed = list(ai_pool.get("confirmed") or [])
     disputed = list(ai_pool.get("disputed") or [])
     hotspots = list(payload.get("hotspots") or [])
 
-    st.markdown("## 雪球 × 淘股吧公开信息搜索")
     st.caption(
-        f"快照日期：{payload.get('date', '未知')}｜生成时间：{payload.get('generated_at', '未知')}。"
         "热点是线索，不是结论；页面不构成投资建议。"
     )
     metrics = st.columns(4)

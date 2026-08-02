@@ -16,6 +16,11 @@ from src.reporting.intraday_chart import (
     prepare_intraday_comparison,
     symmetric_pct_range,
 )
+from src.reporting.market_comparison_chart import (
+    COMPARISON_MODES,
+    RETURN_MODE,
+    make_market_comparison_figure,
+)
 from src.reporting.prediction_panel import render_prediction_panel
 from src.storage.database import Database
 from src.utils.config import load_ai_chain, load_settings, load_watchlist
@@ -408,14 +413,24 @@ with market_linkage_tab:
             width="stretch",
             hide_index=True,
         )
-        normalized = go.Figure()
+        comparison_mode = st.radio(
+            "对比口径",
+            COMPARISON_MODES,
+            horizontal=True,
+            key="market_comparison_mode",
+        )
+        if comparison_mode == RETURN_MODE:
+            st.caption(
+                "默认按区间累计收益率比较：首日为0%，之后显示相对首日累计上涨或下跌多少。"
+            )
+        else:
+            st.caption(
+                "归一化走势把各标的首日统一设为100；110表示较首日上涨10%，90表示下跌10%，不是实际价格。"
+            )
+        comparison_series = []
         stock_chart = qfq.tail(120).copy()
         if not stock_chart.empty:
-            stock_chart["normalized"] = stock_chart["close"] / stock_chart["close"].iloc[0] * 100
-            normalized.add_trace(go.Scatter(
-                x=stock_chart["trade_date"], y=stock_chart["normalized"],
-                name=selected.name, line={"width": 3},
-            ))
+            comparison_series.append((selected.name, stock_chart, 3.0))
             start_date = stock_chart["trade_date"].min()
             for benchmark in watchlist.enabled_benchmarks_for(selected):
                 benchmark_bars = database.get_benchmark_bars(benchmark.code)
@@ -427,22 +442,13 @@ with market_linkage_tab:
                 ].tail(120)
                 if benchmark_bars.empty:
                     continue
-                benchmark_bars["normalized"] = (
-                    benchmark_bars["close"] / benchmark_bars["close"].iloc[0] * 100
-                )
-                normalized.add_trace(go.Scatter(
-                    x=benchmark_bars["trade_date"],
-                    y=benchmark_bars["normalized"],
-                    name=benchmark.name,
-                    line={"width": 1.5},
-                ))
-        normalized.update_layout(
-            title="最近120个交易日归一化走势（起点=100）",
-            height=480,
-            hovermode="x unified",
-            margin={"l": 20, "r": 20, "t": 50, "b": 20},
+                comparison_series.append((benchmark.name, benchmark_bars, 1.5))
+        comparison_figure = make_market_comparison_figure(
+            comparison_series,
+            comparison_mode,
+            trading_days=120,
         )
-        st.plotly_chart(normalized, width="stretch")
+        st.plotly_chart(comparison_figure, width="stretch")
 
 with ai_chain_tab:
     render_ai_chain_panel(database, ai_chain_config)
