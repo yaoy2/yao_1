@@ -13,19 +13,6 @@
     ]
   },
   {
-    "id": "921f2e528fc109cc",
-    "source_id": "openai_status_history",
-    "source_name": "OpenAI Status Incidents",
-    "title": "Elevated errors for GitHub-dependent ChatGPT and Codex workflows",
-    "summary": "Elevated errors for GitHub-dependent ChatGPT and Codex workflows resolved All impacted services have now fully recovered. We are monitoring the recovery. Users may experience failures or delays in ChatGPT and Codex workflows that depend on GitHub. This mostly should impact Codex web and code review for PRs on Github. This is related to an active GitHub API partial outage and degraded GitHub Actions. [https://www.githubstatus.com/incidents/8vfyvq16hzh9](https://www.githubstatus.com/incidents/8vfy",
-    "url": "https://status.openai.com/api/v2/incidents.json",
-    "observed_at": "2026-07-20T03:34:06Z",
-    "weight": 40,
-    "tags": [
-      "codex"
-    ]
-  },
-  {
     "id": "725bf89f26df730f",
     "source_id": "openai_community",
     "source_name": "OpenAI Community Forum",
@@ -129,6 +116,20 @@
     "weight": 10,
     "tags": [
       "codex"
+    ]
+  },
+  {
+    "id": "08c8df62ee521680",
+    "source_id": "openai_community",
+    "source_name": "OpenAI Community Forum",
+    "title": "Issue with GPT-5 Codex Limits Despite Having Pro Subscription",
+    "summary": "Issue with GPT-5 Codex Limits Despite Having Pro Subscription Hello, I have an active ChatGPT Plus (Pro) subscription, but I am facing a serious issue when working with the GPT-5 Codex model in Codex IDE. After just a couple of hours of active use, I get a message saying that I've hit my usage limit and can't continue working with the model. At the same tim...",
+    "url": "https://community.openai.com/t/issue-with-gpt-5-codex-limits-despite-having-pro-subscription/1359497",
+    "observed_at": "2025-09-23T11:04:34.559Z",
+    "weight": 10,
+    "tags": [
+      "codex",
+      "usage limit"
     ]
   }
 ]
