@@ -3,7 +3,7 @@
   "probability_24h": 95,
   "probability_48h": 98,
   "reason": "多个 Codex 限额或事故信号叠加，进入高概率关注。",
-  "checked_at": "2026-08-07T13:42:06.241701Z",
+  "checked_at": "2026-08-07T15:11:29.905011Z",
   "alert_level": "push",
   "signals": [
     {
