@@ -1,10 +1,10 @@
 [
   {
     "status": "high_probability",
-    "checked_at": "2026-08-09T02:31:25.978706Z",
+    "checked_at": "2026-08-09T04:39:25.768188Z",
     "closed_at": null,
-    "probability_24h": 60,
-    "probability_48h": 75,
+    "probability_24h": 95,
+    "probability_48h": 98,
     "reason": "多个 Codex 限额或事故信号叠加，进入高概率关注。"
   },
   {
