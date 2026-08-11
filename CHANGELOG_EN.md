@@ -10,6 +10,7 @@ This English change log mirrors the project history maintained in `CHANGELOG_ZH-
 - **Removed Codex Radar completely**: removed the M12 page, the `codex_radar_lite/` package, static site, public-source and judgment configuration, all JSON/RSS status data, design and implementation documents, and the dedicated tests.
 - **Stopped hourly automated commits**: removed `.github/workflows/codex-radar.yml`, so GitHub Actions no longer generates radar data or continuously writes automated commits to `main`.
 - **Aligned navigation and documentation**: removed the M12 homepage card. Module numbers still preserve original launch order, so the repository now has 18 current modules with a numbering gap. README and homepage pagination tests were updated accordingly.
+- **Paused Zhongshengshi**: kept the Next.js source, 27 passing tests, and a durable project explanation covering the original intent, completed MVP, pause rationale, and conditions for any future restart. No active development or deployment is planned.
 
 ## 2026-08-02
 

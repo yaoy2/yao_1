@@ -21,7 +21,7 @@ The project is built around real administrative, teaching-support, competition-g
 - **Grade Workbench Guide (M18)**: explains the M17 workflow, score definitions, file locations, cross-computer status, and common questions.
 - **Teaching Grade Workbench (M17)**: manages rosters, group roadshow/report source scores, contribution coefficients, adjustment layers, validation, and review-workbook export.
 - **Legacy Grade Linkage (M16)**: replaced by M17 and marked with a red cross for historical reference; it remains between M17 and M15 in module-number order.
-- **Zhongshengshi MVP**: `zhongshengshi/`, a local Next.js subproject for validating the multi-model roundtable flow. The current page now defaults to a freer short-message discussion stream instead of fixed opening/debate speeches.
+- **Zhongshengshi MVP (paused)**: `zhongshengshi/`, a local Next.js multi-model roundtable proof of concept. Source and documentation remain available, but active development and deployment stopped on 2026-08-11.
 - **Todo List**: the 14th locked tool panel. It records tasks newest-first, extracts common Chinese date/time hints, supports search, soft-archives completed tasks, and keeps `data/todo_items_backup.md` as a GitHub-syncable recovery file.
 - **LLM Budget Tracker**: the 13th tool panel, showing balances for supported LLM providers, including Gemini, and keeping editable login-account and expiration-date labels in `data/llm_budget_accounts.json`.
 - **Home style**: a dark Command Center cover; tools are listed in descending module-number order, with a fixed 3 x 3 grid per page.
@@ -89,12 +89,7 @@ Current limits:
 - Speaker selection is still rules-based, not a real model-driven moderator. True autonomous turn-taking, speech-value evaluation, missing-view detection, final summary, and persistence are still pending.
 - Real providers use OpenAI-compatible Chat Completions by default. Any incompatible provider will need its own adapter extension.
 
-Next steps:
-
-- Upgrade speaker selection from a fixed lightweight rule to a model-assisted moderator so not every seat has to speak on every turn.
-- Add missing-view detection and final summary.
-- Add SQLite / Prisma persistence for rooms, seats, messages, and summaries.
-- After the core flow works, decide whether to adapt it into Streamlit or keep it as an independent local Web tool.
+Development was paused on 2026-08-11. The source, tests, and proof-of-concept result remain available, but moderator models, persistence, summarization, and deployment will not be expanded unless a concrete new need appears. See [`zhongshengshi/README.md`](zhongshengshi/README.md) for the durable project record.
 
 ---
 
