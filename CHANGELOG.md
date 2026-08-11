@@ -5,6 +5,12 @@
 
 This English change log mirrors the project history maintained in `CHANGELOG_ZH-CN.md`. It keeps the same dated structure and preserves the operational notes that matter for later troubleshooting: what changed, why it changed, what failed or detoured, and how the work was verified.
 
+## 2026-08-11
+
+- **Removed Codex Radar completely**: removed the M12 page, the `codex_radar_lite/` package, static site, public-source and judgment configuration, all JSON/RSS status data, design and implementation documents, and the dedicated tests.
+- **Stopped hourly automated commits**: removed `.github/workflows/codex-radar.yml`, so GitHub Actions no longer generates radar data or continuously writes automated commits to `main`.
+- **Aligned navigation and documentation**: removed the M12 homepage card. Module numbers still preserve original launch order, so the repository now has 18 current modules with a numbering gap. README and homepage pagination tests were updated accordingly.
+
 ## 2026-08-02
 
 - **Added on-demand M19 heat collection**: Stock Search now provides “Collect latest heat” and “Restore published snapshot” actions. A successful refresh immediately updates the current session's hotspots, AI pools, and source status; partial limits are surfaced, while an all-failed or empty refresh keeps the published snapshot and never writes runtime data into the repository.

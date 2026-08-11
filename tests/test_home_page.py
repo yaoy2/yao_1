@@ -78,12 +78,11 @@ class HomePageTest(unittest.TestCase):
         self.assertEqual("M14", tools[5]["code"])
         self.assertTrue(tools[5]["locked"])
         self.assertEqual("M13", tools[6]["code"])
-        self.assertEqual("M12", tools[7]["code"])
-        self.assertTrue(tools[7]["blocked"])
+        self.assertEqual("M11", tools[7]["code"])
         blocked_codes = {tool["code"] for tool in tools if tool.get("blocked")}
-        self.assertEqual({"M01", "M02", "M03", "M04", "M05", "M12", "M16"}, blocked_codes)
+        self.assertEqual({"M01", "M02", "M03", "M04", "M05", "M16"}, blocked_codes)
         self.assertEqual("M01", tools[-1]["code"])
-        self.assertEqual(19, len(tools))
+        self.assertEqual(18, len(tools))
 
     def test_homepage_order_is_module_number_driven_instead_of_filename_driven(self):
         _page_source, namespace = load_homepage_bits()
@@ -112,15 +111,13 @@ class HomePageTest(unittest.TestCase):
         self.assertEqual("M15", tools[4]["code"])
         self.assertEqual("M14", tools[5]["code"])
         self.assertEqual("M13", tools[6]["code"])
-        self.assertEqual("M12", tools[7]["code"])
-        self.assertTrue(tools[7]["blocked"])
-        self.assertEqual("M10", tools[9]["code"])
-        self.assertEqual("M09", tools[10]["code"])
-        self.assertEqual("M05", tools[14]["code"])
-        self.assertTrue(tools[14]["blocked"])
-        self.assertEqual(["M19", "M18", "M17", "M16", "M15", "M14", "M13", "M12", "M11"], [tool["code"] for tool in homepage_pages[0]])
-        self.assertEqual(["M10", "M09", "M08", "M07", "M06", "M05", "M04", "M03", "M02"], [tool["code"] for tool in homepage_pages[1]])
-        self.assertEqual(["M01"], [tool["code"] for tool in homepage_pages[2]])
+        self.assertEqual("M11", tools[7]["code"])
+        self.assertEqual("M10", tools[8]["code"])
+        self.assertEqual("M09", tools[9]["code"])
+        self.assertEqual("M05", tools[13]["code"])
+        self.assertTrue(tools[13]["blocked"])
+        self.assertEqual(["M19", "M18", "M17", "M16", "M15", "M14", "M13", "M11", "M10"], [tool["code"] for tool in homepage_pages[0]])
+        self.assertEqual(["M09", "M08", "M07", "M06", "M05", "M04", "M03", "M02", "M01"], [tool["code"] for tool in homepage_pages[1]])
 
 
 if __name__ == "__main__":

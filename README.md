@@ -7,7 +7,7 @@
 
 > **"There is no victory ahead; holding the line is everything."**
 
-`yao_1` is a Streamlit toolkit for the day-to-day work of a college-level academic office. It covers to-do tracking, document processing, roster checks, schedule lookup, budget tracking, WeChat article archiving, color-palette reference, web memos, DingTalk recorder note cleanup, and Codex reset-window monitoring.
+`yao_1` is a Streamlit toolkit for the day-to-day work of a college-level academic office. It covers to-do tracking, document processing, roster checks, schedule lookup, budget tracking, WeChat article archiving, color-palette reference, web memos, and DingTalk recorder note cleanup.
 
 The project is built around real administrative, teaching-support, competition-guidance, and knowledge-management workflows. The default design preference is local-first, simple, maintainable, and practical enough to become a stable button instead of a one-off script.
 
@@ -24,7 +24,6 @@ The project is built around real administrative, teaching-support, competition-g
 - **Zhongshengshi MVP**: `zhongshengshi/`, a local Next.js subproject for validating the multi-model roundtable flow. The current page now defaults to a freer short-message discussion stream instead of fixed opening/debate speeches.
 - **Todo List**: the 14th locked tool panel. It records tasks newest-first, extracts common Chinese date/time hints, supports search, soft-archives completed tasks, and keeps `data/todo_items_backup.md` as a GitHub-syncable recovery file.
 - **LLM Budget Tracker**: the 13th tool panel, showing balances for supported LLM providers, including Gemini, and keeping editable login-account and expiration-date labels in `data/llm_budget_accounts.json`.
-- **Codex Radar**: the 12th tool panel, reading `data/codex_radar_current.json` to display Codex reset-window status.
 - **Home style**: a dark Command Center cover; tools are listed in descending module-number order, with a fixed 3 x 3 grid per page.
 - **Navigation order**: homepage cards are sorted by the module codes in `hello.py`, independent of page filename prefixes or special insertion rules. New modules can use stable readable filenames while keeping a predictable numeric order.
 
@@ -99,9 +98,9 @@ Next steps:
 
 ---
 
-## Nineteen Tool Modules
+## Eighteen Current Tool Modules
 
-Module numbers track launch order. Homepage order comes from metadata in `hello.py`, with nine cards per page. Red-cross modules are retained for history only and should not be used for new work.
+Module numbers track launch order, so the current sequence is no longer continuous. Homepage order comes from metadata in `hello.py`, with nine cards per page. Red-cross modules are retained for history only and should not be used for new work.
 
 ### 1. Report Grading System
 
@@ -190,16 +189,6 @@ Module numbers track launch order. Homepage order comes from metadata in `hello.
   - **Access lock**: reuses the Budget Tracker password from `budget_password`, `[budget].password`, or local `BUDGET_PASSWORD`.
   - **Migration guide**: L-laptop setup is documented in `docs/ding_minutes_L_setup.md`.
 
-### 12. Codex Radar Lite
-
-- **Use case**: monitoring Codex quota reset windows so likely reset or recovery periods are not missed.
-- **What it does**:
-  - **Hourly monitor**: runs through GitHub Actions every hour, without Docker or a long-running server.
-  - **Rule-based judgment**: reads public sources and classifies status using signals such as Codex, limit, reset, and recovered.
-  - **Toolbox display**: appears as the 12th panel with current status, evidence, historical windows, and push-notification notes.
-  - **DingTalk alerts**: sends alerts when a high-probability window appears, opens, or closes.
-  - **Secret protection**: DingTalk webhook and signing secret live only in GitHub Secrets.
-
 ### 13. LLM Budget Tracker
 
 - **Use case**: tracking LLM API balances and subscription-plan spending across DeepSeek, Kimi, MiMo, ChatGPT, and Gemini.
@@ -241,32 +230,6 @@ Module numbers track launch order. Homepage order comes from metadata in `hello.
 - **Use case**: reviewing A-share market research and public discussion evidence from one online entry.
 - **What it does**: provides two switchable sections. AStockLab displays watchlists, daily and intraday charts, market linkage, money-flow observations, calibrated probability research, data health, and the AI industry chain from a verified read-only snapshot. Stock Search displays Xueqiu and Taoguba public-information snapshots, AI confirmed/disputed pools, archive search, and an optional live seven-day public search that clearly marks source restrictions.
 - **Data boundary**: local stock projects produce and validate data; the online page only displays published snapshots, does not update the database during page load, and never performs trades.
-
----
-
-## Codex Radar Lite
-
-Codex Radar Lite is the monitoring module behind the 12th toolbox panel.
-
-- **Workflow**: `.github/workflows/codex-radar.yml` runs hourly.
-- **Judgment**: a rule engine reads public sources first; it does not call a large model by default.
-- **Data files**: `data/codex_radar_current.json`, `data/codex_radar_history.json`, and `data/codex_radar_signals.json`.
-- **Streamlit page**: `pages/01_12_codex❌.py` (this module is currently deprecated).
-- **Static fallback**: `codex_radar_lite/site/index.html`.
-- **DingTalk push**: alerts only for high-probability, open, or closed reset windows.
-
-Required GitHub repository secrets:
-
-- `DINGTALK_WEBHOOK`: DingTalk robot webhook.
-- `DINGTALK_SECRET`: optional signing secret if DingTalk signature verification is enabled.
-
-Local checks:
-
-```bash
-python -m unittest tests.test_codex_radar_lite
-python -m py_compile codex_radar_lite/*.py
-python -m codex_radar_lite.cli --dry-run
-```
 
 ---
 

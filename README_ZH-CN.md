@@ -22,7 +22,6 @@
 - **众声室 MVP**：`zhongshengshi/`，本地 Next.js 子项目，用于验证多模型圆桌群聊流程；当前页面默认改为自由短消息讨论流，不再默认展示固定 opening / debate 排队发言。
 - **待办清单**：第 14 个上锁工具板块。支持新增在上、从文本自动识别常见中文日期和时间、关键字搜索、完成后软归档，并用 `data/todo_items_backup.md` 做可同步恢复的硬备份。
 - **LLM 余额管理**：第 13 个工具板块，集中查看各家 LLM 余额，并把每家登录账号和到期日标签保存到 `data/llm_budget_accounts.json`，当前包含 Gemini。
-- **Codex雷达**：第 12 个工具板块，读取 `data/codex_radar_current.json` 展示 Codex 重置窗口状态。
 - **首页风格**：Command Center 深色封面；工具入口按模块编号倒序展示，首页每页固定 3 x 3。
 - **导航排序**：首页卡片现在以 `hello.py` 的模块编号为准，不再依赖 `pages/` 文件名前缀或特殊插入规则。以后新页面可以使用稳定可读的文件名，同时仍按模块编号自然排列。
 
@@ -97,9 +96,9 @@ KIMI_MODEL=
 
 ---
 
-## 十九个工具模块
+## 十八个现存工具模块
 
-模块编号记录上线顺序。首页入口以 `hello.py` 的元数据为准，每页固定9张卡片。带红色叉号的模块仅保留历史对照，不再用于新任务。
+模块编号记录上线顺序，因此当前编号不再连续。首页入口以 `hello.py` 的元数据为准，每页固定9张卡片。带红色叉号的模块仅保留历史对照，不再用于新任务。
 
 ### 1. 📝 报告评分系统 (Grading System)
 - **场景**：期末大作业、实验报告批量打分。
@@ -177,15 +176,6 @@ KIMI_MODEL=
     - **访问上锁**：复用预算速记台账同一套密码，读取 `budget_password` / `[budget].password` 或本机 `BUDGET_PASSWORD`。
     - **迁移说明**：L 电脑运行配置见 `docs/ding_minutes_L_setup.md`。
 
-### 12. 📡 Codex雷达 (Codex Radar Lite)
-- **场景**：观察 Codex 额度重置窗口，避免错过高概率窗口或官方重置信号。
-- **功能**：
-    - **每小时监控**：GitHub Actions 每小时运行一次，不需要 Docker 或常驻服务器。
-    - **规则判断**：读取公开来源，按 Codex、limit、reset、recovered 等信号判断状态和 24/48 小时概率。
-    - **工具箱展示**：作为第 12 个板块出现在首页，可查看当前状态、关键证据、历史窗口记录和推送配置说明。
-    - **钉钉提醒**：高概率、窗口开启或窗口关闭时，通过钉钉机器人主动推送。
-    - **密钥保护**：钉钉 webhook 和加签密钥只放 GitHub Secrets，不写入代码。
-
 ### 13. 💰 LLM 余额管理 (LLM Budget Tracker)
 - **场景**：集中查看 DeepSeek、Kimi、MiMo、ChatGPT、Gemini 等 LLM API / 订阅余额，避免忘记是哪一个账号在扣费。
 - **功能**：
@@ -220,32 +210,6 @@ KIMI_MODEL=
 - **场景**：从一个线上入口查看A股研究数据与公开讨论证据。
 - **功能**：页面内切换两个子板块。AStockLab 从经过校验的只读快照展示自选股、日线与分时、市场联动、资金行为、校准概率研究、数据健康和AI产业链；股票搜索展示雪球与淘股吧公开信息快照、AI确认池/争议池、快照检索，并可选择实时查询最近7天公开结果，来源受限时明确提示不完整。
 - **数据边界**：本地股票项目负责采集、计算和校验，线上页面只展示已发布快照，页面加载不更新数据库，也不执行交易。
-
----
-
-## Codex Radar Lite
-
-这是第 12 个工具板块的后台监控模块，用来观察 Codex 额度重置窗口。
-
-- **运行方式**：`.github/workflows/codex-radar.yml` 每小时运行一次。
-- **判断方式**：优先用规则引擎读取公开来源，不默认调用大模型。
-- **展示数据**：`data/codex_radar_current.json`、`data/codex_radar_history.json`、`data/codex_radar_signals.json`。
-- **工具页面**：`pages/01_12_codex❌.py`（该模块当前已弃用）。
-- **静态页面**：`codex_radar_lite/site/index.html`，作为轻量备用展示入口。
-- **钉钉推送**：只在高概率、窗口开启或窗口关闭时推送。
-
-需要在 GitHub 仓库 Secrets 中配置：
-
-- `DINGTALK_WEBHOOK`：钉钉机器人 webhook。
-- `DINGTALK_SECRET`：如果机器人启用了“加签”，再填写这个；没有启用可不填。
-
-本地检查可以运行：
-
-```bash
-python -m unittest tests.test_codex_radar_lite
-python -m py_compile codex_radar_lite/*.py
-python -m codex_radar_lite.cli --dry-run
-```
 
 ---
 

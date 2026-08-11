@@ -84,16 +84,6 @@ TOOLS = [
         "accent": "cyan",
     },
     {
-        "title": "Codex雷达",
-        "desc": "已弃用：实际意义不大，偏投机取巧，后续不再作为推荐工具使用。",
-        "tag": "已弃用",
-        "created": "2026_06_05",
-        "page": "pages/01_12_codex❌.py",
-        "code": "M12",
-        "accent": "magenta",
-        "blocked": True,
-    },
-    {
         "title": "Recorder_笔记",
         "desc": "每天扫描钉钉导出的 Word 转写，保留原文并生成可归档、可复盘的 AI 整理稿。",
         "tag": "纪要整理",
