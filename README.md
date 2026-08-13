@@ -17,7 +17,6 @@ The project is built around real administrative, teaching-support, competition-g
 
 - **Online app**: [yao-1.streamlit.app](https://yao-1.streamlit.app/)
 - **Repository**: [github.com/yaoy2/yao_1](https://github.com/yaoy2/yao_1)
-- **Stock Research Center (M19)**: a locked page that reuses the shared tool password, exposes both tracked stocks in the main content area, and combines the read-only AStockLab interface with Xueqiu × Taoguba public-information search.
 - **Grade Workbench Guide (M18)**: explains the M17 workflow, score definitions, file locations, cross-computer status, and common questions.
 - **Teaching Grade Workbench (M17)**: manages rosters, group roadshow/report source scores, contribution coefficients, adjustment layers, validation, and review-workbook export.
 - **Legacy Grade Linkage (M16)**: replaced by M17 and marked with a red cross for historical reference; it remains between M17 and M15 in module-number order.
@@ -93,7 +92,7 @@ Development was paused on 2026-08-11. The source, tests, and proof-of-concept re
 
 ---
 
-## Eighteen Current Tool Modules
+## Seventeen Current Tool Modules
 
 Module numbers track launch order, so the current sequence is no longer continuous. Homepage order comes from metadata in `hello.py`, with nine cards per page. Red-cross modules are retained for history only and should not be used for new work.
 
@@ -219,12 +218,6 @@ Module numbers track launch order, so the current sequence is no longer continuo
 
 - **Use case**: quickly confirming what M18, M17, and M16 mean after a long gap between grading sessions.
 - **What it does**: documents the six-step workflow, score definitions, file locations, cross-computer cautions, and common questions.
-
-### 19. Stock Research Center
-
-- **Use case**: reviewing A-share market research and public discussion evidence from one online entry.
-- **What it does**: provides two switchable sections. AStockLab displays watchlists, daily and intraday charts, market linkage, money-flow observations, calibrated probability research, data health, and the AI industry chain from a verified read-only snapshot. Stock Search displays Xueqiu and Taoguba public-information snapshots, AI confirmed/disputed pools, archive search, and an optional live seven-day public search that clearly marks source restrictions.
-- **Data boundary**: local stock projects produce and validate data; the online page only displays published snapshots, does not update the database during page load, and never performs trades.
 
 ---
 

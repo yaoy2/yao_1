@@ -5,6 +5,13 @@
 
 This English change log mirrors the project history maintained in `CHANGELOG_ZH-CN.md`. It keeps the same dated structure and preserves the operational notes that matter for later troubleshooting: what changed, why it changed, what failed or detoured, and how the work was verified.
 
+## 2026-08-13
+
+- **Removed the M19 Stock Research Center from Streamlit**: removed the homepage and sidebar entry, the online page, the complete `stock/` runtime and read-only snapshots, and the dedicated tests. The online toolbox no longer displays or runs stock-related features.
+- **Returned stock work to the local workspace**: the maintained projects now live only under `E:\GoogleDrive\Ding2026\stock\subject_01_stock_search` and `subject_02_astocklab`, each with its own rules, instructions, data, and local entry point.
+- **Reduced the online dependency surface**: removed DuckDB, Plotly, Pydantic, Loguru, and PyYAML from Streamlit runtime requirements because no remaining module imports them. Historical M19 entries below are retained only as a record of what previously existed.
+- **Verification**: the remaining Yao_1 repository passed all 127 tests; the homepage/sidebar/documentation checks passed, README mirrors match, and no executable M19 or stock-runtime reference remains outside historical change-log entries.
+
 ## 2026-08-11
 
 - **Removed Codex Radar completely**: removed the M12 page, the `codex_radar_lite/` package, static site, public-source and judgment configuration, all JSON/RSS status data, design and implementation documents, and the dedicated tests.
