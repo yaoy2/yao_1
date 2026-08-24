@@ -6,6 +6,10 @@
 - **澄清仓库结构**：根目录 README 明确区分 Streamlit / YaoYao 主应用与三个独立子项目；`pages/`、`utils/`、`scripts/`、`config/`、`assets/`、`tests/` 记为主应用组成部分，不是独立项目。
 - **保护本机竞赛名单**：根目录 `.gitignore` 增加窄规则 `商业精英挑战赛_最终准确名单_*.md`，防止该本机名单被误加入 Git。名单文件未加入 Git，也未修改。
 - **补充文档检查**：`tests/test_project_docs_and_setup.py` 增加独立子项目 README、Grok Builder 日志镜像和名单忽略规则检查。
+- **完成可恢复的工作区清场**：将被忽略的竞赛名单移出仓库，保存到 `E:\GoogleDrive\Ding2026\商业精英挑战赛_最终准确名单_2026_07_22.md`，内容未变化（SHA-256：`01EFA5A469FB35224C09B1B21B1D59874341C423D7C5C8784BCE501DB089E8B9`）。过期的一次性脚本 `立即Recorder真实测试.bat` 没有永久删除，而是归档到 `E:\GoogleDrive\Ding2026\yao_1_cleanup_archive_2026_08_24\立即Recorder真实测试.bat`（SHA-256：`E4D2BB27C34D82B818FE5560CC0AE9E857EF8A851949DD19AF22FD65E6A94E6B`）。
+- **只清除可再生残留**：从 13 个已核对路径删除 305 个生成文件，共 58,592,488 字节，包括 Python/pytest 缓存、`codex_radar_lite/` 和 `tools/` 下仅剩的缓存，以及众声室的 `.next-build/` 与 `tsconfig.tsbuildinfo`；未删除任何 Git 跟踪源码或动态 `data/` 文件。
+- **保留有歧义和运行用途的本机状态**：保留 `.tmp/`，因为其中有心跳辅助脚本和任务 XML；同时保留 `.venv/`、`zhongshengshi/node_modules/`、本机数据库、配置、日志和代理设置。
+- **恢复方法**：如以后需要，将两个归档文件从上述位置移回原仓库根目录，并先对照 SHA-256 校验。被删缓存会在正常运行 Python 测试或众声室构建/类型检查时自动重建，不需要备份。
 
 ## 2026-08-13
 
