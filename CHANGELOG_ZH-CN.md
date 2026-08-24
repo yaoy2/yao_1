@@ -1,5 +1,12 @@
 # 更新日志 (CHANGELOG)
 
+## 2026-08-24
+
+- **新增独立子项目 Grok Builder**：在 `codex-grok-builder/` 纳入受控的 Codex 规划、用户确认、Grok Build 实施、Codex 验收闭环技能，并补齐该子项目的中英文默认更新日志。
+- **澄清仓库结构**：根目录 README 明确区分 Streamlit / YaoYao 主应用与三个独立子项目；`pages/`、`utils/`、`scripts/`、`config/`、`assets/`、`tests/` 记为主应用组成部分，不是独立项目。
+- **保护本机竞赛名单**：根目录 `.gitignore` 增加窄规则 `商业精英挑战赛_最终准确名单_*.md`，防止该本机名单被误加入 Git。名单文件未加入 Git，也未修改。
+- **补充文档检查**：`tests/test_project_docs_and_setup.py` 增加独立子项目 README、Grok Builder 日志镜像和名单忽略规则检查。
+
 ## 2026-08-13
 
 - **从 Streamlit 完整下架 M19 股票研究中心**：移除首页和侧栏入口、在线页面、完整 `stock/` 运行模块及只读快照、股票专项测试；线上工具箱不再展示或运行任何股票功能。

@@ -40,3 +40,25 @@ def test_generated_output_and_dependency_folders_are_ignored():
     ignore = read(".gitignore")
     for pattern in ("outputs/", "node_modules/", ".next/", ".next-build/"):
         assert pattern in ignore
+
+
+def test_independent_subprojects_have_required_readmes():
+    for name in ("Deepself", "zhongshengshi", "codex-grok-builder"):
+        readme = ROOT / name / "README.md"
+        assert readme.is_file(), f"{name} is missing README.md"
+
+
+def test_grok_builder_changelog_language_and_default_files_match():
+    grok = ROOT / "codex-grok-builder"
+    changelog = grok / "CHANGELOG.md"
+    english = grok / "CHANGELOG_EN.md"
+    chinese = grok / "CHANGELOG_ZH-CN.md"
+    assert changelog.is_file()
+    assert english.is_file()
+    assert chinese.is_file()
+    assert changelog.read_text(encoding="utf-8") == english.read_text(encoding="utf-8")
+
+
+def test_roster_artifact_ignore_rule_exists():
+    ignore = read(".gitignore")
+    assert "商业精英挑战赛_最终准确名单_*.md" in ignore

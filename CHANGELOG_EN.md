@@ -5,6 +5,13 @@
 
 This English change log mirrors the project history maintained in `CHANGELOG_ZH-CN.md`. It keeps the same dated structure and preserves the operational notes that matter for later troubleshooting: what changed, why it changed, what failed or detoured, and how the work was verified.
 
+## 2026-08-24
+
+- **Added the independent Grok Builder subproject**: `codex-grok-builder/` now holds the controlled Codex-plan, user-approval, Grok Build implementation, and Codex-verification skill, with its own bilingual default changelog set.
+- **Clarified repository structure**: the root README now distinguishes the Streamlit / YaoYao main application from the three independent subprojects. `pages/`, `utils/`, `scripts/`, `config/`, `assets/`, and `tests/` are documented as components of the main application, not as separate projects.
+- **Protected the local competition-roster artifact**: the root `.gitignore` now includes the narrow rule `商业精英挑战赛_最终准确名单_*.md` so that local roster file cannot be staged by accident. The roster file was not added to Git or modified.
+- **Added focused documentation checks**: `tests/test_project_docs_and_setup.py` now asserts independent-subproject READMEs, Grok Builder changelog mirrors, and the roster ignore rule.
+
 ## 2026-08-13
 
 - **Removed the M19 Stock Research Center from Streamlit**: removed the homepage and sidebar entry, the online page, the complete `stock/` runtime and read-only snapshots, and the dedicated tests. The online toolbox no longer displays or runs stock-related features.

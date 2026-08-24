@@ -13,6 +13,17 @@ The project is built around real administrative, teaching-support, competition-g
 
 ---
 
+## Repository Structure
+
+This repository contains one main application and three independent subprojects.
+
+- **Main application**: the Streamlit / YaoYao toolbox at the repository root. The entry points are `hello.py` and `启动YaoYao工具箱.bat`. Internal directories such as `pages/`, `utils/`, `scripts/`, `config/`, `assets/`, and `tests/` belong to this application; they are not separate subprojects.
+- **Deepself** ([`Deepself/`](Deepself/README.md)): an initialized independent subproject. Goals, scope, and implementation are not defined yet.
+- **Zhongshengshi** ([`zhongshengshi/`](zhongshengshi/README.md)): a paused independent Next.js multi-model roundtable proof of concept. Active development and deployment stopped on 2026-08-11.
+- **Grok Builder** ([`codex-grok-builder/`](codex-grok-builder/README.md)): an active independent Codex skill that runs a controlled Codex-plan / Grok-implement loop.
+
+---
+
 ## Current Entry Points
 
 - **Online app**: [yao-1.streamlit.app](https://yao-1.streamlit.app/)
@@ -20,7 +31,6 @@ The project is built around real administrative, teaching-support, competition-g
 - **Grade Workbench Guide (M18)**: explains the M17 workflow, score definitions, file locations, cross-computer status, and common questions.
 - **Teaching Grade Workbench (M17)**: manages rosters, group roadshow/report source scores, contribution coefficients, adjustment layers, validation, and review-workbook export.
 - **Legacy Grade Linkage (M16)**: replaced by M17 and marked with a red cross for historical reference; it remains between M17 and M15 in module-number order.
-- **Zhongshengshi MVP (paused)**: `zhongshengshi/`, a local Next.js multi-model roundtable proof of concept. Source and documentation remain available, but active development and deployment stopped on 2026-08-11.
 - **Todo List**: the 14th locked tool panel. It records tasks newest-first, extracts common Chinese date/time hints, supports search, soft-archives completed tasks, and keeps `data/todo_items_backup.md` as a GitHub-syncable recovery file.
 - **LLM Budget Tracker**: the 13th tool panel, showing balances for supported LLM providers, including Gemini, and keeping editable login-account and expiration-date labels in `data/llm_budget_accounts.json`.
 - **Home style**: a dark Command Center cover; tools are listed in descending module-number order, with a fixed 3 x 3 grid per page.

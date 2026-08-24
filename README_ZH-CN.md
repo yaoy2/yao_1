@@ -11,6 +11,17 @@
 
 ---
 
+## 仓库结构
+
+本仓库包含一个主应用和三个独立子项目。
+
+- **主应用**：根目录的 Streamlit / YaoYao 工具箱，入口是 `hello.py` 和 `启动YaoYao工具箱.bat`。`pages/`、`utils/`、`scripts/`、`config/`、`assets/`、`tests/` 是这个主应用的组成部分，不是独立子项目。
+- **Deepself**（[`Deepself/`](Deepself/README.md)）：已初始化、尚未实现的独立子项目。目标、功能范围和技术栈仍待确认。
+- **众声室**（[`zhongshengshi/`](zhongshengshi/README.md)）：已暂停的独立 Next.js 多模型圆桌概念验证。2026-08-11 起不再主动开发或部署。
+- **Grok Builder**（[`codex-grok-builder/`](codex-grok-builder/README.md)）：正在使用的独立 Codex 技能子项目，用于受控的 Codex 规划 / Grok 实施闭环。
+
+---
+
 ## 当前入口
 
 - **线上入口**：[yao-1.streamlit.app](https://yao-1.streamlit.app/)
@@ -18,7 +29,6 @@
 - **评分工作台使用说明（M18）**：说明M17操作流程、分数口径、文件位置、跨电脑状态和常见问题；忘记怎么操作时先看M18。
 - **教学评分工作台（M17）**：持久化管理花名册、小组路演与报告原始分、个人贡献系数、各层调整、校验和审核工作簿导出。
 - **旧版评分联动（M16）**：已由M17替代，保留红叉作为历史对照；首页仍按模块编号放在M17与M15之间，不再用于新任务。
-- **众声室 MVP（已暂停）**：`zhongshengshi/`，本地 Next.js 多模型圆桌概念验证。源码和说明继续保留，2026-08-11 起不再主动开发或部署。
 - **待办清单**：第 14 个上锁工具板块。支持新增在上、从文本自动识别常见中文日期和时间、关键字搜索、完成后软归档，并用 `data/todo_items_backup.md` 做可同步恢复的硬备份。
 - **LLM 余额管理**：第 13 个工具板块，集中查看各家 LLM 余额，并把每家登录账号和到期日标签保存到 `data/llm_budget_accounts.json`，当前包含 Gemini。
 - **首页风格**：Command Center 深色封面；工具入口按模块编号倒序展示，首页每页固定 3 x 3。
