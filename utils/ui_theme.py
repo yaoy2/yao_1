@@ -31,7 +31,7 @@ def _nav_sort_key(tool):
         module_number = int(code)
     except ValueError:
         module_number = 0
-    return (str(tool.get("created", "")), module_number)
+    return (not bool(tool.get("blocked")), str(tool.get("created", "")), module_number)
 
 
 def _get_sidebar_tools(tools):

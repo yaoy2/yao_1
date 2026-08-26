@@ -192,7 +192,11 @@ def sort_tool_key(tool):
 
 
 def get_homepage_tools(tools):
-    return sorted(tools, key=sort_tool_key, reverse=True)
+    return sorted(
+        tools,
+        key=lambda tool: (not bool(tool.get("blocked")), sort_tool_key(tool)),
+        reverse=True,
+    )
 
 
 def get_homepage_pages(tools, page_size=9):
