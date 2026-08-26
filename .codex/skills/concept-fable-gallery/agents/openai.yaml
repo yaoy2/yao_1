@@ -1,0 +1,6 @@
+interface:
+  display_name: "概念寓言馆"
+  short_description: "将抽象概念改写为可记忆的寓言，并自动收录到 M19 概念寓言馆"
+  default_prompt: "使用 $concept-fable-gallery：用寓言法解释我给出的概念，并把结构化结果收录到 M19 概念寓言馆。"
+policy:
+  allow_implicit_invocation: true

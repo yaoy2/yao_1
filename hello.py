@@ -18,6 +18,15 @@ apply_global_theme()
 
 TOOLS = [
     {
+        "title": "概念寓言馆",
+        "desc": "Codex 把概念写成寓言，本馆集中保存，便于检索与重读。",
+        "tag": "概念学习",
+        "created": "2026_08_26",
+        "page": "pages/18_19_concept_fables.py",
+        "code": "M19",
+        "accent": "magenta",
+    },
+    {
         "title": "评分工作台使用说明",
         "desc": "第18个项目：集中说明M17操作流程、分数口径、数据位置、跨电脑状态和常见问题。",
         "tag": "使用说明",

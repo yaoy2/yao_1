@@ -65,9 +65,13 @@ class HomePageTest(unittest.TestCase):
         by_code = {tool["code"]: tool for tool in tools}
         codes = [tool["code"] for tool in tools]
 
-        self.assertEqual(max(int(code.removeprefix("M")) for code in codes), int(tools[0]["code"].removeprefix("M")))
+        self.assertEqual("M19", tools[0]["code"])
+        self.assertEqual("pages/18_19_concept_fables.py", tools[0]["page"])
+        self.assertEqual("M18", tools[1]["code"])
         self.assertEqual("pages/17_18_grade_workbench_guide.py", by_code["M18"]["page"])
+        self.assertEqual("M17", tools[2]["code"])
         self.assertEqual("pages/16_17_grade_workbench.py", by_code["M17"]["page"])
+        self.assertEqual("M15", tools[3]["code"])
         self.assertEqual("pages/15_0_email_notice.py", by_code["M15"]["page"])
         self.assertTrue(by_code["M14"]["locked"])
         self.assertEqual(codes[codes.index("M06") : codes.index("M06") + 3], ["M06", "M16", "M05"])
@@ -76,6 +80,7 @@ class HomePageTest(unittest.TestCase):
         blocked_codes = {tool["code"] for tool in tools if tool.get("blocked")}
         self.assertEqual({"M01", "M02", "M03", "M04", "M05", "M16"}, blocked_codes)
         self.assertEqual("M01", tools[-1]["code"])
+        self.assertEqual(18, len(tools))
 
     def test_homepage_order_is_module_number_driven_instead_of_filename_driven(self):
         _page_source, namespace = load_homepage_bits()
@@ -102,14 +107,17 @@ class HomePageTest(unittest.TestCase):
         page1_codes = [tool["code"] for tool in homepage_pages[0]]
         page2_codes = [tool["code"] for tool in homepage_pages[1]]
 
-        self.assertLess(codes.index("M18"), codes.index("M16"))
-        self.assertLess(codes.index("M17"), codes.index("M16"))
+        self.assertEqual("M19", tools[0]["code"])
+        self.assertEqual("M18", tools[1]["code"])
+        self.assertEqual("M17", tools[2]["code"])
+        self.assertEqual("M15", tools[3]["code"])
         self.assertEqual(codes[codes.index("M06") : codes.index("M06") + 3], ["M06", "M16", "M05"])
         self.assertTrue(tools[codes.index("M16")]["blocked"])
         self.assertTrue(tools[codes.index("M05")]["blocked"])
         self.assertNotIn("M16", page1_codes)
         self.assertIn("M16", page2_codes)
-        self.assertEqual(page2_codes[page2_codes.index("M06") : page2_codes.index("M06") + 3], ["M06", "M16", "M05"])
+        self.assertEqual(["M19", "M18", "M17", "M15", "M14", "M13", "M11", "M10", "M09"], page1_codes)
+        self.assertEqual(["M08", "M07", "M06", "M16", "M05", "M04", "M03", "M02", "M01"], page2_codes)
 
 
 if __name__ == "__main__":
