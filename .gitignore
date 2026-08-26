@@ -10,12 +10,19 @@ node_modules/
 # IDE / Agent
 .claude/
 .agents/
-.codex/
+.codex/*
+!.codex/skills/
+.codex/skills/*
+!.codex/skills/concept-fable-gallery/
+!.codex/skills/concept-fable-gallery/**
+.codex/skills/concept-fable-gallery/**/__pycache__/
+.codex/skills/concept-fable-gallery/**/*.py[cod]
 .playwright-mcp/
 .superpowers/
 .tmp/
 skills-lock.json
 AGENTS.md
+!concept_fables/AGENTS.md
 CLAUDE.md
 CONVERSATION_LOG.md
 
