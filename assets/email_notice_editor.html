@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>通知排版生成工具</title>
+    <title>邮件通知编辑器</title>
     <style>
         :root {
             --primary-color: #2f5496;
@@ -17,24 +17,57 @@
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
+        html, body {
+            height: 100%;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Microsoft YaHei', 'PingFang SC', sans-serif;
             background-color: var(--bg-light);
             color: var(--text-dark);
             line-height: 1.6;
-            height: 100vh;
             overflow: hidden;
         }
 
+        .app-shell {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .top-banner {
+            flex-shrink: 0;
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 10px 20px;
+            background: #182230;
+            color: #fff;
+        }
+
+        .top-banner h1 {
+            font-size: 16px;
+            font-weight: 750;
+            line-height: 1.3;
+        }
+
+        .top-banner p {
+            font-size: 12px;
+            color: #d0d5dd;
+            line-height: 1.45;
+        }
+
         .app-container {
+            flex: 1;
+            min-height: 0;
             display: grid;
             grid-template-columns: 1fr 1fr;
-            height: 100%;
             background: white;
         }
 
         .editor-section {
-            padding: 20px;
+            padding: 16px 20px 20px;
             border-right: 1px solid var(--border-color);
             display: flex;
             flex-direction: column;
@@ -43,10 +76,10 @@
         }
 
         .section-header {
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 700;
             color: var(--primary-color);
-            margin-bottom: 16px;
+            margin-bottom: 10px;
             display: flex;
             align-items: center;
             gap: 8px;
@@ -57,35 +90,84 @@
             content: "";
             display: block;
             width: 5px;
-            height: 18px;
+            height: 16px;
             background: var(--accent-color);
             border-radius: 3px;
         }
 
-        .form-group { margin-bottom: 10px; flex-shrink: 0; }
+        .parse-box {
+            flex-shrink: 0;
+            margin-bottom: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: #f8fafc;
+            padding: 8px 10px;
+        }
+
+        .parse-box summary {
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 650;
+            color: var(--text-dark);
+            list-style: none;
+        }
+
+        .parse-box summary::-webkit-details-marker { display: none; }
+
+        .parse-box summary::after {
+            content: "▾";
+            float: right;
+            color: #98a2b3;
+        }
+
+        .parse-hint {
+            margin-top: 4px;
+            font-size: 12px;
+            color: #667085;
+            line-height: 1.45;
+        }
+
+        .form-group { margin-bottom: 8px; flex-shrink: 0; }
 
         .form-label {
             display: block;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 500;
             color: var(--text-gray);
-            margin-bottom: 4px;
+            margin-bottom: 3px;
         }
 
-        .form-input {
+        .form-input, textarea.form-input {
             width: 100%;
-            padding: 8px 10px;
+            padding: 7px 10px;
             border: 1px solid var(--border-color);
             border-radius: 4px;
             font-size: 14px;
+            font-family: inherit;
             transition: border-color 0.2s;
         }
 
-        .form-input:focus {
+        textarea.form-input { resize: vertical; min-height: 72px; }
+
+        .form-input:focus, textarea.form-input:focus {
             outline: none;
             border-color: var(--secondary-color);
             box-shadow: 0 0 0 2px rgba(68, 114, 196, 0.15);
         }
+
+        .form-input[readonly], .form-input[disabled] {
+            background: #f2f4f7;
+            color: #475467;
+        }
+
+        .field-grid {
+            display: grid;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+
+        .field-grid.two { grid-template-columns: 1fr 1fr; }
+        .field-grid.number { grid-template-columns: 1fr 2fr; }
 
         .editor-toolbar {
             display: flex;
@@ -139,7 +221,7 @@
             color: #000000;
             line-height: 1.8;
             overflow-y: auto;
-            min-height: 200px;
+            min-height: 160px;
         }
 
         .editor-content:focus { outline: none; border-color: var(--secondary-color); }
@@ -150,7 +232,7 @@
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             gap: 8px;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             flex-shrink: 0;
         }
 
@@ -160,7 +242,7 @@
         }
 
         .preview-section {
-            padding: 20px;
+            padding: 16px 20px 20px;
             background: #e9ecef;
             display: flex;
             flex-direction: column;
@@ -180,12 +262,12 @@
         }
         .preview-container img { max-width: 100%; height: auto; box-sizing: border-box; }
 
-        .action-bar { display: flex; gap: 12px; margin-top: 16px; flex-shrink: 0; }
+        .action-bar { display: flex; gap: 10px; margin-top: 12px; flex-shrink: 0; }
 
         .btn {
-            padding: 10px 20px; border: none; border-radius: 6px; font-size: 15px;
+            padding: 9px 16px; border: none; border-radius: 6px; font-size: 14px;
             font-weight: 500; cursor: pointer; transition: all 0.2s;
-            display: flex; align-items: center; justify-content: center; gap: 8px;
+            display: flex; align-items: center; justify-content: center; gap: 6px;
         }
         .btn-primary { background: var(--primary-color); color: white; }
         .btn-primary:hover { background: #3a6db5; }
@@ -198,7 +280,6 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1000; font-weight: bold; display: none;
         }
 
-        /* 代码弹窗样式 */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.5); z-index: 900; display: none;
@@ -224,42 +305,75 @@
             background: transparent; border: none; font-size: 24px; cursor: pointer; color: #666;
         }
         .close-btn:hover { color: #000; }
+
+        @media (max-width: 960px) {
+            body { overflow: auto; }
+            .app-shell, .app-container, .editor-section, .preview-section { height: auto; }
+            .app-container { grid-template-columns: 1fr; }
+            .editor-content { min-height: 280px; }
+            .preview-container { min-height: 420px; }
+            .top-banner { flex-direction: column; align-items: flex-start; }
+        }
     </style>
 </head>
 <body>
+<div class="app-shell">
+    <div class="top-banner">
+        <h1>邮件通知编辑器</h1>
+        <p>这是单文件本地工具：用浏览器打开即可，不必安装、不必联网。编好后点「保存 HTML 文件」，把导出的通知页发给收件人。</p>
+    </div>
 
 <div class="app-container">
     <div class="editor-section">
         <div class="section-header">📝 信息与内容编辑</div>
 
+        <details class="parse-box" open>
+            <summary>粘贴通知全文，一键识别标题、编号、正文、落款和日期</summary>
+            <p class="parse-hint">从通知主题开始粘贴。识别规则：第一行是主题；继续识别“通知〔年份〕编号”；末尾中文日期及其上一行作为落款单位。</p>
+            <textarea id="rawNotice" class="form-input" rows="4" placeholder="关于……的通知&#10;健康医疗科技学院通知〔2026〕41号&#10;各位老师：&#10;……&#10;健康医疗科技学院&#10;2026年8月28日"></textarea>
+            <div style="display:flex; gap:8px; align-items:center; margin-top:6px;">
+                <button class="btn btn-primary" type="button" onclick="recognizeNotice()" style="padding:7px 14px; font-size:13px;">一键识别并填入</button>
+                <span class="parse-hint" style="margin:0;">识别后仍可在下方改字段和正文。</span>
+            </div>
+        </details>
+
         <div class="form-group">
-            <label class="form-label">通知标题（顶部蓝色横幅）</label>
-            <input type="text" id="inputHeader" class="form-input" value="成都东软学院科研管理部通知">
+            <label class="form-label">表头（顶部蓝色横幅）</label>
+            <input type="text" id="inputHeader" class="form-input" value="成都东软学院健康医疗科技学院">
         </div>
-        
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+
+        <div class="field-grid two">
             <div class="form-group">
                 <label class="form-label">通知主题</label>
-                <input type="text" id="inputSubject" class="form-input" value="请输入通知主题">
+                <input type="text" id="inputSubject" class="form-input" value="" placeholder="请输入通知主题">
             </div>
-            <div class="form-group">
-                <label class="form-label">通知编号</label>
-                <input type="text" id="inputNumber" class="form-input" value="科研通知〔2026〕41号">
-            </div>
-        </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
             <div class="form-group">
                 <label class="form-label">落款单位</label>
-                <input type="text" id="inputUnit" class="form-input" value="成都东软学院科研管理部">
-            </div>
-            <div class="form-group">
-                <label class="form-label">落款日期</label>
-                <input type="date" id="inputDate" class="form-input" value="2026-05-08">
+                <input list="unitOptions" id="inputUnit" class="form-input" value="健康医疗科技学院">
+                <datalist id="unitOptions">
+                    <option value="健康医疗科技学院"></option>
+                    <option value="健康医疗科技学院党政办"></option>
+                </datalist>
             </div>
         </div>
 
-        <div class="section-header" style="margin-top: 5px; font-size: 16px;">🎨 整体格式设置</div>
+        <div class="field-grid number">
+            <div class="form-group">
+                <label class="form-label">通知编号数字</label>
+                <input type="text" id="inputNumberDigits" class="form-input" value="" placeholder="例如：41">
+            </div>
+            <div class="form-group">
+                <label class="form-label">完整通知编号</label>
+                <input type="text" id="inputNumber" class="form-input" value="健康医疗科技学院通知〔2026〕 号" readonly>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">落款日期</label>
+            <input type="date" id="inputDate" class="form-input" value="2026-08-28">
+        </div>
+
+        <div class="section-header" style="margin-top: 2px; font-size: 15px;">🎨 整体格式设置</div>
         <div class="settings-grid">
             <div class="setting-item">
                 <label class="form-label">内容字体</label>
@@ -292,7 +406,7 @@
                 </select>
             </div>
             <div class="setting-item">
-                <label class="form-label">表头宽度(pt)</label>
+                <label class="form-label">表格宽度(pt)</label>
                 <input type="number" id="setHeaderWidth" value="521.3" step="1" min="360" max="700">
             </div>
             <div class="setting-item">
@@ -301,8 +415,8 @@
             </div>
         </div>
 
-        <div class="section-header" style="margin-top: 5px; font-size: 16px;">✍️ 局部内容编辑 (选中文字后操作)</div>
-        
+        <div class="section-header" style="margin-top: 2px; font-size: 15px;">✍️ 局部内容编辑 (选中文字后操作)</div>
+
         <div class="editor-toolbar">
             <button class="toolbar-btn" onclick="execCmd('undo')" title="撤销 Ctrl+Z">↩</button>
             <button class="toolbar-btn" onclick="execCmd('redo')" title="重做 Ctrl+Y">↪</button>
@@ -312,22 +426,21 @@
             <button class="toolbar-btn" onclick="execCmd('underline')"><u>U</u></button>
             <button class="toolbar-btn" onclick="execCmd('strikeThrough')"><s>S</s></button>
             <div class="toolbar-divider"></div>
-            
+
             <button class="toolbar-btn" onclick="applyHeading('H2')">H2</button>
             <button class="toolbar-btn" onclick="applyHeading('H3')">H3</button>
             <button class="toolbar-btn" onclick="applyHeading('P')">正文P</button>
             <div class="toolbar-divider"></div>
-            
+
             <button class="toolbar-btn" onclick="execCmd('insertOrderedList')">1.</button>
             <button class="toolbar-btn" onclick="execCmd('insertUnorderedList')">•</button>
             <button class="toolbar-btn" onclick="forceIndent()" title="首行缩进2字符">⟹</button>
             <div class="toolbar-divider"></div>
-            
+
             <button class="toolbar-btn" onclick="execCmd('justifyLeft')">⫷</button>
             <button class="toolbar-btn" onclick="execCmd('justifyCenter')">⫿</button>
             <button class="toolbar-btn" onclick="execCmd('justifyRight')">⫸</button>
             <div class="toolbar-divider"></div>
-            <!-- 字体颜色色块 -->
             <button class="toolbar-btn" onmousedown="applyColor('color','#000000')" title="纯黑"><span style="color:#000;font-weight:bold;">A</span></button>
             <button class="toolbar-btn" onmousedown="applyColor('color','#333333')" title="深灰"><span style="color:#333;font-weight:bold;">A</span></button>
             <button class="toolbar-btn" onmousedown="applyColor('color','#808080')" title="灰色"><span style="color:#808080;font-weight:bold;">A</span></button>
@@ -339,7 +452,6 @@
             <button class="toolbar-btn" onmousedown="applyColor('color','#0000ff')" title="蓝色"><span style="color:#0000ff;font-weight:bold;">A</span></button>
             <button class="toolbar-btn" onmousedown="applyColor('color','#800080')" title="紫色"><span style="color:#800080;font-weight:bold;">A</span></button>
             <div class="toolbar-divider"></div>
-            <!-- 背景色色块 -->
             <button class="toolbar-btn" onmousedown="applyColor('backgroundColor','#ffff00')" title="黄色"><span style="background:#ffff00;font-weight:bold;">A</span></button>
             <button class="toolbar-btn" onmousedown="applyColor('backgroundColor','#ffcc00')" title="金色"><span style="background:#ffcc00;font-weight:bold;">A</span></button>
             <button class="toolbar-btn" onmousedown="applyColor('backgroundColor','#90ee90')" title="浅绿"><span style="background:#90ee90;font-weight:bold;">A</span></button>
@@ -351,11 +463,10 @@
             <button class="toolbar-btn" onmousedown="applyColor('backgroundColor','#d3d3d3')" title="浅灰"><span style="background:#d3d3d3;font-weight:bold;">A</span></button>
             <button class="toolbar-btn" onmousedown="applyColor('backgroundColor','transparent')" title="清除背景"><span style="font-weight:bold;">A</span></button>
             <div class="toolbar-divider"></div>
-            <!-- 插入图片 -->
             <button class="toolbar-btn" onclick="document.getElementById('imageFileInput').click()" title="插入图片">🖼️</button>
             <input type="file" id="imageFileInput" accept="image/*" style="display:none" onchange="insertImage(this)">
             <div class="toolbar-divider"></div>
-            
+
             <button class="toolbar-btn" onclick="execCmd('removeFormat')">🚫</button>
             <button class="toolbar-btn" onclick="cleanEmptyLines()">🧹</button>
         </div>
@@ -363,14 +474,10 @@
         <div id="editorContent" class="editor-content" contenteditable="true">
             <p>各位老师：</p>
             <p>根据工作安排，现将有关事项通知如下：</p>
-            <h3>一、标题1</h3>
+            <p><b>一、标题1</b></p>
             <p>正文段落正文段落正文段落正文段落正文段落正文段落正文段落正文段落正文段落正文段落正文段落。</p>
             <p>正文段落正文段落正文段落正文段落正文段落正文段落正文段落正文段落正文段落正文段落正文段落。</p>
-            <h3>二、标题2</h3>
-            <p>正文段落正文段落正文段落正文段落正文段落正文段落正文段落正文段落正文段落正文段落正文段落。</p>
-            <p>正文段落正文段落正文段落正文段落正文段落正文段落正文段落正文段落正文段落正文段落正文段落。</p>
-            <h3>二、标题3</h3>
-            <p>正文段落正文段落正文段落正文段落正文段落正文段落正文段落正文段落正文段落正文段落正文段落。</p>
+            <p><b>二、标题2</b></p>
             <p>正文段落正文段落正文段落正文段落正文段落正文段落正文段落正文段落正文段落正文段落正文段落。</p>
         </div>
     </div>
@@ -386,8 +493,8 @@
         </div>
     </div>
 </div>
+</div>
 
-<!-- 查看代码弹窗 -->
 <div id="codeModal" class="modal-overlay">
     <div class="modal-content">
         <div class="modal-header">
@@ -403,434 +510,517 @@
 <div id="toast" class="toast"></div>
 
 <script>
+    var DEFAULT_HEADER = "成都东软学院健康医疗科技学院";
+    var NOTICE_NUMBER_PREFIX = "健康医疗科技学院通知〔2026〕";
+    var NOTICE_NUMBER_RE = /^[^\n]{0,12}通知〔\d{4}〕\d+号$/;
+    var CHINESE_DATE_RE = /^(\d{4})年(\d{1,2})月(\d{1,2})日$/;
+    var SECTION_HEADING_RE = /^[一二三四五六七八九十]+、/;
+
+    function escapeHtml(text) {
+        return String(text == null ? "" : text)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;");
+    }
+
+    function cleanLines(rawText) {
+        return String(rawText || "")
+            .replace(/\r\n/g, "\n")
+            .replace(/\r/g, "\n")
+            .split("\n")
+            .map(function(line) { return line.trim(); })
+            .filter(Boolean);
+    }
+
+    function padDatePart(value, width) {
+        var text = String(parseInt(value, 10));
+        while (text.length < width) text = "0" + text;
+        return text;
+    }
+
+    function parseNoticeText(rawText) {
+        var lines = cleanLines(rawText);
+        if (!lines.length) {
+            return {
+                header: DEFAULT_HEADER,
+                subject: "",
+                number: "",
+                unit: "",
+                date: "",
+                bodyText: ""
+            };
+        }
+
+        var dateValue = "";
+        var unit = "";
+        var dateMatch = CHINESE_DATE_RE.exec(lines[lines.length - 1]);
+        if (dateMatch) {
+            dateValue = padDatePart(dateMatch[1], 4) + "-" + padDatePart(dateMatch[2], 2) + "-" + padDatePart(dateMatch[3], 2);
+            lines.pop();
+            if (lines.length) unit = lines.pop();
+        }
+
+        var subject = lines.length ? lines.shift() : "";
+        var number = "";
+        for (var i = 0; i < lines.length; i++) {
+            if (NOTICE_NUMBER_RE.test(lines[i])) {
+                number = lines[i];
+                lines.splice(i, 1);
+                break;
+            }
+        }
+
+        return {
+            header: DEFAULT_HEADER,
+            subject: subject,
+            number: number,
+            unit: unit,
+            date: dateValue,
+            bodyText: lines.join("\n")
+        };
+    }
+
+    function extractNoticeNumberDigits(noticeNumber) {
+        var match = String(noticeNumber || "").match(/〔2026〕\s*(\d+)\s*号/);
+        return match ? match[1] : "";
+    }
+
+    function buildNoticeNumber(numberDigits) {
+        var digits = String(numberDigits || "").trim();
+        return digits ? NOTICE_NUMBER_PREFIX + digits + "号" : NOTICE_NUMBER_PREFIX + " 号";
+    }
+
+    function textToBodyHtml(bodyText) {
+        return String(bodyText || "")
+            .split(/\n/)
+            .map(function(line) { return line.trim(); })
+            .filter(Boolean)
+            .map(function(line) {
+                var escaped = escapeHtml(line);
+                if (SECTION_HEADING_RE.test(line)) return "<p><b>" + escaped + "</b></p>";
+                return "<p>" + escaped + "</p>";
+            })
+            .join("\n");
+    }
+
+    function syncNoticeNumber() {
+        document.getElementById("inputNumber").value = buildNoticeNumber(
+            document.getElementById("inputNumberDigits").value
+        );
+    }
+
+    function recognizeNotice() {
+        var rawNotice = document.getElementById("rawNotice").value;
+        if (!String(rawNotice || "").trim()) {
+            showToast("还没有识别到有效内容，请先粘贴通知内容。");
+            return;
+        }
+        var parsed = parseNoticeText(rawNotice);
+        document.getElementById("inputHeader").value = parsed.header || DEFAULT_HEADER;
+        document.getElementById("inputSubject").value = parsed.subject || "";
+        document.getElementById("inputNumberDigits").value = extractNoticeNumberDigits(parsed.number);
+        syncNoticeNumber();
+        if (parsed.unit) document.getElementById("inputUnit").value = parsed.unit;
+        if (parsed.date) document.getElementById("inputDate").value = parsed.date;
+        document.getElementById("editorContent").innerHTML = textToBodyHtml(parsed.bodyText) || "<p></p>";
+        refreshPreview();
+        showToast("已识别并填入下方字段。");
+    }
+
     function initEditor() {
         if (window.__emailNoticeEditorReady) return;
         window.__emailNoticeEditorReady = true;
         if (document.execCommand) {
-            document.execCommand('styleWithCSS', false, true);
+            document.execCommand("styleWithCSS", false, true);
         }
 
-        // 落款日期默认今天
         var today = new Date();
-        document.getElementById('inputDate').value = today.getFullYear() + '-' +
-            String(today.getMonth() + 1).padStart(2, '0') + '-' +
-            String(today.getDate()).padStart(2, '0');
+        document.getElementById("inputDate").value = today.getFullYear() + "-" +
+            String(today.getMonth() + 1).padStart(2, "0") + "-" +
+            String(today.getDate()).padStart(2, "0");
 
+        syncNoticeNumber();
         refreshPreview();
-        
-        document.getElementById('editorContent').addEventListener('input', refreshPreview);
-        ['inputSubject', 'inputNumber', 'inputUnit', 'inputDate', 'inputHeader'].forEach(id => {
-            document.getElementById(id).addEventListener('input', refreshPreview);
+
+        document.getElementById("editorContent").addEventListener("input", refreshPreview);
+        ["inputSubject", "inputUnit", "inputDate", "inputHeader"].forEach(function(id) {
+            document.getElementById(id).addEventListener("input", refreshPreview);
         });
-        
-        document.querySelectorAll('.settings-grid select, .settings-grid input').forEach(el => {
-            el.addEventListener('change', applyStylesToEditor);
+        document.getElementById("inputNumberDigits").addEventListener("input", function() {
+            syncNoticeNumber();
+            refreshPreview();
+        });
+
+        document.querySelectorAll(".settings-grid select, .settings-grid input").forEach(function(el) {
+            el.addEventListener("change", applyStylesToEditor);
         });
         applyStylesToEditor();
 
-        // 快捷键：Ctrl+Z 撤销、Ctrl+Y / Ctrl+Shift+Z 重做
-        document.getElementById('editorContent').addEventListener('keydown', function(e) {
-            if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        document.getElementById("editorContent").addEventListener("keydown", function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
                 e.preventDefault();
-                document.execCommand('undo', false, null);
+                document.execCommand("undo", false, null);
                 refreshPreview();
-            } else if ((e.ctrlKey || e.metaKey) && ((e.key === 'y') || (e.key === 'z' && e.shiftKey))) {
+            } else if ((e.ctrlKey || e.metaKey) && ((e.key === "y") || (e.key === "z" && e.shiftKey))) {
                 e.preventDefault();
-                document.execCommand('redo', false, null);
+                document.execCommand("redo", false, null);
                 refreshPreview();
             }
         });
     }
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initEditor);
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", initEditor);
     } else {
         initEditor();
     }
 
-    function execCmd(command, value = null) {
-        document.execCommand(command, false, value);
-        document.getElementById('editorContent').focus();
+    function execCmd(command, value) {
+        document.execCommand(command, false, value == null ? null : value);
+        document.getElementById("editorContent").focus();
         refreshPreview();
     }
 
     function applyColor(cssProp, cssVal) {
-        // onmousedown 触发，此时 contenteditable 尚未失焦，选区依然有效
-        const editor = document.getElementById('editorContent');
+        var editor = document.getElementById("editorContent");
         editor.focus();
-        const selection = window.getSelection();
+        var selection = window.getSelection();
         if (!selection.rangeCount || selection.isCollapsed) {
             alert("请先选中需要修改颜色的文字！");
             return;
         }
-        // 使用 execCommand 替代直接操作 Range，这样会被浏览器的撤销栈追踪
-        if (cssProp === 'color') {
-            document.execCommand('foreColor', false, cssVal);
+        if (cssProp === "color") {
+            document.execCommand("foreColor", false, cssVal);
         } else {
-            document.execCommand('backColor', false, cssVal);
+            document.execCommand("backColor", false, cssVal);
         }
         refreshPreview();
     }
 
-    // 将图片文件转为base64嵌入编辑器，保证导出后图片不丢失
     function insertImage(input) {
-        const file = input.files[0];
+        var file = input.files[0];
         if (!file) return;
-        if (!file.type.startsWith('image/')) {
-            alert('请选择图片文件！');
+        if (!file.type.startsWith("image/")) {
+            alert("请选择图片文件！");
             return;
         }
-        const reader = new FileReader();
+        var reader = new FileReader();
         reader.onload = function(e) {
-            const editor = document.getElementById('editorContent');
+            var editor = document.getElementById("editorContent");
             editor.focus();
-            const img = document.createElement('img');
+            var img = document.createElement("img");
             img.src = e.target.result;
-            img.style.maxWidth = '100%';
-            img.style.width = 'auto';
-            img.style.height = 'auto';
-            img.style.display = 'block';
-            img.style.margin = '10px auto';
+            img.style.maxWidth = "100%";
+            img.style.width = "auto";
+            img.style.height = "auto";
+            img.style.display = "block";
+            img.style.margin = "10px auto";
 
-            const sel = window.getSelection();
+            var sel = window.getSelection();
             if (sel && sel.rangeCount) {
                 sel.getRangeAt(0).insertNode(img);
-                // 在图片后插入一个空行，方便继续编辑
-                const br = document.createElement('br');
+                var br = document.createElement("br");
                 img.parentNode.insertBefore(br, img.nextSibling);
                 sel.collapse(img.nextSibling || img.parentNode, img.nextSibling ? 0 : 0);
             } else {
                 editor.appendChild(img);
-                editor.appendChild(document.createElement('br'));
+                editor.appendChild(document.createElement("br"));
             }
             refreshPreview();
         };
         reader.readAsDataURL(file);
-        input.value = '';
+        input.value = "";
     }
 
     function applyHeading(tag) {
-        document.execCommand('formatBlock', false, `<${tag}>`);
-        document.getElementById('editorContent').focus();
+        document.execCommand("formatBlock", false, "<" + tag + ">");
+        document.getElementById("editorContent").focus();
         refreshPreview();
     }
 
     function forceIndent() {
-        const selection = window.getSelection();
+        var selection = window.getSelection();
         if (!selection.rangeCount) return;
-        const range = selection.getRangeAt(0);
-        let container = range.commonAncestorContainer;
+        var range = selection.getRangeAt(0);
+        var container = range.commonAncestorContainer;
         if (container.nodeType === 3) container = container.parentNode;
-        const block = container.closest('p, h1, h2, h3, h4, h5, h6, div, li');
+        var block = container.closest("p, h1, h2, h3, h4, h5, h6, div, li");
         if (block) {
-            block.style.textIndent = '2em';
+            block.style.textIndent = "2em";
         } else {
-            const span = document.createElement("span");
+            var span = document.createElement("span");
             span.style.display = "inline-block";
             span.style.textIndent = "2em";
             try {
                 range.surroundContents(span);
             } catch (e) {
                 try {
-                    const fragment = range.extractContents();
+                    var fragment = range.extractContents();
                     span.appendChild(fragment);
                     range.insertNode(span);
-                } catch (e2) {
-                    // 跨复杂结构时静默放弃
-                }
+                } catch (e2) {}
             }
         }
-        document.getElementById('editorContent').focus();
+        document.getElementById("editorContent").focus();
         refreshPreview();
     }
 
-    // 清理空行（会重置撤销栈，使用前请确认）
     function cleanEmptyLines() {
-        if (!confirm('⚠️ 清理空行会重置撤销历史，操作后无法 Ctrl+Z 恢复。\n\n确定要继续吗？')) {
+        if (!confirm("清理空行会重置撤销历史，操作后无法 Ctrl+Z 恢复。\n\n确定要继续吗？")) {
             return;
         }
-        const editor = document.getElementById('editorContent');
-        editor.innerHTML = editor.innerHTML.replace(/<p[^>]*>\s*(<br\s*\/?>)?\s*<\/p>/gi, '');
+        var editor = document.getElementById("editorContent");
+        editor.innerHTML = editor.innerHTML.replace(/<p[^>]*>\s*(<br\s*\/?>)?\s*<\/p>/gi, "");
         refreshPreview();
     }
 
     function applyStylesToEditor() {
-        const editor = document.getElementById('editorContent');
-        editor.style.fontFamily = document.getElementById('setContentFont').value;
-        editor.style.fontSize = document.getElementById('setContentSize').value;
-        editor.style.lineHeight = document.getElementById('setLineHeight').value;
+        var editor = document.getElementById("editorContent");
+        editor.style.fontFamily = document.getElementById("setContentFont").value;
+        editor.style.fontSize = document.getElementById("setContentSize").value;
+        editor.style.lineHeight = document.getElementById("setLineHeight").value;
         refreshPreview();
     }
 
     function formatSignature(unit, date) {
-        return `
-            <div style="text-align:right; margin-top:20px; font-family:仿宋, FangSong, serif; font-size:19px; color:#000000; line-height:1.8;">
-                <p style="margin:0;"><b>${unit}</b></p>
-                <p style="margin:0;"><b>${date}</b></p>
-            </div>
-        `;
+        return [
+            '<div style="text-align:right; margin-top:20px; font-family:仿宋, FangSong, serif; font-size:19px; color:#000000; line-height:1.8;">',
+            '<p style="margin:0;">' + unit + "</p>",
+            '<p style="margin:0;">' + date + "</p>",
+            "</div>"
+        ].join("");
     }
 
     function formatChineseDate(dateStr) {
-        if (!dateStr) return '';
-        const date = new Date(dateStr);
-        return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
+        if (!dateStr) return "";
+        var parts = String(dateStr).split("-");
+        if (parts.length !== 3) return String(dateStr);
+        return parseInt(parts[0], 10) + "年" + parseInt(parts[1], 10) + "月" + parseInt(parts[2], 10) + "日";
     }
 
     function getHeaderDimensions() {
-        const widthInput = document.getElementById('setHeaderWidth');
-        const heightInput = document.getElementById('setHeaderHeight');
-        const widthPt = Math.min(Math.max(parseFloat(widthInput.value) || 521.3, 360), 700);
-        const heightPx = Math.min(Math.max(parseFloat(heightInput.value) || 58, 40), 120);
-        const normalizedWidth = Math.round(widthPt * 10) / 10;
-        const normalizedHeight = Math.round(heightPx);
+        var widthInput = document.getElementById("setHeaderWidth");
+        var heightInput = document.getElementById("setHeaderHeight");
+        var widthPt = Math.min(Math.max(parseFloat(widthInput.value) || 521.3, 360), 700);
+        var heightPx = Math.min(Math.max(parseFloat(heightInput.value) || 58, 40), 120);
+        var normalizedWidth = Math.round(widthPt * 10) / 10;
+        var normalizedHeight = Math.round(heightPx);
 
         widthInput.value = normalizedWidth;
         heightInput.value = normalizedHeight;
 
         return {
-            tableWidth: `${normalizedWidth}pt`,
-            detailWidth: `${Math.max(normalizedWidth - 74, 200).toFixed(1)}pt`,
-            headerHeight: `${normalizedHeight}px`
+            tableWidth: normalizedWidth + "pt",
+            detailWidth: Math.max(normalizedWidth - 74, 200).toFixed(1) + "pt",
+            headerHeight: normalizedHeight + "px"
         };
     }
 
     function refreshPreview() {
-        const subject = document.getElementById('inputSubject').value;
-        const number = document.getElementById('inputNumber').value;
-        const unit = document.getElementById('inputUnit').value;
-        const date = formatChineseDate(document.getElementById('inputDate').value);
-        const header = document.getElementById('inputHeader').value.trim() || '通知';
-        const contentHtml = document.getElementById('editorContent').innerHTML;
-        
-        const fontFamily = document.getElementById('setContentFont').value;
-        const fontSize = document.getElementById('setContentSize').value;
-        const lineHeight = document.getElementById('setLineHeight').value;
-        const indent = document.getElementById('setIndent').value;
-        const { tableWidth, detailWidth, headerHeight } = getHeaderDimensions();
+        var subject = escapeHtml(document.getElementById("inputSubject").value);
+        var number = escapeHtml(document.getElementById("inputNumber").value);
+        var unit = escapeHtml(document.getElementById("inputUnit").value);
+        var date = escapeHtml(formatChineseDate(document.getElementById("inputDate").value));
+        var header = escapeHtml(document.getElementById("inputHeader").value.trim() || "通知");
+        var contentHtml = document.getElementById("editorContent").innerHTML;
 
-        const previewHtml = `
-            <div align="center" style="line-height:1.43; width:100%; overflow:auto;">
-                <table border="1" cellspacing="0" style="width:${tableWidth}; max-width:100%; border-collapse:collapse; border:1pt double double solid #4472c4;">
-                    <tbody>
-                        <tr>
-                            <td colspan="2" style="border:1pt double double solid #4472c4; background:#2f5496; padding:3.75pt; width:${tableWidth}; height:${headerHeight}">
-                                <p style="text-align:center; line-height:15.75pt; margin:0;">
-                                    <span style="font-family:华文中宋; font-size:22pt; color:#fff;"><b>${header}</b></span>
-                                </p>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="border:1pt solid solid solid double #4472c4; padding:3.75pt; width:74pt; height:37px">
-                                <p style="text-align:center; margin:0;">
-                                    <span style="font-family:宋体; font-size:14pt; color:#004898;"><b>通知主题</b></span>
-                                </p>
-                            </td>
-                            <td style="border:1pt solid double solid #4472c4; padding:3.75pt; width:${detailWidth}; height:37px">
-                                <p style="text-align:justify; line-height:15.75pt; margin:0 0 0 6.6pt">
-                                    <b><span style="font-family:宋体; color:#333; font-size:14pt;">${subject}</span></b>
-                                </p>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="border:1pt solid solid solid double #4472c4; padding:3.75pt; width:74pt; height:37px">
-                                <p style="text-align:center; margin:0;">
-                                    <span style="font-family:宋体; font-size:14pt; color:#004898;"><b>通知编号</b></span>
-                                </p>
-                            </td>
-                            <td style="border:1pt solid double solid #4472c4; padding:3.75pt; width:${detailWidth}; height:37px">
-                                <p style="text-align:justify; line-height:15.75pt; margin:0 0 0 6.6pt;">
-                                    <span style="font-family:宋体; font-size:14pt; color:#333;"><b>${number}</b></span>
-                                </p>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td colspan="2" style="border:1pt solid double #4472c4; padding:3.75pt; vertical-align:top; width:${tableWidth}; height:20px">
-                                <p style="text-align:center; margin:0;">
-                                    <span style="font-family:华文中宋; font-size:14pt; color:#004898;"><b>通 知 内 容</b></span>
-                                </p>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td colspan="2" style="border:1pt solid double #4472c4; padding:3.75pt 30px; vertical-align:top; width:${tableWidth}; min-height:95px">
-                                <div style="font-family:${fontFamily}; font-size:${fontSize}; line-height:${lineHeight}; text-align:justify; text-indent:${indent}; color:#000000; overflow:hidden;">
-                                    ${contentHtml}
-                                </div>
-                                ${formatSignature(unit, date)}
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        `;
-        document.getElementById('previewArea').innerHTML = previewHtml;
+        var fontFamily = escapeHtml(document.getElementById("setContentFont").value);
+        var fontSize = escapeHtml(document.getElementById("setContentSize").value);
+        var lineHeight = escapeHtml(document.getElementById("setLineHeight").value);
+        var indent = escapeHtml(document.getElementById("setIndent").value);
+        var dims = getHeaderDimensions();
+
+        document.getElementById("previewArea").innerHTML = [
+            '<div align="center" style="line-height:1.43; width:100%; overflow:auto;">',
+            '<table border="1" cellspacing="0" style="width:' + dims.tableWidth + "; max-width:100%; border-collapse:collapse; border:1pt double double solid #4472c4;\">",
+            "<tbody>",
+            "<tr>",
+            '<td colspan="2" style="border:1pt double double solid #4472c4; background:#2f5496; padding:3.75pt; width:' + dims.tableWidth + "; height:" + dims.headerHeight + '">',
+            '<p style="text-align:center; line-height:15.75pt; margin:0;">',
+            '<span style="font-family:华文中宋; font-size:22pt; color:#fff;"><b>' + header + "</b></span>",
+            "</p></td></tr>",
+            "<tr>",
+            '<td style="border:1pt solid solid solid double #4472c4; padding:3.75pt; width:74pt; height:37px">',
+            '<p style="text-align:center; margin:0;"><span style="font-family:宋体; font-size:14pt; color:#004898;"><b>通知主题</b></span></p></td>',
+            '<td style="border:1pt solid double solid #4472c4; padding:3.75pt; width:' + dims.detailWidth + '; height:37px">',
+            '<p style="text-align:justify; line-height:15.75pt; margin:0 0 0 6.6pt"><b><span style="font-family:宋体; color:#333; font-size:14pt;">' + subject + "</span></b></p></td></tr>",
+            "<tr>",
+            '<td style="border:1pt solid solid solid double #4472c4; padding:3.75pt; width:74pt; height:37px">',
+            '<p style="text-align:center; margin:0;"><span style="font-family:宋体; font-size:14pt; color:#004898;"><b>通知编号</b></span></p></td>',
+            '<td style="border:1pt solid double solid #4472c4; padding:3.75pt; width:' + dims.detailWidth + '; height:37px">',
+            '<p style="text-align:justify; line-height:15.75pt; margin:0 0 0 6.6pt;"><span style="font-family:宋体; font-size:14pt; color:#333;"><b>' + number + "</b></span></p></td></tr>",
+            "<tr>",
+            '<td colspan="2" style="border:1pt solid double #4472c4; padding:3.75pt; vertical-align:top; width:' + dims.tableWidth + '; height:20px">',
+            '<p style="text-align:center; margin:0;"><span style="font-family:华文中宋; font-size:14pt; color:#004898;"><b>通 知 内 容</b></span></p></td></tr>',
+            "<tr>",
+            '<td colspan="2" style="border:1pt solid double #4472c4; padding:3.75pt 30px; vertical-align:top; width:' + dims.tableWidth + '; min-height:95px">',
+            '<div style="font-family:' + fontFamily + "; font-size:" + fontSize + "; line-height:" + lineHeight + "; text-align:justify; text-indent:" + indent + '; color:#000000; overflow:hidden;">',
+            contentHtml,
+            "</div>",
+            formatSignature(unit, date),
+            "</td></tr></tbody></table></div>"
+        ].join("");
     }
 
     function generateFinalHtml() {
-        const subject = document.getElementById('inputSubject').value;
-        const contentHtml = document.getElementById('editorContent').innerHTML;
-        const fontFamily = document.getElementById('setContentFont').value;
-        const fontSize = document.getElementById('setContentSize').value;
-        const lineHeight = document.getElementById('setLineHeight').value;
-        const indent = document.getElementById('setIndent').value;
-        const unit = document.getElementById('inputUnit').value;
-        const date = formatChineseDate(document.getElementById('inputDate').value);
-        const number = document.getElementById('inputNumber').value;
-        const header = document.getElementById('inputHeader').value.trim() || '通知';
-        const { tableWidth, detailWidth, headerHeight } = getHeaderDimensions();
+        var subject = escapeHtml(document.getElementById("inputSubject").value);
+        var contentHtml = document.getElementById("editorContent").innerHTML;
+        var fontFamily = escapeHtml(document.getElementById("setContentFont").value);
+        var fontSize = escapeHtml(document.getElementById("setContentSize").value);
+        var lineHeight = escapeHtml(document.getElementById("setLineHeight").value);
+        var indent = escapeHtml(document.getElementById("setIndent").value);
+        var unit = escapeHtml(document.getElementById("inputUnit").value);
+        var date = escapeHtml(formatChineseDate(document.getElementById("inputDate").value));
+        var number = escapeHtml(document.getElementById("inputNumber").value);
+        var header = escapeHtml(document.getElementById("inputHeader").value.trim() || "通知");
+        var dims = getHeaderDimensions();
 
-        return `<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <title>${subject}</title>
-    <style class="fox_global_style">
-        div.fox_html_content{line-height:1.5}
-        blockquote{margin:0 0 0 .5em}
-        ol,ul{margin:0;list-style-position:inside}
-        p{margin:0}
-        img{max-width:100%;height:auto;box-sizing:border-box}
-        @media print { table { page-break-inside: avoid; } body { margin: 0; } }
-    </style>
-</head>
-<body style="font-family: '微软雅黑', sans-serif;">
-    <div align="center" style="line-height:1.43;">
-        <table border="1" cellspacing="0" style="width:${tableWidth};border-collapse:collapse">
-            <tbody>
-                <tr>
-                    <td colspan="2" style="border:1pt double double solid #4472c4;background:#2f5496;padding:3.75pt;width:${tableWidth};height:${headerHeight}">
-                        <p style="text-align:center;line-height:15.75pt;margin:0;">
-                            <span style="font-family:华文中宋;font-size:22pt;color:#fff"><b>${header}</b></span>
-                        </p>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="border:1pt solid solid solid double #4472c4;padding:3.75pt;width:74pt;height:37px">
-                        <p style="text-align:center;margin:0;">
-                            <span style="font-family:宋体;font-size:14pt;color:#004898"><b>通知主题</b></span>
-                        </p>
-                    </td>
-                    <td style="border:1pt solid double solid #4472c4;padding:3.75pt;width:${detailWidth};height:37px">
-                        <p style="text-align:justify;line-height:15.75pt;margin:0 0 0 6.6pt">
-                            <b><span style="font-family:宋体;color:#333;font-size:14pt">${subject}</span></b>
-                        </p>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="border:1pt solid solid solid double #4472c4;padding:3.75pt;width:74pt;height:37px">
-                        <p style="text-align:center;margin:0;">
-                            <span style="font-family:宋体;font-size:14pt;color:#004898"><b>通知编号</b></span>
-                        </p>
-                    </td>
-                    <td style="border:1pt solid double solid #4472c4;padding:3.75pt;width:${detailWidth};height:37px">
-                        <p style="text-align:justify;line-height:15.75pt;margin:0 0 0 6.6pt;">
-                            <span style="font-family:宋体;font-size:14pt;color:#333"><b>${number}</b></span>
-                        </p>
-                    </td>
-                </tr>
-                <tr>
-                    <td colspan="2" style="border:1pt solid double #4472c4;padding:3.75pt;vertical-align:top;width:${tableWidth};height:20px">
-                        <p style="text-align:center;margin:0;">
-                            <span style="font-family:华文中宋;font-size:14pt;color:#004898"><b>通 知 内 容</b></span>
-                        </p>
-                    </td>
-                </tr>
-                <tr>
-                    <td colspan="2" id="content-cell" style="border:1pt solid double #4472c4;padding:3.75pt 30px;vertical-align:top;width:${tableWidth};min-height:95px">
-                        <div style="font-family:${fontFamily}; font-size:${fontSize}; line-height:${lineHeight}; text-align:justify; text-indent:${indent}; color:#000000; overflow:hidden;">
-                            ${contentHtml}
-                        </div>
-                        ${formatSignature(unit, date)}
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-</body>
-</html>`;
+        return [
+            "<!DOCTYPE html>",
+            '<html lang="zh-CN">',
+            "<head>",
+            '    <meta charset="UTF-8">',
+            "    <title>" + subject + "</title>",
+            '    <style class="fox_global_style">',
+            "        div.fox_html_content{line-height:1.5}",
+            "        blockquote{margin:0 0 0 .5em}",
+            "        ol,ul{margin:0;list-style-position:inside}",
+            "        p{margin:0}",
+            "        img{max-width:100%;height:auto;box-sizing:border-box}",
+            "        @media print { table { page-break-inside: avoid; } body { margin: 0; } }",
+            "    </style>",
+            "</head>",
+            '<body style="font-family: \'微软雅黑\', sans-serif;">',
+            '    <div align="center" style="line-height:1.43;">',
+            '        <table border="1" cellspacing="0" style="width:' + dims.tableWidth + ';border-collapse:collapse">',
+            "            <tbody>",
+            "                <tr>",
+            '                    <td colspan="2" style="border:1pt double double solid #4472c4;background:#2f5496;padding:3.75pt;width:' + dims.tableWidth + ";height:" + dims.headerHeight + '">',
+            '                        <p style="text-align:center;line-height:15.75pt;margin:0;">',
+            '                            <span style="font-family:华文中宋;font-size:22pt;color:#fff"><b>' + header + "</b></span>",
+            "                        </p>",
+            "                    </td>",
+            "                </tr>",
+            "                <tr>",
+            '                    <td style="border:1pt solid solid solid double #4472c4;padding:3.75pt;width:74pt;height:37px">',
+            '                        <p style="text-align:center;margin:0;">',
+            '                            <span style="font-family:宋体;font-size:14pt;color:#004898"><b>通知主题</b></span>',
+            "                        </p>",
+            "                    </td>",
+            '                    <td style="border:1pt solid double solid #4472c4;padding:3.75pt;width:' + dims.detailWidth + ';height:37px">',
+            '                        <p style="text-align:justify;line-height:15.75pt;margin:0 0 0 6.6pt">',
+            '                            <b><span style="font-family:宋体;color:#333;font-size:14pt">' + subject + "</span></b>",
+            "                        </p>",
+            "                    </td>",
+            "                </tr>",
+            "                <tr>",
+            '                    <td style="border:1pt solid solid solid double #4472c4;padding:3.75pt;width:74pt;height:37px">',
+            '                        <p style="text-align:center;margin:0;">',
+            '                            <span style="font-family:宋体;font-size:14pt;color:#004898"><b>通知编号</b></span>',
+            "                        </p>",
+            "                    </td>",
+            '                    <td style="border:1pt solid double solid #4472c4;padding:3.75pt;width:' + dims.detailWidth + ';height:37px">',
+            '                        <p style="text-align:justify;line-height:15.75pt;margin:0 0 0 6.6pt;">',
+            '                            <span style="font-family:宋体;font-size:14pt;color:#333"><b>' + number + "</b></span>",
+            "                        </p>",
+            "                    </td>",
+            "                </tr>",
+            "                <tr>",
+            '                    <td colspan="2" style="border:1pt solid double #4472c4;padding:3.75pt;vertical-align:top;width:' + dims.tableWidth + ';height:20px">',
+            '                        <p style="text-align:center;margin:0;">',
+            '                            <span style="font-family:华文中宋;font-size:14pt;color:#004898"><b>通 知 内 容</b></span>',
+            "                        </p>",
+            "                    </td>",
+            "                </tr>",
+            "                <tr>",
+            '                    <td colspan="2" id="content-cell" style="border:1pt solid double #4472c4;padding:3.75pt 30px;vertical-align:top;width:' + dims.tableWidth + ';min-height:95px">',
+            '                        <div style="font-family:' + fontFamily + "; font-size:" + fontSize + "; line-height:" + lineHeight + "; text-align:justify; text-indent:" + indent + '; color:#000000; overflow:hidden;">',
+            "                            " + contentHtml,
+            "                        </div>",
+            "                        " + formatSignature(unit, date),
+            "                    </td>",
+            "                </tr>",
+            "            </tbody>",
+            "        </table>",
+            "    </div>",
+            "</body>",
+            "</html>"
+        ].join("\n");
     }
 
-    // 弹出代码框并自动复制
     function showCodeModal() {
         refreshPreview();
-        const htmlCode = generateFinalHtml();
-        const modal = document.getElementById('codeModal');
-        const textarea = document.getElementById('codeOutput');
-        
+        var htmlCode = generateFinalHtml();
+        var modal = document.getElementById("codeModal");
+        var textarea = document.getElementById("codeOutput");
         textarea.value = htmlCode;
-        modal.style.display = 'flex';
-        
-        // 自动选中并复制
+        modal.style.display = "flex";
         textarea.select();
-        document.execCommand('copy');
-        showToast('✅ 代码已自动复制到剪贴板！');
+        document.execCommand("copy");
+        showToast("代码已自动复制到剪贴板！");
     }
 
     function closeCodeModal() {
-        document.getElementById('codeModal').style.display = 'none';
+        document.getElementById("codeModal").style.display = "none";
     }
 
-    // 保存HTML文件，文件名格式：通知编号_通知主题.html
     function saveHtmlFile() {
         refreshPreview();
-        const htmlCode = generateFinalHtml();
-        const number = document.getElementById('inputNumber').value.trim();
-        const subject = document.getElementById('inputSubject').value.trim();
-
-        // 拼接文件名，清理Windows文件系统不允许的字符
-        var rawName = (number ? number + '_' : '') + (subject || '通知');
-        var safeName = rawName.replace(/[\\\/:\*\?"<>\|]/g, '_');
-        var filename = safeName + '.html';
-
-        var blob = new Blob([htmlCode], { type: 'text/html;charset=utf-8' });
+        var htmlCode = generateFinalHtml();
+        var number = document.getElementById("inputNumber").value.trim();
+        var subject = document.getElementById("inputSubject").value.trim();
+        var rawName = (number ? number + "_" : "") + (subject || "通知");
+        var filename = rawName.replace(/[\\/:*?"<>|]/g, "_") + ".html";
+        var blob = new Blob([htmlCode], { type: "text/html;charset=utf-8" });
         var url = URL.createObjectURL(blob);
-        var a = document.createElement('a');
+        var a = document.createElement("a");
         a.href = url;
         a.download = filename;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        showToast('✅ 已保存: ' + filename);
+        showToast("已保存: " + filename);
     }
 
-    // 保存为PDF：在新窗口中打开HTML并触发打印，用户选择"另存为PDF"
     function savePdfFile() {
         refreshPreview();
         var htmlCode = generateFinalHtml();
-        var number = document.getElementById('inputNumber').value.trim();
-        var subject = document.getElementById('inputSubject').value.trim();
-        // 用通知编号_通知主题作为PDF文件名（浏览器以<title>作为默认保存名）
-        var pdfName = (number ? number + '_' : '') + (subject || '通知');
-        pdfName = pdfName.replace(/[\\\/:\*\?"<>\|]/g, '_');
-        htmlCode = htmlCode.replace(/<title>[^<]*<\/title>/, '<title>' + pdfName + '</title>');
-        var w = window.open('', '_blank', 'width=800,height=600');
+        var number = document.getElementById("inputNumber").value.trim();
+        var subject = document.getElementById("inputSubject").value.trim();
+        var pdfName = ((number ? number + "_" : "") + (subject || "通知")).replace(/[\\/:*?"<>|]/g, "_");
+        htmlCode = htmlCode.replace(/<title>[^<]*<\/title>/, "<title>" + pdfName + "</title>");
+        var w = window.open("", "_blank", "width=800,height=600");
+        if (!w) {
+            showToast("浏览器拦截了新窗口，请允许弹窗后再保存 PDF。");
+            return;
+        }
         var printed = false;
         var triggerPrint = function() {
             if (printed) return;
             printed = true;
             w.print();
-            showToast('📄 请在打印对话框中选择"另存为PDF"');
+            showToast("请在打印对话框中选择「另存为PDF」");
         };
         w.document.write(htmlCode);
         w.document.close();
         w.focus();
         w.onload = triggerPrint;
         setTimeout(function() {
-            if (w.document.readyState === 'complete') triggerPrint();
+            if (w.document.readyState === "complete") triggerPrint();
         }, 600);
     }
 
-    // 点击遮罩层关闭弹窗
-    document.getElementById('codeModal').addEventListener('click', function(e) {
+    document.getElementById("codeModal").addEventListener("click", function(e) {
         if (e.target === this) closeCodeModal();
     });
 
     function showToast(message) {
-        const toast = document.getElementById('toast');
+        var toast = document.getElementById("toast");
         toast.textContent = message;
-        toast.style.display = 'block';
-        setTimeout(() => { toast.style.display = 'none'; }, 3000);
+        toast.style.display = "block";
+        setTimeout(function() { toast.style.display = "none"; }, 3000);
     }
 </script>
 </body>
