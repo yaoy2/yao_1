@@ -5,7 +5,7 @@ from urllib.parse import quote
 
 import streamlit as st
 
-from utils.ui_theme import apply_global_theme
+from utils.ui_theme import apply_home_theme
 
 
 st.set_page_config(
@@ -14,9 +14,29 @@ st.set_page_config(
     layout="wide",
 )
 
-apply_global_theme()
+apply_home_theme()
 
 TOOLS = [
+    {
+        "title": "Awesome Design MD",
+        "desc": "只读浏览本地拉取的 74 组品牌 DESIGN.md 设计规范，为页面设计和 AI 生成界面提供视觉参考。",
+        "tag": "视觉资产",
+        "created": "2026_08_31",
+        "page": "pages/20_21_awesome_design_md.py",
+        "code": "M21",
+        "accent": "cyan",
+        "section": "个人",
+    },
+    {
+        "title": "Ding2026 文件中转发放系统",
+        "desc": "展示学院行政文件如何被识别、手动分发、进入中转裁决，并按五条时间轴安全归档。",
+        "tag": "文件治理",
+        "created": "2026_08_31",
+        "page": "pages/19_20_ding2026.py",
+        "code": "M20",
+        "accent": "green",
+        "section": "行政",
+    },
     {
         "title": "概念寓言馆",
         "desc": "Codex 把概念写成寓言，本馆集中保存，便于检索与重读。",
@@ -25,6 +45,7 @@ TOOLS = [
         "page": "pages/18_19_concept_fables.py",
         "code": "M19",
         "accent": "magenta",
+        "section": "个人",
     },
     {
         "title": "评分工作台使用说明",
@@ -34,6 +55,7 @@ TOOLS = [
         "page": "pages/17_18_grade_workbench_guide.py",
         "code": "M18",
         "accent": "amber",
+        "section": "教学",
     },
     {
         "title": "教学评分工作台",
@@ -43,6 +65,7 @@ TOOLS = [
         "page": "pages/16_17_grade_workbench.py",
         "code": "M17",
         "accent": "green",
+        "section": "教学",
     },
     {
         "title": "旧版报告评分与成绩联动",
@@ -53,6 +76,7 @@ TOOLS = [
         "code": "M16",
         "accent": "cyan",
         "blocked": True,
+        "section": "archived",
     },
     {
         "title": "邮件通知编辑器",
@@ -62,6 +86,7 @@ TOOLS = [
         "page": "pages/15_0_email_notice.py",
         "code": "M15",
         "accent": "amber",
+        "section": "行政",
     },
     {
         "title": "待办清单",
@@ -72,6 +97,7 @@ TOOLS = [
         "code": "M14",
         "accent": "green",
         "locked": True,
+        "section": "行政",
     },
     {
         "title": "LLM 余额管理",
@@ -81,6 +107,8 @@ TOOLS = [
         "page": "pages/00_13_llm_budget.py",
         "code": "M13",
         "accent": "cyan",
+        "blocked": True,
+        "section": "archived",
     },
     {
         "title": "Recorder_笔记",
@@ -91,6 +119,7 @@ TOOLS = [
         "code": "M11",
         "accent": "green",
         "locked": True,
+        "section": "行政",
     },
     {
         "title": "灵感便签盒",
@@ -100,6 +129,7 @@ TOOLS = [
         "page": "pages/03_10_memos.py",
         "code": "M10",
         "accent": "cyan",
+        "section": "个人",
     },
     {
         "title": "配色方案预览",
@@ -109,6 +139,7 @@ TOOLS = [
         "page": "pages/04_9_palette.py",
         "code": "M09",
         "accent": "amber",
+        "section": "个人",
     },
     {
         "title": "预算速记台账",
@@ -119,6 +150,7 @@ TOOLS = [
         "code": "M08",
         "accent": "magenta",
         "locked": True,
+        "section": "行政",
     },
     {
         "title": "微信归档",
@@ -128,6 +160,7 @@ TOOLS = [
         "page": "pages/06_7_wechat.py",
         "code": "M07",
         "accent": "green",
+        "section": "个人",
     },
     {
         "title": "课表查询",
@@ -137,6 +170,7 @@ TOOLS = [
         "page": "pages/07_6_schedule.py",
         "code": "M06",
         "accent": "cyan",
+        "section": "行政",
     },
     {
         "title": "万能合并机",
@@ -147,6 +181,7 @@ TOOLS = [
         "code": "M05",
         "accent": "amber",
         "blocked": True,
+        "section": "archived",
     },
     {
         "title": "Word 收割机",
@@ -157,6 +192,7 @@ TOOLS = [
         "code": "M04",
         "accent": "magenta",
         "blocked": True,
+        "section": "archived",
     },
     {
         "title": "名单核对",
@@ -167,6 +203,7 @@ TOOLS = [
         "code": "M03",
         "accent": "green",
         "blocked": True,
+        "section": "archived",
     },
     {
         "title": "文件比对",
@@ -177,6 +214,7 @@ TOOLS = [
         "code": "M02",
         "accent": "cyan",
         "blocked": True,
+        "section": "archived",
     },
     {
         "title": "报告评分",
@@ -187,8 +225,34 @@ TOOLS = [
         "code": "M01",
         "accent": "amber",
         "blocked": True,
+        "section": "archived",
     },
 ]
+
+HOME_SECTIONS = {
+    "行政": "学院事务在这里归位。",
+    "教学": "评分相关的工作台。",
+    "个人": "给自己留的工具、笔记和视觉参考。",
+    "archived": "已经停用的项目，只作对照，不再启用。",
+}
+
+SECTION_DISPLAY = {
+    "行政": "行政狗",
+    "教学": "教学",
+    "个人": "个人",
+    "archived": "archived",
+}
+
+FEATURED_LEADS = {
+    "M15": "把通知全文收成可寄出的秩序：标题、编号、落款，一次成形。",
+    "M14": "截止日期自动识别，做完就归档，学院的一天先落在纸面上。",
+    "M06": "教室、时间和安排，行政核对时立刻能看见。",
+    "M17": "花名册、路演、报告分和个人系数，校验后导出审核工作簿。",
+    "M18": "流程、口径、数据位置和跨电脑状态，先读这一页再动手。",
+    "M19": "把难懂的概念写成可重读的寓言，供自己慢慢回来。",
+    "M10": "灵感、摘录和写作素材，随手放下，日后还能找回来。",
+    "M07": "把微信文章和网页沉淀下来，减少个人资料流失。",
+}
 
 
 def sort_tool_key(tool):
@@ -217,32 +281,15 @@ def get_homepage_pages(tools, page_size=9):
     return pages or [[]]
 
 
-def build_hero_visual_html() -> str:
-    return (
-        '<div class="hero-visual" aria-label="首页视觉">'
-        '<div class="visual-orbit">'
-        '<span class="orbit-node node-a"></span>'
-        '<span class="orbit-node node-b"></span>'
-        '<span class="orbit-node node-c"></span>'
-        '<span class="orbit-node node-d"></span>'
-        '<div class="orbit-core">YAO<br/>OPS</div>'
-        "</div>"
-        "</div>"
-    )
-
-
-def coerce_page_number(raw_value, total_pages):
-    if isinstance(raw_value, list):
-        raw_value = raw_value[0] if raw_value else "1"
-    try:
-        page_number = int(raw_value)
-    except (TypeError, ValueError):
-        page_number = 1
-    return min(max(page_number, 1), total_pages)
-
-
-def build_page_href(page_number):
-    return f"?module_page={page_number}"
+def tools_for_section(tools, section):
+    ordered_tools = get_homepage_tools(tools)
+    if section == "archived":
+        return [tool for tool in ordered_tools if tool.get("blocked")]
+    return [
+        tool
+        for tool in ordered_tools
+        if not tool.get("blocked") and tool.get("section") == section
+    ]
 
 
 def build_streamlit_page_href(page_path):
@@ -254,44 +301,8 @@ def build_streamlit_page_href(page_path):
     return f"/{quote(url_path)}"
 
 
-def build_pagination_html(current_page, total_pages):
-    if total_pages <= 1:
-        return ""
-
-    def page_item(page_number):
-        if page_number == current_page:
-            return f'<span class="pagination-item active">{page_number}</span>'
-        return f'<a class="pagination-item" href="{build_page_href(page_number)}">{page_number}</a>'
-
-    prev_html = (
-        '<span class="pagination-item disabled">&lt;</span>'
-        if current_page <= 1
-        else f'<a class="pagination-item nav" href="{build_page_href(current_page - 1)}">&lt;</a>'
-    )
-    next_html = (
-        '<span class="pagination-item disabled">&gt;</span>'
-        if current_page >= total_pages
-        else f'<a class="pagination-item nav" href="{build_page_href(current_page + 1)}">&gt;</a>'
-    )
-    prev_text = (
-        '<span class="pagination-item text disabled">上一页</span>'
-        if current_page <= 1
-        else f'<a class="pagination-item text" href="{build_page_href(current_page - 1)}">上一页</a>'
-    )
-    next_text = (
-        '<span class="pagination-item text disabled">下一页</span>'
-        if current_page >= total_pages
-        else f'<a class="pagination-item text" href="{build_page_href(current_page + 1)}">下一页</a>'
-    )
-    pages_html = "".join(page_item(index) for index in range(1, total_pages + 1))
-    counter = escape(f"{current_page}/{total_pages}")
-    return (
-        '<nav class="pagination-bar" aria-label="工具分页">'
-        f"{prev_html}{prev_text}{pages_html}"
-        f'<span class="pagination-counter">{counter}</span>'
-        f"{next_text}{next_html}"
-        "</nav>"
-    )
+def build_section_href(section):
+    return f"?section={quote(section)}"
 
 
 def build_tool_title_html(tool):
@@ -308,151 +319,191 @@ def build_tool_status_icon_html(tool):
     return '<span class="tool-lock-spacer" aria-hidden="true"></span>'
 
 
-st.markdown(
-    f"""
-<section class="command-hero">
-  <div class="hero-grid"></div>
-  <div class="hero-copy-block">
-    <div class="hero-kicker">YAO · CAMPUS · AI OPERATIONS</div>
-    <div class="hero-title">学院行政智能中枢</div>
-    <div class="hero-copy">
-      面向学院日常事务的高效率工具矩阵：材料处理、数据核对、课表查询、预算台账、微信归档、灵感便签与视觉资产统一接入。
-      把重复劳动压缩成一次点击，把复杂流程沉淀为稳定入口。
-    </div>
-  </div>
-  {build_hero_visual_html()}
-</section>
-    """,
-    unsafe_allow_html=True,
-)
+def _flyout_html(section, tools):
+    items = tools_for_section(tools, section)
+    if not items:
+        return '<p class="nav-flyout-empty">这一栏还没有模块</p>'
+    rows = []
+    for tool in items:
+        href = escape(build_streamlit_page_href(tool["page"]), quote=True)
+        mark = " ❌" if tool.get("blocked") else ""
+        rows.append(
+            f'<a href="{href}" target="_self">'
+            f'<span class="fly-code">{escape(tool["code"])}</span>'
+            f'{escape(tool["title"])}{mark}'
+            "</a>"
+        )
+    return "".join(rows)
 
-st.markdown(
-    """
-    <div class="section-heading">
-      <div>
-        <div class="section-label">MISSION MODULES</div>
-      </div>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
 
-st.markdown(
-    """
-    <style>
-    .pagination-bar {
-        display: inline-flex;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 0;
-        margin: .1rem 0 .75rem auto;
-        border: 1px solid rgba(71, 205, 190, .32);
-        border-radius: 8px;
-        background: rgba(8, 22, 36, .76);
-        box-shadow: 0 18px 36px rgba(3, 10, 18, .28), inset 0 1px 0 rgba(255,255,255,.07);
-        overflow: hidden;
-        backdrop-filter: blur(10px);
-    }
-    .pagination-dock {
-        display: flex;
-        justify-content: flex-end;
-        margin-top: .25rem;
-        margin-bottom: .15rem;
-    }
-    .pagination-item,
-    .pagination-counter {
-        min-width: 2.35rem;
-        height: 2.15rem;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0 .72rem;
-        border-right: 1px solid rgba(119, 176, 212, .18);
-        color: #D6E4F0;
-        font-size: .92rem;
-        font-weight: 750;
-        text-decoration: none !important;
-        letter-spacing: 0;
-    }
-    .pagination-item:hover {
-        color: #ffffff;
-        background: rgba(74, 144, 217, .28);
-    }
-    .pagination-item.active {
-        color: #ffffff;
-        background: linear-gradient(180deg, #2D6A4F, #22533E);
-        box-shadow: inset 0 -3px 0 rgba(71, 205, 190, .58);
-    }
-    .pagination-item.disabled {
-        color: rgba(214, 228, 240, .36);
-        background: rgba(255,255,255,.035);
-        pointer-events: none;
-    }
-    .pagination-item.text {
-        min-width: 4.6rem;
-        color: #D6E4F0;
-        font-weight: 700;
-    }
-    .pagination-counter {
-        min-width: 5.4rem;
-        color: #F8FAFC;
-        background: rgba(27, 58, 92, .45);
-        font-weight: 850;
-    }
-    .pagination-bar > :last-child {
-        border-right: 0;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
-
-homepage_pages = get_homepage_pages(TOOLS)
-total_pages = len(homepage_pages)
-if total_pages > 1:
-    current_page = coerce_page_number(st.query_params.get("module_page", "1"), total_pages)
-    page_index = current_page - 1
-else:
-    current_page = 1
-    page_index = 0
-
-page_tools = homepage_pages[page_index]
-for row_start in range(0, 9, 3):
-    cols = st.columns(3)
-    for col, tool in zip(cols, page_tools[row_start : row_start + 3]):
-        with col:
-            st.markdown(
-                f"""
-                <div class="tool-card-shell">
-                  <div class="tool-card {tool["accent"]}">
-                    <div class="tool-head">
-                      <div class="tool-code">{tool["code"]}</div>
-                      <div class="tool-date">{tool["created"]}</div>
-                    </div>
-                    {build_tool_title_html(tool)}
-                    <div class="tool-meta">{tool["desc"]}</div>
-                    <div class="tool-footer">
-                      <span class="tool-tag">{tool["tag"]}</span>
-                      {build_tool_status_icon_html(tool)}
-                    </div>
-                  </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-if total_pages > 1:
-    st.markdown(
-        f'<div class="pagination-dock">{build_pagination_html(current_page, total_pages)}</div>',
-        unsafe_allow_html=True,
+def build_nav_html(current_section, tools):
+    cats = []
+    flyouts = []
+    for section, _copy in HOME_SECTIONS.items():
+        current = " current" if section == current_section else ""
+        label = "archived" if section == "archived" else section
+        cats.append(
+            f'<a class="nav-cat{current}" data-section="{escape(section)}" '
+            f'href="{escape(build_section_href(section), quote=True)}">{escape(label)}</a>'
+        )
+        flyouts.append(
+            f'<div class="nav-flyout fly-{escape(section)}">'
+            f'<div class="nav-flyout-inner">'
+            f'<div class="nav-flyout-kicker">探索 {escape(label)}</div>'
+            f'<div class="nav-flyout-list">{_flyout_html(section, tools)}</div>'
+            "</div></div>"
+        )
+    return (
+        '<header class="global-nav">'
+        '<div class="global-nav-inner">'
+        '<a class="brand" href="/" target="_self"><span class="brand-mark">Y</span>YaoYao\'s Space</a>'
+        f'<nav class="nav-links">{"".join(cats)}</nav>'
+        '<div class="nav-tools">'
+        '<a class="icon-btn" href="#modules" target="_self" aria-label="浏览模块">⌕</a>'
+        "</div></div>"
+        f'{"".join(flyouts)}'
+        "</header>"
     )
 
+
+def _feature_tile(tool, variant, heading="h2"):
+    href = escape(build_streamlit_page_href(tool["page"]), quote=True)
+    lead = FEATURED_LEADS.get(tool["code"], tool["desc"])
+    link_class = "text-link" if variant != "dark" else "pill pill-secondary"
+    primary_class = "pill pill-primary" if variant == "dark" else "text-link"
+    ctas = (
+        f'<div class="ctas">'
+        f'<a class="{link_class}" href="{href}" target="_self">了解更多</a>'
+        f'<a class="{primary_class}" href="{href}" target="_self">'
+        f'{"查看说明" if tool.get("blocked") else "打开"}</a>'
+        "</div>"
+    )
+    return (
+        f'<div class="eyebrow">{escape(tool["code"])} · {escape(tool["tag"])}</div>'
+        f"<{heading}>{escape(tool['title'])}</{heading}>"
+        f'<p class="lead">{escape(lead)}</p>'
+        f"{ctas}"
+    )
+
+
+def build_feature_html(current_section, tools):
+    if current_section == "archived":
+        return ""
+    by_code = {tool["code"]: tool for tool in tools}
+    if current_section == "行政":
+        dark, left, right = by_code["M15"], by_code["M14"], by_code["M06"]
+        return (
+            f'<section class="product-tile product-tile-dark"><div class="text-lock">{_feature_tile(dark, "dark")}</div></section>'
+            '<section class="split">'
+            f'<article class="product-tile product-tile-parchment">{_feature_tile(left, "light")}</article>'
+            f'<article class="product-tile product-tile-light">{_feature_tile(right, "light")}</article>'
+            "</section>"
+        )
+    if current_section == "教学":
+        dark, second = by_code["M17"], by_code["M18"]
+        return (
+            f'<section class="product-tile product-tile-dark"><div class="text-lock">{_feature_tile(dark, "dark")}</div></section>'
+            f'<section class="product-tile product-tile-parchment"><div class="text-lock">{_feature_tile(second, "light")}</div></section>'
+        )
+    if current_section == "个人":
+        dark, left, right = by_code["M19"], by_code["M10"], by_code["M07"]
+        return (
+            f'<section class="product-tile product-tile-dark"><div class="text-lock">{_feature_tile(dark, "dark")}</div></section>'
+            '<section class="split">'
+            f'<article class="product-tile product-tile-parchment">{_feature_tile(left, "light")}</article>'
+            f'<article class="product-tile product-tile-light">{_feature_tile(right, "light")}</article>'
+            "</section>"
+        )
+    return ""
+
+
+def build_store_html(current_section, tools):
+    section_tools = tools_for_section(tools, current_section)
+    title = SECTION_DISPLAY.get(current_section, current_section)
+    copy = HOME_SECTIONS.get(current_section, "")
+    cards = []
+    for tool in section_tools:
+        href = escape(build_streamlit_page_href(tool["page"]), quote=True)
+        blocked = " is-blocked" if tool.get("blocked") else ""
+        mark = " ❌" if tool.get("blocked") else ""
+        status = ""
+        if tool.get("locked"):
+            status = ' <span class="status">需要密码</span>'
+        elif tool.get("blocked"):
+            status = ' <span class="status">暂不开放</span>'
+        cards.append(
+            f'<article class="store-card{blocked}" id="module-{escape(tool["code"])}">'
+            f'<div class="card-media"><span>{escape(tool["code"])} · {escape(tool["tag"])}</span>'
+            '<div class="card-slab"></div></div>'
+            f'<h3>{build_tool_title_html(tool)}{mark}{status}{build_tool_status_icon_html(tool)}</h3>'
+            f'<p>{escape(tool["desc"])}</p>'
+            '<div class="store-foot">'
+            f'<span class="fine">{escape(tool["created"])}</span>'
+            f'<a class="text-link" href="{href}" target="_self">'
+            f'{"查看说明" if tool.get("blocked") else "了解更多"}</a>'
+            "</div></article>"
+        )
+    body = "".join(cards) or '<div class="empty">没有匹配的模块</div>'
+    return (
+        f'<section class="store" id="modules">'
+        f'<div class="store-lock"><div class="store-head"><div>'
+        f"<h2>{escape(title)}</h2>"
+        f'<p>{escape(copy)} · {len(section_tools)} 个模块</p>'
+        f"</div></div>"
+        f'<div class="card-grid">{body}</div>'
+        "</div></section>"
+    )
+
+
+def resolve_home_section(raw_value):
+    if isinstance(raw_value, list):
+        raw_value = raw_value[0] if raw_value else "行政"
+    section = str(raw_value or "行政")
+    if section not in HOME_SECTIONS:
+        return "行政"
+    return section
+
+
+current_section = resolve_home_section(st.query_params.get("section", "行政"))
+display_title = SECTION_DISPLAY.get(current_section, current_section)
+
 st.markdown(
-    """
-    <section class="quote-strip">
-      <div>前方没有胜利，挺住意味一切</div>
-      <span>YaoYao Command Center</span>
+    f"""
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Inter:wght@300;400;600&display=swap" rel="stylesheet" />
+<div class="apple-home">
+  {build_nav_html(current_section, TOOLS)}
+  <div class="sub-nav">
+    <div class="sub-nav-inner store-lock">
+      <div class="sub-title">{escape(display_title)}</div>
+      <div class="sub-actions">
+        <a href="#modules" target="_self">浏览模块</a>
+        <a href="#feature" target="_self">精选</a>
+        <a class="pill pill-primary pill-sm" href="#modules" target="_self">进入工作台</a>
+      </div>
+    </div>
+  </div>
+  <main>
+    <section class="product-tile product-tile-light">
+      <div class="text-lock">
+        <div class="eyebrow">Yao · Campus · AI Operations</div>
+        <h1>学院行政智能中枢</h1>
+        <p class="lead lead-playful">Don't worry. Be happy.</p>
+        <div class="ctas">
+          <a class="pill pill-secondary" href="#feature" target="_self">了解更多</a>
+          <a class="pill pill-primary" href="#modules" target="_self">浏览模块</a>
+        </div>
+      </div>
     </section>
+    <div id="feature">{build_feature_html(current_section, TOOLS)}</div>
+    {build_store_html(current_section, TOOLS)}
+    <section class="quote quote-strip">
+      <h2>前方没有胜利，挺住意味一切</h2>
+      <span class="fine">YaoYao Command Center</span>
+    </section>
+  </main>
+</div>
     """,
     unsafe_allow_html=True,
 )
