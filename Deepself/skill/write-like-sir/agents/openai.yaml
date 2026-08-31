@@ -1,0 +1,4 @@
+interface:
+  display_name: "Sir 的表达与回复"
+  short_description: "按 Sir 的真实语感起草聊天回复、评论和个人文案"
+  default_prompt: "使用 $write-like-sir 按我的真实语感，替我回复下面这条消息。"

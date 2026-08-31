@@ -1,0 +1,12 @@
+# Private source material and analyses
+data/private/
+reports/private/
+
+# Temporary screenshots and OCR artifacts
+tmp/
+*.ocr.txt
+
+# Local runtime artifacts
+__pycache__/
+.pytest_cache/
+*.log
