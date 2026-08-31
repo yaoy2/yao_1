@@ -17,6 +17,16 @@ apply_home_theme()
 
 TOOLS = [
     {
+        "title": "GPT Planner · Luna Executor",
+        "desc": "展示一套由 Sol 定向编排、Luna 本地探索执行、ChatGPT 网页版负责规划与最终审查的低消耗协作流程。",
+        "tag": "AI 协作",
+        "created": "2026_08_31",
+        "page": "pages/21_22_gpt_planner_luna_executor.py",
+        "code": "M22",
+        "accent": "magenta",
+        "section": "个人",
+    },
+    {
         "title": "Awesome Design MD",
         "desc": "只读浏览本地拉取的 74 组品牌 DESIGN.md 设计规范，为页面设计和 AI 生成界面提供视觉参考。",
         "tag": "视觉资产",
