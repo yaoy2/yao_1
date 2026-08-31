@@ -1,0 +1,6 @@
+interface:
+  display_name: "GPT Planner → Luna Executor"
+  short_description: "Sol 定向、ChatGPT 规划审查、Luna 执行测试"
+  default_prompt: "使用 $gpt-planner-luna-executor：让 GPT 负责规划和审查，Luna 负责本地探索、执行和测试。"
+policy:
+  allow_implicit_invocation: true
