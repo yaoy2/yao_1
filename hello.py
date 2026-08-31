@@ -365,55 +365,34 @@ def build_nav_html(current_section, tools):
     )
 
 
-def _feature_tile(tool, variant, heading="h2"):
+FEATURED_CODES = {
+    "行政": ("M15", "M14", "M06"),
+    "教学": ("M17", "M18"),
+    "个人": ("M19", "M10", "M07"),
+}
+
+
+def _feature_card(tool):
     href = escape(build_streamlit_page_href(tool["page"]), quote=True)
     lead = FEATURED_LEADS.get(tool["code"], tool["desc"])
-    link_class = "text-link" if variant != "dark" else "pill pill-secondary"
-    primary_class = "pill pill-primary" if variant == "dark" else "text-link"
-    ctas = (
-        f'<div class="ctas">'
-        f'<a class="{link_class}" href="{href}" target="_self">了解更多</a>'
-        f'<a class="{primary_class}" href="{href}" target="_self">'
-        f'{"查看说明" if tool.get("blocked") else "打开"}</a>'
-        "</div>"
-    )
+    label = "查看说明" if tool.get("blocked") else "打开"
     return (
-        f'<div class="eyebrow">{escape(tool["code"])} · {escape(tool["tag"])}</div>'
-        f"<{heading}>{escape(tool['title'])}</{heading}>"
-        f'<p class="lead">{escape(lead)}</p>'
-        f"{ctas}"
+        f'<a class="feature-card" href="{href}" target="_self">'
+        f'<span class="eyebrow">{escape(tool["code"])} · {escape(tool["tag"])}</span>'
+        f"<strong>{escape(tool['title'])}</strong>"
+        f"<p>{escape(lead)}</p>"
+        f'<span class="feature-go">{label}</span>'
+        "</a>"
     )
 
 
 def build_feature_html(current_section, tools):
-    if current_section == "archived":
+    codes = FEATURED_CODES.get(current_section) or ()
+    if not codes:
         return ""
     by_code = {tool["code"]: tool for tool in tools}
-    if current_section == "行政":
-        dark, left, right = by_code["M15"], by_code["M14"], by_code["M06"]
-        return (
-            f'<section class="product-tile product-tile-dark"><div class="text-lock">{_feature_tile(dark, "dark")}</div></section>'
-            '<section class="split">'
-            f'<article class="product-tile product-tile-parchment">{_feature_tile(left, "light")}</article>'
-            f'<article class="product-tile product-tile-light">{_feature_tile(right, "light")}</article>'
-            "</section>"
-        )
-    if current_section == "教学":
-        dark, second = by_code["M17"], by_code["M18"]
-        return (
-            f'<section class="product-tile product-tile-dark"><div class="text-lock">{_feature_tile(dark, "dark")}</div></section>'
-            f'<section class="product-tile product-tile-parchment"><div class="text-lock">{_feature_tile(second, "light")}</div></section>'
-        )
-    if current_section == "个人":
-        dark, left, right = by_code["M19"], by_code["M10"], by_code["M07"]
-        return (
-            f'<section class="product-tile product-tile-dark"><div class="text-lock">{_feature_tile(dark, "dark")}</div></section>'
-            '<section class="split">'
-            f'<article class="product-tile product-tile-parchment">{_feature_tile(left, "light")}</article>'
-            f'<article class="product-tile product-tile-light">{_feature_tile(right, "light")}</article>'
-            "</section>"
-        )
-    return ""
+    cards = "".join(_feature_card(by_code[code]) for code in codes if code in by_code)
+    return f'<section class="feature-row" id="feature">{cards}</section>'
 
 
 def build_store_html(current_section, tools):
@@ -432,14 +411,14 @@ def build_store_html(current_section, tools):
             status = ' <span class="status">暂不开放</span>'
         cards.append(
             f'<article class="store-card{blocked}" id="module-{escape(tool["code"])}">'
-            f'<div class="card-media"><span>{escape(tool["code"])} · {escape(tool["tag"])}</span>'
-            '<div class="card-slab"></div></div>'
+            '<div class="store-card-main">'
+            f'<span class="store-code">{escape(tool["code"])}</span>'
+            f'<div class="store-copy">'
             f'<h3>{build_tool_title_html(tool)}{mark}{status}{build_tool_status_icon_html(tool)}</h3>'
             f'<p>{escape(tool["desc"])}</p>'
-            '<div class="store-foot">'
-            f'<span class="fine">{escape(tool["created"])}</span>'
+            "</div>"
             f'<a class="text-link" href="{href}" target="_self">'
-            f'{"查看说明" if tool.get("blocked") else "了解更多"}</a>'
+            f'{"查看说明" if tool.get("blocked") else "打开"}</a>'
             "</div></article>"
         )
     body = "".join(cards) or '<div class="empty">没有匹配的模块</div>'
@@ -489,10 +468,6 @@ st.markdown(
         <div class="eyebrow">Yao · Campus · AI Operations</div>
         <h1>学院行政智能中枢</h1>
         <p class="lead lead-playful">Don't worry. Be happy.</p>
-        <div class="ctas">
-          <a class="pill pill-secondary" href="#feature" target="_self">了解更多</a>
-          <a class="pill pill-primary" href="#modules" target="_self">浏览模块</a>
-        </div>
       </div>
     </section>
     <div id="feature">{build_feature_html(current_section, TOOLS)}</div>

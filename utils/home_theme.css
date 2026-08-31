@@ -15,7 +15,7 @@
             --rounded-lg: 18px;
             --rounded-pill: 9999px;
             --spacing-lg: 24px;
-            --spacing-section: 64px;
+            --spacing-section: 28px;
             --shadow-product: 3px 5px 30px rgba(0, 0, 0, 0.22);
             --font-display: "SF Pro Display", "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
             --font-text: "SF Pro Text", "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
@@ -25,7 +25,13 @@
         [data-testid="collapsedControl"] {
             display: none !important;
         }
-        header[data-testid="stHeader"] {
+        header[data-testid="stHeader"],
+        [data-testid="stToolbar"],
+        [data-testid="stDecoration"],
+        [data-testid="stStatusWidget"],
+        #MainMenu,
+        footer {
+            display: none !important;
             background: transparent !important;
         }
         .stApp {
@@ -39,9 +45,14 @@
         [data-testid="stMarkdownContainer"], [data-testid="stVerticalBlockBorderWrapper"] {
             overflow: visible !important;
         }
-        .block-container {
+        .block-container,
+        [data-testid="stAppViewBlockContainer"],
+        [data-testid="stMainBlockContainer"] {
             max-width: 100% !important;
             padding: 0 !important;
+        }
+        [data-testid="stMarkdownContainer"] p {
+            margin: 0;
         }
         .apple-home {
             color: var(--colors-ink);
@@ -213,126 +224,126 @@
         }
         .pill-sm { padding: 8px 15px; font-size: 14px; min-height: 36px; }
         .product-tile {
-            padding: var(--spacing-section) 20px;
+            padding: 28px 20px 12px;
             text-align: center;
         }
         .product-tile-light { background: var(--colors-canvas); }
-        .product-tile-parchment { background: var(--colors-canvas-parchment); }
-        .product-tile-dark {
-            background: var(--colors-surface-tile-1);
-            color: var(--colors-body-on-dark);
-        }
         .eyebrow {
             font-size: 12px;
             color: var(--colors-ink-muted-48);
         }
-        .product-tile-dark .eyebrow { color: var(--colors-body-muted); }
-        .product-tile h1, .product-tile h2 {
-            margin: 12px 0 10px;
+        .product-tile h1 {
+            margin: 8px 0 8px;
             font-family: var(--font-display);
             font-weight: 600;
-        }
-        .product-tile h1 { font-size: 56px; line-height: 1.07; }
-        .product-tile h2 { font-size: 40px; line-height: 1.1; }
-        .lead {
-            margin: 0 auto 24px;
-            max-width: 720px;
-            font-size: 28px;
-            line-height: 1.14;
+            font-size: 40px;
+            line-height: 1.1;
         }
         .lead-playful {
             font-family: "Fredoka", "Comic Neue", "Segoe UI Rounded", sans-serif;
-            font-size: 32px;
+            font-size: 24px;
             font-weight: 500;
             line-height: 1.3;
             letter-spacing: 0.4px;
             color: var(--colors-ink-muted-80);
+            margin: 0 auto 8px;
         }
-        .product-tile-dark .lead { color: var(--colors-body-muted); }
-        .ctas {
-            display: flex;
-            justify-content: center;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-        .split { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
-        .split .product-tile { min-height: 360px; }
-        .split .lead { font-size: 21px; }
-        .text-link { color: var(--colors-primary) !important; }
-        .store {
-            background: var(--colors-canvas-parchment);
-            padding: var(--spacing-section) 20px 48px;
-        }
-        .store-head { margin-bottom: 32px; }
-        .store-head h2 {
-            margin: 0;
-            font-family: var(--font-display);
-            font-size: 34px;
-            font-weight: 600;
-        }
-        .store-head p {
-            margin: 6px 0 0;
-            font-size: 14px;
-            color: var(--colors-ink-muted-48);
-        }
-        .card-grid {
+        .feature-row {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 12px;
+            width: min(980px, calc(100% - 40px));
+            margin: 8px auto 20px;
         }
-        .store-card {
-            background: var(--colors-canvas);
-            border: 1px solid var(--colors-hairline);
-            border-radius: var(--rounded-lg);
-            padding: var(--spacing-lg);
+        .feature-card {
             display: flex;
             flex-direction: column;
-            gap: 8px;
-        }
-        .store-card.is-blocked { opacity: 0.62; }
-        .card-media {
-            height: 72px;
-            border-radius: var(--rounded-sm);
-            background: var(--colors-canvas-parchment);
-            display: flex;
-            align-items: flex-end;
-            justify-content: space-between;
-            padding: 12px;
-        }
-        .card-media span {
-            font-size: 12px;
-            color: var(--colors-ink-muted-48);
-        }
-        .card-slab {
-            width: 54px;
-            height: 36px;
-            border-radius: var(--rounded-sm);
+            align-items: flex-start;
+            gap: 6px;
+            min-height: 0;
+            padding: 14px 16px;
+            border: 1px solid var(--colors-hairline);
+            border-radius: var(--rounded-lg);
             background: var(--colors-canvas);
-            box-shadow: var(--shadow-product);
+            text-align: left;
         }
-        .store-card h3, .store-card .tool-title {
-            margin: 0;
-            color: var(--colors-ink) !important;
-            font-size: 17px;
+        .feature-card strong {
+            font-family: var(--font-display);
+            font-size: 18px;
             font-weight: 600;
-            text-decoration: none !important;
+            line-height: 1.25;
         }
-        .status { font-size: 12px; color: var(--colors-ink-muted-48); }
-        .store-card p {
+        .feature-card p {
             margin: 0;
-            font-size: 14px;
+            font-size: 13px;
+            line-height: 1.4;
             color: var(--colors-ink-muted-80);
             display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
         }
-        .store-foot {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
+        .feature-go {
             margin-top: auto;
-            padding-top: 8px;
+            color: var(--colors-primary);
+            font-size: 13px;
+        }
+        .text-link { color: var(--colors-primary) !important; white-space: nowrap; }
+        .store {
+            background: var(--colors-canvas-parchment);
+            padding: 20px 20px 28px;
+        }
+        .store-head { margin-bottom: 14px; }
+        .store-head h2 {
+            margin: 0;
+            font-family: var(--font-display);
+            font-size: 24px;
+            font-weight: 600;
+        }
+        .store-head p {
+            margin: 4px 0 0;
+            font-size: 13px;
+            color: var(--colors-ink-muted-48);
+        }
+        .card-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 8px;
+        }
+        .store-card {
+            background: var(--colors-canvas);
+            border: 1px solid var(--colors-hairline);
+            border-radius: 12px;
+            padding: 10px 14px;
+        }
+        .store-card.is-blocked { opacity: 0.62; }
+        .store-card-main {
+            display: grid;
+            grid-template-columns: 3.2rem minmax(0, 1fr) auto;
+            gap: 10px;
+            align-items: center;
+        }
+        .store-code {
+            color: var(--colors-ink-muted-48);
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .store-copy { min-width: 0; }
+        .store-card h3, .store-card .tool-title {
+            margin: 0;
+            color: var(--colors-ink) !important;
+            font-size: 16px;
+            font-weight: 600;
+            text-decoration: none !important;
+        }
+        .status { font-size: 12px; color: var(--colors-ink-muted-48); }
+        .store-card p {
+            margin: 2px 0 0;
+            font-size: 13px;
+            color: var(--colors-ink-muted-80);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .fine { font-size: 12px; color: var(--colors-ink-muted-48); }
         .tool-lock, .tool-blocked, .tool-lock-spacer {
@@ -346,7 +357,7 @@
         .quote-strip.quote {
             display: block;
             margin-top: 0;
-            padding: var(--spacing-section) 20px;
+            padding: 28px 20px;
             border: 0;
             border-radius: 0;
             background: var(--colors-surface-tile-1);
@@ -355,9 +366,9 @@
             font-weight: 600;
         }
         .quote h2 {
-            margin: 0 0 16px;
+            margin: 0 0 8px;
             font-family: var(--font-display);
-            font-size: 40px;
+            font-size: 24px;
         }
         .quote .fine {
             color: var(--colors-body-muted);
@@ -369,18 +380,15 @@
             padding: 48px 16px;
             color: var(--colors-ink-muted-48);
         }
-        @media (max-width: 1068px) {
-            .product-tile h1 { font-size: 40px; }
-        }
         @media (max-width: 833px) {
             .nav-flyout { display: none !important; }
-            .split, .card-grid { grid-template-columns: 1fr 1fr; }
-            .product-tile, .quote { padding-top: 48px; padding-bottom: 48px; }
+            .feature-row { grid-template-columns: 1fr; }
+            .store-card-main { grid-template-columns: 3.2rem minmax(0, 1fr); }
+            .store-card-main .text-link { grid-column: 2; }
         }
         @media (max-width: 640px) {
-            .card-grid, .split { grid-template-columns: 1fr; }
-            .product-tile h1 { font-size: 34px; }
-            .lead, .lead-playful { font-size: 21px; }
-            .product-tile h2, .quote h2 { font-size: 34px; }
+            .product-tile h1 { font-size: 32px; }
+            .lead-playful { font-size: 20px; }
+            .quote h2 { font-size: 20px; }
             .sub-actions a:not(.pill) { display: none; }
         }
