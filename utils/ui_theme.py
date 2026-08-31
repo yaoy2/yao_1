@@ -68,76 +68,86 @@ def render_sidebar_nav() -> None:
         )
 
     nav_html = "".join(item_html(tool) for tool in ordered_tools)
-    st.sidebar.markdown(
+    st.markdown(
         f"""
         <style>
         [data-testid="stSidebar"] {{
             background: #f5f5f7 !important;
             border-right: 1px solid #e0e0e0 !important;
-            font-family: "SF Pro Text", "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+            color: #1d1d1f !important;
+            font-family: "SF Pro Text", "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif !important;
         }}
         [data-testid="stSidebar"] * {{
-            font-family: inherit;
+            font-family: inherit !important;
         }}
         [data-testid="stSidebar"] [data-testid="stSidebarNav"] {{
-            display: none;
+            display: none !important;
         }}
-        .custom-nav-title {{
+        [data-testid="stSidebar"] [data-testid="stSidebarCollapseButton"] button {{
+            color: #1d1d1f !important;
+            background: transparent !important;
+        }}
+        [data-testid="stSidebar"] ::-webkit-scrollbar-thumb {{
+            border-radius: 999px;
+            background: rgba(29, 29, 31, .2) !important;
+        }}
+        [data-testid="stSidebar"] .custom-nav-title {{
             display: flex;
             align-items: center;
             gap: .48rem;
             margin: .3rem .45rem .72rem;
-            color: #1d1d1f;
+            color: #1d1d1f !important;
             font-family: "SF Pro Display", "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
             font-size: .9rem;
             font-weight: 600;
             letter-spacing: -.01em;
         }}
-        .custom-nav-brand-mark {{
+        [data-testid="stSidebar"] .custom-nav-brand-mark {{
             display: inline-grid;
             place-items: center;
             width: 1.3rem;
             height: 1.3rem;
             border-radius: 50%;
-            background: #1d1d1f;
-            color: #fff;
+            background: #1d1d1f !important;
+            color: #fff !important;
             font-size: .67rem;
             font-weight: 600;
         }}
-        .custom-nav-item {{
+        [data-testid="stSidebar"] .custom-nav-item {{
             display: grid;
             grid-template-columns: 2.75rem minmax(0, 1fr);
             gap: .55rem;
             align-items: center;
             margin: .18rem .35rem;
             padding: .54rem .58rem;
-            border: 1px solid #e0e0e0;
-            border-radius: 12px;
-            background: #fff;
+            border: 1px solid #e0e0e0 !important;
+            border-radius: 12px !important;
+            background: #fff !important;
+            color: #1d1d1f !important;
             text-decoration: none !important;
             transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease;
         }}
-        .custom-nav-item:hover {{
-            border-color: rgba(0, 102, 204, .38);
-            background: #fff;
+        [data-testid="stSidebar"] .custom-nav-item:hover {{
+            border-color: rgba(0, 102, 204, .38) !important;
+            background: #fff !important;
             box-shadow: 0 5px 18px rgba(0, 0, 0, .08);
             transform: translateY(-1px);
         }}
-        .custom-nav-code {{
-            color: #0066cc;
+        [data-testid="stSidebar"] .custom-nav-code {{
+            color: #0066cc !important;
             font-family: "SF Pro Text", "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
             font-size: .72rem;
             font-weight: 600;
         }}
-        .custom-nav-main {{
+        [data-testid="stSidebar"] .custom-nav-main {{
             min-width: 0;
             display: flex;
             flex-direction: column;
             gap: .06rem;
         }}
-        .custom-nav-main strong {{
+        [data-testid="stSidebar"] .custom-nav-main strong {{
             overflow: hidden;
-            color: #1d1d1f;
+            color: #1d1d1f !important;
             font-family: "SF Pro Display", "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
             font-size: .84rem;
             font-weight: 600;
@@ -145,22 +155,27 @@ def render_sidebar_nav() -> None:
             text-overflow: ellipsis;
             white-space: nowrap;
         }}
-        .custom-nav-main em {{
+        [data-testid="stSidebar"] .custom-nav-main em {{
             overflow: hidden;
-            color: #7a7a7a;
+            color: #7a7a7a !important;
             font-size: .7rem;
             font-style: normal;
             text-overflow: ellipsis;
             white-space: nowrap;
         }}
-        .custom-nav-section {{
+        [data-testid="stSidebar"] .custom-nav-section {{
             margin: .75rem .48rem .25rem;
-            color: #7a7a7a;
+            color: #7a7a7a !important;
             font-size: .7rem;
             font-weight: 600;
             letter-spacing: .02em;
         }}
         </style>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.sidebar.markdown(
+        f"""
         <div class="custom-nav-title"><span class="custom-nav-brand-mark">Y</span>YaoYao 工具箱</div>
         <div class="custom-nav-section">按需排序</div>
         {nav_html}

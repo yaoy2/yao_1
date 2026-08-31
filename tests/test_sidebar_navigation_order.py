@@ -91,10 +91,16 @@ def test_sidebar_matches_homepage_apple_visual_tokens(monkeypatch):
     ui_theme.render_sidebar_nav()
 
     assert len(fake_st.sidebar.markdown_calls) == 1
-    body, kwargs = fake_st.sidebar.markdown_calls[0]
-    assert kwargs == {"unsafe_allow_html": True}
-    assert 'font-family: "SF Pro Text", "Inter"' in body
-    assert "#f5f5f7" in body
-    assert "#1d1d1f" in body
-    assert "#0066cc" in body
-    assert "rgba(57, 223, 247" not in body
+    nav_body, nav_kwargs = fake_st.sidebar.markdown_calls[0]
+    assert nav_kwargs == {"unsafe_allow_html": True}
+    assert "custom-nav-brand-mark" in nav_body
+    assert "示例工具" in nav_body
+
+    css = "\n".join(body for body, _kwargs in fake_st.markdown_calls)
+    assert '[data-testid="stSidebar"] .custom-nav-item' in css
+    assert 'font-family: "SF Pro Text", "Inter"' in css
+    assert "#f5f5f7" in css
+    assert "#1d1d1f" in css
+    assert "#0066cc" in css
+    assert "rgba(57, 223, 247" not in css
+    assert "!important" in css
