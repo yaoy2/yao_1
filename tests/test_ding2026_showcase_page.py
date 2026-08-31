@@ -128,3 +128,16 @@ def test_m20_page_has_no_operational_controls_or_runtime_dependencies():
     assert "127.0.0.1" not in source
     assert "E:\\github\\ding2026-system" not in source
 
+
+def test_m20_page_defines_a_high_contrast_light_content_system():
+    source = PAGE.read_text(encoding="utf-8")
+
+    for token in (
+        "--m20-ink: #161616",
+        "--m20-muted: #525252",
+        "--m20-blue: #0f62fe",
+        ".m20-hero p",
+        "color: var(--m20-ink)",
+        "background: #ffffff",
+    ):
+        assert token in source

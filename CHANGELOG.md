@@ -5,6 +5,17 @@
 
 This English change log mirrors the project history maintained in `CHANGELOG_ZH-CN.md`. It keeps the same dated structure and preserves the operational notes that matter for later troubleshooting: what changed, why it changed, what failed or detoured, and how the work was verified.
 
+## 2026-08-31
+
+- **Published the M20 file-transfer and distribution showcase**: added a read-only Streamlit page, a strict desensitized-snapshot contract, and homepage/sidebar entries. The page never reads real materials, databases, Google Drive, or the independent Ding2026 runtime and exposes no distribute, archive, or rollback controls.
+- **Fixed M20 text contrast**: the original dark gradient panel inherited text colors from the light homepage theme, leaving body and workflow copy nearly unreadable. It now uses an IBM-inspired white canvas, charcoal text, muted secondary copy, blue hierarchy rules, and flat borders, with a regression check for explicit high-contrast colors.
+- **Published M21 Awesome Design MD**: added searchable, selectable, read-only design-reference rendering and bundled 74 brand `DESIGN.md` files, source provenance, and licenses so local and deployed pages use the same assets.
+- **Fixed M21's deployed “not found” state**: the asset folder carried its own `.git`, so the parent repository did not track the documents. The source is now pinned to commit `8147538b4226ae41e2487a9179e3bcc1f68e8554`, assets are tracked by the parent repository, and the original Git metadata is recoverable at `C:\Users\Yao\AppData\Local\Temp\yao_1-awesome-design-md-upstream-git-8147538`.
+- **Synchronized and preserved the redesigned homepage**: remote synchronization confirmed `main` and `origin/main` were aligned without overwriting the user's section-based homepage. M21, M20, and M19 now participate in the Administration, Teaching, Personal, and archived navigation.
+- **Closed the repository-structure gap**: aligned English and Chinese READMEs to 20 current modules, documented M19–M21, added `docs/repository-structure.md` for main-app, independent-subproject, read-only-asset, dynamic-data, and local-generated-state boundaries, and marked the old M20 design/plan counts as historical baselines.
+- **Recorded the recovery detour**: direct removal of nested Git metadata was blocked by the safety layer. The recoverable move transferred its contents but Windows left an empty hidden directory; after confirming it was empty, the directory attributes were normalized and the shell was removed without losing any design documents.
+- **Verification**: all 165 repository tests passed, including M20/M21 page checks, homepage entry checks, sidebar order, asset-deployment contracts, and English/Chinese document mirrors. No local Streamlit service was started, following repository rules.
+
 ## 2026-08-24
 
 - **Added the independent Grok Builder subproject**: `codex-grok-builder/` now holds the controlled Codex-plan, user-approval, Grok Build implementation, and Codex-verification skill, with its own bilingual default changelog set.

@@ -1,0 +1,4 @@
+# Preserve the pinned upstream snapshot byte-for-byte while keeping parent-repo
+# whitespace checks focused on files maintained by this repository.
+.github/FUNDING.yml whitespace=-blank-at-eof
+README.md whitespace=-blank-at-eol

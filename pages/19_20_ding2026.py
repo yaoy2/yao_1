@@ -26,35 +26,73 @@ render_home_link()
 st.markdown(
     """
     <style>
+    :root {
+        --m20-ink: #161616;
+        --m20-muted: #525252;
+        --m20-blue: #0f62fe;
+        --m20-border: #e0e0e0;
+        --m20-surface: #f4f4f4;
+    }
     .m20-hero {
-        padding: 1rem 1.1rem;
-        margin-bottom: .75rem;
-        border: 1px solid rgba(57, 223, 247, .24);
-        border-radius: 14px;
-        background: linear-gradient(135deg, rgba(10, 28, 46, .95), rgba(22, 32, 42, .92));
+        padding: 1.1rem 1.25rem 1.2rem;
+        margin-bottom: 1rem;
+        border: 1px solid var(--m20-border);
+        border-top: 4px solid var(--m20-blue);
+        background: #ffffff;
+        color: var(--m20-ink);
     }
     .m20-kicker {
-        color: #39dff7;
+        color: var(--m20-blue);
         font-size: .78rem;
         font-weight: 800;
         letter-spacing: .06em;
     }
+    .m20-hero p {
+        margin: .55rem 0 0;
+        color: var(--m20-ink);
+        font-size: .98rem;
+        line-height: 1.65;
+    }
+    .m20-hero strong {
+        color: var(--m20-ink);
+        font-weight: 700;
+    }
     .m20-boundary {
-        margin-top: .65rem;
-        padding: .55rem .7rem;
-        border-left: 3px solid #f5b84b;
-        border-radius: 8px;
-        background: rgba(245, 184, 75, .08);
-        color: #f6dfb5;
+        margin-top: .85rem;
+        padding: .65rem .8rem;
+        border-left: 4px solid var(--m20-blue);
+        background: var(--m20-surface);
+        color: var(--m20-ink);
+        font-weight: 650;
+        line-height: 1.55;
     }
     .m20-flow {
-        padding: .72rem .8rem;
-        border: 1px solid rgba(84, 240, 163, .2);
-        border-radius: 10px;
-        background: rgba(84, 240, 163, .06);
-        color: #dff8ea;
+        padding: .8rem .9rem;
+        border: 1px solid var(--m20-border);
+        border-left: 4px solid var(--m20-blue);
+        background: var(--m20-surface);
+        color: var(--m20-ink);
         font-weight: 700;
         line-height: 1.6;
+    }
+    div[data-testid="stMetric"] {
+        min-height: 6rem;
+        padding: .8rem .9rem;
+        border-top: 1px solid var(--m20-border);
+        background: var(--m20-surface);
+    }
+    div[data-testid="stMetricLabel"] {
+        color: var(--m20-muted);
+    }
+    div[data-baseweb="tab-list"] {
+        border-bottom: 1px solid var(--m20-border);
+    }
+    button[data-baseweb="tab"] {
+        color: var(--m20-muted) !important;
+    }
+    button[data-baseweb="tab"][aria-selected="true"] {
+        color: var(--m20-ink) !important;
+        border-bottom-color: var(--m20-blue) !important;
     }
     </style>
     """,

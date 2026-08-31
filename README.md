@@ -28,13 +28,17 @@ This repository contains one main application and three independent subprojects.
 
 - **Online app**: [yao-1.streamlit.app](https://yao-1.streamlit.app/)
 - **Repository**: [github.com/yaoy2/yao_1](https://github.com/yaoy2/yao_1)
+- **Awesome Design MD (M21)**: read-only browsing of 74 bundled brand `DESIGN.md` references; local and deployed pages use the same pinned asset snapshot.
+- **Ding2026 File Transfer and Distribution (M20)**: presents desensitized aggregate status, manual distribution, transfer review, five archive timelines, and rollback boundaries without connecting to real material folders.
+- **Concept Fable Gallery (M19)**: turns abstract concepts into searchable Chinese fables with definitions and story mappings.
 - **Grade Workbench Guide (M18)**: explains the M17 workflow, score definitions, file locations, cross-computer status, and common questions.
 - **Teaching Grade Workbench (M17)**: manages rosters, group roadshow/report source scores, contribution coefficients, adjustment layers, validation, and review-workbook export.
 - **Legacy Grade Linkage (M16)**: replaced by M17 and marked with a red cross for historical reference; it remains between M17 and M15 in module-number order.
 - **Todo List**: the 14th locked tool panel. It records tasks newest-first, extracts common Chinese date/time hints, supports search, soft-archives completed tasks, and keeps `data/todo_items_backup.md` as a GitHub-syncable recovery file.
 - **LLM Budget Tracker**: the 13th tool panel, showing balances for supported LLM providers, including Gemini, and keeping editable login-account and expiration-date labels in `data/llm_budget_accounts.json`.
-- **Home style**: a dark Command Center cover; tools are listed in descending module-number order, with a fixed 3 x 3 grid per page.
-- **Navigation order**: homepage cards are sorted by the module codes in `hello.py`, independent of page filename prefixes or special insertion rules. New modules can use stable readable filenames while keeping a predictable numeric order.
+- **Home style**: a compact home surface organized by Administration, Teaching, Personal, and archived sections; module cards and featured entries come from `hello.py` metadata.
+- **Navigation order**: module codes and sections in `hello.py` are the single source of truth, independent of page filename prefixes or special insertion rules.
+- **Repository map**: [`docs/repository-structure.md`](docs/repository-structure.md) records the boundaries between the main app, independent subprojects, read-only assets, and local generated state.
 
 ---
 
@@ -102,9 +106,9 @@ Development was paused on 2026-08-11. The source, tests, and proof-of-concept re
 
 ---
 
-## Seventeen Current Tool Modules
+## Twenty Current Tool Modules
 
-Module numbers track launch order, so the current sequence is no longer continuous. Homepage order comes from metadata in `hello.py`, with nine cards per page. Red-cross modules are retained for history only and should not be used for new work.
+Module numbers track launch order, so the current sequence is no longer continuous. Homepage order and sections come from metadata in `hello.py`. Red-cross modules are retained for history only and should not be used for new work.
 
 ### 1. Report Grading System
 
@@ -228,6 +232,21 @@ Module numbers track launch order, so the current sequence is no longer continuo
 
 - **Use case**: quickly confirming what M18, M17, and M16 mean after a long gap between grading sessions.
 - **What it does**: documents the six-step workflow, score definitions, file locations, cross-computer cautions, and common questions.
+
+### 19. Concept Fable Gallery
+
+- **Use case**: turning hard-to-remember abstract concepts into searchable, rereadable Chinese fables.
+- **What it does**: stores the domain definition, fable, and mapping from each concept to story elements.
+
+### 20. Ding2026 File Transfer and Distribution
+
+- **Use case**: showing how college administrative materials are identified, manually distributed, reviewed in transfer, and archived across distinct time scopes.
+- **Boundary**: the page reads only a desensitized aggregate snapshot bundled with the repository. It never accesses real files, databases, Google Drive, or the independent Ding2026 runtime and exposes no operational controls.
+
+### 21. Awesome Design MD
+
+- **Use case**: finding brand design-system references for page design and AI-generated interfaces.
+- **What it does**: filters and renders 74 bundled `DESIGN.md` files in read-only mode, using the same pinned assets locally and in deployment.
 
 ---
 
