@@ -52,6 +52,9 @@ class HomePageTest(unittest.TestCase):
         self.assertIn('target="_self"', page_source)
         self.assertIn("quote-strip", page_source)
         self.assertIn("def apply_home_theme", theme_source)
+        self.assertIn("from utils.home_theme import apply_home_theme", page_source)
+        from utils.home_theme import apply_home_theme as imported_home_theme
+        self.assertTrue(callable(imported_home_theme))
         self.assertIn("render_sidebar_nav()", theme_source)
         self.assertIn("_load_homepage_tools", theme_source)
         self.assertIn("hello.py", theme_source)

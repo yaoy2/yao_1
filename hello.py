@@ -5,8 +5,7 @@ from urllib.parse import quote
 
 import streamlit as st
 
-from utils.ui_theme import apply_home_theme
-
+from utils.home_theme import apply_home_theme
 
 st.set_page_config(
     page_title="YaoYao's Space",
