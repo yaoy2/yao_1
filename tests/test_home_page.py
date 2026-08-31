@@ -1,6 +1,8 @@
 import ast
+import re
 import unittest
 from pathlib import Path
+from urllib.parse import quote
 
 
 def load_homepage_bits():
@@ -13,6 +15,7 @@ def load_homepage_bits():
         "sort_tool_key",
         "tools_for_section",
         "HOME_SECTIONS",
+        "build_streamlit_page_href",
     }
     selected = [
         node
@@ -23,7 +26,7 @@ def load_homepage_bits():
         )
         or (isinstance(node, ast.FunctionDef) and node.name in names)
     ]
-    namespace = {}
+    namespace = {"Path": Path, "re": re, "quote": quote}
     exec(compile(ast.Module(body=selected, type_ignores=[]), str(Path("hello.py")), "exec"), namespace)
     return page_source, namespace
 
@@ -118,6 +121,7 @@ class HomePageTest(unittest.TestCase):
         self.assertIn("M13", archived_codes)
         self.assertNotIn("M13", admin_codes)
         self.assertNotIn("M13", [tool["code"] for tool in namespace["tools_for_section"](tools, "个人")])
+        self.assertEqual("/20_ding2026", namespace["build_streamlit_page_href"]("pages/19_20_ding2026.py"))
 
     def test_homepage_order_is_module_number_driven_instead_of_filename_driven(self):
         _page_source, namespace = load_homepage_bits()
