@@ -72,20 +72,37 @@ def render_sidebar_nav() -> None:
         f"""
         <style>
         [data-testid="stSidebar"] {{
-            background: linear-gradient(180deg, #07111f 0%, #05090f 100%) !important;
-            border-right: 1px solid rgba(115, 238, 255, .18) !important;
+            background: #f5f5f7 !important;
+            border-right: 1px solid #e0e0e0 !important;
+            font-family: "SF Pro Text", "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
         }}
         [data-testid="stSidebar"] * {{
-            color: rgba(234, 247, 255, .86);
+            font-family: inherit;
         }}
         [data-testid="stSidebar"] [data-testid="stSidebarNav"] {{
             display: none;
         }}
         .custom-nav-title {{
-            margin: .35rem .45rem .6rem;
-            color: #EAF7FF;
-            font-size: .92rem;
-            font-weight: 850;
+            display: flex;
+            align-items: center;
+            gap: .48rem;
+            margin: .3rem .45rem .72rem;
+            color: #1d1d1f;
+            font-family: "SF Pro Display", "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: .9rem;
+            font-weight: 600;
+            letter-spacing: -.01em;
+        }}
+        .custom-nav-brand-mark {{
+            display: inline-grid;
+            place-items: center;
+            width: 1.3rem;
+            height: 1.3rem;
+            border-radius: 50%;
+            background: #1d1d1f;
+            color: #fff;
+            font-size: .67rem;
+            font-weight: 600;
         }}
         .custom-nav-item {{
             display: grid;
@@ -94,52 +111,57 @@ def render_sidebar_nav() -> None:
             align-items: center;
             margin: .18rem .35rem;
             padding: .54rem .58rem;
-            border: 1px solid rgba(57, 223, 247, .14);
-            border-radius: 8px;
-            background: rgba(255,255,255,.025);
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            background: #fff;
             text-decoration: none !important;
+            transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease;
         }}
         .custom-nav-item:hover {{
-            border-color: rgba(57, 223, 247, .32);
-            background: rgba(57, 223, 247, .09);
+            border-color: rgba(0, 102, 204, .38);
+            background: #fff;
+            box-shadow: 0 5px 18px rgba(0, 0, 0, .08);
+            transform: translateY(-1px);
         }}
         .custom-nav-code {{
-            color: #39DFF7;
-            font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-            font-size: .78rem;
-            font-weight: 850;
+            color: #0066cc;
+            font-family: "SF Pro Text", "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: .72rem;
+            font-weight: 600;
         }}
         .custom-nav-main {{
             min-width: 0;
             display: flex;
             flex-direction: column;
-            gap: .08rem;
+            gap: .06rem;
         }}
         .custom-nav-main strong {{
             overflow: hidden;
-            color: #EAF7FF;
-            font-size: .86rem;
-            line-height: 1.24;
+            color: #1d1d1f;
+            font-family: "SF Pro Display", "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: .84rem;
+            font-weight: 600;
+            line-height: 1.25;
             text-overflow: ellipsis;
             white-space: nowrap;
         }}
         .custom-nav-main em {{
             overflow: hidden;
-            color: rgba(234, 247, 255, .56);
-            font-size: .72rem;
+            color: #7a7a7a;
+            font-size: .7rem;
             font-style: normal;
             text-overflow: ellipsis;
             white-space: nowrap;
         }}
         .custom-nav-section {{
             margin: .75rem .48rem .25rem;
-            color: rgba(234, 247, 255, .52);
-            font-size: .72rem;
-            font-weight: 780;
-            letter-spacing: .08em;
+            color: #7a7a7a;
+            font-size: .7rem;
+            font-weight: 600;
+            letter-spacing: .02em;
         }}
         </style>
-        <div class="custom-nav-title">YaoYao 工具箱</div>
+        <div class="custom-nav-title"><span class="custom-nav-brand-mark">Y</span>YaoYao 工具箱</div>
         <div class="custom-nav-section">按需排序</div>
         {nav_html}
         """,
@@ -152,11 +174,17 @@ def render_home_link() -> None:
     st.markdown(
         """
         <style>
-        .home-link-fixed {
+        .st-key-home-link-fixed {
             position: fixed;
             top: 4.1rem;
             right: 1.35rem;
             z-index: 999999;
+            width: auto !important;
+        }
+        .st-key-home-link-fixed [data-testid="stButton"] {
+            margin: 0;
+        }
+        .st-key-home-link-fixed [data-testid="stButton"] button {
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -165,30 +193,40 @@ def render_home_link() -> None:
             border: 1px solid rgba(24, 34, 48, .16);
             border-radius: 8px;
             background: rgba(255, 255, 255, .94);
-            color: #182230 !important;
+            color: #1d1d1f !important;
+            font-family: "SF Pro Text", "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
             font-size: .86rem;
-            font-weight: 750;
+            font-weight: 600;
             text-decoration: none !important;
             box-shadow: 0 10px 26px rgba(24, 34, 48, .12);
         }
-        .home-link-fixed:hover {
-            border-color: rgba(45, 106, 79, .35);
-            background: #f8fffb;
+        .st-key-home-link-fixed [data-testid="stButton"] button:hover {
+            border-color: rgba(0, 102, 204, .38);
+            background: #f5f5f7;
+            color: #0066cc !important;
+        }
+        .st-key-home-link-fixed [data-testid="stButton"] button * {
+            color: inherit !important;
+            font-family: inherit;
         }
         @media (max-width: 720px) {
-            .home-link-fixed {
+            .st-key-home-link-fixed {
                 top: 3.65rem;
                 right: .75rem;
+            }
+            .st-key-home-link-fixed [data-testid="stButton"] button {
                 min-height: 32px;
                 padding: 0 .56rem;
                 font-size: .8rem;
             }
         }
         </style>
-        <a class="home-link-fixed" href="/" target="_self">🏠 回到主页</a>
         """,
         unsafe_allow_html=True,
     )
+    with st.container(key="home-link-fixed"):
+        if st.button("回到主页", icon="🏠", width="content"):
+            st.switch_page("hello.py")
 
 
 def apply_global_theme() -> None:
