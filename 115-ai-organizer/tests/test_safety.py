@@ -51,13 +51,13 @@ class SafetyTest(unittest.TestCase):
             assert_write_blocked("delete", self.settings)
         self.assertIn("禁止删除", str(ctx.exception))
 
-    def test_write_mode_true_still_blocked_in_phase1(self):
+    def test_write_mode_true_still_blocked_in_generic_entry(self):
         env_path = Path(self.tmpdir.name) / ".env2"
         env_path.write_text("WRITE_MODE=true\nALLOWED_ROOT=/云下载\n", encoding="utf-8")
         settings = load_settings(env_path)
         with self.assertRaises(WriteDisabledError) as ctx:
             assert_write_blocked("move", settings)
-        self.assertIn("不提供可调用的远程写入接口", str(ctx.exception))
+        self.assertIn("带确认码的审核清单执行器", str(ctx.exception))
 
 
 if __name__ == "__main__":

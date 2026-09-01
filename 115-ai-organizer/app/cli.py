@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from datetime import datetime
 from pathlib import Path
 
 from .config import load_settings
@@ -16,13 +17,23 @@ from .diagnostics import (
 from .logging_utils import setup_logger
 from .open115_provider import Open115ReadOnlyError, Open115ReadOnlyProvider
 from .openlist_client import OpenListClient, OpenListError, extract_native_id
+from .operations import (
+    Open115Writer,
+    OperationError,
+    approve_safe_plans,
+    build_manifest,
+    execute_manifest,
+    load_manifest,
+    save_manifest,
+)
 from .planner import rebuild_plans
+from .reporting import export_reports
 from .safety import assert_under_allowed_root
 from .scanner import scan
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="115 AI 文件整理系统（第一版只读）")
+    parser = argparse.ArgumentParser(description="115 AI 文件整理系统")
     sub = parser.add_subparsers(dest="command", required=True)
 
     sub.add_parser("status", help="检查 OpenList 连接状态")
@@ -62,6 +73,52 @@ def build_parser() -> argparse.ArgumentParser:
 
     sub.add_parser("rebuild-plans", help="按当前规则重新生成整理计划，不扫描 115")
     sub.add_parser("stats", help="查看本地索引统计")
+
+    report = sub.add_parser("report", help="导出 HTML、Excel 和 JSON 整理报告")
+    report.add_argument("--output-dir", default="reports")
+
+    sub.add_parser(
+        "approve-safe",
+        help="本地批准高/中置信度、非重复、具有原生ID的安全候选",
+    )
+
+    prepare = sub.add_parser(
+        "prepare-execution",
+        help="把已批准计划生成为带确认码的115操作清单，不修改115",
+    )
+    prepare.add_argument("--scan-root-id", required=True)
+    prepare.add_argument("--scan-root-path", default="")
+    prepare.add_argument("--organize-dir", default="已整理")
+    prepare.add_argument("--include-low-confidence", action="store_true")
+    prepare.add_argument("--include-duplicates", action="store_true")
+    prepare.add_argument("--include-auxiliary", action="store_true")
+    prepare.add_argument("--output", default="")
+
+    execute = sub.add_parser(
+        "execute-open115",
+        help="按已审核清单执行建目录、改名和移动；永不删除",
+    )
+    execute.add_argument("--manifest", required=True)
+    execute.add_argument("--confirm", required=True)
+    execute.add_argument("--continue-on-error", action="store_true")
+    execute.add_argument(
+        "--openlist-data-dir",
+        default=str(DEFAULT_OPENLIST_DATA_DIR),
+    )
+
+    full = sub.add_parser(
+        "full-workflow",
+        help="完整只读扫描指定文件夹并导出 HTML/Excel/JSON 报告",
+    )
+    full.add_argument("--root-folder-id", required=True)
+    full.add_argument("--dir", dest="scan_dir", default="")
+    full.add_argument("--depth", type=int, default=None)
+    full.add_argument("--max-files", type=int, default=0)
+    full.add_argument("--output-dir", default="reports")
+    full.add_argument(
+        "--openlist-data-dir",
+        default=str(DEFAULT_OPENLIST_DATA_DIR),
+    )
     return parser
 
 
@@ -106,7 +163,7 @@ def cmd_probe(settings, scan_dir: str) -> int:
     }
     print(json.dumps(report, ensure_ascii=False, indent=2, default=str))
     if content and native_count == 0:
-        print("警告：没有原生 file_id。第一版会停在小范围探测，不会用文件名伪装成 file_id。", file=sys.stderr)
+        print("警告：没有原生 file_id。程序会停在小范围探测，不会用文件名伪装成 file_id。", file=sys.stderr)
         return 2
     if not content:
         print("错误：目录列表为空，不能把这次探测当作成功。请运行 diagnose-listing。", file=sys.stderr)
@@ -169,6 +226,7 @@ def cmd_scan_open115(
             max_depth=depth,
             max_files=max_files,
             list_fn=provider.list_dir,
+            scan_root_id=root_folder_id,
         )
     except (ListingDiagnosticError, Open115ReadOnlyError) as exc:
         print(json.dumps({"status": "error", "error": str(exc)}, ensure_ascii=False, indent=2))
@@ -181,6 +239,74 @@ def cmd_stats(settings) -> int:
     init_db(settings.db_path)
     with db_session(settings.db_path) as conn:
         print(json.dumps(file_stats(conn), ensure_ascii=False, indent=2))
+    return 0
+
+
+def cmd_prepare_execution(settings, args) -> int:
+    manifest = build_manifest(
+        settings,
+        scan_root_id=args.scan_root_id,
+        scan_root_path=args.scan_root_path or settings.default_scan_dir,
+        organize_dir=args.organize_dir,
+        include_low_confidence=args.include_low_confidence,
+        include_duplicates=args.include_duplicates,
+        include_auxiliary=args.include_auxiliary,
+    )
+    output = args.output or str(
+        Path("reports") / f"115_操作清单_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    )
+    path = save_manifest(manifest, output)
+    print(json.dumps({
+        "manifest": str(path),
+        "operation_count": manifest["operation_count"],
+        "blocked_count": manifest["blocked_count"],
+        "confirmation_code": manifest["confirmation_code"],
+        "remote_writes_performed": False,
+    }, ensure_ascii=False, indent=2))
+    return 0
+
+
+def cmd_execute_open115(settings, args) -> int:
+    try:
+        manifest = load_manifest(args.manifest)
+        access_token, mounted_root_id = load_open115_storage(
+            Path(args.openlist_data_dir), settings.openlist_mount_path
+        )
+        provider = Open115ReadOnlyProvider(
+            access_token=access_token,
+            mounted_root_id=mounted_root_id,
+            scan_root_id=str(manifest["scan_root_id"]),
+            logical_root=str(manifest["scan_root_path"]),
+        )
+        provider.validate_scan_root()
+        writer = Open115Writer(access_token, str(manifest["scan_root_id"]))
+        result = execute_manifest(
+            settings,
+            manifest,
+            args.confirm,
+            writer,
+            continue_on_error=args.continue_on_error,
+        )
+    except (ListingDiagnosticError, Open115ReadOnlyError, OperationError, OSError, ValueError, json.JSONDecodeError) as exc:
+        print(json.dumps({"status": "error", "error": str(exc)}, ensure_ascii=False, indent=2))
+        return 1
+    print(json.dumps(result.as_dict(), ensure_ascii=False, indent=2))
+    return 0 if result.failed == 0 else 1
+
+
+def cmd_full_workflow(settings, args) -> int:
+    code = cmd_scan_open115(
+        settings,
+        args.root_folder_id,
+        args.scan_dir,
+        args.depth,
+        args.max_files,
+        args.openlist_data_dir,
+    )
+    if code != 0:
+        return code
+    result = export_reports(settings, args.output_dir)
+    print(json.dumps({"reports": result, "remote_writes_performed": False}, ensure_ascii=False, indent=2))
     return 0
 
 
@@ -210,6 +336,18 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.command == "stats":
         return cmd_stats(settings)
+    if args.command == "report":
+        print(json.dumps(export_reports(settings, args.output_dir), ensure_ascii=False, indent=2))
+        return 0
+    if args.command == "approve-safe":
+        print(json.dumps(approve_safe_plans(settings), ensure_ascii=False, indent=2))
+        return 0
+    if args.command == "prepare-execution":
+        return cmd_prepare_execution(settings, args)
+    if args.command == "execute-open115":
+        return cmd_execute_open115(settings, args)
+    if args.command == "full-workflow":
+        return cmd_full_workflow(settings, args)
     return 1
 
 

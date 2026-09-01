@@ -37,7 +37,7 @@ def assert_under_allowed_root(path: str, settings: Settings) -> str:
     candidate = normalize_path(path)
     if not is_under_root(candidate, settings.allowed_root):
         raise PathNotAllowedError(
-            f"路径超出允许范围：{candidate}。第一版只能访问 {settings.allowed_root}"
+            f"路径超出允许范围：{candidate}。本项目只能访问 {settings.allowed_root}"
         )
     return candidate
 
@@ -50,10 +50,10 @@ def assert_write_blocked(operation: str, settings: Settings | None = None) -> No
     if name in WRITE_OPERATIONS:
         if not write_mode:
             raise WriteDisabledError(
-                f"WRITE_MODE 未开启，禁止执行 {operation}。第一版只生成整理计划，不修改 115 文件。"
+                f"WRITE_MODE 未开启，通用入口禁止执行 {operation}。请使用带确认码的审核清单执行器。"
             )
         raise WriteDisabledError(
-            f"第一版不提供可调用的远程写入接口，即使 WRITE_MODE=true 也不会执行 {operation}。"
+            f"通用写入入口不执行 {operation}。远程整理只能通过带确认码的审核清单执行器完成。"
         )
     raise WriteDisabledError(f"未知写入操作已被拦截：{operation}")
 
@@ -66,7 +66,7 @@ class DryRunPreview:
     old_name: str
     new_name: str
     would_execute: bool = False
-    note: str = "dry-run only; phase 1 never writes to 115"
+    note: str = "dry-run only; generic write entry never writes to 115"
 
 
 def preview_write(

@@ -134,6 +134,52 @@ class DbAndScannerTest(unittest.TestCase):
         self.assertEqual("fid-1", extract_native_id({"name": "movie.mkv", "id": "fid-1"}))
         self.assertEqual("", extract_native_id({"name": "movie.mkv", "size": 10}))
 
+    def test_native_id_tracks_rename_without_duplicate_row(self):
+        def first_tree(path: str):
+            return {"content": [{
+                "name": "old.mkv", "file_id": "stable-1", "parent_id": "root-1",
+                "is_dir": False, "size": 10,
+            }]}
+
+        def renamed_tree(path: str):
+            return {"content": [{
+                "name": "new.mkv", "file_id": "stable-1", "parent_id": "root-2",
+                "is_dir": False, "size": 10,
+            }]}
+
+        scan(self.settings, scan_dir="/云下载", max_files=0, list_fn=first_tree, scan_root_id="root-1")
+        scan(self.settings, scan_dir="/云下载", max_files=0, list_fn=renamed_tree, scan_root_id="root-1")
+        conn = connect(self.db_path)
+        try:
+            rows = conn.execute(
+                "SELECT name, full_path, parent_id FROM files WHERE file_id = 'stable-1'"
+            ).fetchall()
+            self.assertEqual(1, len(rows))
+            self.assertEqual("new.mkv", rows[0]["name"])
+            self.assertEqual("/云下载/new.mkv", rows[0]["full_path"])
+            self.assertEqual("root-2", rows[0]["parent_id"])
+        finally:
+            conn.close()
+
+    def test_scan_counts_repeated_native_id_once(self):
+        def repeated_tree(path: str):
+            return {"content": [
+                {"name": "first.mkv", "file_id": "same-id", "parent_id": "root", "is_dir": False, "size": 10},
+                {"name": "stale-copy.mkv", "file_id": "same-id", "parent_id": "root", "is_dir": False, "size": 10},
+            ]}
+
+        result = scan(
+            self.settings,
+            scan_dir="/云下载",
+            max_files=0,
+            list_fn=repeated_tree,
+            scan_root_id="root",
+        )
+        self.assertEqual(1, result.file_count)
+        self.assertEqual(2, result.native_id_count)
+        self.assertEqual(1, result.duplicate_native_id_count)
+        self.assertEqual(1, result.as_dict()["unique_native_id_count"])
+
 
 if __name__ == "__main__":
     unittest.main()

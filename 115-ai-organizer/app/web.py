@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import html
 import sys
 from pathlib import Path
 
@@ -12,9 +13,11 @@ if str(ROOT) not in sys.path:
 from app.config import load_settings
 from app.db import db_session, file_stats, init_db, list_plans, set_plan_approved
 from app.openlist_client import OpenListClient
+from app.operations import approve_safe_plans
+from app.reporting import collect_report, export_reports
 
 
-st.set_page_config(page_title="115 整理系统（只读）", page_icon="📁", layout="wide")
+st.set_page_config(page_title="115 文件整理系统", page_icon="📁", layout="wide")
 
 st.markdown(
     """
@@ -85,10 +88,11 @@ settings = load_app_settings()
 init_db(settings.db_path)
 status = connection_status(settings)
 
-st.title("115 网盘整理系统 · 第一版只读")
-st.caption("只扫描、索引、生成建议。不会移动、重命名或删除 115 文件。WRITE_MODE 已关闭。")
+st.title("115 网盘整理系统")
+st.caption("扫描和报告默认只读；真正改名、移动必须使用已批准清单和一次性确认码。删除功能不存在。")
 
-info_cols = st.columns(6)
+report_snapshot = collect_report(settings)
+info_cols = st.columns(7)
 with db_session(settings.db_path) as conn:
     stats = file_stats(conn)
 
@@ -98,6 +102,7 @@ info_cols[2].metric("文件数", stats["file_count"])
 info_cols[3].metric("总容量", format_size(stats["total_size"]))
 info_cols[4].metric("待识别", stats["pending_count"])
 info_cols[5].metric("最近扫描", (stats["last_scan_time"] or "尚未扫描")[:19])
+info_cols[6].metric("重复风险", report_snapshot["duplicate_file_count"])
 
 if status.get("error"):
     st.warning(status["error"])
@@ -144,6 +149,16 @@ if filter_cols[5].button("取消批准", use_container_width=True):
         set_plan_approved(conn, ids, False)
     st.rerun()
 
+action_cols = st.columns([1, 1, 3])
+if action_cols[0].button("批准安全候选", use_container_width=True):
+    result = approve_safe_plans(settings)
+    st.success(f"已批准 {result['approved']} 项；重复、低置信度和待识别项目均已排除。")
+    st.rerun()
+if action_cols[1].button("生成完整报告", use_container_width=True):
+    result = export_reports(settings, ROOT / "reports")
+    st.success(f"报告已生成：{result['html']}")
+action_cols[2].caption("安全批准只改本地审核状态；生成报告只写本地文件，不会修改115。")
+
 if not plans:
     st.info("还没有整理计划。请先运行最多 50 个文件的扫描。")
 else:
@@ -154,18 +169,18 @@ else:
             f"""
             <div class="plan-row">
               <div class="plan-main">
-                <div class="name">{row["original_name"]}
-                  <span class="{tag_class}">{row["category"]}</span>
-                  <span class="tag">{row["confidence"]}</span>
+                <div class="name">{html.escape(str(row["original_name"]))}
+                  <span class="{tag_class}">{html.escape(str(row["category"]))}</span>
+                  <span class="tag">{html.escape(str(row["confidence"]))}</span>
                   <span class="tag">{approved_label}</span>
                 </div>
-                <div class="muted">原路径：{row["original_path"]}</div>
-                <div class="muted">建议路径：{row["suggested_path"]}</div>
+                <div class="muted">原路径：{html.escape(str(row["original_path"]))}</div>
+                <div class="muted">建议路径：{html.escape(str(row["suggested_path"]))}</div>
               </div>
               <div class="plan-side">
-                <div>建议文件名：{row["suggested_name"]}</div>
-                <div class="muted">{row["reason"]}</div>
-                <div class="muted">大小 {format_size(row.get("size"))} · 执行状态 {row["execute_status"]}</div>
+                <div>建议文件名：{html.escape(str(row["suggested_name"]))}</div>
+                <div class="muted">{html.escape(str(row["reason"]))}</div>
+                <div class="muted">大小 {format_size(row.get("size"))} · 执行状态 {html.escape(str(row["execute_status"]))}</div>
               </div>
             </div>
             """,
@@ -183,4 +198,4 @@ else:
                     set_plan_approved(conn, [row["id"]], False)
                 st.rerun()
 
-st.caption("第一版不会执行整理计划。批准只保存在本地数据库里。")
+st.caption("网页用于查看、批准和生成报告。远程执行必须在操作清单中核对确认码后单独启动。")

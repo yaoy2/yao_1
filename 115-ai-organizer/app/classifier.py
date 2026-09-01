@@ -140,7 +140,7 @@ def classify_item(
             suggested_name=name,
             suggested_path=full_path or f"/{name}",
             confidence="low",
-            reason="这是文件夹，第一版不生成移动建议。",
+            reason="这是文件夹，当前只对文件生成移动建议。",
             title=name,
         )
 
@@ -189,7 +189,7 @@ def classify_item(
             suggested_name=name,
             suggested_path=_join_path("音频", name),
             confidence="medium",
-            reason="这是音频文件，第一版不按影视剧分类。",
+            reason="这是音频文件，当前不按影视剧分类。",
             title=title,
             year=year,
         )
@@ -199,7 +199,7 @@ def classify_item(
             suggested_name=name,
             suggested_path=_join_path("其他", name),
             confidence="medium",
-            reason=f"扩展名 {ext} 不是第一版处理的视频类型。",
+            reason=f"扩展名 {ext} 不是当前规则处理的视频类型。",
             title=title,
         )
 

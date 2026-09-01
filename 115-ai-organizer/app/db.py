@@ -82,7 +82,7 @@ CREATE TABLE IF NOT EXISTS scan_runs (
 
 
 def utc_now() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    return datetime.now(timezone.utc).isoformat(timespec="microseconds")
 
 
 def connect(db_path: str | Path) -> sqlite3.Connection:
@@ -138,6 +138,35 @@ def upsert_file(conn: sqlite3.Connection, record: dict[str, Any]) -> int:
         else json.dumps(record.get("extra_json") or {}, ensure_ascii=False),
         "scan_time": record.get("scan_time") or utc_now(),
     }
+    if payload["file_id"] and payload["file_id_source"] == "native":
+        existing = conn.execute(
+            "SELECT id FROM files WHERE file_id = ? AND file_id_source = 'native'",
+            (payload["file_id"],),
+        ).fetchone()
+        if existing:
+            conn.execute(
+                """
+                UPDATE files SET
+                    parent_id = :parent_id,
+                    name = :name,
+                    full_path = :full_path,
+                    is_directory = :is_directory,
+                    extension = :extension,
+                    size = :size,
+                    created_at = :created_at,
+                    updated_at = :updated_at,
+                    duration = :duration,
+                    width = :width,
+                    height = :height,
+                    media_type = :media_type,
+                    hash_sha1 = :hash_sha1,
+                    extra_json = :extra_json,
+                    scan_time = :scan_time
+                WHERE id = :existing_id
+                """,
+                {**payload, "existing_id": int(existing["id"])},
+            )
+            return int(existing["id"])
     conn.execute(
         """
         INSERT INTO files (
@@ -235,6 +264,19 @@ def set_plan_approved(conn: sqlite3.Connection, plan_ids: Iterable[int], approve
     return conn.execute("SELECT changes()").fetchone()[0]
 
 
+def set_plan_execute_status(
+    conn: sqlite3.Connection, plan_id: int, status: str
+) -> None:
+    conn.execute(
+        """
+        UPDATE organize_plans
+        SET execute_status = ?, updated_at = ?
+        WHERE id = ?
+        """,
+        (status, utc_now(), int(plan_id)),
+    )
+
+
 def add_operation_log(conn: sqlite3.Connection, record: dict[str, Any]) -> None:
     conn.execute(
         """
@@ -294,6 +336,14 @@ def finish_scan_run(conn: sqlite3.Connection, run_id: int, summary: dict[str, An
 
 
 def file_stats(conn: sqlite3.Connection) -> dict[str, Any]:
+    current = conn.execute(
+        """
+        SELECT started_at FROM scan_runs
+        WHERE status = 'ok'
+        ORDER BY id DESC LIMIT 1
+        """
+    ).fetchone()
+    snapshot_start = current["started_at"] if current else ""
     row = conn.execute(
         """
         SELECT
@@ -303,15 +353,28 @@ def file_stats(conn: sqlite3.Connection) -> dict[str, Any]:
             SUM(CASE WHEN is_directory = 0 THEN size ELSE 0 END) AS total_size,
             MAX(scan_time) AS last_scan_time
         FROM files
-        """
+        WHERE scan_time >= ?
+        """,
+        (snapshot_start,),
     ).fetchone()
     pending = conn.execute(
-        "SELECT COUNT(*) AS n FROM organize_plans WHERE category = '待识别'"
+        """
+        SELECT COUNT(*) AS n
+        FROM organize_plans p JOIN files f ON f.id = p.file_row_id
+        WHERE p.category = '待识别' AND f.scan_time >= ?
+        """,
+        (snapshot_start,),
     ).fetchone()
     categories = {
         item["category"]: item["n"]
         for item in conn.execute(
-            "SELECT category, COUNT(*) AS n FROM organize_plans GROUP BY category"
+            """
+            SELECT p.category, COUNT(*) AS n
+            FROM organize_plans p JOIN files f ON f.id = p.file_row_id
+            WHERE f.scan_time >= ?
+            GROUP BY p.category
+            """,
+            (snapshot_start,),
         )
     }
     latest = conn.execute(
@@ -342,8 +405,12 @@ def list_plans(
     keyword: str = "",
     approved: str = "",
 ) -> list[dict[str, Any]]:
-    clauses = ["1=1"]
-    params: list[Any] = []
+    current = conn.execute(
+        "SELECT started_at FROM scan_runs WHERE status = 'ok' ORDER BY id DESC LIMIT 1"
+    ).fetchone()
+    snapshot_start = current["started_at"] if current else ""
+    clauses = ["f.scan_time >= ?"]
+    params: list[Any] = [snapshot_start]
     if category:
         clauses.append("p.category = ?")
         params.append(category)

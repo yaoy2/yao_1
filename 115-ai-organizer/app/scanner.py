@@ -38,6 +38,7 @@ class ScanResult:
     total_size: int = 0
     native_file_id_found: bool = False
     native_id_count: int = 0
+    duplicate_native_id_count: int = 0
     missing_id_count: int = 0
     status: str = "ok"
     error: str = ""
@@ -53,6 +54,8 @@ class ScanResult:
             "total_size": self.total_size,
             "native_file_id_found": self.native_file_id_found,
             "native_id_count": self.native_id_count,
+            "unique_native_id_count": self.native_id_count - self.duplicate_native_id_count,
+            "duplicate_native_id_count": self.duplicate_native_id_count,
             "missing_id_count": self.missing_id_count,
             "status": self.status,
             "error": self.error,
@@ -88,6 +91,7 @@ def scan(
     max_depth: int | None = None,
     max_files: int | None = None,
     list_fn: ListFn | None = None,
+    scan_root_id: str = "",
 ) -> ScanResult:
     init_db(settings.db_path)
     target = assert_under_allowed_root(scan_dir or settings.default_scan_dir, settings)
@@ -106,8 +110,9 @@ def scan(
         run_id = start_scan_run(conn, target, depth_limit, file_limit if file_limit < 10**9 else 0)
         result = ScanResult(run_id=run_id, scan_dir=target)
         try:
-            queue: deque[tuple[str, int, str]] = deque([(target, 0, "")])
+            queue: deque[tuple[str, int, str]] = deque([(target, 0, scan_root_id)])
             seen_dirs: set[str] = set()
+            seen_native_ids: set[str] = set()
             while queue:
                 current, depth, parent_id = queue.popleft()
                 current = normalize_path(current)
@@ -143,6 +148,10 @@ def scan(
                     if native_id:
                         result.native_file_id_found = True
                         result.native_id_count += 1
+                        if native_id in seen_native_ids:
+                            result.duplicate_native_id_count += 1
+                            continue
+                        seen_native_ids.add(native_id)
                         source = "native"
                     else:
                         result.missing_id_count += 1
@@ -150,7 +159,7 @@ def scan(
                     media = extract_media_fields(item)
                     record = {
                         "file_id": native_id,
-                        "parent_id": parent_id,
+                        "parent_id": str(item.get("parent_id") or parent_id),
                         "name": name,
                         "full_path": full_path,
                         "is_directory": is_directory,
