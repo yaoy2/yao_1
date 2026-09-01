@@ -248,46 +248,6 @@
             color: var(--colors-ink-muted-80);
             margin: 0 auto 8px;
         }
-        .feature-row {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 12px;
-            width: min(980px, calc(100% - 40px));
-            margin: 8px auto 20px;
-        }
-        .feature-card {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 6px;
-            min-height: 0;
-            padding: 14px 16px;
-            border: 1px solid var(--colors-hairline);
-            border-radius: var(--rounded-lg);
-            background: var(--colors-canvas);
-            text-align: left;
-        }
-        .feature-card strong {
-            font-family: var(--font-display);
-            font-size: 18px;
-            font-weight: 600;
-            line-height: 1.25;
-        }
-        .feature-card p {
-            margin: 0;
-            font-size: 13px;
-            line-height: 1.4;
-            color: var(--colors-ink-muted-80);
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-        .feature-go {
-            margin-top: auto;
-            color: var(--colors-primary);
-            font-size: 13px;
-        }
         .text-link { color: var(--colors-primary) !important; white-space: nowrap; }
         .store {
             background: var(--colors-canvas-parchment);
@@ -307,43 +267,57 @@
         }
         .card-grid {
             display: grid;
-            grid-template-columns: 1fr;
-            gap: 8px;
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+            gap: 12px;
         }
+        .span-2 { grid-column: span 2; }
+        .span-3 { grid-column: span 3; }
+        .span-4 { grid-column: span 4; }
+        .span-6 { grid-column: span 6; }
         .store-card {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
             background: var(--colors-canvas);
             border: 1px solid var(--colors-hairline);
-            border-radius: 12px;
-            padding: 10px 14px;
+            border-radius: 14px;
+            padding: 16px 18px;
         }
         .store-card.is-blocked { opacity: 0.62; }
-        .store-card-main {
-            display: grid;
-            grid-template-columns: 3.2rem minmax(0, 1fr) auto;
-            gap: 10px;
+        .store-meta {
+            display: flex;
             align-items: center;
+            justify-content: space-between;
+            gap: 8px;
         }
         .store-code {
             color: var(--colors-ink-muted-48);
             font-size: 12px;
             font-weight: 600;
+            letter-spacing: 0.3px;
         }
-        .store-copy { min-width: 0; }
         .store-card h3, .store-card .tool-title {
             margin: 0;
             color: var(--colors-ink) !important;
-            font-size: 16px;
+            font-size: 17px;
             font-weight: 600;
             text-decoration: none !important;
         }
         .status { font-size: 12px; color: var(--colors-ink-muted-48); }
         .store-card p {
-            margin: 2px 0 0;
+            margin: 0;
             font-size: 13px;
+            line-height: 1.5;
             color: var(--colors-ink-muted-80);
-            white-space: nowrap;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
             overflow: hidden;
-            text-overflow: ellipsis;
+        }
+        .store-card .text-link {
+            margin-top: auto;
+            font-size: 14px;
+            padding-top: 4px;
         }
         .fine { font-size: 12px; color: var(--colors-ink-muted-48); }
         .tool-lock, .tool-blocked, .tool-lock-spacer {
@@ -382,9 +356,8 @@
         }
         @media (max-width: 833px) {
             .nav-flyout { display: none !important; }
-            .feature-row { grid-template-columns: 1fr; }
-            .store-card-main { grid-template-columns: 3.2rem minmax(0, 1fr); }
-            .store-card-main .text-link { grid-column: 2; }
+            .card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .span-2, .span-3, .span-4, .span-6 { grid-column: span 2; }
         }
         @media (max-width: 640px) {
             .product-tile h1 { font-size: 32px; }

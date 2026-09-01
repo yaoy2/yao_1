@@ -252,18 +252,6 @@ SECTION_DISPLAY = {
     "archived": "archived",
 }
 
-FEATURED_LEADS = {
-    "M15": "把通知全文收成可寄出的秩序：标题、编号、落款，一次成形。",
-    "M14": "截止日期自动识别，做完就归档，学院的一天先落在纸面上。",
-    "M06": "教室、时间和安排，行政核对时立刻能看见。",
-    "M17": "花名册、路演、报告分和个人系数，校验后导出审核工作簿。",
-    "M18": "流程、口径、数据位置和跨电脑状态，先读这一页再动手。",
-    "M19": "把难懂的概念写成可重读的寓言，供自己慢慢回来。",
-    "M10": "灵感、摘录和写作素材，随手放下，日后还能找回来。",
-    "M07": "把微信文章和网页沉淀下来，减少个人资料流失。",
-}
-
-
 def sort_tool_key(tool):
     code = str(tool.get("code", "M0")).removeprefix("M")
     try:
@@ -375,61 +363,48 @@ def build_nav_html(current_section, tools):
     )
 
 
-FEATURED_CODES = {
-    "行政": ("M15", "M14", "M06"),
-    "教学": ("M17", "M18"),
-    "个人": ("M19", "M10", "M07"),
-}
+# 积木式网格：6 列，每行宽度不对称（4+2 / 3+3 / 2+4 循环），行行铺满，外框保持矩形
+BENTO_ROW_PATTERN = ((4, 2), (3, 3), (2, 4))
 
 
-def _feature_card(tool):
-    href = escape(build_streamlit_page_href(tool["page"]), quote=True)
-    lead = FEATURED_LEADS.get(tool["code"], tool["desc"])
-    label = "查看说明" if tool.get("blocked") else "打开"
-    return (
-        f'<a class="feature-card" href="{href}" target="_self">'
-        f'<span class="eyebrow">{escape(tool["code"])} · {escape(tool["tag"])}</span>'
-        f"<strong>{escape(tool['title'])}</strong>"
-        f"<p>{escape(lead)}</p>"
-        f'<span class="feature-go">{label}</span>'
-        "</a>"
-    )
-
-
-def build_feature_html(current_section, tools):
-    codes = FEATURED_CODES.get(current_section) or ()
-    if not codes:
-        return ""
-    by_code = {tool["code"]: tool for tool in tools}
-    cards = "".join(_feature_card(by_code[code]) for code in codes if code in by_code)
-    return f'<section class="feature-row" id="feature">{cards}</section>'
+def bento_spans(count, columns=6):
+    spans = []
+    remaining = count
+    row_index = 0
+    while remaining > 0:
+        row = BENTO_ROW_PATTERN[row_index % len(BENTO_ROW_PATTERN)]
+        if remaining >= len(row):
+            spans.extend(row)
+            remaining -= len(row)
+        else:
+            spans.append(columns)
+            remaining = 0
+        row_index += 1
+    return spans
 
 
 def build_store_html(current_section, tools):
     section_tools = tools_for_section(tools, current_section)
     title = SECTION_DISPLAY.get(current_section, current_section)
     copy = HOME_SECTIONS.get(current_section, "")
+    spans = bento_spans(len(section_tools))
     cards = []
-    for tool in section_tools:
+    for tool, span in zip(section_tools, spans):
         href = escape(build_streamlit_page_href(tool["page"]), quote=True)
         blocked = " is-blocked" if tool.get("blocked") else ""
-        mark = " ❌" if tool.get("blocked") else ""
         status = ""
         if tool.get("locked"):
-            status = ' <span class="status">需要密码</span>'
+            status = '<span class="status">需要密码</span>'
         elif tool.get("blocked"):
-            status = ' <span class="status">暂不开放</span>'
+            status = '<span class="status">暂不开放</span>'
         cards.append(
-            f'<article class="store-card{blocked}" id="module-{escape(tool["code"])}">'
-            '<div class="store-card-main">'
-            f'<span class="store-code">{escape(tool["code"])}</span>'
-            f'<div class="store-copy">'
-            f'<h3>{build_tool_title_html(tool)}{mark}{status}{build_tool_status_icon_html(tool)}</h3>'
-            f'<p>{escape(tool["desc"])}</p>'
-            "</div>"
+            f'<article class="store-card span-{span}{blocked}" id="module-{escape(tool["code"])}">'
+            f'<div class="store-meta"><span class="store-code">{escape(tool["code"])}</span>{status}</div>'
+            f"<h3>{build_tool_title_html(tool)}{build_tool_status_icon_html(tool)}</h3>"
+            f"<p>{escape(tool['desc'])}</p>"
             f'<a class="text-link" href="{href}" target="_self">'
             f'{"查看说明" if tool.get("blocked") else "打开"}</a>'
-            "</div></article>"
+            "</article>"
         )
     body = "".join(cards) or '<div class="empty">没有匹配的模块</div>'
     return (
@@ -467,7 +442,6 @@ st.markdown(
       <div class="sub-title">{escape(display_title)}</div>
       <div class="sub-actions">
         <a href="#modules" target="_self">浏览模块</a>
-        <a href="#feature" target="_self">精选</a>
         <a class="pill pill-primary pill-sm" href="#modules" target="_self">进入工作台</a>
       </div>
     </div>
@@ -480,7 +454,6 @@ st.markdown(
         <p class="lead lead-playful">Don't worry. Be happy.</p>
       </div>
     </section>
-    <div id="feature">{build_feature_html(current_section, TOOLS)}</div>
     {build_store_html(current_section, TOOLS)}
     <section class="quote quote-strip">
       <h2>前方没有胜利，挺住意味一切</h2>
