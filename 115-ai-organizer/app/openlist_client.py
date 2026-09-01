@@ -16,11 +16,25 @@ class OpenListError(RuntimeError):
     pass
 
 
+def to_api_path(logical_path: str, user_base_path: str) -> str:
+    logical = normalize_path(logical_path)
+    base = normalize_path(user_base_path or "")
+    if not base or base == "/":
+        return logical
+    if logical == base:
+        return "/"
+    if logical.startswith(base + "/"):
+        return normalize_path(logical[len(base):] or "/")
+    return logical
+
+
 class OpenListClient:
     def __init__(self, settings: Settings, session: requests.Session | None = None) -> None:
         self.settings = settings
         self.session = session or requests.Session()
         self.token = ""
+        self.user_base_path = ""
+        self._user_loaded = False
 
     def _url(self, path: str) -> str:
         return urljoin(self.settings.openlist_base_url.rstrip("/") + "/", path.lstrip("/"))
@@ -65,7 +79,18 @@ class OpenListClient:
         if not token:
             raise OpenListError("OpenList 登录成功但没有返回 token。")
         self.token = token
+        self._user_loaded = False
         return token
+
+    def ensure_user_context(self) -> None:
+        if self._user_loaded:
+            return
+        if not self.token:
+            self.login()
+        me_resp = self._request("GET", "/api/me")
+        me = me_resp.get("data") or {}
+        self.user_base_path = me.get("base_path") or ""
+        self._user_loaded = True
 
     def ping(self) -> dict[str, Any]:
         reachable = False
@@ -86,8 +111,7 @@ class OpenListClient:
         error = ""
         logged_in = False
         try:
-            if not self.token:
-                self.login()
+            self.ensure_user_context()
             me_resp = self._request("GET", "/api/me")
             me = me_resp.get("data") or {}
             logged_in = True
@@ -105,11 +129,12 @@ class OpenListClient:
 
     def list_dir(self, path: str, page: int = 1, per_page: int = 200, refresh: bool = False) -> dict[str, Any]:
         safe_path = assert_under_allowed_root(path, self.settings)
+        self.ensure_user_context()
         data = self._request(
             "POST",
             "/api/fs/list",
             {
-                "path": safe_path,
+                "path": to_api_path(safe_path, self.user_base_path),
                 "page": page,
                 "per_page": per_page,
                 "refresh": refresh,
@@ -119,7 +144,12 @@ class OpenListClient:
 
     def get_item(self, path: str) -> dict[str, Any]:
         safe_path = assert_under_allowed_root(path, self.settings)
-        data = self._request("POST", "/api/fs/get", {"path": safe_path})
+        self.ensure_user_context()
+        data = self._request(
+            "POST",
+            "/api/fs/get",
+            {"path": to_api_path(safe_path, self.user_base_path)},
+        )
         return data.get("data") or {}
 
     def mkdir(self, *args: Any, **kwargs: Any) -> None:

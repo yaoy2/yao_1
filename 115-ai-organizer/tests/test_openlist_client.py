@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import MagicMock
 
 from app.config import Settings
-from app.openlist_client import OpenListClient, extract_native_id
+from app.openlist_client import OpenListClient, extract_native_id, to_api_path
 from app.safety import PathNotAllowedError, WriteDisabledError
 
 
@@ -49,6 +49,12 @@ class OpenListClientTest(unittest.TestCase):
         token = client.login()
         self.assertEqual("abc", token)
         self.assertEqual("abc", client.token)
+
+    def test_to_api_path_strips_readonly_base_path(self):
+        self.assertEqual("/", to_api_path("/云下载", "/云下载"))
+        self.assertEqual("/电影", to_api_path("/云下载/电影", "/云下载"))
+        self.assertEqual("/云下载", to_api_path("/云下载", "/"))
+        self.assertEqual("/云下载", to_api_path("/云下载", ""))
 
     def test_native_id_from_common_keys(self):
         self.assertEqual("99", extract_native_id({"fid": "99", "name": "a.mkv"}))
