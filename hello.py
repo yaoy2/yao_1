@@ -246,7 +246,7 @@ HOME_SECTIONS = {
 }
 
 SECTION_DISPLAY = {
-    "行政": "行政狗",
+    "行政": "行政",
     "教学": "教学",
     "个人": "个人",
     "archived": "archived",
