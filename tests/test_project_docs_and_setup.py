@@ -46,6 +46,7 @@ def test_independent_subprojects_have_required_readmes():
     for name in ("Deepself", "zhongshengshi", "codex-grok-builder", "115-ai-organizer"):
         readme = ROOT / name / "README.md"
         assert readme.is_file(), f"{name} is missing README.md"
+    assert (ROOT / "115-ai-organizer" / "进度.md").is_file()
 
 
 def test_grok_builder_changelog_language_and_default_files_match():
