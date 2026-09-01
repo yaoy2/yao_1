@@ -26,9 +26,25 @@
 
 - 115 网页里「云下载」有约 3616 个文件夹、117 个文件
 - OpenList 点进去是空的，所以还没有扫描 50 个文件
-- 更可能是 115 Open 对超大目录返回空白，不是 cid 填错
+- 2026-09-01 实机诊断确认：115 Open 列表接口返回成功但 `data=[]`
+- 同一 Token 的官方搜索接口能找到目录；抽样 50 个文件夹，50 个都是 `is_private=1`
+- 因此主因不是 cid 或目录过大，而是 115 后端仍把这些条目标记为隐藏；OpenList 的 115 Open 驱动不会列出它们
 
-回家后先不要扫全部。先挂一个小文件夹做 50 条验证。
+不要直接扫全部，也不要批量修改 12TB。先对一个小文件夹实际取消隐藏属性，再做 50 条验证。
+
+### 为什么在 115 里“取消隐藏”后仍然空
+
+本机实测时，115 官方接口仍返回 `is_private=1`。这说明先前的操作没有覆盖这些条目的后端隐藏属性，可能只是退出隐藏浏览模式，也可能没有递归影响子文件夹。这里以接口实际状态为准。
+
+官方文件列表接口没有“包含隐藏条目”的公开参数；OpenList v4.2.5 的 115 Open 驱动调用的正是这个列表接口，所以无法靠 OpenList 的刷新、分页或改 cid 绕过。
+
+可运行脱敏诊断：
+
+```powershell
+python -m app diagnose-listing
+```
+
+该命令只读 `E:\OpenList\data\data.db` 中当前挂载信息，只向 115 官方接口发出串行只读请求；结果不显示 Token、文件名或个人内容。出现 `hidden_items_excluded_from_listing` 就表示“普通列表为空，但隐藏目录样本存在”。
 
 ## OpenList 是什么
 
@@ -361,11 +377,14 @@ cd E:\OpenList
 ```powershell
 python -m app status
 python -m app probe --dir "/云下载"
+python -m app diagnose-listing
 python -m app scan --dir "/云下载" --depth 8 --max-files 50
 python -m app stats
 python -m app rebuild-plans
 python -m unittest discover -s tests -v
 ```
+
+`probe` 遇到空目录会返回失败，不再把“0 条”当作探测成功。只读账号没有强制刷新权限时，结果会标记为 `empty_listing_refresh_denied`。
 
 ## 数据库和日志
 
