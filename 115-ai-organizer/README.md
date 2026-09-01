@@ -28,7 +28,9 @@
 - OpenList 点进去是空的，所以还没有扫描 50 个文件
 - 2026-09-01 实机诊断确认：115 Open 列表接口返回成功但 `data=[]`
 - 同一 Token 的官方搜索接口能找到目录；抽样 50 个文件夹，50 个都是 `is_private=1`
-- 因此主因不是 cid 或目录过大，而是 115 后端仍把这些条目标记为隐藏；OpenList 的 115 Open 驱动不会列出它们
+- 隐藏属性是首个已确认原因；但取消一个直属子文件夹的隐藏后，根目录仍返回0，说明根级列表还存在另一项115侧限制
+- 对一个已取消隐藏的小文件夹实测：OpenList 能看到 111 项，但公开列表不透出原生 `file_id`
+- 新增官方只读扫描通道后，已成功扫描 50 个文件，全部取得原生 ID，状态 `ok`
 
 不要直接扫全部，也不要批量修改 12TB。先对一个小文件夹实际取消隐藏属性，再做 50 条验证。
 
@@ -45,6 +47,24 @@ python -m app diagnose-listing
 ```
 
 该命令只读 `E:\OpenList\data\data.db` 中当前挂载信息，只向 115 官方接口发出串行只读请求；结果不显示 Token、文件名或个人内容。出现 `hidden_items_excluded_from_listing` 就表示“普通列表为空，但隐藏目录样本存在”。
+
+### 为什么索引阶段改用115官方 Open API
+
+OpenList 的公开 `/api/fs/list` 适合查看目录，但实测只返回名称、大小、时间和哈希，不透出115原生 `file_id`。整理系统不能用文件名伪造 ID，否则重名、改名或移动后会认错文件。
+
+因此现在采用混合方式：OpenList 继续负责本机授权、挂载和状态检查；索引阶段通过同一 Token 调115官方 Open API，只读取得原生 ID。程序会确认指定 CID 位于当前“云下载”挂载范围内，接口请求保持串行，单层目录超过10000项会主动停止。
+
+小文件夹首次扫描命令：
+
+```powershell
+python -m app scan-open115 `
+  --root-folder-id "小文件夹CID" `
+  --dir "/云下载" `
+  --depth 8 `
+  --max-files 50
+```
+
+先验证50个；未确认前不要扩大到500、5000或全量。
 
 ## OpenList 是什么
 
@@ -378,6 +398,7 @@ cd E:\OpenList
 python -m app status
 python -m app probe --dir "/云下载"
 python -m app diagnose-listing
+python -m app scan-open115 --root-folder-id "小文件夹CID" --dir "/云下载" --depth 8 --max-files 50
 python -m app scan --dir "/云下载" --depth 8 --max-files 50
 python -m app stats
 python -m app rebuild-plans

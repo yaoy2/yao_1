@@ -11,8 +11,10 @@ from .diagnostics import (
     DEFAULT_OPENLIST_DATA_DIR,
     ListingDiagnosticError,
     diagnose_open115_listing,
+    load_open115_storage,
 )
 from .logging_utils import setup_logger
+from .open115_provider import Open115ReadOnlyError, Open115ReadOnlyProvider
 from .openlist_client import OpenListClient, OpenListError, extract_native_id
 from .planner import rebuild_plans
 from .safety import assert_under_allowed_root
@@ -43,6 +45,20 @@ def build_parser() -> argparse.ArgumentParser:
     scan_cmd.add_argument("--dir", dest="scan_dir", default="")
     scan_cmd.add_argument("--depth", type=int, default=None, help="扫描深度，0 表示只扫当前目录")
     scan_cmd.add_argument("--max-files", type=int, default=None, help="最大文件数，默认 50。0 表示不限制")
+
+    direct_scan = sub.add_parser(
+        "scan-open115",
+        help="通过115官方 Open API 只读扫描，并保留原生 file_id",
+    )
+    direct_scan.add_argument("--root-folder-id", required=True, help="本次扫描根文件夹 ID")
+    direct_scan.add_argument("--dir", dest="scan_dir", default="")
+    direct_scan.add_argument("--depth", type=int, default=None)
+    direct_scan.add_argument("--max-files", type=int, default=None)
+    direct_scan.add_argument(
+        "--openlist-data-dir",
+        default=str(DEFAULT_OPENLIST_DATA_DIR),
+        help="OpenList data 目录，默认 E:\\OpenList\\data",
+    )
 
     sub.add_parser("rebuild-plans", help="按当前规则重新生成整理计划，不扫描 115")
     sub.add_parser("stats", help="查看本地索引统计")
@@ -128,6 +144,39 @@ def cmd_scan(settings, scan_dir: str, depth: int | None, max_files: int | None) 
     return 0 if result.status == "ok" else 1
 
 
+def cmd_scan_open115(
+    settings,
+    root_folder_id: str,
+    scan_dir: str,
+    depth: int | None,
+    max_files: int | None,
+    data_dir: str,
+) -> int:
+    try:
+        access_token, mounted_root_id = load_open115_storage(
+            Path(data_dir), settings.openlist_mount_path
+        )
+        provider = Open115ReadOnlyProvider(
+            access_token=access_token,
+            mounted_root_id=mounted_root_id,
+            scan_root_id=root_folder_id,
+            logical_root=scan_dir or settings.default_scan_dir,
+        )
+        provider.validate_scan_root()
+        result = scan(
+            settings,
+            scan_dir=scan_dir or settings.default_scan_dir,
+            max_depth=depth,
+            max_files=max_files,
+            list_fn=provider.list_dir,
+        )
+    except (ListingDiagnosticError, Open115ReadOnlyError) as exc:
+        print(json.dumps({"status": "error", "error": str(exc)}, ensure_ascii=False, indent=2))
+        return 1
+    print(json.dumps(result.as_dict(), ensure_ascii=False, indent=2))
+    return 0 if result.status == "ok" else 1
+
+
 def cmd_stats(settings) -> int:
     init_db(settings.db_path)
     with db_session(settings.db_path) as conn:
@@ -146,6 +195,15 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_diagnose_listing(settings, args.openlist_data_dir, args.mount_path)
     if args.command == "scan":
         return cmd_scan(settings, args.scan_dir, args.depth, args.max_files)
+    if args.command == "scan-open115":
+        return cmd_scan_open115(
+            settings,
+            args.root_folder_id,
+            args.scan_dir,
+            args.depth,
+            args.max_files,
+            args.openlist_data_dir,
+        )
     if args.command == "rebuild-plans":
         count = rebuild_plans(settings)
         print(json.dumps({"updated": count}, ensure_ascii=False))
