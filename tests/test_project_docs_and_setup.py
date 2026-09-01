@@ -43,7 +43,7 @@ def test_generated_output_and_dependency_folders_are_ignored():
 
 
 def test_independent_subprojects_have_required_readmes():
-    for name in ("Deepself", "zhongshengshi", "codex-grok-builder"):
+    for name in ("Deepself", "zhongshengshi", "codex-grok-builder", "115-ai-organizer"):
         readme = ROOT / name / "README.md"
         assert readme.is_file(), f"{name} is missing README.md"
 

@@ -24,6 +24,7 @@ E:\github\yao_1\
 ├── codex-grok-builder\             # 独立子项目
 ├── gpt-planner-luna-executor\      # 独立子项目
 ├── Deepself\                       # 独立子项目
+├── 115-ai-organizer\               # 115 网盘只读整理系统，第一版不改 115 文件
 └── zhongshengshi\                  # 已暂停的独立子项目
 ```
 

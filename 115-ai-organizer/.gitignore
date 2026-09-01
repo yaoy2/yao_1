@@ -1,0 +1,9 @@
+.env
+data/*.sqlite
+data/*.db
+data/*.db-journal
+logs/*.log
+__pycache__/
+*.pyc
+.pytest_cache/
+.streamlit/secrets.toml

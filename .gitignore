@@ -36,6 +36,9 @@ outputs/
 # Data
 *.db
 data/grade_workbench/
+115-ai-organizer/.env
+115-ai-organizer/data/*.sqlite
+115-ai-organizer/logs/*.log
 
 # Local run logs
 logs/*.log
