@@ -16,10 +16,12 @@ class GlmMonitorShowcaseTest(unittest.TestCase):
 
         self.assertFalse(app.exception)
         self.assertFalse(app.error)
-        self.assertEqual("M23 · GLM/ZCode 促销雷达", app.title[0].value)
+        self.assertEqual("M23 · GLM 促销雷达", app.title[0].value)
         rendered = "\n".join(item.value for item in app.markdown)
-        for text in ("每小时扫描", "官方渠道", "去重", "Windows 桌面通知", "只读展示"):
+        for text in ("Docker", "官方渠道", "去重", "钉钉", "只读展示"):
             self.assertIn(text, rendered)
+        self.assertNotIn("Windows 桌面通知", rendered)
+        self.assertNotIn("每小时扫描", rendered)
         self.assertEqual(1, len(app.sidebar.markdown))
         self.assertEqual(["回到主页"], [button.label for button in app.button])
         self.assertFalse(app.text_input)

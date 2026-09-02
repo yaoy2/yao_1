@@ -30,7 +30,7 @@ This repository contains one main application and five independent subprojects.
 
 - **Online app**: [yao-1.streamlit.app](https://yao-1.streamlit.app/)
 - **Repository**: [github.com/yaoy2/yao_1](https://github.com/yaoy2/yao_1)
-- **GLM/ZCode Promo Radar (M23)**: a read-only view of hourly official-source scanning, fact verification, local deduplication, and Windows notifications; the deployed page never runs the monitor.
+- **GLM Promo Radar (M23)**: a read-only view of the Docker scanner that watches Zhipu official pages, dedupes, and pushes DingTalk (or 无); the deployed page never runs the monitor.
 - **GPT Planner · Luna Executor (M22)**: a read-only explanation of the controlled Sol planning, Luna execution, and ChatGPT Web planning/review workflow.
 - **Awesome Design MD (M21)**: read-only browsing of 74 bundled brand `DESIGN.md` references; local and deployed pages use the same pinned asset snapshot.
 - **Ding2026 File Transfer and Distribution (M20)**: presents desensitized aggregate status, manual distribution, transfer review, five archive timelines, and rollback boundaries without connecting to real material folders.
@@ -257,10 +257,10 @@ Module numbers track launch order, so the current sequence is no longer continuo
 - **Use case**: explaining how complex local work is divided among Sol, Luna, and ChatGPT Web within explicit boundaries.
 - **Boundary**: the page only presents roles, packets, and review stages. It does not create agents, call models, control a browser, or modify projects.
 
-### 23. GLM/ZCode Promo Radar
+### 23. GLM Promo Radar
 
-- **Use case**: showing how ZCode, BigModel, and GLM Coding Plan token grants, quota changes, prices, and limited-time promotions are checked every hour.
-- **Boundary**: the page does not access the network, create scheduled tasks, read local state, or execute notification scripts. Real monitoring stays in the independent private repository and the local Windows environment.
+- **Use case**: showing what the Docker promo radar has and what it does: five daily scans, official Zhipu pages, DingTalk, and 无 when nothing is new.
+- **Boundary**: the page does not access the network, start the container, read local state, or send DingTalk. Real monitoring stays in the independent glm-monitor repository.
 
 ---
 

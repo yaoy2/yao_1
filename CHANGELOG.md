@@ -7,6 +7,7 @@ This English change log mirrors the project history maintained in `CHANGELOG_ZH-
 
 ## 2026-09-02
 
+- **Updated M23 to the Docker promo-radar showcase**: the page no longer describes ZCode hourly jobs or Windows toasts. It only shows what glm-monitor has and what it does (Docker, five daily scans, official sources, DingTalk, 无 when empty). Cards are compact and horizontal. Homepage copy, bilingual READMEs, and the repository map were aligned. The page stays read-only; Streamlit was not started.
 - **Published the M23 GLM/ZCode Promo Radar showcase**: added a compact read-only Streamlit page explaining hourly official-source scanning, promotion verification, local-state deduplication, Windows desktop notifications, and bounded failure handling. The page itself never accesses the network, creates tasks, reads local state, or executes PowerShell.
 - **Kept the operational project separate from the deployed showcase**: the independent private `glm-monitor` repository was cloned and verified as a clean `main`. Real monitoring stays in that repository and the local Windows environment; `yao_1` only gains the M23 page and home/sidebar entry, with no private state or runtime dependency added to deployment.
 - **Aligned module documentation**: the homepage places M23 in Personal ahead of M22 by module number. The bilingual READMEs, repository map, and default document mirrors now describe 22 current modules and also include M22, which had not yet been added to the README module list.
