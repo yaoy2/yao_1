@@ -17,6 +17,16 @@ apply_home_theme()
 
 TOOLS = [
     {
+        "title": "GLM/ZCode 促销雷达",
+        "desc": "展示一套每小时扫描智谱官方渠道、核验促销事实、本机去重并发送 Windows 通知的本地优先监控流程。",
+        "tag": "促销监控",
+        "created": "2026_09_02",
+        "page": "pages/22_23_glm_monitor.py",
+        "code": "M23",
+        "accent": "green",
+        "section": "个人",
+    },
+    {
         "title": "GPT Planner · Luna Executor",
         "desc": "展示一套由 Sol 定向编排、Luna 本地探索执行、ChatGPT 网页版负责规划与最终审查的低消耗协作流程。",
         "tag": "AI 协作",

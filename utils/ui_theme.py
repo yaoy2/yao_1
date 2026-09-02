@@ -184,8 +184,9 @@ def render_sidebar_nav() -> None:
     )
 
 
-def render_home_link() -> None:
-    render_sidebar_nav()
+def render_home_link(*, include_sidebar: bool = True) -> None:
+    if include_sidebar:
+        render_sidebar_nav()
     st.markdown(
         """
         <style>

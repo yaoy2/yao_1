@@ -5,6 +5,14 @@
 
 This English change log mirrors the project history maintained in `CHANGELOG_ZH-CN.md`. It keeps the same dated structure and preserves the operational notes that matter for later troubleshooting: what changed, why it changed, what failed or detoured, and how the work was verified.
 
+## 2026-09-02
+
+- **Published the M23 GLM/ZCode Promo Radar showcase**: added a compact read-only Streamlit page explaining hourly official-source scanning, promotion verification, local-state deduplication, Windows desktop notifications, and bounded failure handling. The page itself never accesses the network, creates tasks, reads local state, or executes PowerShell.
+- **Kept the operational project separate from the deployed showcase**: the independent private `glm-monitor` repository was cloned and verified as a clean `main`. Real monitoring stays in that repository and the local Windows environment; `yao_1` only gains the M23 page and home/sidebar entry, with no private state or runtime dependency added to deployment.
+- **Aligned module documentation**: the homepage places M23 in Personal ahead of M22 by module number. The bilingual READMEs, repository map, and default document mirrors now describe 22 current modules and also include M22, which had not yet been added to the README module list.
+- **Recorded the test path**: M23 page, read-only boundary, home, sidebar, and documentation contract tests were added first and produced seven expected failures. On the first green attempt, the shared theme's required “Back to home” navigation button exposed an incorrect test assumption, so the test was narrowed to allow only that fixed navigation control. Independent review then found that M23 called two shared theme helpers that each rendered the full sidebar; after a failing regression test reproduced the duplicate, the home-link helper gained an optional sidebar-reuse switch and the page now renders one navigation set.
+- **Verification**: all 172 main-application tests under `tests/` passed; the 17 focused M23 checks, syntax compilation, and `git diff --check` also passed. The independent `115-ai-organizer` passed 39 tests and 16 subtests when run from its own directory. A no-argument pytest run from the repository root still hits that independent project's existing `app` import-path boundary during collection; this is not an M23 failure. No Streamlit service was started, following repository rules.
+
 ## 2026-08-31
 
 - **Published the M20 file-transfer and distribution showcase**: added a read-only Streamlit page, a strict desensitized-snapshot contract, and homepage/sidebar entries. The page never reads real materials, databases, Google Drive, or the independent Ding2026 runtime and exposes no distribute, archive, or rollback controls.

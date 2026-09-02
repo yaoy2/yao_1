@@ -15,12 +15,14 @@ The project is built around real administrative, teaching-support, competition-g
 
 ## Repository Structure
 
-This repository contains one main application and three independent subprojects.
+This repository contains one main application and five independent subprojects.
 
 - **Main application**: the Streamlit / YaoYao toolbox at the repository root. The entry points are `hello.py` and `启动YaoYao工具箱.bat`. Internal directories such as `pages/`, `utils/`, `scripts/`, `config/`, `assets/`, and `tests/` belong to this application; they are not separate subprojects.
 - **Deepself** ([`Deepself/`](Deepself/README.md)): an initialized independent subproject. Goals, scope, and implementation are not defined yet.
 - **Zhongshengshi** ([`zhongshengshi/`](zhongshengshi/README.md)): a paused independent Next.js multi-model roundtable proof of concept. Active development and deployment stopped on 2026-08-11.
 - **Grok Builder** ([`codex-grok-builder/`](codex-grok-builder/README.md)): an active independent Codex skill that runs a controlled Codex-plan / Grok-implement loop.
+- **GPT Planner · Luna Executor** ([`gpt-planner-luna-executor/`](gpt-planner-luna-executor/SKILL.md)): an independent Codex skill for the controlled Sol / Luna / ChatGPT Web collaboration workflow.
+- **115 AI Organizer** ([`115-ai-organizer/`](115-ai-organizer/README.md)): an independent read-only 115-drive organization project with its own application package and test entry point.
 
 ---
 
@@ -28,6 +30,8 @@ This repository contains one main application and three independent subprojects.
 
 - **Online app**: [yao-1.streamlit.app](https://yao-1.streamlit.app/)
 - **Repository**: [github.com/yaoy2/yao_1](https://github.com/yaoy2/yao_1)
+- **GLM/ZCode Promo Radar (M23)**: a read-only view of hourly official-source scanning, fact verification, local deduplication, and Windows notifications; the deployed page never runs the monitor.
+- **GPT Planner · Luna Executor (M22)**: a read-only explanation of the controlled Sol planning, Luna execution, and ChatGPT Web planning/review workflow.
 - **Awesome Design MD (M21)**: read-only browsing of 74 bundled brand `DESIGN.md` references; local and deployed pages use the same pinned asset snapshot.
 - **Ding2026 File Transfer and Distribution (M20)**: presents desensitized aggregate status, manual distribution, transfer review, five archive timelines, and rollback boundaries without connecting to real material folders.
 - **Concept Fable Gallery (M19)**: turns abstract concepts into searchable Chinese fables with definitions and story mappings.
@@ -106,7 +110,7 @@ Development was paused on 2026-08-11. The source, tests, and proof-of-concept re
 
 ---
 
-## Twenty Current Tool Modules
+## Twenty-Two Current Tool Modules
 
 Module numbers track launch order, so the current sequence is no longer continuous. Homepage order and sections come from metadata in `hello.py`. Red-cross modules are retained for history only and should not be used for new work.
 
@@ -247,6 +251,16 @@ Module numbers track launch order, so the current sequence is no longer continuo
 
 - **Use case**: finding brand design-system references for page design and AI-generated interfaces.
 - **What it does**: filters and renders 74 bundled `DESIGN.md` files in read-only mode, using the same pinned assets locally and in deployment.
+
+### 22. GPT Planner · Luna Executor
+
+- **Use case**: explaining how complex local work is divided among Sol, Luna, and ChatGPT Web within explicit boundaries.
+- **Boundary**: the page only presents roles, packets, and review stages. It does not create agents, call models, control a browser, or modify projects.
+
+### 23. GLM/ZCode Promo Radar
+
+- **Use case**: showing how ZCode, BigModel, and GLM Coding Plan token grants, quota changes, prices, and limited-time promotions are checked every hour.
+- **Boundary**: the page does not access the network, create scheduled tasks, read local state, or execute notification scripts. Real monitoring stays in the independent private repository and the local Windows environment.
 
 ---
 

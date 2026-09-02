@@ -13,12 +13,14 @@
 
 ## 仓库结构
 
-本仓库包含一个主应用和三个独立子项目。
+本仓库包含一个主应用和五个独立子项目。
 
 - **主应用**：根目录的 Streamlit / YaoYao 工具箱，入口是 `hello.py` 和 `启动YaoYao工具箱.bat`。`pages/`、`utils/`、`scripts/`、`config/`、`assets/`、`tests/` 是这个主应用的组成部分，不是独立子项目。
 - **Deepself**（[`Deepself/`](Deepself/README.md)）：已初始化、尚未实现的独立子项目。目标、功能范围和技术栈仍待确认。
 - **众声室**（[`zhongshengshi/`](zhongshengshi/README.md)）：已暂停的独立 Next.js 多模型圆桌概念验证。2026-08-11 起不再主动开发或部署。
 - **Grok Builder**（[`codex-grok-builder/`](codex-grok-builder/README.md)）：正在使用的独立 Codex 技能子项目，用于受控的 Codex 规划 / Grok 实施闭环。
+- **GPT Planner · Luna Executor**（[`gpt-planner-luna-executor/`](gpt-planner-luna-executor/SKILL.md)）：独立 Codex 技能子项目，用于受控的 Sol / Luna / ChatGPT Web 协作流程。
+- **115 AI Organizer**（[`115-ai-organizer/`](115-ai-organizer/README.md)）：独立的 115 网盘只读整理项目，拥有自己的应用包和测试入口。
 
 ---
 
@@ -26,6 +28,8 @@
 
 - **线上入口**：[yao-1.streamlit.app](https://yao-1.streamlit.app/)
 - **仓库地址**：[github.com/yaoy2/yao_1](https://github.com/yaoy2/yao_1)
+- **GLM/ZCode 促销雷达（M23）**：只读展示每小时扫描官方渠道、事实核验、本机去重和 Windows 通知流程；线上页面不执行监控。
+- **GPT Planner · Luna Executor（M22）**：只读说明 Sol 定向编排、Luna 本地执行与 ChatGPT 网页版规划/审查的受控协作方式。
 - **Awesome Design MD（M21）**：只读浏览主库内置的 74 组品牌 `DESIGN.md` 设计规范；来源版本固定，线上与本地读取同一份资产。
 - **Ding2026 文件中转发放系统（M20）**：以脱敏静态快照展示文件识别、人工分发、中转裁决、五条时间轴归档和撤销边界，不连接真实材料目录。
 - **概念寓言馆（M19）**：把抽象概念改写为可检索、可重读的中文寓言，并保存概念定义与故事映射。
@@ -104,7 +108,7 @@ KIMI_MODEL=
 
 ---
 
-## 二十个现存工具模块
+## 二十二个现存工具模块
 
 模块编号记录上线顺序，因此当前编号不再连续。首页入口以 `hello.py` 的元数据和分区为准。带红色叉号的模块仅保留历史对照，不再用于新任务。
 
@@ -225,6 +229,14 @@ KIMI_MODEL=
 ### 21. 🧩 Awesome Design MD
 - **场景**：为页面设计和 AI 界面生成查找品牌设计系统参考。
 - **功能**：只读筛选和浏览 74 组本地 `DESIGN.md`；资产固定在主库中，部署与本地使用同一来源。
+
+### 22. 🤝 GPT Planner · Luna Executor
+- **场景**：说明复杂本地任务如何在受控边界内分配给 Sol、Luna 与 ChatGPT 网页版。
+- **边界**：页面只展示角色、Packet 和审查流程，不创建代理、不调用模型、不控制浏览器，也不修改项目。
+
+### 23. 📡 GLM/ZCode 促销雷达
+- **场景**：展示如何每小时检查 ZCode、BigModel 与 GLM Coding Plan 的 Token、额度、价格和限时活动。
+- **边界**：页面不联网、不创建定时任务、不读取本机状态、不执行通知脚本；真实监控保留在独立私有仓库和 Windows 本机。
 
 ---
 

@@ -5,7 +5,7 @@ from utils.ui_theme import _get_sidebar_tools, _load_homepage_tools
 def test_sidebar_starts_with_current_showcase_tools():
     tools = _get_sidebar_tools(_load_homepage_tools())
     codes = [tool["code"] for tool in tools]
-    assert codes[:5] == ["M22", "M21", "M20", "M19", "M18"]
+    assert codes[:5] == ["M23", "M22", "M21", "M20", "M19"]
     assert codes[codes.index("M06") : codes.index("M06") + 3] == ["M06", "M16", "M13"]
     assert tools[codes.index("M16")]["blocked"] is True
 

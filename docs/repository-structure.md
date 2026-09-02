@@ -10,7 +10,9 @@ E:\github\yao_1\
 ├── pages\                           # Streamlit 页面；文件名前缀只控制原生侧栏顺序
 │   ├── 18_19_concept_fables.py     # M19 概念寓言馆
 │   ├── 19_20_ding2026.py           # M20 文件中转发放系统只读展示
-│   └── 20_21_awesome_design_md.py  # M21 Awesome Design MD 只读展示
+│   ├── 20_21_awesome_design_md.py  # M21 Awesome Design MD 只读展示
+│   ├── 21_22_gpt_planner_luna_executor.py # M22 AI 协作流程只读展示
+│   └── 22_23_glm_monitor.py        # M23 GLM/ZCode 促销雷达只读展示
 ├── utils\                           # 主应用可复用逻辑、数据校验和主题辅助
 ├── assets\                          # 可随主库部署的静态资产
 │   ├── ding2026_m20_snapshot.json  # M20 脱敏聚合快照
@@ -28,11 +30,13 @@ E:\github\yao_1\
 └── zhongshengshi\                  # 已暂停的独立子项目
 ```
 
-## M19—M21 边界
+## M19—M23 边界
 
 - **M19**：页面读取 `concept_fables/`；新增寓言由对应 Skill 写入，页面本身不提供写入操作。
 - **M20**：页面只读取 `assets/ding2026_m20_snapshot.json`。真实扫描、分发、归档、撤销、配置和数据库继续只在独立本地项目 `E:\github\ding2026-system` 中运行，主库没有运行时依赖。
 - **M21**：页面只读 `assets/awesome-design-md/design-md/`。来源 URL 和固定提交记录在 `assets/awesome-design-md/SOURCE.md`；源仓库的 `.git` 元数据不嵌入主库，避免线上部署遗漏资产。
+- **M22**：页面只介绍 `gpt-planner-luna-executor/` 的角色、Packet 和审查流程，不创建代理、不调用模型、不控制浏览器，也不修改项目。
+- **M23**：页面只展示 GLM-Monitor 的扫描、核验、去重和通知架构，不访问网络、不读取本机状态、不执行 PowerShell。真实监控保留在独立私有仓库和 Windows 本机，主库没有运行时依赖。
 
 ## 本机状态与清理规则
 

@@ -13,13 +13,13 @@ def test_english_default_documents_match_their_named_versions():
     assert read("CHANGELOG.md") == read("CHANGELOG_EN.md")
 
 
-def test_readmes_cover_current_m19_to_m21_modules():
+def test_readmes_cover_current_m19_to_m23_modules():
     chinese = read("README_ZH-CN.md")
     english = read("README_EN.md")
-    assert "二十个现存工具模块" in chinese
-    assert all(code in chinese for code in ("M19", "M20", "M21"))
-    assert "Twenty Current Tool Modules" in english
-    assert all(code in english for code in ("M19", "M20", "M21"))
+    assert "二十二个现存工具模块" in chinese
+    assert all(code in chinese for code in ("M19", "M20", "M21", "M22", "M23"))
+    assert "Twenty-Two Current Tool Modules" in english
+    assert all(code in english for code in ("M19", "M20", "M21", "M22", "M23"))
 
 
 def test_beginner_setup_files_reference_real_entry_points():
