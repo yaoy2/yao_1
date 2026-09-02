@@ -46,11 +46,12 @@ class GlmMonitorShowcaseTest(unittest.TestCase):
                     called_names.add(node.func.id)
 
         self.assertEqual({"streamlit", "utils"}, imported_roots)
+        self.assertIn("render_home_link()", PAGE.read_text(encoding="utf-8"))
+        self.assertNotIn("include_sidebar", PAGE.read_text(encoding="utf-8"))
         self.assertTrue(
             called_names.issubset(
                 {
                     "st.set_page_config",
-                    "apply_global_theme",
                     "render_home_link",
                     "st.markdown",
                     "st.title",

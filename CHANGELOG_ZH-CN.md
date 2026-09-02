@@ -2,6 +2,7 @@
 
 ## 2026-09-02
 
+- **修复 M23 线上 TypeError**：Streamlit Cloud 在 `render_home_link(include_sidebar=False)` 报错。M23 改为与其他展示页相同，只调用无参数的 `render_home_link()`，由该函数渲染侧栏和回到主页，避免重复侧栏和关键词参数不兼容。
 - **M23 改为 Docker 促销雷达展示**：页面不再讲 ZCode 每小时任务和 Windows 弹窗，只展示 glm-monitor 有什么、做了什么（Docker、每天 5 次、官方渠道、钉钉、无新优惠显示无）。卡片改为横向紧凑布局。首页入口、中英文 README 和库结构说明同步。页面仍只读，未启动 Streamlit。
 - **发布 M23 GLM/ZCode 促销雷达展示页**：新增紧凑的只读 Streamlit 页面，说明每小时官方渠道扫描、活动事实核验、本机状态去重、Windows 桌面通知和失败收尾边界；页面本身不联网、不创建任务、不读取本机状态，也不执行 PowerShell。
 - **保持运行项目与线上展示解耦**：独立私有 `glm-monitor` 仓库已克隆并核对为干净的 `main`，真实监控继续留在该仓库和 Windows 本机；`yao_1` 只增加 M23 页面及首页/侧栏入口，没有把私有状态或运行依赖带入部署。

@@ -2,7 +2,7 @@
 
 import streamlit as st
 
-from utils.ui_theme import apply_global_theme, render_home_link
+from utils.ui_theme import render_home_link
 
 
 st.set_page_config(
@@ -10,8 +10,7 @@ st.set_page_config(
     page_icon="📡",
     layout="wide",
 )
-apply_global_theme()
-render_home_link(include_sidebar=False)
+render_home_link()
 
 st.markdown(
     """

@@ -7,6 +7,7 @@ This English change log mirrors the project history maintained in `CHANGELOG_ZH-
 
 ## 2026-09-02
 
+- **Fixed the M23 TypeError on Streamlit Cloud**: `render_home_link(include_sidebar=False)` failed at runtime. M23 now calls `render_home_link()` with no extra arguments, matching the other showcase pages, so the sidebar and home button still render once.
 - **Updated M23 to the Docker promo-radar showcase**: the page no longer describes ZCode hourly jobs or Windows toasts. It only shows what glm-monitor has and what it does (Docker, five daily scans, official sources, DingTalk, 无 when empty). Cards are compact and horizontal. Homepage copy, bilingual READMEs, and the repository map were aligned. The page stays read-only; Streamlit was not started.
 - **Published the M23 GLM/ZCode Promo Radar showcase**: added a compact read-only Streamlit page explaining hourly official-source scanning, promotion verification, local-state deduplication, Windows desktop notifications, and bounded failure handling. The page itself never accesses the network, creates tasks, reads local state, or executes PowerShell.
 - **Kept the operational project separate from the deployed showcase**: the independent private `glm-monitor` repository was cloned and verified as a clean `main`. Real monitoring stays in that repository and the local Windows environment; `yao_1` only gains the M23 page and home/sidebar entry, with no private state or runtime dependency added to deployment.
