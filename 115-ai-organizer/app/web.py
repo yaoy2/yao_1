@@ -149,6 +149,32 @@ if filter_cols[5].button("取消批准", use_container_width=True):
         set_plan_approved(conn, ids, False)
     st.rerun()
 
+# 分页：文件量大时一次渲染全部计划会让页面卡在骨架屏几分钟。
+PAGE_SIZES = (50, 200, 1000)
+page_state = st.session_state
+if "plan_page" not in page_state:
+    page_state.plan_page = 0
+page_size = filter_cols[3].selectbox(
+    "每页条数", PAGE_SIZES, index=0, key="plan_page_size"
+)
+total = len(plans)
+total_pages = max(1, (total + page_size - 1) // page_size)
+page_state.plan_page = min(page_state.plan_page, total_pages - 1)
+page_start = page_state.plan_page * page_size
+plans = plans[page_start : page_start + page_size]
+
+page_cols = st.columns([1, 2, 1])
+if page_cols[0].button("上一页", disabled=page_state.plan_page == 0):
+    page_state.plan_page -= 1
+    st.rerun()
+page_cols[1].caption(
+    f"第 {page_state.plan_page + 1} / {total_pages} 页，"
+    f"显示 {page_start + 1}-{page_start + len(plans)}，共 {total} 条"
+)
+if page_cols[2].button("下一页", disabled=page_state.plan_page >= total_pages - 1):
+    page_state.plan_page += 1
+    st.rerun()
+
 action_cols = st.columns([1, 1, 3])
 if action_cols[0].button("批准安全候选", use_container_width=True):
     result = approve_safe_plans(settings)

@@ -296,10 +296,11 @@ def classify_item(
 
     if year and ext in VIDEO_EXTS:
         suggested = _movie_name(title, year, version, ext)
+        movie_dir = f"{title} ({year})" if title else (year or "未知片名")
         return Classification(
             category="电影",
             suggested_name=suggested,
-            suggested_path=_join_path("电影", year, suggested),
+            suggested_path=_join_path("电影", movie_dir, suggested),
             confidence="medium" if version else "low",
             reason="视频文件名含年份，按电影候选处理，不确定则请人工核对。",
             title=title,
