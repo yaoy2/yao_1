@@ -105,6 +105,21 @@ st.markdown(
         font-weight: 800;
         font-variant-numeric: tabular-nums;
     }
+    .m23-quote {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        gap: .3rem .7rem;
+        align-items: center;
+        margin: 0 0 .5rem;
+        padding: .4rem .55rem;
+        border: 1px solid rgba(125, 211, 252, .16);
+        border-radius: 10px;
+        background: rgba(8, 20, 30, .62);
+        color: #b6c7d4;
+        font-size: .76rem;
+        line-height: 1.4;
+    }
+    .m23-quote b { color: #7dd3fc; font-weight: 760; }
     .m23-boundary {
         padding: .4rem .65rem;
         border-left: 3px solid #22d3ee;
@@ -115,7 +130,7 @@ st.markdown(
         line-height: 1.45;
     }
     @media (max-width: 900px) {
-        .m23-hero, .m23-task { grid-template-columns: 1fr; }
+        .m23-hero, .m23-task, .m23-quote { grid-template-columns: 1fr; }
         .m23-ports, .m23-times { justify-content: flex-start; }
     }
     </style>
@@ -132,7 +147,7 @@ st.markdown(
         <div>
           <div class="m23-kicker">M23 · DOCKER MONITOR</div>
           <h2>本机 Docker 常驻任务合集</h2>
-          <p>真实监控在独立仓库 docker-monitor。一个 Compose 跑三个任务，去重或比价后发同一条钉钉。本页只展示有什么、做什么。</p>
+          <p>真实监控在独立私有仓库 github.com/yaoy2/docker-monitor。一个 Compose 跑三个任务，结果走同一条钉钉。本页只展示有什么、做什么。</p>
         </div>
         <div class="m23-ports">
           <span class="m23-port">8091</span>
@@ -173,7 +188,7 @@ st.markdown(
             <h3>德亚显卡报价</h3>
             <p class="m23-meta">gpu-watch · 8093</p>
           </div>
-          <p>Amazon.de 自营 ASUS Prime / TUF / PNY 的 5080、5090，各报最低 3 条。不要 Slim、EVO。先报德亚欧元标价，再按 标价×1.13×7.79+150 折合人民币。没货写无货。</p>
+          <p>Amazon.de 自营 ASUS Prime / TUF / PNY 的 5080、5090，各报最低 3 条。不要 Slim、EVO。钉钉先报德亚欧元标价，再报人民币折合价。没货写无货。</p>
           <div class="m23-times">
             <span class="m23-time">09:00</span>
             <span class="m23-time">21:00</span>
@@ -181,7 +196,12 @@ st.markdown(
         </article>
       </div>
 
-      <div class="m23-boundary"><b>只读展示：</b>本页不联网、不启容器、不读本机状态、不发钉钉。标题带 TrendRadar 才能被同一条机器人收下。真实监控留在 docker-monitor。</div>
+      <div class="m23-quote">
+        <b>德亚报价怎么显示</b>
+        <span>先报 Amazon.de 欧元标价，再折合人民币：¥ ≈ € × 1.13 × 7.79 + 150。7.79 是欧元兑人民币购物折算价。</span>
+      </div>
+
+      <div class="m23-boundary"><b>只读展示：</b>本页不联网、不启容器、不读本机状态、不发钉钉。标题带 TrendRadar 才能被同一条机器人收下。真实监控 pull github.com/yaoy2/docker-monitor 后在本机 Docker 跑。</div>
     </div>
     """,
     unsafe_allow_html=True,

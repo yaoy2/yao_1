@@ -18,7 +18,7 @@ apply_home_theme()
 TOOLS = [
     {
         "title": "docker-monitor",
-        "desc": "只读展示本机 Docker 常驻任务：GLM 促销雷达、AIHOT 增量、德亚显卡报价，均走同一条钉钉。",
+        "desc": "只读展示本机 Docker 常驻任务：GLM 促销雷达、AIHOT 增量、德亚显卡报价（欧元标价再折合人民币），均走同一条钉钉。",
         "tag": "Docker 监控",
         "created": "2026_09_03",
         "page": "pages/22_23_docker_monitor.py",

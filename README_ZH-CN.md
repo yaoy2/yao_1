@@ -28,7 +28,7 @@
 
 - **线上入口**：[yao-1.streamlit.app](https://yao-1.streamlit.app/)
 - **仓库地址**：[github.com/yaoy2/yao_1](https://github.com/yaoy2/yao_1)
-- **docker-monitor（M23）**：只读展示本机 Docker 常驻任务（GLM 促销雷达、AIHOT 增量、德亚显卡报价），均走同一条钉钉；线上页面不执行监控。
+- **docker-monitor（M23）**：只读展示本机 Docker 常驻任务（GLM 促销雷达、AIHOT 增量、德亚显卡报价）；德亚先报欧元标价再按 ×1.13×7.79+150 折合人民币。真实监控在 [yaoy2/docker-monitor](https://github.com/yaoy2/docker-monitor)；线上页面不执行监控。
 - **GPT Planner · Luna Executor（M22）**：只读说明 Sol 定向编排、Luna 本地执行与 ChatGPT 网页版规划/审查的受控协作方式。
 - **Awesome Design MD（M21）**：只读浏览主库内置的 74 组品牌 `DESIGN.md` 设计规范；来源版本固定，线上与本地读取同一份资产。
 - **Ding2026 文件中转发放系统（M20）**：以脱敏静态快照展示文件识别、人工分发、中转裁决、五条时间轴归档和撤销边界，不连接真实材料目录。
@@ -235,8 +235,8 @@ KIMI_MODEL=
 - **边界**：页面只展示角色、Packet 和审查流程，不创建代理、不调用模型、不控制浏览器，也不修改项目。
 
 ### 23. 📡 docker-monitor
-- **场景**：在个人类目下一页平铺三个 Docker 任务：GLM 促销雷达、AIHOT 增量、德亚显卡报价。
-- **边界**：页面不联网、不启容器、不读取本机状态、不发钉钉；真实监控保留在独立仓库 docker-monitor。侧栏不加新入口。
+- **场景**：在个人类目下一页平铺三个 Docker 任务：GLM 促销雷达、AIHOT 增量、德亚显卡报价（欧元标价 + 人民币折合）。
+- **边界**：页面不联网、不启容器、不读取本机状态、不发钉钉；真实监控 pull 独立私有仓库 [yaoy2/docker-monitor](https://github.com/yaoy2/docker-monitor) 后在本机 Docker 跑。侧栏不加新入口。
 
 ---
 

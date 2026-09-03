@@ -7,6 +7,7 @@ This English change log mirrors the project history maintained in `CHANGELOG_ZH-
 
 ## 2026-09-03
 
+- **Aligned the M23 showcase with the final quote format**: the Personal entry stays M23 docker-monitor. The page now states the Amazon.de display rule (EUR list price, then CNY ≈ EUR × 1.13 × 7.79 + 150) and the independent repo github.com/yaoy2/docker-monitor so another machine can pull it.
 - **Turned M23 into the docker-monitor overview**: the Personal entry stays M23, now titled docker-monitor. The page lays out three compact cards — GLM promo radar, AIHOT increments, and Amazon.de GPU quotes — without a new sidebar item. Real monitoring lives in the independent `E:\github\docker-monitor` repo. The page stays read-only; Streamlit was not started, old containers were not stopped, and no DingTalk message was sent.
 - **GPU quote rules**: Amazon.de sold-by-Amazon ASUS Prime / TUF / PNY 5080 and 5090, cheapest 3 each; drop Slim and EVO; always push at 09:00 and 21:00 with price deltas.
 - **Detour**: gpu-watch fixtures used ASINs that were not 10 characters, so the parser kept only one listing; 10-character ASINs made the tests pass. The old `glm-monitor` and `aihot-push` repos are kept.
