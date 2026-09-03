@@ -5,6 +5,13 @@
 
 This English change log mirrors the project history maintained in `CHANGELOG_ZH-CN.md`. It keeps the same dated structure and preserves the operational notes that matter for later troubleshooting: what changed, why it changed, what failed or detoured, and how the work was verified.
 
+## 2026-09-03
+
+- **Turned M23 into the docker-monitor overview**: the Personal entry stays M23, now titled docker-monitor. The page lays out three compact cards — GLM promo radar, AIHOT increments, and Amazon.de GPU quotes — without a new sidebar item. Real monitoring lives in the independent `E:\github\docker-monitor` repo. The page stays read-only; Streamlit was not started, old containers were not stopped, and no DingTalk message was sent.
+- **GPU quote rules**: Amazon.de sold-by-Amazon ASUS Prime / TUF / PNY 5080 and 5090, cheapest 3 each; drop Slim and EVO; always push at 09:00 and 21:00 with price deltas.
+- **Detour**: gpu-watch fixtures used ASINs that were not 10 characters, so the parser kept only one listing; 10-character ASINs made the tests pass. The old `glm-monitor` and `aihot-push` repos are kept.
+- **Verification**: 172 main-app tests passed; docker-monitor ran 18 glm-monitor, 14 aihot-push, and 16 gpu-watch tests; `docker compose config` succeeded. Streamlit was not started, new containers were not started, and no DingTalk message was sent.
+
 ## 2026-09-02
 
 - **Fixed the M23 TypeError on Streamlit Cloud**: `render_home_link(include_sidebar=False)` failed at runtime. M23 now calls `render_home_link()` with no extra arguments, matching the other showcase pages, so the sidebar and home button still render once.

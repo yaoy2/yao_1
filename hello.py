@@ -17,11 +17,11 @@ apply_home_theme()
 
 TOOLS = [
     {
-        "title": "GLM 促销雷达",
-        "desc": "只读展示 Docker 常驻扫描智谱官网、去重后发钉钉；没有新优惠就显示无。",
-        "tag": "促销监控",
-        "created": "2026_09_02",
-        "page": "pages/22_23_glm_monitor.py",
+        "title": "docker-monitor",
+        "desc": "只读展示本机 Docker 常驻任务：GLM 促销雷达、AIHOT 增量、德亚显卡报价，均走同一条钉钉。",
+        "tag": "Docker 监控",
+        "created": "2026_09_03",
+        "page": "pages/22_23_docker_monitor.py",
         "code": "M23",
         "accent": "green",
         "section": "个人",

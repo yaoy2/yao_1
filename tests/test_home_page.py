@@ -73,7 +73,7 @@ class HomePageTest(unittest.TestCase):
         codes = [tool["code"] for tool in tools]
 
         self.assertEqual("M23", tools[0]["code"])
-        self.assertEqual("pages/22_23_glm_monitor.py", tools[0]["page"])
+        self.assertEqual("pages/22_23_docker_monitor.py", tools[0]["page"])
         self.assertEqual("M22", tools[1]["code"])
         self.assertEqual("pages/21_22_gpt_planner_luna_executor.py", tools[1]["page"])
         self.assertEqual("M21", tools[2]["code"])

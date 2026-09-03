@@ -1,5 +1,12 @@
 # 更新日志 (CHANGELOG)
 
+## 2026-09-03
+
+- **M23 改为 docker-monitor 总览**：个人类目入口仍是 M23，标题改为 docker-monitor。页面平铺 GLM 促销雷达、AIHOT 增量、德亚显卡报价三块紧凑卡片，不加新侧栏入口。真实监控改到独立仓库 `E:\github\docker-monitor`；本页仍只读，未启动 Streamlit，未停旧容器，未发钉钉。
+- **德亚报价规则**：Amazon.de 自营 ASUS Prime / TUF / PNY 的 5080、5090，各报最低 3 条；排除 Slim、EVO；每天 09:00 / 21:00 都推，带涨跌。
+- **过程**：gpu-watch 夹具 ASIN 一度不是 10 位，解析只认出一条；改成 10 位后单测转绿。旧 `glm-monitor` / `aihot-push` 仓库先保留。
+- **验证**：主应用 `tests/` 172 项通过；docker-monitor 中 glm-monitor 18、aihot-push 14、gpu-watch 16 项通过；`docker compose config` 通过。未启动 Streamlit，未启新容器，未发钉钉。
+
 ## 2026-09-02
 
 - **修复 M23 线上 TypeError**：Streamlit Cloud 在 `render_home_link(include_sidebar=False)` 报错。M23 改为与其他展示页相同，只调用无参数的 `render_home_link()`，由该函数渲染侧栏和回到主页，避免重复侧栏和关键词参数不兼容。

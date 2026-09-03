@@ -6,19 +6,28 @@ from streamlit.testing.v1 import AppTest
 
 
 ROOT = Path(__file__).resolve().parents[1]
-PAGE = ROOT / "pages" / "22_23_glm_monitor.py"
+PAGE = ROOT / "pages" / "22_23_docker_monitor.py"
 
 
-class GlmMonitorShowcaseTest(unittest.TestCase):
-    def test_m23_page_renders_the_monitoring_flow_without_controls(self):
+class DockerMonitorShowcaseTest(unittest.TestCase):
+    def test_m23_page_renders_three_docker_tasks_without_controls(self):
         app = AppTest.from_file(str(PAGE), default_timeout=10)
         app.run()
 
         self.assertFalse(app.exception)
         self.assertFalse(app.error)
-        self.assertEqual("M23 · GLM 促销雷达", app.title[0].value)
+        self.assertEqual("M23 · docker-monitor", app.title[0].value)
         rendered = "\n".join(item.value for item in app.markdown)
-        for text in ("Docker", "官方渠道", "去重", "钉钉", "只读展示"):
+        for text in (
+            "Docker",
+            "GLM 促销雷达",
+            "AIHOT",
+            "德亚显卡报价",
+            "钉钉",
+            "只读展示",
+            "09:00",
+            "21:00",
+        ):
             self.assertIn(text, rendered)
         self.assertNotIn("Windows 桌面通知", rendered)
         self.assertNotIn("每小时扫描", rendered)

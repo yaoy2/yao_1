@@ -12,7 +12,7 @@ E:\github\yao_1\
 │   ├── 19_20_ding2026.py           # M20 文件中转发放系统只读展示
 │   ├── 20_21_awesome_design_md.py  # M21 Awesome Design MD 只读展示
 │   ├── 21_22_gpt_planner_luna_executor.py # M22 AI 协作流程只读展示
-│   └── 22_23_glm_monitor.py        # M23 GLM 促销雷达（Docker）只读展示
+│   └── 22_23_docker_monitor.py     # M23 docker-monitor 只读展示
 ├── utils\                           # 主应用可复用逻辑、数据校验和主题辅助
 ├── assets\                          # 可随主库部署的静态资产
 │   ├── ding2026_m20_snapshot.json  # M20 脱敏聚合快照
@@ -36,7 +36,7 @@ E:\github\yao_1\
 - **M20**：页面只读取 `assets/ding2026_m20_snapshot.json`。真实扫描、分发、归档、撤销、配置和数据库继续只在独立本地项目 `E:\github\ding2026-system` 中运行，主库没有运行时依赖。
 - **M21**：页面只读 `assets/awesome-design-md/design-md/`。来源 URL 和固定提交记录在 `assets/awesome-design-md/SOURCE.md`；源仓库的 `.git` 元数据不嵌入主库，避免线上部署遗漏资产。
 - **M22**：页面只介绍 `gpt-planner-luna-executor/` 的角色、Packet 和审查流程，不创建代理、不调用模型、不控制浏览器，也不修改项目。
-- **M23**：页面只展示 glm-monitor 有什么、做了什么（Docker、五次扫描、钉钉、无新优惠显示无），不访问网络、不启容器、不读取本机状态、不发钉钉。真实监控保留在独立仓库，主库没有运行时依赖。
+- **M23**：页面只展示 docker-monitor 的三个 Docker 任务（GLM 促销雷达、AIHOT 增量、德亚显卡报价），不访问网络、不启容器、不读取本机状态、不发钉钉。真实监控保留在独立仓库 `E:\github\docker-monitor`，主库没有运行时依赖。侧栏不加新入口。
 
 ## 本机状态与清理规则
 
