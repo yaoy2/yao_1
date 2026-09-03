@@ -23,6 +23,7 @@ class DockerMonitorShowcaseTest(unittest.TestCase):
             "GLM 促销雷达",
             "AIHOT",
             "德亚显卡报价",
+            "折合人民币",
             "钉钉",
             "只读展示",
             "09:00",

@@ -173,7 +173,7 @@ st.markdown(
             <h3>德亚显卡报价</h3>
             <p class="m23-meta">gpu-watch · 8093</p>
           </div>
-          <p>Amazon.de 自营 ASUS Prime / TUF / PNY 的 5080、5090，各报最低 3 条。不要 Slim、EVO。每次都推当前价和涨跌；没货写无货。</p>
+          <p>Amazon.de 自营 ASUS Prime / TUF / PNY 的 5080、5090，各报最低 3 条。不要 Slim、EVO。先报德亚欧元标价，再按 标价×1.13×7.79+150 折合人民币。没货写无货。</p>
           <div class="m23-times">
             <span class="m23-time">09:00</span>
             <span class="m23-time">21:00</span>
