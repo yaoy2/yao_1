@@ -60,40 +60,56 @@ st.markdown(
         text-align: center;
         font-variant-numeric: tabular-nums;
     }
-    .m23-tasks { display: grid; gap: .42rem; margin-bottom: .5rem; }
-    .m23-task {
+    .m23-tasks {
         display: grid;
-        grid-template-columns: minmax(9.5rem, .9fr) minmax(0, 1.6fr) minmax(10.5rem, .85fr);
-        gap: .35rem .65rem;
-        align-items: start;
-        padding: .42rem .55rem;
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: 1fr 1fr;
+        gap: .42rem;
+        margin: 0 auto .5rem;
+        max-width: 52rem;
+        aspect-ratio: 1 / 1;
+    }
+    .m23-task {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        padding: .5rem .58rem .48rem;
         border: 1px solid rgba(125, 211, 252, .16);
         border-radius: 10px;
         background: rgba(8, 20, 30, .78);
     }
+    .m23-task-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: .4rem;
+        margin-bottom: .28rem;
+    }
     .m23-task h3 {
         margin: 0;
         color: #e0f2fe;
-        font-size: .82rem;
+        font-size: .84rem;
         letter-spacing: .03em;
     }
     .m23-meta {
-        margin: .18rem 0 0;
+        margin: .14rem 0 0;
         color: #7dd3fc;
-        font-size: .7rem;
+        font-size: .68rem;
         font-weight: 760;
     }
     .m23-task p {
         margin: 0;
         color: #b6c7d4;
-        font-size: .76rem;
+        font-size: .74rem;
         line-height: 1.4;
+        flex: 1;
     }
     .m23-times {
         display: flex;
         flex-wrap: wrap;
         justify-content: flex-end;
-        gap: .22rem;
+        gap: .2rem;
+        margin-top: .38rem;
     }
     .m23-time {
         padding: .16rem .32rem;
@@ -130,8 +146,16 @@ st.markdown(
         line-height: 1.45;
     }
     @media (max-width: 900px) {
-        .m23-hero, .m23-task, .m23-quote { grid-template-columns: 1fr; }
+        .m23-hero, .m23-quote { grid-template-columns: 1fr; }
+        .m23-tasks {
+            grid-template-columns: 1fr 1fr;
+            aspect-ratio: auto;
+            max-width: none;
+        }
         .m23-ports, .m23-times { justify-content: flex-start; }
+    }
+    @media (max-width: 620px) {
+        .m23-tasks { grid-template-columns: 1fr; }
     }
     </style>
     """,
@@ -147,9 +171,10 @@ st.markdown(
         <div>
           <div class="m23-kicker">M23 · DOCKER MONITOR</div>
           <h2>本机 Docker 常驻任务合集</h2>
-          <p>真实监控在独立私有仓库 github.com/yaoy2/docker-monitor。一个 Compose 跑三个任务，结果走同一条钉钉。本页只展示有什么、做什么。</p>
+          <p>四个容器共用同一条钉钉。TrendRadar 是热点主雷达；另外三个在 github.com/yaoy2/docker-monitor。本页只展示有什么、做什么。</p>
         </div>
         <div class="m23-ports">
+          <span class="m23-port">8080</span>
           <span class="m23-port">8091</span>
           <span class="m23-port">8092</span>
           <span class="m23-port">8093</span>
@@ -158,11 +183,27 @@ st.markdown(
 
       <div class="m23-tasks">
         <article class="m23-task">
-          <div>
-            <h3>GLM 促销雷达</h3>
-            <p class="m23-meta">glm-monitor · 8092</p>
+          <div class="m23-task-head">
+            <div>
+              <h3>TrendRadar</h3>
+              <p class="m23-meta">trendradar · 8080</p>
+            </div>
           </div>
-          <p>扫描智谱官网渠道，关键词 / 价格去重后发钉钉。没有新优惠正文只发「无」。第一次扫描只建基线，不当新闻重报。</p>
+          <p>热点主雷达。按关键词采集并推钉钉，配置和报告给另外三个任务只读挂载。标题带 TrendRadar 才能被机器人收下。</p>
+          <div class="m23-times">
+            <span class="m23-time">09:30</span>
+            <span class="m23-time">14:00</span>
+            <span class="m23-time">17:00</span>
+          </div>
+        </article>
+        <article class="m23-task">
+          <div class="m23-task-head">
+            <div>
+              <h3>GLM 促销雷达</h3>
+              <p class="m23-meta">glm-monitor · 8092</p>
+            </div>
+          </div>
+          <p>扫描智谱官网渠道，关键词 / 价格去重后发钉钉。没有新优惠正文只发「无」。第一次扫描只建基线。</p>
           <div class="m23-times">
             <span class="m23-time">09:00</span>
             <span class="m23-time">13:00</span>
@@ -172,9 +213,11 @@ st.markdown(
           </div>
         </article>
         <article class="m23-task">
-          <div>
-            <h3>AIHOT 增量</h3>
-            <p class="m23-meta">aihot-push · 8091</p>
+          <div class="m23-task-head">
+            <div>
+              <h3>AIHOT 增量</h3>
+              <p class="m23-meta">aihot-push · 8091</p>
+            </div>
           </div>
           <p>跟随 TrendRadar 窗口读取 AIHOT 增量精选，过滤后发钉钉。不复制全库，只保存游标和去重状态。</p>
           <div class="m23-times">
@@ -184,11 +227,13 @@ st.markdown(
           </div>
         </article>
         <article class="m23-task">
-          <div>
-            <h3>德亚显卡报价</h3>
-            <p class="m23-meta">gpu-watch · 8093</p>
+          <div class="m23-task-head">
+            <div>
+              <h3>德亚显卡报价</h3>
+              <p class="m23-meta">gpu-watch · 8093</p>
+            </div>
           </div>
-          <p>Amazon.de 自营 ASUS Prime / TUF / PNY 的 5080、5090，各报最低 3 条。不要 Slim、EVO。钉钉先报德亚欧元标价，再报人民币折合价。没货写无货。</p>
+          <p>Amazon.de 自营 Prime / TUF / PNY 的 5080、5090，各报最低 3 条。不要 Slim、EVO。先报欧元标价，再折合人民币。</p>
           <div class="m23-times">
             <span class="m23-time">09:00</span>
             <span class="m23-time">21:00</span>

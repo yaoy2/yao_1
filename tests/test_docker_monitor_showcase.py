@@ -10,7 +10,7 @@ PAGE = ROOT / "pages" / "22_23_docker_monitor.py"
 
 
 class DockerMonitorShowcaseTest(unittest.TestCase):
-    def test_m23_page_renders_three_docker_tasks_without_controls(self):
+    def test_m23_page_renders_four_docker_tasks_without_controls(self):
         app = AppTest.from_file(str(PAGE), default_timeout=10)
         app.run()
 
@@ -20,9 +20,11 @@ class DockerMonitorShowcaseTest(unittest.TestCase):
         rendered = "\n".join(item.value for item in app.markdown)
         for text in (
             "Docker",
+            "TrendRadar",
             "GLM 促销雷达",
             "AIHOT",
             "德亚显卡报价",
+            "grid-template-columns: 1fr 1fr",
             "折合人民币",
             "1.13",
             "7.79",

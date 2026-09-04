@@ -2,6 +2,7 @@
 
 ## 2026-09-03
 
+- **M23 四个任务改成 2×2 方块**：补上本机已在跑的 TrendRadar（8080），与 GLM、AIHOT、德亚报价一行两个排成大方块，不再一列排开。未改正在跑的容器。
 - **M23 展示页对齐最终形态**：个人类目仍是 M23 docker-monitor。页面补上德亚报价显示规则（先欧元标价，再按 ×1.13×7.79+150 折合人民币）和独立仓库地址 github.com/yaoy2/docker-monitor，方便换电脑 pull。
 - **M23 改为 docker-monitor 总览**：个人类目入口仍是 M23，标题改为 docker-monitor。页面平铺 GLM 促销雷达、AIHOT 增量、德亚显卡报价三块紧凑卡片，不加新侧栏入口。真实监控改到独立仓库 `E:\github\docker-monitor`；本页仍只读，未启动 Streamlit，未停旧容器，未发钉钉。
 - **德亚报价规则**：Amazon.de 自营 ASUS Prime / TUF / PNY 的 5080、5090，各报最低 3 条；排除 Slim、EVO；每天 09:00 / 21:00 都推，带涨跌。
