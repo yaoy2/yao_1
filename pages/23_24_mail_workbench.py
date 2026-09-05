@@ -1,4 +1,4 @@
-"""M24: authenticated view of a private, independently collected mail snapshot."""
+"""M24: public mail summary view with authenticated action-status editing."""
 
 import os
 import re
@@ -173,22 +173,25 @@ def build_action_updates(actions, drafts):
             and drafts[str(item["id"])] != item.get("status")}
 
 
-def require_mail_auth():
+def render_edit_access():
     password = budget_auth.get_budget_password(st.secrets, os.environ)
     if not password:
-        st.warning("邮件工作台访问密码尚未配置。请配置已有的 budget_password / BUDGET_PASSWORD 后使用。")
-        st.stop()
+        st.session_state.pop("mail_authenticated", None)
+        st.caption("可直接浏览。待办编辑密码尚未配置，暂不能修改状态。")
+        return False
     if st.session_state.get("mail_authenticated"):
-        return
-    st.info("使用预算台账的访问密码进入邮件工作台。")
-    with st.form("mail_auth_form"):
-        value = st.text_input("访问密码", type="password")
-        if st.form_submit_button("进入邮件工作台", use_container_width=True):
-            if budget_auth.is_budget_password_valid(value, password):
-                st.session_state["mail_authenticated"] = True
-                st.rerun()
-            st.error("密码不正确，请重新输入。")
-    st.stop()
+        st.caption("待办编辑已启用。")
+        return True
+    with st.expander("启用待办编辑", expanded=False):
+        st.caption("浏览不需要密码；修改待办状态时，使用预算台账的访问密码确认。")
+        with st.form("mail_auth_form"):
+            value = st.text_input("编辑密码", type="password")
+            if st.form_submit_button("启用编辑", use_container_width=True):
+                if budget_auth.is_budget_password_valid(value, password):
+                    st.session_state["mail_authenticated"] = True
+                    st.rerun()
+                st.error("密码不正确，请重新输入。")
+    return False
 
 
 def show_data_error(exc, *, saving=False):
@@ -208,6 +211,9 @@ def refresh_snapshot(gateway):
 
 
 def save_drafts(gateway, loaded, drafts):
+    # Enforce write authorization here, independent of disabled browser widgets.
+    if not st.session_state.get("mail_authenticated") or not budget_auth.get_budget_password(st.secrets, os.environ):
+        raise PermissionError("请先启用待办编辑，再保存状态。")
     updates = build_action_updates(loaded["snapshot"].get("actions", []), drafts)
     if not updates:
         return False
@@ -260,12 +266,14 @@ def render_reports(reports, kinds, start=None, end=None):
 def render_actions(snapshot, loaded, gateway, category, now):
     drafts = st.session_state.setdefault("mail_action_drafts", {})
     by_id = {item.get("id"): item for item in snapshot.get("messages", [])}
-    readonly = loaded.get("source") != "github"
+    readonly = loaded.get("source") != "github" or not st.session_state.get("mail_authenticated")
     st.caption("待办按截止时间筛选，不受收件日期范围限制。未明确的时间单列待确认；这里的状态只更新工作台。")
     view = st.radio("待办视图", ["未完成", "今天", "未来7天", "逾期", "待确认", "已完成", "全部"], horizontal=True)
     pending = build_action_updates(snapshot.get("actions", []), drafts)
-    if readonly:
+    if loaded.get("source") != "github":
         st.info("当前读取本机快照；连接私有同步数据源后可在网页更新状态。")
+    elif readonly:
+        st.info("当前为公开浏览。需要修改状态时，请在页面上方启用待办编辑。")
     if st.button(f"保存状态修改（{len(pending)}项）", disabled=readonly or not pending, type="primary"):
         try:
             if save_drafts(gateway, loaded, drafts):
@@ -293,7 +301,7 @@ def render_actions(snapshot, loaded, gateway, category, now):
             key = f"mail_status_{action_id}"
             current = action.get("status") if action.get("status") in STATUSES else "needs_confirmation"
             # A separate draft survives Streamlit's cleanup of hidden widget state.
-            st.session_state[key] = drafts.get(action_id, current)
+            st.session_state[key] = current if readonly else drafts.get(action_id, current)
             st.selectbox("处理状态", list(STATUSES), key=key, format_func=STATUSES.get,
                          disabled=readonly, label_visibility="collapsed",
                          on_change=remember_status, args=(action_id,))
@@ -335,8 +343,9 @@ def main():
     st.set_page_config(page_title="M24 · 邮件工作台", page_icon="✉️", layout="wide")
     render_home_link()
     st.title("邮件工作台")
-    require_mail_auth()
-    # No private snapshot is imported, fetched, cached, or rendered before auth.
+    editing = render_edit_access()
+    # Summaries are public; the private-source module still protects the backing
+    # repository and excludes raw mail bodies. Passwords authorize status writes.
     from utils import mail_private_sync
 
     st.markdown("""<style>
@@ -349,9 +358,9 @@ def main():
     st.caption("以上是约定的计划时间；是否实际执行，以运行记录为准。周一至五口径暂不调整节假日与调休。")
     refresh_col, logout_col = st.columns([5, 1])
     refresh = refresh_col.button("刷新数据（保留未保存编辑）")
-    if logout_col.button("退出工作台"):
+    if editing and logout_col.button("退出编辑"):
         for key in list(st.session_state):
-            if str(key).startswith("mail_"):
+            if key in {"mail_authenticated", "mail_action_drafts"} or str(key).startswith("mail_status_"):
                 del st.session_state[key]
         st.rerun()
     loaded = st.session_state.get("mail_loaded")

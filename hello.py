@@ -18,13 +18,13 @@ apply_home_theme()
 TOOLS = [
     {
         "title": "邮件工作台",
-        "desc": "登录后查看邮件简报、报送与反馈时限、附件归档结果和每周工作汇总。",
+        "desc": "查看邮件简报、报送与反馈时限、附件归档结果和每周工作汇总。",
         "tag": "邮件事务",
         "created": "2026_09_06",
         "page": "pages/23_24_mail_workbench.py",
         "code": "M24",
         "accent": "cyan",
-        "locked": True,
+        "locked": False,
         "section": "行政",
     },
     {

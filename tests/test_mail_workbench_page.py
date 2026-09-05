@@ -86,28 +86,51 @@ class MailWorkbenchPageTests(unittest.TestCase):
         self.assertEqual(1, page.incomplete_attachment_count(snapshot["messages"]))
         self.assertIn("失败", page.ATTACHMENT_STATUSES["error"])
 
-    def test_missing_password_blocks_even_a_previous_authenticated_session(self):
+    def test_missing_password_keeps_public_browsing_but_disables_previous_edit_session(self):
         fake_st = SimpleNamespace(secrets={}, session_state={"mail_authenticated": True},
-                                  warning=Mock(), stop=Mock(side_effect=StopPage))
+                                  caption=Mock(), stop=Mock(side_effect=StopPage))
         with patch.object(page, "st", fake_st), patch.object(page.budget_auth, "get_budget_password", return_value=None):
-            with self.assertRaises(StopPage):
-                page.require_mail_auth()
-        fake_st.warning.assert_called_once()
+            self.assertFalse(page.render_edit_access())
+        fake_st.stop.assert_not_called()
+        self.assertNotIn("mail_authenticated", fake_st.session_state)
 
-    def test_main_does_not_load_data_before_authentication(self):
-        fake_st = SimpleNamespace(set_page_config=Mock(), title=Mock())
+    def test_main_loads_public_summary_without_an_edit_session(self):
+        columns = [SimpleNamespace(button=Mock(return_value=False)), SimpleNamespace(button=Mock(return_value=False))]
+        fake_st = SimpleNamespace(set_page_config=Mock(), title=Mock(), markdown=Mock(), caption=Mock(),
+                                  columns=Mock(return_value=columns), session_state={})
         with patch.object(page, "st", fake_st), patch.object(page, "render_home_link"), \
-                patch.object(page, "require_mail_auth", side_effect=StopPage), \
-                patch.object(page, "refresh_snapshot") as load:
+                patch.object(page, "render_edit_access", return_value=False), \
+                patch.object(page, "refresh_snapshot", side_effect=StopPage) as load:
             with self.assertRaises(StopPage):
                 page.main()
-            load.assert_not_called()
+            load.assert_called_once()
+        columns[1].button.assert_not_called()
+
+    def test_anonymous_status_save_is_blocked_before_any_remote_call(self):
+        loaded = {"snapshot": {"actions": [{"id": "a", "status": "pending"}]}, "version": "old", "source": "github"}
+        drafts = {"a": "done"}
+        fake_st = SimpleNamespace(secrets={}, session_state={})
+        gateway = SimpleNamespace(save_action_updates=Mock())
+        with patch.object(page, "st", fake_st):
+            with self.assertRaises(PermissionError):
+                page.save_drafts(gateway, loaded, drafts)
+        gateway.save_action_updates.assert_not_called()
+        self.assertEqual({"a": "done"}, drafts)
+
+    def test_removed_password_configuration_blocks_status_save(self):
+        loaded = {"snapshot": {"actions": [{"id": "a", "status": "pending"}]}, "version": "old", "source": "github"}
+        fake_st = SimpleNamespace(secrets={}, session_state={"mail_authenticated": True})
+        gateway = SimpleNamespace(save_action_updates=Mock())
+        with patch.object(page, "st", fake_st), patch.object(page.budget_auth, "get_budget_password", return_value=None):
+            with self.assertRaises(PermissionError):
+                page.save_drafts(gateway, loaded, {"a": "done"})
+        gateway.save_action_updates.assert_not_called()
 
     def test_conflict_keeps_user_draft_and_original_version(self):
         loaded = {"snapshot": {"actions": [{"id": "a", "status": "pending"}]}, "version": "old-sha", "source": "github"}
         drafts = {"a": "done"}
-        state = {"mail_loaded": loaded, "mail_action_drafts": drafts}
-        fake_st = SimpleNamespace(secrets={}, session_state=state)
+        state = {"mail_loaded": loaded, "mail_action_drafts": drafts, "mail_authenticated": True}
+        fake_st = SimpleNamespace(secrets={"budget_password": "test-edit-password"}, session_state=state)
         conflict = RuntimeError("safe conflict")
         gateway = SimpleNamespace(save_action_updates=Mock(side_effect=conflict))
         with patch.object(page, "st", fake_st):
@@ -121,7 +144,7 @@ class MailWorkbenchPageTests(unittest.TestCase):
         loaded = {"snapshot": {"actions": [{"id": "a", "status": "pending"}]}, "version": "old", "source": "github"}
         saved = {"snapshot": {"actions": [{"id": "a", "status": "done"}]}, "version": "new", "source": "github"}
         drafts = {"a": "done", "removed": "in_progress"}
-        fake_st = SimpleNamespace(secrets={}, session_state={"mail_status_a": "done"})
+        fake_st = SimpleNamespace(secrets={"budget_password": "test-edit-password"}, session_state={"mail_status_a": "done", "mail_authenticated": True})
         gateway = SimpleNamespace(save_action_updates=Mock(return_value=saved))
         with patch.object(page, "st", fake_st):
             self.assertTrue(page.save_drafts(gateway, loaded, drafts))
