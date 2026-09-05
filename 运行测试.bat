@@ -8,8 +8,8 @@ if not exist ".venv\Scripts\python.exe" (
   exit /b 1
 )
 
-echo 正在检查整个项目，请稍候...
-".venv\Scripts\python.exe" -m pytest -q
+echo 正在检查主工具箱，请稍候（独立子项目请使用各自的测试入口）...
+".venv\Scripts\python.exe" -m pytest -q tests
 set TEST_EXIT=%ERRORLEVEL%
 
 echo.

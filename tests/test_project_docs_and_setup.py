@@ -33,7 +33,25 @@ def test_beginner_setup_files_reference_real_entry_points():
     assert launcher.exists()
     assert tester.exists()
     assert "streamlit run hello.py" in launcher.read_text(encoding="utf-8")
-    assert "-m pytest -q" in tester.read_text(encoding="utf-8")
+    assert "-m pytest -q tests" in tester.read_text(encoding="utf-8")
+
+
+def test_codespaces_uses_the_existing_main_application():
+    import json
+    import shlex
+
+    # The checked-in devcontainer file permits full-line JSON comments.
+    config_text = read(".devcontainer/devcontainer.json")
+    config = json.loads("\n".join(
+        line for line in config_text.splitlines()
+        if not line.lstrip().startswith("//")
+    ))
+    for name in config["customizations"]["codespaces"]["openFiles"]:
+        assert (ROOT / name).is_file(), f"Codespaces opens a missing file: {name}"
+    command = shlex.split(config["postAttachCommand"]["server"])
+    assert command[:2] == ["streamlit", "run"]
+    assert command[2] == "hello.py"
+    assert (ROOT / command[2]).is_file()
 
 
 def test_generated_output_and_dependency_folders_are_ignored():

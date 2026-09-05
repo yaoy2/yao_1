@@ -1,5 +1,7 @@
 # Ding Minutes Implementation Plan
 
+> 历史记录（2026-09-05 归档）：保留当时的设计、步骤和未勾选事项，旧路径与命令仅作历史证据，不是当前执行指令。当前用法见[文档导航](../README.md)和[仓库结构](../repository-structure.md)。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build board 11 for daily DingTalk `.docx` transcript registration, DeepSeek-based cleanup, user remarks, and L-computer deployment guidance.
