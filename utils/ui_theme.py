@@ -77,9 +77,6 @@ def render_sidebar_nav() -> None:
             color: #1d1d1f !important;
             font-family: "SF Pro Text", "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif !important;
         }}
-        [data-testid="stSidebar"] * {{
-            font-family: inherit !important;
-        }}
         [data-testid="stSidebar"] [data-testid="stSidebarNav"] {{
             display: none !important;
         }}
