@@ -17,6 +17,17 @@ apply_home_theme()
 
 TOOLS = [
     {
+        "title": "邮件工作台",
+        "desc": "登录后查看邮件简报、报送与反馈时限、附件归档结果和每周工作汇总。",
+        "tag": "邮件事务",
+        "created": "2026_09_06",
+        "page": "pages/23_24_mail_workbench.py",
+        "code": "M24",
+        "accent": "cyan",
+        "locked": True,
+        "section": "行政",
+    },
+    {
         "title": "docker-monitor",
         "desc": "只读展示本机四个 Docker 任务：TrendRadar、GLM 促销雷达、AIHOT 增量、德亚显卡报价，均走同一条钉钉。",
         "tag": "Docker 监控",
