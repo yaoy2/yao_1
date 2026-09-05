@@ -1,117 +1,57 @@
 # Codex → Grok Builder
 
-[中文版](README_ZH-CN.md)
+**Language**: English | [简体中文](README_ZH-CN.md)
 
-A Windows-first personal Codex skill that runs a controlled two-agent coding loop:
+**Change logs**: [English](CHANGELOG_EN.md) | [中文](CHANGELOG_ZH-CN.md)
 
-`Codex plans → user approves → Grok Build implements → Codex verifies → Grok repairs if needed`
+A Windows personal Codex skill: Codex packages the goal, scope, and acceptance criteria; an authenticated Grok Build CLI implements the approved plan; Codex accepts the result using the actual diff and test evidence.
 
-## Trigger phrases
+## When to Use It
 
-The skill is automatically considered whenever a direct user instruction means “use Grok to do it,” including:
+Invoke for an explicit request such as “use Grok to implement this,” “let Grok write the code,” or `用 Grok 去做`. Quoting these phrases while discussing or maintaining the skill does not start Grok. Requests limited to the Grok website belong to browser tools.
 
-- `用grok去做`
-- `用 Grok 去做`
-- `让 Grok 做`
-- `交给 Grok 实现`
-- `让 Grok 写代码`
+When model selection is open, the current agent should usually complete small edits directly. Delegation is more worthwhile for substantial work with a clear scope. Use a stronger model for important uncertainty, consequential choices, and necessary acceptance; do not fix the controller to Sol or require a Luna review for every task. Compare the total cost of a qualified result, including preparation, handoff, waiting, repair, and acceptance.
 
-Capitalization, spaces, and natural wording variations do not need to match exactly. Quoting these phrases only to discuss or configure the skill does not start an implementation run.
+## Workflow and Boundaries
 
-## Responsibilities
+1. Codex reads repository rules, existing changes, and enough context to orient the task, then defines the plan, allowed and forbidden files, test commands, and acceptance criteria. Stop prereading once the goal, scope, and acceptance are clear; do not write the complete implementation before delegation.
+2. The user approves Grok's specific plan, edit scope, and test commands. Reuse still-valid authorization in the same task; seek renewed approval when scope or conditions change.
+3. Combine related work into one packet. Grok handles scoped exploration, implementation, tests, and routine repairs without the controller inspecting every tool call.
+4. Grok returns changed files, check results, and relevant log locations. Codex focuses on the actual diff, material risks, and a small amount of verifiable evidence. Add checks or repairs only for defects or unresolved concerns.
 
-- **Codex:** inspect the repository, create the canonical plan, define scope and acceptance criteria, review the diff, and rerun tests independently.
-- **Grok Build:** edit only the approved scope and run only approved commands through its local headless CLI.
-- **User:** approve the plan and any later scope, permission, deployment, secret, or destructive-operation expansion.
+A task packet is not a permission sandbox. Grok must not independently expand scope, commit, push, deploy, use credentials, or perform destructive actions. Specific plan and command approvals remain required; the wrapper does not change global permissions.
 
-## Requirements
+## Installation and Requirements
 
-- Windows PowerShell.
-- A local `grok` command authenticated with `grok login`.
-- A Codex task configured to GPT-5.6 Sol with `xhigh` reasoning when that exact planner configuration is required.
-- Python 3 only for the bundled Codex skill validator; the runtime wrapper itself is PowerShell.
+Use Windows PowerShell, a working local `grok` command, and Grok authentication completed by the user. The skill stores no keys; the wrapper uses existing CLI authentication. Python 3 is needed only when using the skill validator.
 
-No API key is stored in this project. The wrapper uses the existing Grok login or environment-based authentication resolved by Grok Build.
+Copy or install the complete `codex-grok-builder/` directory into each machine's effective `CODEX_HOME/skills/codex-grok-builder/`. If `CODEX_HOME` is unset, this is typically `.codex/skills/` under the user profile. Check existing skills and preserve local edits before updating. Pulling the repository does not update installed copies automatically; no fixed drive letter or Junction is assumed. Start a new Codex task if discovery needs to refresh.
 
-## Files
+Read [SKILL.md](SKILL.md) for the contract, [agents/openai.yaml](agents/openai.yaml) for interface metadata, and [scripts/invoke-grok.ps1](scripts/invoke-grok.ps1) for the wrapper.
 
-```text
-codex-grok-builder/
-├── SKILL.md                    Skill routing and workflow contract
-├── README.md                   English default README
-├── README_EN.md                English README mirror
-├── README_ZH-CN.md             Chinese README
-├── CHANGELOG.md                English default changelog
-├── CHANGELOG_EN.md             English changelog mirror
-├── CHANGELOG_ZH-CN.md          Chinese changelog
-├── agents/openai.yaml          Codex UI metadata and implicit invocation
-└── scripts/invoke-grok.ps1     Deterministic Grok Build wrapper
-```
+## Wrapper Example
 
-## How it runs
-
-1. Codex records the existing worktree state and reads repository rules.
-2. Codex proposes a plan with allowed files, forbidden scope, test commands, risks, and acceptance criteria.
-3. After approval, Codex writes a temporary task packet outside the repository.
-4. The wrapper starts Grok Build headlessly with a named session and explicit permission rules.
-5. Codex reviews the real diff and reruns the approved tests without trusting Grok's completion claim.
-6. Failed acceptance can be returned to the same Grok session for up to two focused repair cycles.
-
-## Direct wrapper use
-
-Normally Codex invokes the wrapper. For diagnostics or manual use:
+This is an approved synthetic merge-function task example. Replace paths and the exact test command with the values approved for the current task. Run from the skill directory:
 
 ```powershell
-& "$env:USERPROFILE\.codex\skills\codex-grok-builder\scripts\invoke-grok.ps1" `
+& '.\scripts\invoke-grok.ps1' `
   -ProjectPath 'C:\path\to\repo' `
   -TaskFile 'C:\path\to\approved-task.md' `
-  -AllowRule @('Bash(npm.cmd test*)', 'Bash(npm.cmd run build*)')
+  -AllowRule @('Bash(python -B -m pytest -q tests/test_merge_rows.py -p no:cacheprovider)') `
+  -Quiet `
+  -MaxTurns 12
 ```
 
-Add `-DryRun` to inspect the generated Grok arguments without starting Grok.
+- `-AllowRule` lists only exact commands approved for this run; avoid broad wildcards.
+- `-Quiet` retains full logs and reduces the stream returned to the controller. It does not reduce Grok's own reasoning or tool tokens.
+- `-MaxTurns 12` is this example's budget, not a completion guarantee. Inspect the actual outcome when the limit is reached.
+- `-DryRun` displays arguments without starting Grok or creating output directories or logs.
+- Use `-ResumeSessionId` for repairs in an existing session. Each invocation gets independent logs, separate stderr, and the real Grok exit code.
 
-## Permission model
+Default `dontAsk` and existing configuration jointly determine actual permissions; it is not a hard filesystem sandbox. The wrapper allows read, search, edit, `git status`, and `git diff` by default, with deny rules for push, hard reset, and common recursive deletion commands. `-AlwaysApprove` requires separate authorization for that run's tool-mode change; do not enable global automatic approval.
 
-- Default mode is `dontAsk`: unapproved tools are silently denied.
-- Reads, searches, edits, `git status`, and `git diff` are allowed by default.
-- Test and build commands must be passed explicitly with `-AllowRule`.
-- Push, hard reset, repository cleaning, and common recursive-delete commands are denied by default.
-- `-AlwaysApprove` is available only for a run that the user explicitly authorizes; it remains riskier even with deny rules.
-- The worker contract prohibits commits, pushes, deployment, secrets, and scope expansion unless the approved task explicitly grants them.
+## Validation and Cost Reporting
 
-## Installation layout
+Check PowerShell parsing, then use `-DryRun` to inspect the project, packet, commands, and output location. For wrapper repairs, use a mock CLI to check failure exit codes, log separation, resume names, and side-effect-free previews. Real coding still requires actual diff inspection and proportionate tests.
 
-The canonical source lives at:
-
-```text
-E:\github\yao_1\codex-grok-builder
-```
-
-The active personal-skill path is a Windows junction pointing to that source:
-
-```text
-E:\codex\.codex\skills\codex-grok-builder
-```
-
-This keeps the skill discoverable while allowing the project to be versioned with `yao_1`. Start a new Codex task or restart Codex if a changed skill is not immediately visible.
-
-## Validation
-
-From the project directory:
-
-```powershell
-py -3 -X utf8 'E:\codex\.codex\skills\.system\skill-creator\scripts\quick_validate.py' .
-```
-
-Also parse the wrapper before release:
-
-```powershell
-$tokens = $null
-$errors = $null
-[System.Management.Automation.Language.Parser]::ParseFile(
-  '.\scripts\invoke-grok.ps1',
-  [ref]$tokens,
-  [ref]$errors
-) | Out-Null
-$errors
-```
+The wrapper reads actual usage/cost from the CLI's terminal report. Its `run.json` provides `TokenUsage`, `NumTurns`, `ResolvedModels`, `CliReportedCostUsd`, and `UsageStatus`; unavailable fields remain `null`, and `ActualSubscriptionCharge` is `unknown`. Total tokens, higher-priced model usage, subscription allowance, and fees are separate measures; a CLI estimate is not a subscription bill. The synthetic `merge_rows` task on 2026-09-05 passed the same 12 checks on the first attempt with no repairs. Without a complete strong-model baseline, this establishes neither token savings nor a cost ranking. See the [public validation record](../docs/history/2026-09-05-skill-cost-optimization.md).

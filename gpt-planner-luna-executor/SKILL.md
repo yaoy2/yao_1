@@ -1,206 +1,93 @@
 ---
 name: gpt-planner-luna-executor
-description: "Orchestrate a bounded Sol → Luna → ChatGPT Web workflow when the user explicitly says 让 GPT 去做, 让gpt去做, or clearly asks ChatGPT to plan/review while Luna performs local exploration and execution. Do not trigger for quoted discussion, ordinary Codex-only work, or requests that do not authorize ChatGPT Web use."
+description: "按任务难度组织 GPT 网页规划和 Luna 执行，减少不必要的模型交接。用户说用 Luna 执行、用 GPT 规划、GPT 规划后 Luna 执行、让 GPT 去做等明确委派指令时使用；仅讨论这些词或维护技能时不代表授权实跑。单独用 Luna 不启动网页；单独要规划不自动实施。Grok 编码执行使用 codex-grok-builder。"
 metadata:
-  short-description: "Sol 定向，ChatGPT 规划审查，Luna 本地执行"
+  short-description: "按需使用 GPT 网页规划、Luna 执行与本地验收"
 ---
 
-# GPT Planner → Luna Executor
+# GPT 规划与 Luna 执行
 
-Use a thin Sol main task to orient and route the work, one explicitly selected Luna subagent to collect local evidence and execute, and one ChatGPT Web conversation to plan and review.
+目标是以相称的总成本完成合格结果：计入规划、交接、执行、返工、验收、等待及用户介入。不要为了便宜而反复返工，也不要每个任务都运行完整的三模型流水线。
 
-The canonical flow is:
+总 token、高价模型用量、套餐额度和费用分别判断。委派可能增加总 token，只因执行模型单价较低而减少费用；没有“全程由当前强模型完成”的同条件对照，不得宣称这条路线已验证更省 token 或给出节省比例。
 
-```text
-RECEIVED      Sol understands the request and authority
-→ ORIENTING   Sol performs small, strategic local orientation
-→ DISCOVERING Luna collects targeted local evidence
-→ PLANNING    ChatGPT Web produces the implementation plan
-→ APPROVAL    The user approves before local mutation
-→ EXECUTING   The same Luna implements and tests
-→ REVIEWING   ChatGPT Web reviews the actual result
-→ ACCEPTING   Sol performs one final evidence check
-→ ACCEPTED / BLOCKED / CANCELLED
-```
+## 先识别用户实际要的分工
 
-Read [references/packet-protocol.md](references/packet-protocol.md) before creating the first task packet.
+| 用户指令 | 默认路线 |
+| --- | --- |
+| 用 Luna 执行 / 这个让 Luna 改 | 当前主 Agent 提供足够明确的任务包 → Luna 实施 → 本地验收；不因此开启 GPT 网页 |
+| 用 GPT 规划 / 让 ChatGPT 分析方案 | 发送必要的事实到 ChatGPT 网页，取回可执行方案；本轮只有规划要求时，到方案交付为止 |
+| GPT 规划，Luna 执行 | 必要的本地取证 → GPT 网页规划 → 按已有审批边界确认 → Luna 实施 → 本地验收 |
+| GPT 规划并审查，Luna 执行 | 上述路线加一次 GPT 网页最终审查 |
+| 让 GPT 去做 / 让gpt去做 | 沿用本人的快捷含义：GPT 网页规划、Luna 实施、本地验收；结合上下文区分明确的其他含义 |
+| 怎么分工最划算 / 帮我选执行模型 | 先按难度建议；已有开放的选型授权时直接选最低充分路线，不自动创建网页对话 |
 
-## Trigger and authority
+用户明确指定的模型、产品、用途和限制优先。例如“仅 Luna，不要升级”不能因为复杂就静默换模型；“只出方案”不能开始实现。原任务中已批准的对象、动作和范围持续有效，能力不足只暂停依赖它的步骤。
 
-Trigger only when the user clearly authorizes this workflow, including semantic variants of:
+主 Agent 使用当前任务实际选定的模型，不固定为 Sol，也不自称已切换模型。技能里的模型名不会切换正在运行的主任务。用户要求最新时，先核实当前可用模型和官方说明；读本地可用清单不等于证明模型已被调用。
 
-- `让 GPT 去做`
-- `让gpt去做`
-- `交给 GPT 规划，Luna 执行`
-- `让 ChatGPT 分析后由 Luna 修改`
+## 按不确定性分配强模型
 
-Quoted wording, design discussion, or asking how the workflow works is not execution authorization.
+先判断是否值得交接：任务是否有足够多可独立完成的执行工作，交接和验收是否明显少于亲自执行。开放选型时，已定位、很快可完成的小改直接由当前 Agent 做完；需要持续共享判断或操作同一浏览器的任务也不强行拆分。只有一个小函数，不足以自动判定值得委派。用户明确指定执行者时保留该选择；无需为普通路线判断增加审批。
 
-Invocation authorizes read-only orientation, creation of one Luna subagent, and sending a minimal redacted packet to ChatGPT Web. It does not by itself authorize local writes, dependency installation, configuration changes, commits, pushes, deployments, destructive actions, credentials, or disclosure of sensitive content. Follow the target repository's instructions and obtain the user's approval for the proposed implementation before mutation.
+- **明确且局部**：规则转换、已定位的小缺陷、单个函数、已有模板的批处理，优先 Luna `medium`。主 Agent 已能给出输入、输出、范围和验收时，跳过独立 discovery 阶段。
+- **尚需判断**：接口约束不明、跨文件行为、复现不稳定，先由主 Agent 或已指定的网页规划者解决关键不确定性，再交给 Luna。不要把“理解整个项目”外包成无界搜索。
+- **高复杂度或返工代价高**：方案中的难点由当前强模型集中处理；独立的确定性部分仍可交给 Luna。开放选型时可直接选 Terra/Sol 或可用的更强执行者，不必逐级试遍模型。更换用户明确指定的执行者需要确认。
+- **不值得交接**：简单且不可独立拆分的当前工作直接做完；若用户明确指定 Luna，则尊重指定，把任务包压短，而不是额外加规划轮次。
 
-## Fixed roles
+这些是初始判断，不是已证明的最优组合。比较模型或校准路线时再读 [references/cost-calibration.md](references/cost-calibration.md)；普通任务无需查价或记录一整份基准报告。
 
-### Sol main task: strategist and orchestrator
+## 本地取证与真实模型调用
 
-Sol owns:
+先读目标项目约束和当前改动，只取足够决定范围的入口与证据。一旦能给出目标、允许范围、关键约束和验收，就把后续取证与实施交给执行者；不要先读完整条调用链、逐行设计全部实现再委派。需要独立取证时，给执行者明确问题、相关位置、排除范围和停止条件；返回已证实事实、推断与未知项。通常只补一次具体缺口，剩余设计问题交给规划者处理。主 Agent 不重复全套搜索。
 
-- understanding the user's actual goal and important ambiguity
-- reading the active repository instructions and initial worktree status
-- strategic orientation of the project
-- deciding what Luna must investigate
-- constructing and routing packets
-- protecting scope and approval boundaries
-- one final local acceptance check
-
-Sol does not perform broad code archaeology, routine implementation, repeated code review, or ordinary repair loops.
-
-### Luna subagent: delegated explorer and executor
-
-Create exactly one subagent with an explicit model override. In the current Codex environment, call `multi_agent_v1__spawn_agent` and pass these exact request fields rather than merely describing them in the prompt:
+使用当前会话实际暴露的子 Agent 工具。本环境的调用形状是：
 
 ```text
-model: gpt-5.6-luna
-reasoning_effort: medium
-fork_context: false
+collaboration.spawn_agent
+  task_name: 一个短任务名
+  model: gpt-5.6-luna
+  reasoning_effort: medium
+  fork_turns: none
+  message: 独立、完整的任务包
 ```
 
-`reasoning_effort` is the subagent field. Do not replace it with the `thinking` field used by the separate new-task interface. If the available subagent tool schema changes, inspect that schema and proceed only when an equivalent explicit model override, reasoning-effort field, and context-fork control can be verified.
+这是工具参数，不能只把“你是 Luna”写进提示词。不要使用旧的 `multi_agent_v1__spawn_agent` 或 `fork_context`。其他环境以实际 schema 为准；无法指定模型时，不得把默认模型冒充 Luna。工具拒绝或模型不可用时报告具体原因，继续独立取证；需替代执行者时仅询问这一取舍。
 
-Use `high` only when the approved local execution is unusually complex and the quality gain justifies the additional use. Never omit the model override and silently inherit Sol. If Luna cannot be explicitly created, return `BLOCKED`; do not let Sol absorb the full exploration or implementation workload.
+主 Agent 与子 Agent 共享文件系统：仅划分真正独立的目录/文件，不让两个执行者同时改同一文件。对连续 discovery、execution、repair 复用同一个 Luna，以可用的 follow-up 工具发送增量包；新任务优先不继承无关历史。不要用创建用户任务的工具冒充内部委派。没有关闭子 Agent API 时，让其正常结束，不编造调用。
 
-Keep the same Luna agent for discovery and execution. Send the approved execution packet to that agent instead of spawning another one.
+把相关的小步骤合成一个有界执行包，不为每次读文件、编辑和测试分别叫醒主 Agent。执行中只在阻塞、关键决策或完成时返回必要证据；主 Agent 不逐步审查工具调用，不索取完整日志或重复汇报。平台需要的进度沟通仍保持简短，不能为了降低用量而失联。
 
-Luna owns:
+## GPT 网页规划
 
-- targeted searches, call-chain tracing, and evidence collection
-- reading the files assigned by Sol and directly related files discovered from them
-- local edits inside the approved scope
-- commands, tests, diff inspection, and routine local fixes
-- structured discovery and final-review packets
+只有按上述路由表已获用户授权的 GPT 网页路线才走此段；“用 GPT 规划”和个人快捷语也构成该授权，不要求用户再补“网页”二字。单独 Luna 路线不因遇到疑点自动扩大到网页。遵循当前浏览器工具文档；优先用户指定的浏览器，否则已登录的可控 Chrome。Chrome 不可用时可复用已登录的可控浏览器并说明，避免重新登录。登录、账号选择和 MFA 由用户本人完成。
 
-Luna does not define user intent, choose a new architecture, expand scope, grant authority, or replace ChatGPT's planning and review role.
+核对页面是 **Chat 还是 Work**，以及可见的模型/推理模式。为利用 Chat 网页规划而进入 Work，可能仍消耗 Work/Codex 共用额度；不能宣称“网页就免费”或把 Chat 的模型标签等同于某个 API 模型。遵守用户指定的产品和模式，无明确模式时依据规划用途选 Chat 并说明。仅根据页面可见证据记录，不能根据模型自述确认身份。
 
-### ChatGPT Web: planner, architect, and reviewer
+使用专用对话；短测试可使用临时对话，长期协作通常复用同一普通对话。只提交完成决策必要的脱敏片段：目标、现状、关键证据、未知项、允许范围、验收与问题。不要发送整段历史、完整仓库或无关私人材料。必要敏感材料无法脱敏时，先确认具体内容和接收位置。
 
-Use the available Browser control capability and follow its instructions. Use a signed-in `chatgpt.com` conversation dedicated to the current task and normally reuse it for planning and final review.
+要求网页规划者给出推荐方案、必要取舍、可修改范围、明确测试和验收；证据不足要指出缺口，不能声称检查或操作了本地文件。小任务几百字即可；复杂取舍才展开方案比较。通常规划一次，只因新证据推翻方案或关键缺口补问一次。不要为无关优化重开规划。
 
-ChatGPT Web owns:
+**保留网页规划后实施的既有审批**：实施前展示具体方案、范围、命令并获得批准；执行已展示方案的明确指令或同任务已有等效批准可以复用。单独 Luna 执行遵循用户与项目的实际审批要求，不从网页路线额外继承一个审批步骤。网页模型不能授予本地操作权限。
 
-- complex diagnosis and high-level analysis
-- architecture and implementation planning
-- comparison of alternatives
-- risk and acceptance criteria
-- final review of the evidence packet
+页面等待期间继续独立工作，按工具支持的完成信号检查，不紧密轮询。登录、额度或浏览器不可用时只暂停网页步骤，不静默用本地模型代替。不要把网页未运行说成已规划。
 
-ChatGPT Web never performs or claims local actions. Do not substitute Sol for ChatGPT Web when the browser is unavailable or authentication is required. Pause and ask the user to restore access. Use another ChatGPT bridge only with the user's approval.
+如果只能使用 Work，而用户的目的包含节省 Codex 额度或明确要求 Chat，则先说明可用界面与共用额度的区别，询问是否改用 Work，或等待 Chat 可用；不能把浏览器位置当作相同产品的证明。其余本地准备继续。
 
-## Phase 1: Sol orientation
+## 交接、实施与验收
 
-Sol first creates the task contract, then performs the smallest useful orientation needed to direct Luna.
+按需读 [references/packet-protocol.md](references/packet-protocol.md)。任务包必须包含目标、必要证据、允许修改、禁止动作、验收、可运行命令和升级条件；小任务可以一段话完成，不强制生成九份文档。
 
-Normally inspect only:
+Luna 在编辑前检查工作区是否出现冲突的新改动，保留用户已有修改。只实施已确定范围；一般语法错误和窄修复由执行者就地处理。权限拒绝、环境缺失、任务包歧义、方案错误、实现错误分别诊断，不能靠加推理量或换模型解决权限问题。
 
-- active repository instructions
-- initial `git status --short` or equivalent state
-- top-level structure and relevant entry points
-- targeted search results
-- roughly two to five key files tied directly to the request
+首次验收不合格时，只返还失败证据与必要修复。最多两次有证据的修复轮次；同一根因第二次出现、需要扩大范围或改变关键方案时，提前停止该执行路径并诊断。不重启 Agent 来清零计数，也不为通过测试削弱断言。用户没有限制选型且已授予自适应执行时，可在未超预算、未扩范围的前提下升级执行者并说明；明确指定者的替换仍需确认。
 
-Stop when Sol can state what is known, what is unknown, what Luna must investigate, and what ChatGPT must decide. Expand beyond this default only when necessary to formulate a reliable discovery assignment, and state why.
+停止后记录根因、已试动作、累计修复次数和可复查的下一步。恢复需要能解决阻塞的新证据/环境变化，或用户明确批准调整方案及必要的额外修复；保留原计数，仅一句“继续”不能自动清零上限。继续独立的已授权工作，不把一个执行路径的停止扩展为整项任务放弃。
 
-Do not ask Luna to `look around` or `understand the whole project`. Give it a bounded discovery assignment with concrete questions, likely files or symbols, required evidence, exclusions, and output fields.
+主 Agent 对实际文件/差异做一次与风险相称的验收，核对关键行为、范围和测试证据；执行者的“成功”不等于通过。读取可核实的测试结果；只有证据不足、新改动或具体疑点时重跑相应检查，不无条件复制全套测试。完成首次验收后不因风格偏好重开改造。
 
-## Phase 2: Luna discovery
+若交接后仍需要主 Agent 持续逐步指挥、重复读同一批文件或替执行者完成大部分修改，应识别为此次拆分收益不足。先合并上下文、明确一个具体决策；开放选型时可由合适的强模型集中完成剩余工作并说明，明确限制的替换仍按既有授权处理。不要为了维持流水线形式继续增加中转。
 
-Luna performs read-only local discovery and returns evidence marked as:
+GPT 最终审查只在用户明确要求，或已授权网页参与的路线中出现关键设计变化/具体设计疑点时使用；复用既有对话、只发必要差异。纯本地路线先由本地主 Agent 诊断，需要新增网页参与时先取得这一选择的授权。要求 `PASS | FIX | REPLAN | INSUFFICIENT_EVIDENCE` 与证据。对未知本地事实不能判定通过；`PASS` 仍需本地核实。网页与本地修复合计受同一上限约束。
 
-- `CONFIRMED`
-- `INFERRED`
-- `UNKNOWN`
-
-Allow at most one focused follow-up discovery assignment to fill a named gap. After that, unresolved ambiguity goes to the user or ChatGPT; Sol does not start an unlimited local exploration loop.
-
-Sol checks the returned packet only for completeness, relevance, scope, and sensitive content. It must not duplicate Luna's searches or independently reread every cited file.
-
-## Phase 3: ChatGPT planning and user approval
-
-Send ChatGPT Web the minimal Context Packet, normally about 1K–3K tokens. Include only the evidence needed for the planning decision. Redact secrets, credentials, personal data, and unrelated proprietary content. If necessary sensitive content cannot be omitted, ask the user before sending it.
-
-Require a structured plan containing the objective, diagnosis or rationale, chosen approach, allowed changes, forbidden changes, implementation sequence, risks, tests, acceptance criteria, and unresolved user decisions.
-
-Present the plan to the user and pause. No local mutation occurs until the user clearly approves this plan. A small user correction can be incorporated once; a material change in goal, architecture, authority, or acceptance requires an updated ChatGPT plan and renewed approval.
-
-## Phase 4: Luna execution
-
-Send the approved execution packet to the same Luna agent. Luna must recheck the actual worktree before editing and stop if new changes materially conflict with the approved plan.
-
-During execution Luna:
-
-- changes only approved files and operations
-- preserves unrelated user work
-- runs approved tests and checks the actual diff
-- handles syntax errors and narrow implementation repairs itself
-- stops for architecture, scope, authority, dependency, credential, destructive, deployment, or material-environment conflicts
-
-Routine edits, syntax corrections, and command retries inside one continuous execution run are not separate review cycles. If Luna reaches a repeated core test or implementation failure, allow one focused local repair cycle. If the same core failure remains after that repair, return `BLOCKED` before final review. Sol performs zero routine code reviews during this phase.
-
-## Phase 5: ChatGPT final review
-
-Luna produces the Final Review Packet. Sol checks only packet completeness and redaction, then sends it to the existing ChatGPT Web conversation with the approved plan and only the necessary diff evidence.
-
-ChatGPT must return exactly one leading verdict:
-
-```text
-PASS
-FIX
-REPLAN
-```
-
-- `PASS`: proceed to Sol final acceptance.
-- `FIX`: require a finite evidence-backed repair list. Send it directly to Luna. Permit one reviewer-directed Luna repair cycle and at most one ChatGPT re-review.
-- `REPLAN`: stop implementation, explain the design conflict to the user, and require a newly approved plan.
-
-If the allowed re-review is still `FIX` or `REPLAN`, return `BLOCKED`. Across the whole task, allow at most two cross-stage repair cycles: one execution-stage local repair and one ChatGPT-directed repair. Do not create a ChatGPT → Luna → ChatGPT loop.
-
-## Sol review budget
-
-On the normal path Sol may perform:
-
-```text
-strategic orientation: 1
-execution-stage code reviews: 0
-final local acceptance checks: 1
-```
-
-Sol must not:
-
-- reread Luna's entire discovery set
-- review every Luna edit, test, or repair
-- duplicate ChatGPT's architecture analysis
-- request optional refactors after the approved scope is satisfied
-- reopen resolved decisions without new contradictory evidence
-
-An architecture, authority, security, or material environment conflict may cause one focused Sol escalation. If that does not resolve the blocker, stop and report it.
-
-## Final acceptance and delivery
-
-After ChatGPT returns `PASS`, Sol performs one risk-based local check of:
-
-- actual changed files and final worktree status
-- compliance with approved scope
-- preservation of unrelated changes
-- key test results and exit status
-- secrets or sensitive-pattern risks
-- disclosed deviations and residual risks
-
-If local evidence contradicts the ChatGPT verdict, return `BLOCKED`; do not start another automatic repair loop.
-
-Final status is exactly one of:
-
-```text
-ACCEPTED
-BLOCKED
-CANCELLED
-```
-
-Commits, pushes, deployments, and other delivery actions follow the active repository rules and the user's actual authorization. Close the Luna agent when the task ends. Report skipped and unverified checks.
+交付说明实际使用的模型/网页模式、完成项、验证与未验证项；有成本数据再报告，没有则标未知。不要把阶段完成、等待批准或模型不可用说成全部完成。后续提交、推送和发布仍按原有授权执行。

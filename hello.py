@@ -28,7 +28,7 @@ TOOLS = [
     },
     {
         "title": "GPT Planner · Luna Executor",
-        "desc": "展示一套由 Sol 定向编排、Luna 本地探索执行、ChatGPT 网页版负责规划与最终审查的低消耗协作流程。",
+        "desc": "展示按任务选路的 GPT/Luna 与 Codex/Grok 协作：小改直接完成、执行量大再委派，并记录真实样本与总成本边界。",
         "tag": "AI 协作",
         "created": "2026_08_31",
         "page": "pages/21_22_gpt_planner_luna_executor.py",

@@ -1,263 +1,62 @@
-# Packet Protocol
+# 精简任务包
 
-Use these schemas to keep handoffs compact, traceable, and non-duplicative. Omit sections that genuinely do not apply; never invent evidence to fill a field.
+只用当前阶段所需字段。可直接通过工具消息传递；只有跨产品、恢复任务或审计确有需要时落盘。普通小改不要求每阶段生成文件。
 
-## 1. Sol Task Contract
+## 执行包
 
-```markdown
-# Task Contract
-
-## Mode
-query | diagnose | plan | change
-
-## User goal
-
-## In scope
-
-## Out of scope
-
-## Allowed reads
-
-## Potential writes
-
-## Approval required
-
-## Acceptance criteria
-
-## Constraints
-
-## Documentation impact
-
-## Important ambiguity
+```text
+目标与完成标准：
+事实与关键位置：（已证实 / 推断 / 未知）
+实施方案：（只写必要决策；未解决的设计问题先交规划者）
+允许修改/操作：
+禁止范围：
+已有授权及仍需审批的动作：
+验收样例与命令：
+遇到什么情况停止或升级：
+回报：实际文件、命令/退出码、检查结果、偏差与未验证项。
 ```
 
-Only the user resolves ambiguity about their desired outcome. ChatGPT may compare options but cannot grant permission or choose a preference that materially changes the user's request.
+小任务例：只修改 `normalize.py`，保留调用签名，将空白值规范为空字符串；给出两组输入输出、既有测试命令和不可改测试的边界即可。不要补写无关的架构分析、风险清单和仓库历史。
 
-## 2. Luna Discovery Assignment
+这个例子说明包可以多短，不表示如此小的任务一定值得委派。开放选型时先比较交接开销；已经决定直接完成就不生成任务包。给执行者必要决策，不把主 Agent 的逐行实现再换一种说法交出去。
 
-```markdown
-# Luna Discovery Assignment
+## 需要额外取证时
 
-## Objective
-Collect the local facts needed to plan this task. Do not modify files.
-
-## Questions to answer
-
-## Likely files, symbols, or entry points
-
-## Required evidence
-- file path and location
-- observed behavior
-- relevant error or test result
-- confidence: CONFIRMED | INFERRED | UNKNOWN
-
-## Exclusions
-
-## Stop condition
-Stop when every question is answered or explicitly marked UNKNOWN.
-
-## Required output
-Return the Discovery Packet schema below.
+```text
+要回答的问题：
+从哪些文件/符号开始：
+允许读取与排除项：
+返回：路径/位置、决定性的观察、已证实/推断/未知。
+停止：问题均有证据或明确无法证实；不进行实现。
 ```
 
-## 3. Luna Discovery Packet
+取证包服务于具体决策，不要求先完整理解项目。主 Agent 检查证据的相关性和缺口，不重新遍历整个取证集合。
 
-```markdown
-# Discovery Packet
+## 网页规划包
 
-## Project state
-
-## Initial worktree state
-
-## Confirmed facts
-
-## Inferences
-
-## Unknowns
-
-## Relevant files
-
-## Call paths or data flow
-
-## Existing tests and commands
-
-## Errors and prior attempts
-
-## Risks observed
-
-## Questions still requiring judgment
-
-## Sensitive-content check
-CLEAR | REDACTION REQUIRED | USER APPROVAL REQUIRED
+```text
+你只负责根据以下材料规划；不能声称读取、编辑或验证本地项目。
+目标：
+已确认现状与最小摘录：
+未知项：
+允许/禁止范围：
+待决策问题：
+请返回：推荐方案及理由、必要取舍、改动范围、步骤、验收和具体命令。
+缺少会影响正确性的证据时指出缺口；不要编造路径或已通过的检查。
 ```
 
-Evidence must distinguish observed repository facts from conclusions. Large logs and full files are not packet content; cite locations and include only the decisive excerpt.
+网页方案回到本地后先核对其文件和命令是否真实存在。已有测试足够时沿用；网页输出本身不扩大授权。
 
-## 4. ChatGPT Context Packet
+## 完成与修复证据
 
-Target about 1K–3K tokens when practical.
-
-```markdown
-# Context Packet for Planning
-
-## User's actual goal
-
-## Task contract
-
-## Sol orientation
-
-## Luna-confirmed local facts
-
-## Relevant files and minimal excerpts
-
-## Errors or failed attempts
-
-## Unknowns
-
-## Decision requested from ChatGPT
-
-## Constraints and forbidden actions
-
-## Required plan format
-1. Task understanding
-2. Recommended approach and rationale
-3. Files and change scope
-4. Ordered implementation steps
-5. Risks and mitigations
-6. Test plan
-7. Acceptance criteria
-8. User decisions still required
+```text
+实际完成：
+实际变更文件/差异摘要：
+检查命令、退出码、用例数或可观察结果：
+偏差/未验证项：
+当前状态：完成 / 部分完成 / 等待具体条件
 ```
 
-ChatGPT must not claim to inspect, edit, run, test, or verify the local project.
+修复只发送：失败的行为、证据、期望行为、允许范围、需重跑的检查。区分首次实施与失败后的修复；工具调用总数不是修复次数。
 
-## 5. Approved Execution Packet
-
-Create this only after user approval.
-
-```markdown
-# Approved Execution Packet
-
-## Approved objective
-
-## Approved plan
-
-## Allowed files and operations
-
-## Forbidden files and operations
-
-## Approved commands
-
-## Acceptance criteria
-
-## Required stop and escalation conditions
-
-## Required final report
-Use the Final Review Packet schema.
-```
-
-If the current worktree materially differs from the discovery state, Luna stops before editing and reports the conflict.
-
-## 6. Final Review Packet
-
-```markdown
-# Final Review Packet
-
-## Actual completed work
-
-## Changed files
-
-## Key diff summary
-
-## Commands executed
-
-## Tests and exit status
-
-## Deviations from the approved plan
-
-## Unverified or skipped checks
-
-## Remaining risks
-
-## Unrelated work preserved
-
-## Sensitive-pattern check
-
-## Luna status
-READY | BLOCKED
-```
-
-Include exact test outcomes and concise evidence. A report that says only `tests passed` is insufficient.
-
-## 7. ChatGPT Review Request and Verdict
-
-```markdown
-# Final Review Request
-
-Review the implementation evidence against the approved objective, scope, risks, and acceptance criteria. Do not assume unreported local facts.
-
-Return exactly one leading verdict:
-
-PASS
-FIX
-REPLAN
-
-Then provide:
-- evidence considered
-- blocking findings
-- non-blocking residual risks
-- explicit repair items when verdict is FIX
-- the invalidated assumption when verdict is REPLAN
-```
-
-`FIX` items must be finite, local, evidence-backed, and within existing authority. Otherwise the correct verdict is `REPLAN`.
-
-## 8. Luna Fix Packet
-
-```markdown
-# Approved Fix Packet
-
-## Reviewer verdict
-FIX
-
-## Observed problem and evidence
-
-## Required correction
-
-## Allowed scope
-
-## Commands to rerun
-
-## Acceptance condition
-
-## Stop condition
-Stop if the fix requires architecture, authority, dependency, credential, or scope changes.
-```
-
-Allow one ChatGPT-directed Luna repair cycle. This is the second and final cross-stage repair cycle permitted for the task; the first is the single focused local repair allowed for a repeated core execution failure. Routine edits inside one continuous execution run are not separate repair cycles. After the one permitted re-review, any remaining `FIX` or `REPLAN` becomes `BLOCKED`.
-
-## 9. Sol Final Acceptance
-
-```markdown
-# Sol Final Acceptance
-
-## ChatGPT verdict
-PASS
-
-## Scope check
-
-## Worktree and changed-file check
-
-## Key test evidence
-
-## Unrelated-change preservation
-
-## Sensitive-pattern check
-
-## Deviations and residual risk
-
-## Final status
-ACCEPTED | BLOCKED | CANCELLED
-```
-
-Sol performs this acceptance once. Contradictory local evidence produces `BLOCKED`, not another automatic review or repair cycle.
+网页审查可返回 `PASS | FIX | REPLAN | INSUFFICIENT_EVIDENCE`；每个阻塞意见应有事实依据和可验证的修正标准。证据不足时先补事实，不凭推测直接要求执行者重写。
