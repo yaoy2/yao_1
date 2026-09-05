@@ -125,7 +125,7 @@ st.markdown(
         line-height: 1.58;
     }
     .m22-note strong { color: #f1f5f9; }
-    .m22-note code, .m22-card code { color: #c4b5fd; }
+    .m22-note code, .m22-card code { color: #c4b5fd; background: #27364f; }
     .m22-public {
         margin-top: .8rem;
         padding: .82rem .9rem;
