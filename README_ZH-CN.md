@@ -1,6 +1,6 @@
 # yao_1 | 学院行政智能中枢
 
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_svg.svg)](https://yao-1.streamlit.app/)
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_svg.svg)](https://whatsup.streamlit.app/)
 
 **语言**：简体中文 | [English](README_EN.md)
 **更新日志**：[中文](CHANGELOG_ZH-CN.md) | [English](CHANGELOG_EN.md)
@@ -11,7 +11,7 @@
 
 ## 从哪里开始
 
-- **使用工具箱**：[线上入口](https://yao-1.streamlit.app/)；首页按“行政 / 教学 / 个人 / archived”切换。
+- **使用工具箱**：[线上入口](https://whatsup.streamlit.app/)；首页按“行政 / 教学 / 个人 / archived”切换。
 - **第一次处理成绩**：先看 M18 使用说明，再到 M17 建立正式任务。
 - **归档微信文章或本地文件**：使用本机的 `启动微信归档窗口.bat`，先读[微信归档指南](docs/guides/wechat-archiver.md)。
 - **配置 Recorder 扫描**：先读[本机配置与迁移指南](docs/guides/ding_minutes_L_setup.md)，确认路径后再运行。
@@ -68,7 +68,7 @@
 | 编号 | 模块 | 主要用途与边界 |
 | --- | --- | --- |
 | M23 | docker-monitor | 以 2×2 布局只读展示四个 Docker 任务：TrendRadar、GLM 促销雷达、AIHOT 增量、德亚显卡报价。 |
-| M22 | GPT Planner · Luna Executor | 只读介绍 Sol 定向、Luna 执行、ChatGPT 网页版规划与审查的协作流程；页面不调用模型或执行任务。 |
+| M22 | Planner-Executor | 按任务说明当前 Agent、GPT / Luna 与 Codex / Grok 两条路线的选用、优化前后对照和实测边界；页面只读，不调用模型或执行任务。 |
 | M21 | Awesome Design MD | 搜索、选择和浏览 74 组品牌设计规范；本地与线上使用同一份固定来源资产。 |
 | M19 | 概念寓言馆 | 检索和重读中文寓言、概念定义与故事映射；条目保存在 `data/concept_fables.json`，页面只读。 |
 | M10 | 灵感便签盒 | 保存灵感、摘录与素材，支持标签、色卡、排序、隐藏、Markdown/PDF 导出及 GitHub 备份合并。 |
@@ -97,11 +97,15 @@ M20、M22、M23 是说明或展示页，打开页面不会启动对应外部项�
 | --- | --- | --- |
 | Deepself | 已实现个人表达研究、写作 Skill 和独立回复工具；朋友圈原文、截图与私密报告留在本机。 | [项目说明](Deepself/README.md)；`Deepself/启动Deepself对话框.bat` |
 | 众声室 | Next.js 多模型圆桌概念验证，2026-08-11 起暂停开发；保留源码和验证记录。 | [项目说明](zhongshengshi/README.md) |
-| Codex → Grok Builder | 受控的 Codex 规划、Grok Build 实施和 Codex 验收技能。 | [中文说明](codex-grok-builder/README_ZH-CN.md) |
-| GPT Planner · Luna Executor | 受控的 Sol / Luna / ChatGPT Web 协作技能；M22 只介绍这套流程。 | [Skill 与执行边界](gpt-planner-luna-executor/SKILL.md) |
+| Codex → Grok Builder | 按任务规模交接的 Grok Build 实施技能；具体方案、范围和测试审批保留。 | [中文说明](codex-grok-builder/README_ZH-CN.md) |
+| GPT Planner · Luna Executor | 按任务需要组织 GPT 规划与 Luna 执行；尊重明确模型、网页和只规划要求。 | [中文说明](gpt-planner-luna-executor/README_ZH-CN.md) |
 | 115 AI Organizer | 只读扫描、分类报告、人工审核；批准并核对操作清单与确认码后，才执行建目录、改名和移动。没有删除接口。 | [项目说明与最新交接](115-ai-organizer/README.md) |
 
 这些子项目有自己的启动、依赖和权限要求。克隆本仓库不会自动启动它们，也不会启用监控、归档或网盘整理。
+
+[个人技能集合](personal-skills/README_ZH-CN.md)另保存 PPT 制作、小红书评论真人图片和存储分析技能，不是新增独立运行项目。跨电脑使用时，将所需完整技能复制或安装到各自实际的 `CODEX_HOME/skills/`；仓库拉取不会自动更新安装副本，不依赖固定盘符或 Junction。
+
+技能协作以合格任务总成本为依据：开放选型的小改直接完成，执行量大且边界明确时才委派，强模型聚焦关键不确定性。总 token、高价模型用量、额度和费用分别记录，缺少对照不宣称降本。参见[9 月 5 日评估与 9 月 6 日发布记录](docs/history/2026-09-05-skill-cost-optimization.md)。
 
 ## 数据保存、恢复与跨电脑使用
 

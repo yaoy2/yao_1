@@ -1,6 +1,6 @@
 # yao_1 | Academic Administration Command Center
 
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_svg.svg)](https://yao-1.streamlit.app/)
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_svg.svg)](https://whatsup.streamlit.app/)
 
 **Languages**: English | [简体中文](README_ZH-CN.md)
 **Change logs**: [English](CHANGELOG_EN.md) | [中文](CHANGELOG_ZH-CN.md)
@@ -11,7 +11,7 @@ A Streamlit toolbox for everyday faculty administration, teaching assessment, kn
 
 ## Where to Start
 
-- **Use the toolbox**: open the [online app](https://yao-1.streamlit.app/). The homepage has Administration, Teaching, Personal, and archived sections.
+- **Use the toolbox**: open the [online app](https://whatsup.streamlit.app/). The homepage has Administration, Teaching, Personal, and archived sections.
 - **Start a grading task**: read M18 first, then create the formal task in M17.
 - **Archive WeChat articles or local files**: use the local `启动微信归档窗口.bat` launcher after reading the [WeChat archiving guide](docs/guides/wechat-archiver.md).
 - **Configure Recorder scanning**: follow the [local setup and migration guide](docs/guides/ding_minutes_L_setup.md), confirming the target folder before running.
@@ -68,7 +68,7 @@ Module numbers preserve introduction order and are intentionally discontinuous. 
 | ID | Module | Purpose and boundary |
 | --- | --- | --- |
 | M23 | docker-monitor | Read-only 2×2 view of four Docker tasks: TrendRadar, GLM promotions, AIHOT increments, and Amazon.de GPU quotes. |
-| M22 | GPT Planner · Luna Executor | Read-only description of Sol orientation, Luna execution, and ChatGPT Web planning/review; the page does not call models or execute tasks. |
+| M22 | Planner-Executor | Task-based selection of the current agent, GPT / Luna, and Codex / Grok routes, with before/after changes and evidence limits; read-only, with no model calls or task execution. |
 | M21 | Awesome Design MD | Searches, selects, and displays 74 brand design references; local and deployed pages share the same pinned asset snapshot. |
 | M19 | Concept Fable Gallery | Searches and displays Chinese fables, definitions, and story mappings stored in `data/concept_fables.json`; the page is read-only. |
 | M10 | Web Memo | Captures ideas, quotations, and material with tags, palettes, ordering, hiding, Markdown/PDF export, and GitHub backup merging. |
@@ -97,11 +97,15 @@ These entries retain source code and red-cross status; their presence does not m
 | --- | --- | --- |
 | Deepself | Implemented personal-expression research, a writing Skill, and a standalone reply tool; original social posts, screenshots, and private reports stay local. | [Project guide](Deepself/README.md); `Deepself/启动Deepself对话框.bat` |
 | Zhongshengshi | Next.js multi-model roundtable proof of concept, paused since 2026-08-11; source and verification records retained. | [Project guide](zhongshengshi/README.md) |
-| Codex → Grok Builder | Controlled Codex planning, Grok Build implementation, and Codex acceptance workflow. | [English guide](codex-grok-builder/README_EN.md) |
-| GPT Planner · Luna Executor | Controlled Sol / Luna / ChatGPT Web collaboration Skill; M22 only explains the workflow. | [Skill and execution boundaries](gpt-planner-luna-executor/SKILL.md) |
+| Codex → Grok Builder | Task-sized Grok Build implementation handoffs; specific plan, scope, and test approvals remain required. | [English guide](codex-grok-builder/README_EN.md) |
+| GPT Planner · Luna Executor | GPT planning and Luna execution according to task needs; explicit model, web, and planning-only requests remain authoritative. | [English guide](gpt-planner-luna-executor/README_EN.md) |
 | 115 AI Organizer | Read-only scanning, classification reports, and human review; directory creation, renaming, and moving require approval, a verified manifest, and a matching confirmation code. No deletion interface. | [Project guide and latest handoff](115-ai-organizer/README.md) |
 
 These subprojects have their own launch, dependency, and permission requirements. Cloning this repository does not start them or enable monitoring, archiving, or cloud-drive organization.
+
+The [personal skills collection](personal-skills/README_EN.md) also holds PPT creation, Xiaohongshu comment-photo filtering, and storage analysis skills. It is not another independent application. Copy or install each complete skill into the target machine's effective `CODEX_HOME/skills/`; pulling the repository does not update installed copies automatically, and no fixed drive or Junction is assumed.
+
+Choose collaboration by the total cost of a qualified result: complete small tasks directly when model selection is open, delegate substantial work with clear boundaries, and reserve stronger models for important uncertainty. Report total tokens, higher-priced model usage, allowance, and fees separately; do not claim savings without a baseline. See the [September 5 evaluation and September 6 release record](docs/history/2026-09-05-skill-cost-optimization.md).
 
 ## Storage, Recovery, and Another Computer
 

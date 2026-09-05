@@ -1,118 +1,57 @@
 # Codex → Grok Builder
 
-[English](README_EN.md)
+**语言**：简体中文 | [English](README_EN.md)
 
-这是一个面向 Windows 的个人 Codex 技能，用于运行受控的双智能体编码闭环：
+**更新日志**：[中文](CHANGELOG_ZH-CN.md) | [English](CHANGELOG_EN.md)
 
-`Codex 规划 → 用户确认 → Grok Build 实施 → Codex 验收 → 必要时退回 Grok 修复`
+面向 Windows 的个人 Codex 技能：Codex 整理目标、范围和验收要求，用户批准具体方案后，由已登录的 Grok Build CLI 实施，Codex 根据实际差异和测试证据验收。
 
-## 触发方式
+## 何时值得使用
 
-只要用户的直接指令表达“用 Grok 去做”的意思，就应自动考虑调用本技能，例如：
+用户明确说“用 Grok 去做”“让 Grok 写代码”“交给 Grok 实现”时启用。引用这些话来讨论或修改技能，不会启动 Grok；只要求操作 Grok 网页时应使用浏览器工具。
 
-- `用grok去做`
-- `用 Grok 去做`
-- `让 Grok 做`
-- `交给 Grok 实现`
-- `让 Grok 写代码`
-- `让 Grok 完成操作，你来验收`
+模型尚未指定时，小改动通常由当前 Agent 直接完成。范围清楚、执行量较大的任务才更值得委派；强模型处理关键不确定性、重大取舍和必要验收，不固定为 Sol，也不要求每项任务附加 Luna 审查。选择依据是完成合格任务的总成本，包括准备、交接、等待、修复和验收。
 
-大小写、空格和自然语言变体不需要完全一致。仅为修改、说明或测试技能而引用这些句子时，不会启动实施流程。
+## 工作流程与边界
 
-## 角色分工
+1. Codex 读取项目规则、已有修改和最少定位信息，给出具体方案、文件范围、禁止范围、测试命令和验收标准。目标、范围、验收明确后停止预读，不先写完整实现再交接。
+2. 用户批准 Grok 的方案、修改范围和测试命令；同一任务中仍有效的具体授权可复用，扩大范围或改变条件时再确认。
+3. 将相关工作合并成一个任务包，让 Grok 完成范围内探索、实现、测试和普通修复，主控不逐次盯工具调用。
+4. Grok 返回变更文件、检查结果和必要日志位置。Codex 聚焦实际差异、关键风险和少量可核对证据；有缺陷或未解决疑点才追加检查或修复。
 
-- **Codex：**检查仓库、制定唯一实施方案、界定范围和验收标准、审查实际差异，并独立重跑测试。
-- **Grok Build：**通过本机无界面命令行，只修改批准范围并只运行批准命令。
-- **用户：**确认方案；如果后来需要扩大范围、增加权限、部署、使用密钥或执行破坏性操作，再单独授权。
+任务包不是权限沙箱。Grok 不得擅自扩大范围、提交、推送、部署、使用凭据或执行破坏性操作。具体方案与命令审批保留，包装脚本不修改全局权限配置。
 
-## 环境要求
+## 安装与环境
 
-- Windows PowerShell。
-- 本机可执行 `grok`，并已经通过 `grok login` 登录。
-- 如果要求固定规划配置，应在 Codex 任务中选择 GPT-5.6 Sol 和 `xhigh` 推理强度。
-- Python 3 仅用于运行 Codex 自带的技能校验器；运行包装脚本本身只需要 PowerShell。
+需要 Windows PowerShell、本机可用的 `grok` 命令及用户亲自完成的 Grok 登录。技能不保存密钥，包装脚本使用 CLI 已有认证。Python 3 仅在使用技能校验器时需要。
 
-本项目不保存 API Key。包装脚本使用 Grok Build 已有的本机登录状态，或由 Grok Build 自己解析环境变量认证。
+取得仓库后，把完整的 `codex-grok-builder/` 复制或安装到各台机器实际使用的 `CODEX_HOME/skills/codex-grok-builder/`。未设置 `CODEX_HOME` 时，通常是用户目录下的 `.codex/skills/`。更新前核对同名技能并保留本机改动；拉取仓库不会自动更新安装副本，不依赖固定盘符或 Junction。必要时新建 Codex 任务刷新技能发现。
 
-## 文件结构
+入口是 [SKILL.md](SKILL.md)，界面元数据在 [agents/openai.yaml](agents/openai.yaml)，包装脚本是 [scripts/invoke-grok.ps1](scripts/invoke-grok.ps1)。
 
-```text
-codex-grok-builder/
-├── SKILL.md                    技能触发和工作流约束
-├── README.md                   GitHub 默认英文说明
-├── README_EN.md                英文说明镜像
-├── README_ZH-CN.md             中文说明
-├── CHANGELOG.md                GitHub 默认英文更新日志
-├── CHANGELOG_EN.md             英文更新日志镜像
-├── CHANGELOG_ZH-CN.md          中文更新日志
-├── agents/openai.yaml          Codex 界面元数据和自动触发设置
-└── scripts/invoke-grok.ps1     确定性的 Grok Build 调用脚本
-```
+## 包装脚本示例
 
-## 运行流程
-
-1. Codex 记录工作区原有状态并读取仓库规则。
-2. Codex 给出文件范围、禁止范围、测试命令、风险和验收标准。
-3. 用户确认后，Codex 在仓库外创建临时任务包。
-4. 包装脚本用命名会话和明确权限规则启动 Grok Build 无界面模式。
-5. Grok 完成后，Codex 检查真实差异并独立重跑测试，不直接相信 Grok 的完成声明。
-6. 验收失败时，可在同一个 Grok 会话中进行最多两轮针对性修复。
-
-## 直接调用包装脚本
-
-一般由 Codex 自动调用。排查问题或手工使用时：
+下面是已批准的虚构合并函数任务示例；路径和精确测试命令须换成本次批准的值。从技能目录运行：
 
 ```powershell
-& "$env:USERPROFILE\.codex\skills\codex-grok-builder\scripts\invoke-grok.ps1" `
+& '.\scripts\invoke-grok.ps1' `
   -ProjectPath 'C:\path\to\repo' `
   -TaskFile 'C:\path\to\approved-task.md' `
-  -AllowRule @('Bash(npm.cmd test*)', 'Bash(npm.cmd run build*)')
+  -AllowRule @('Bash(python -B -m pytest -q tests/test_merge_rows.py -p no:cacheprovider)') `
+  -Quiet `
+  -MaxTurns 12
 ```
 
-增加 `-DryRun` 可以只查看最终 Grok 参数，不真正启动 Grok。
+- `-AllowRule` 只列本次批准的精确命令，避免宽泛通配符。
+- `-Quiet` 保留完整日志，只减少传回主控的输出流；不会减少 Grok 自己的推理或工具 token。
+- `-MaxTurns 12` 是本例预算，不保证 12 轮内完成；达到限制仍须核对实际结果。
+- `-DryRun` 仅展示最终参数，不启动 Grok，也不创建输出目录或日志。
+- 修复可用 `-ResumeSessionId` 继续已有会话；每次调用使用独立日志，stderr 单独保存，并返回 Grok 的真实退出码。
 
-## 权限设计
+默认 `dontAsk` 会与已有配置共同决定实际权限，不能当成硬文件沙箱。脚本默认允许读取、搜索、编辑、`git status` 和 `git diff`，并包含推送、硬重置和常见递归删除的拒绝规则。`-AlwaysApprove` 需要针对本次工具模式切换的单独授权；不要因此启用全局自动批准。
 
-- 默认使用 `dontAsk`：没有明确批准的工具会被静默拒绝。
-- 默认允许读取、搜索、编辑、`git status` 和 `git diff`。
-- 测试和构建命令必须通过 `-AllowRule` 单独放行。
-- 默认拒绝推送、硬重置、仓库清理和常见递归删除命令。
-- 只有用户针对本次运行明确授权后才能使用 `-AlwaysApprove`；即使有拒绝规则，该模式仍然风险更高。
-- 工作指令禁止 Grok 自行提交、推送、部署、读取密钥或扩大范围，除非批准的任务包明确授权。
+## 验证与成本记录
 
-## 安装位置
+先检查 PowerShell 能否解析脚本，再用 `-DryRun` 核对项目、任务包、命令与输出位置。脚本修复使用模拟 CLI 检查失败退出码、日志隔离、恢复会话名和无副作用的预演；实际编码仍需检查真实差异与相称测试。
 
-项目真身位于：
-
-```text
-E:\github\yao_1\codex-grok-builder
-```
-
-个人技能发现路径使用 Windows Junction 指向项目真身：
-
-```text
-E:\codex\.codex\skills\codex-grok-builder
-```
-
-这样既能随 `yao_1` 进行版本管理，又能继续被 Codex 自动发现。修改后如果当前任务没有立即刷新技能，可新开一个 Codex 任务或重启 Codex。
-
-## 验证
-
-在项目目录运行：
-
-```powershell
-py -3 -X utf8 'E:\codex\.codex\skills\.system\skill-creator\scripts\quick_validate.py' .
-```
-
-发布前还应检查 PowerShell 脚本能否正常解析：
-
-```powershell
-$tokens = $null
-$errors = $null
-[System.Management.Automation.Language.Parser]::ParseFile(
-  '.\scripts\invoke-grok.ps1',
-  [ref]$tokens,
-  [ref]$errors
-) | Out-Null
-$errors
-```
+包装脚本从 CLI 终态报告读取实际 usage/cost，`run.json` 提供 `TokenUsage`、`NumTurns`、`ResolvedModels`、`CliReportedCostUsd` 和 `UsageStatus`。未提供的字段保留 `null`，`ActualSubscriptionCharge` 为 `unknown`。总 token、高价模型用量、订阅额度和费用是不同指标；CLI 报价不是订阅账单。2026-09-05 的虚构 `merge_rows` 任务首轮通过同一组 12 项检查、零修复；没有全程强模型对照，不能据此宣布省 token 或成本排名。完整口径见[公开验证记录](../docs/history/2026-09-05-skill-cost-optimization.md)。

@@ -29,6 +29,8 @@ param(
 
     [switch]$AlwaysApprove,
 
+    [switch]$Quiet,
+
     [switch]$DryRun
 )
 
@@ -53,22 +55,27 @@ if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
     $OutputDirectory = Join-Path $tempRoot 'codex-grok-builder'
 }
 
-if (-not (Test-Path -LiteralPath $OutputDirectory)) {
-    New-Item -ItemType Directory -Path $OutputDirectory | Out-Null
-}
-
-$outputItem = Get-Item -LiteralPath $OutputDirectory -Force
-if (-not $outputItem.PSIsContainer) {
-    throw "OutputDirectory must be a directory: $OutputDirectory"
+$outputFullPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutputDirectory)
+if (Test-Path -LiteralPath $outputFullPath) {
+    $outputItem = Get-Item -LiteralPath $outputFullPath -Force
+    if (-not $outputItem.PSIsContainer) {
+        throw "OutputDirectory must be a directory: $OutputDirectory"
+    }
 }
 
 $timestamp = Get-Date -Format 'yyyyMMddTHHmmss'
+$runId = [guid]::NewGuid().ToString('N')
 $effectiveSessionId = if ($PSCmdlet.ParameterSetName -eq 'Resume') {
     $ResumeSessionId
 } else {
     $SessionId.ToString()
 }
-$logPath = Join-Path $outputItem.FullName "$timestamp-$effectiveSessionId.jsonl"
+# Session references can be titles containing filename characters or NTFS stream
+# separators. Each invocation uses an independent, filename-safe run identifier.
+$logBasePath = Join-Path $outputFullPath "$timestamp-$runId"
+$logPath = "$logBasePath.jsonl"
+$stderrPath = "$logBasePath.stderr.log"
+$summaryPath = "$logBasePath.run.json"
 
 $defaultAllowRules = @(
     'Read',
@@ -136,7 +143,10 @@ foreach ($rule in $effectiveDenyRules) {
 }
 
 Write-Host "CODEX_GROK_SESSION_ID=$effectiveSessionId"
+Write-Host "CODEX_GROK_RUN_ID=$runId"
 Write-Host "CODEX_GROK_OUTPUT=$logPath"
+Write-Host "CODEX_GROK_STDERR=$stderrPath"
+Write-Host "CODEX_GROK_SUMMARY=$summaryPath"
 
 if ($DryRun) {
     [pscustomobject]@{
@@ -144,19 +154,170 @@ if ($DryRun) {
         ProjectPath = $projectFullPath
         TaskFile = $taskFullPath
         SessionId = $effectiveSessionId
+        RunId = $runId
         OutputPath = $logPath
+        StderrPath = $stderrPath
+        SummaryPath = $summaryPath
         Arguments = $grokArgs
     } | ConvertTo-Json -Depth 4
     exit 0
 }
 
-& $grokCommand.Source @grokArgs 2>&1 | Tee-Object -FilePath $logPath
-$grokExitCode = $LASTEXITCODE
-
-if ($grokExitCode -ne 0) {
-    Write-Error "Grok Build exited with code $grokExitCode. Log: $logPath"
-    exit $grokExitCode
+if (-not (Test-Path -LiteralPath $outputFullPath)) {
+    New-Item -ItemType Directory -Path $outputFullPath | Out-Null
 }
 
-Write-Host "CODEX_GROK_EXIT_CODE=0"
-exit 0
+function Get-CliUsageNumber($Value) {
+    if (($Value -is [int] -or $Value -is [long] -or $Value -is [double] -or $Value -is [decimal]) -and
+        $Value -ge 0 -and -not [double]::IsNaN([double]$Value) -and -not [double]::IsInfinity([double]$Value)) {
+        return $Value
+    }
+    return $null
+}
+
+function Select-CliUsageCounters($Value) {
+    # Copy only known numeric counters, never transcript text or signatures.
+    $counterNames = @(
+        'input_tokens', 'output_tokens', 'total_tokens', 'prompt_tokens', 'completion_tokens',
+        'cache_creation_input_tokens', 'cache_read_input_tokens', 'cached_tokens', 'reasoning_tokens',
+        'inputTokens', 'outputTokens', 'totalTokens', 'cacheCreationInputTokens', 'cacheReadInputTokens',
+        'modelCalls', 'webSearchRequests', 'costUSD', 'contextWindow', 'maxOutputTokens'
+    )
+    $counters = [ordered]@{}
+    if ($null -ne $Value) {
+        foreach ($property in $Value.PSObject.Properties) {
+            if ($counterNames -ccontains $property.Name) {
+                $number = Get-CliUsageNumber $property.Value
+                if ($null -ne $number) { $counters[$property.Name] = $number }
+            }
+        }
+    }
+    if ($counters.Count -gt 0) { return [pscustomobject]$counters }
+    return $null
+}
+
+function Read-CliCompletionUsage([string]$Path) {
+    $usageResult = [ordered]@{
+        UsageSource = $null
+        UsageStatus = 'completion-event-not-obtained'
+        CompletionEventObtained = $false
+        MalformedJsonLines = 0
+        TokenUsage = $null
+        NumTurns = $null
+        CliReportedCostUsd = $null
+        ModelUsage = $null
+        ResolvedModels = $null
+    }
+    try {
+        $lastEnd = $null
+        foreach ($line in [System.IO.File]::ReadLines($Path)) {
+            if ([string]::IsNullOrWhiteSpace($line)) { continue }
+            try {
+                $event = $line | ConvertFrom-Json -ErrorAction Stop
+                if ($event -is [pscustomobject] -and $event.type -ceq 'end') { $lastEnd = $event }
+            } catch {
+                # Do not expose parse errors: they can contain the raw line.
+                $usageResult.MalformedJsonLines++
+            }
+        }
+        if ($usageResult.MalformedJsonLines -gt 0) {
+            # A corrupt later line might be the final end; do not reuse an
+            # earlier total or silently report a partial stream as complete.
+            $usageResult.UsageStatus = 'completion-event-not-obtained: malformed-json'
+        } elseif ($null -ne $lastEnd) {
+            $usageResult.UsageSource = 'cli.end'
+            $usageResult.UsageStatus = 'completion-event-obtained'
+            $usageResult.CompletionEventObtained = $true
+            $usageResult.TokenUsage = Select-CliUsageCounters $lastEnd.usage
+            $usageResult.NumTurns = Get-CliUsageNumber $lastEnd.num_turns
+            $usageResult.CliReportedCostUsd = Get-CliUsageNumber $lastEnd.total_cost_usd
+            $modelUsage = [ordered]@{}
+            if ($null -ne $lastEnd.modelUsage) {
+                foreach ($modelEntry in $lastEnd.modelUsage.PSObject.Properties) {
+                    $modelCounters = Select-CliUsageCounters $modelEntry.Value
+                    if ($null -ne $modelCounters) { $modelUsage[$modelEntry.Name] = $modelCounters }
+                }
+            }
+            if ($modelUsage.Count -gt 0) {
+                $usageResult.ModelUsage = [pscustomobject]$modelUsage
+                # RequestedModel is the input option; only the completion
+                # event's modelUsage keys identify models reported as used.
+                $usageResult.ResolvedModels = @($modelUsage.Keys)
+            }
+        }
+    } catch {
+        $usageResult.UsageSource = $null
+        $usageResult.UsageStatus = 'completion-event-not-obtained: log-unreadable'
+        $usageResult.CompletionEventObtained = $false
+        $usageResult.TokenUsage = $null
+        $usageResult.NumTurns = $null
+        $usageResult.CliReportedCostUsd = $null
+        $usageResult.ModelUsage = $null
+        $usageResult.ResolvedModels = $null
+    }
+    return [pscustomobject]$usageResult
+}
+
+$startedAt = [DateTimeOffset]::UtcNow
+$runTimer = [System.Diagnostics.Stopwatch]::StartNew()
+$grokExitCode = $null
+$wrapperError = $null
+$exitCode = 1
+# Preserve native exit codes even when a caller enables PowerShell's opt-in
+# conversion of native failures into terminating PowerShell errors.
+$PSNativeCommandUseErrorActionPreference = $false
+try {
+    if ($Quiet) {
+        # Suppress console streaming only after the complete stdout stream has
+        # been written through the same logging path used by normal mode.
+        & $grokCommand.Source @grokArgs 2> $stderrPath | Tee-Object -FilePath $logPath | Out-Null
+    } else {
+        & $grokCommand.Source @grokArgs 2> $stderrPath | Tee-Object -FilePath $logPath
+    }
+    $grokExitCode = $LASTEXITCODE
+    if ($null -eq $grokExitCode) {
+        throw 'Grok did not return a native process exit code.'
+    }
+    $exitCode = $grokExitCode
+} catch {
+    $wrapperError = $_.Exception.Message
+} finally {
+    $runTimer.Stop()
+    $completionUsage = Read-CliCompletionUsage $logPath
+    [pscustomobject]@{
+        RunId = $runId
+        SessionReference = $effectiveSessionId
+        IsResume = ($PSCmdlet.ParameterSetName -eq 'Resume')
+        RequestedModel = $(if ([string]::IsNullOrWhiteSpace($Model)) { $null } else { $Model })
+        MaxTurns = $MaxTurns
+        StartedAtUtc = $startedAt.ToString('o')
+        FinishedAtUtc = [DateTimeOffset]::UtcNow.ToString('o')
+        DurationSeconds = [Math]::Round($runTimer.Elapsed.TotalSeconds, 3)
+        NativeExitCode = $grokExitCode
+        ExitCode = $exitCode
+        WrapperError = $wrapperError
+        OutputPath = $logPath
+        StderrPath = $stderrPath
+        UsageSource = $completionUsage.UsageSource
+        UsageStatus = $completionUsage.UsageStatus
+        CompletionEventObtained = $completionUsage.CompletionEventObtained
+        MalformedJsonLines = $completionUsage.MalformedJsonLines
+        TokenUsage = $completionUsage.TokenUsage
+        NumTurns = $completionUsage.NumTurns
+        ModelUsage = $completionUsage.ModelUsage
+        ResolvedModels = $completionUsage.ResolvedModels
+        CliReportedCostUsd = $completionUsage.CliReportedCostUsd
+        # A CLI USD estimate is not evidence of actual subscription charges.
+        ActualSubscriptionCharge = 'unknown'
+        Cost = $null
+    } | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $summaryPath -Encoding utf8
+}
+
+Write-Host "CODEX_GROK_DURATION_SECONDS=$([Math]::Round($runTimer.Elapsed.TotalSeconds, 3))"
+Write-Host "CODEX_GROK_EXIT_CODE=$exitCode"
+if ($exitCode -ne 0 -and -not $Quiet) {
+    # Write-Error under ErrorActionPreference=Stop would replace the real code
+    # with PowerShell's generic exit 1 before the explicit exit is reached.
+    [Console]::Error.WriteLine("Grok Build exited with code $exitCode. Log: $logPath; stderr: $stderrPath; wrapper error: $wrapperError")
+}
+exit $exitCode

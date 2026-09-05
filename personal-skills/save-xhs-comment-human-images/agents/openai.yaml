@@ -1,0 +1,7 @@
+interface:
+  display_name: "保存小红书评论区真人图片"
+  short_description: "自动遍历小红书评论区，并仅保存以真实人物为主体的评论图片"
+  default_prompt: "Use $save-xhs-comment-human-images to 保存这个小红书链接评论区里的真人图片。"
+
+policy:
+  allow_implicit_invocation: true
