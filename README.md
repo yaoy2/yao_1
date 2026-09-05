@@ -68,7 +68,7 @@ Module numbers preserve introduction order and are intentionally discontinuous. 
 | ID | Module | Purpose and boundary |
 | --- | --- | --- |
 | M23 | docker-monitor | Read-only 2×2 view of four Docker tasks: TrendRadar, GLM promotions, AIHOT increments, and Amazon.de GPU quotes. |
-| M22 | GPT Planner · Luna Executor | Task-based selection of the current agent, GPT / Luna, and Codex / Grok routes, with before/after changes and evidence limits; read-only, with no model calls or task execution. |
+| M22 | Planner-Executor | Task-based selection of the current agent, GPT / Luna, and Codex / Grok routes, with before/after changes and evidence limits; read-only, with no model calls or task execution. |
 | M21 | Awesome Design MD | Searches, selects, and displays 74 brand design references; local and deployed pages share the same pinned asset snapshot. |
 | M19 | Concept Fable Gallery | Searches and displays Chinese fables, definitions, and story mappings stored in `data/concept_fables.json`; the page is read-only. |
 | M10 | Web Memo | Captures ideas, quotations, and material with tags, palettes, ordering, hiding, Markdown/PDF export, and GitHub backup merging. |

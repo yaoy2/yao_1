@@ -1,4 +1,4 @@
-"""M22：成本感知的 GPT/Luna 与 Codex/Grok 协作，只读展示。"""
+"""M22：Planner-Executor，成本感知的模型协作，只读展示。"""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from utils.ui_theme import render_home_link
 
 
 st.set_page_config(
-    page_title="GPT Planner · Luna Executor",
+    page_title="Planner-Executor",
     page_icon="🧭",
     layout="wide",
 )
@@ -18,24 +18,27 @@ st.markdown(
     """
     <style>
     .m22-shell {
-        --ink: #eef2ff;
-        --muted: #aab4d0;
-        --line: rgba(148, 163, 184, .22);
-        --sol: #a78bfa;
-        --luna: #60a5fa;
-        --gpt: #34d399;
+        --ink: #172b46;
+        --muted: #475569;
+        --line: #e2e8f0;
+        --sol: #7c3aed;
+        --luna: #2563eb;
+        --gpt: #059669;
+        color: var(--ink);
+        background: #ffffff;
+    }
+    .m22-hero, .m22-card, .m22-note, .m22-public {
+        box-shadow: 0 2px 8px rgba(15, 23, 42, .04);
     }
     .m22-hero {
         padding: 1.1rem 1.2rem;
         margin-bottom: .85rem;
-        border: 1px solid rgba(167, 139, 250, .28);
+        border: 1px solid var(--line);
         border-radius: 16px;
-        background:
-            radial-gradient(circle at 88% 12%, rgba(52, 211, 153, .13), transparent 28%),
-            linear-gradient(135deg, rgba(28, 25, 55, .97), rgba(13, 25, 43, .97));
+        background: #ffffff;
     }
     .m22-kicker {
-        color: #c4b5fd;
+        color: #6d28d9;
         font-size: .76rem;
         font-weight: 780;
         letter-spacing: .08em;
@@ -43,13 +46,13 @@ st.markdown(
     }
     .m22-hero h1 {
         margin: .28rem 0 .35rem;
-        color: #f8fafc;
+        color: var(--ink);
         font-size: clamp(1.55rem, 3vw, 2.15rem);
     }
     .m22-hero p {
         max-width: 880px;
         margin: 0;
-        color: #bec8de;
+        color: var(--muted);
         line-height: 1.65;
     }
     .m22-badges {
@@ -60,16 +63,16 @@ st.markdown(
     }
     .m22-badge {
         padding: .2rem .55rem;
-        border: 1px solid rgba(196, 181, 253, .28);
+        border: 1px solid #e5dff3;
         border-radius: 999px;
-        color: #ddd6fe;
-        background: rgba(139, 92, 246, .09);
+        color: #6d28d9;
+        background: #ffffff;
         font-size: .75rem;
         font-weight: 700;
     }
     .m22-section-title {
         margin: 1.05rem 0 .55rem;
-        color: inherit;
+        color: var(--ink);
         font-size: 1.04rem;
         font-weight: 760;
     }
@@ -82,13 +85,13 @@ st.markdown(
         padding: .8rem .85rem;
         border: 1px solid var(--line);
         border-radius: 13px;
-        background: #182235;
+        background: #ffffff;
     }
     .m22-card.sol { border-top: 3px solid var(--sol); }
     .m22-card.luna { border-top: 3px solid var(--luna); }
     .m22-card.gpt { border-top: 3px solid var(--gpt); }
     .m22-card small {
-        color: #8894b2;
+        color: #64748b;
         font-size: .7rem;
         font-weight: 760;
         letter-spacing: .05em;
@@ -119,24 +122,29 @@ st.markdown(
         padding: .78rem .85rem;
         border: 1px solid var(--line);
         border-radius: 13px;
-        background: #182235;
+        background: #ffffff;
         color: var(--muted);
         font-size: .84rem;
         line-height: 1.58;
     }
-    .m22-note strong { color: #f1f5f9; }
-    .m22-note code, .m22-card code { color: #c4b5fd; background: #27364f; }
+    .m22-note strong, .m22-hero strong { color: var(--ink); }
+    .m22-shell code {
+        padding: .08em .3em;
+        border-radius: 4px;
+        color: #5b21b6;
+        background: #f5f3ff;
+    }
     .m22-public {
         margin-top: .8rem;
         padding: .82rem .9rem;
-        border: 1px solid rgba(52, 211, 153, .25);
+        border: 1px solid var(--line);
         border-radius: 13px;
-        background: #102c24;
-        color: #b8c9c2;
+        background: #ffffff;
+        color: var(--muted);
         line-height: 1.58;
     }
-    .m22-public strong { color: #a7f3d0; }
-    .m22-public a { color: #6ee7b7; }
+    .m22-public strong { color: #065f46; }
+    .m22-public a { color: #047857; }
     @media (max-width: 850px) {
         .m22-grid, .m22-routes, .m22-limit { grid-template-columns: 1fr; }
     }
@@ -144,7 +152,7 @@ st.markdown(
     <div class="m22-shell">
       <section class="m22-hero">
         <div class="m22-kicker">M22 · PUBLIC SKILL SHOWCASE · 2026-09-06 更新</div>
-        <h1>🧭 我做了一套“会分工”的 AI 开发流程</h1>
+        <h1>🧭 Planner-Executor</h1>
         <p>从固定串联转向按任务分工：小改由主 Agent 直接完成，明确且执行量大的工作交给 Luna 或 Grok，强模型集中解决关键不确定性。目标是降低<strong>完成合格任务的总成本</strong>；总 token 不保证减少。</p>
         <div class="m22-badges">
           <span class="m22-badge">GPT / Luna</span>
@@ -266,7 +274,7 @@ st.markdown(
     """
     <div class="m22-shell"><div class="m22-public">
       <strong>公开源码与迁移入口</strong><br>
-      <a href="https://github.com/yaoy2/yao_1/tree/main/gpt-planner-luna-executor" target="_blank" rel="noopener noreferrer">GPT Planner · Luna Executor ↗</a>
+      <a href="https://github.com/yaoy2/yao_1/tree/main/gpt-planner-luna-executor" target="_blank" rel="noopener noreferrer">GPT/Luna 协作 Skill ↗</a>
       &nbsp; · &nbsp;
       <a href="https://github.com/yaoy2/yao_1/tree/main/codex-grok-builder" target="_blank" rel="noopener noreferrer">Codex · Grok Builder ↗</a>
       &nbsp; · &nbsp;

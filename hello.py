@@ -27,7 +27,7 @@ TOOLS = [
         "section": "个人",
     },
     {
-        "title": "GPT Planner · Luna Executor",
+        "title": "Planner-Executor",
         "desc": "展示按任务选路的 GPT/Luna 与 Codex/Grok 协作：小改直接完成、执行量大再委派，并记录真实样本与总成本边界。",
         "tag": "AI 协作",
         "created": "2026_08_31",

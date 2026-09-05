@@ -25,7 +25,8 @@ class GptPlannerLunaShowcaseTest(unittest.TestCase):
 
     def test_rendered_page_explains_both_routes_and_evidence_limits(self):
         rendered = "\n".join(item.value for item in self.app.markdown)
-        self.assertIn("我做了一套“会分工”的 AI 开发流程", rendered)
+        self.assertIn("<h1>🧭 Planner-Executor</h1>", rendered)
+        self.assertIn("<strong>Planner-Executor</strong>", self.app.sidebar.markdown[0].value)
         self.assertIn("GPT / LUNA", rendered)
         self.assertIn("CODEX / GROK", rendered)
         self.assertIn("总 token 不保证减少", rendered)

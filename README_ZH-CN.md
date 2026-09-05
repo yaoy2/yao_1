@@ -68,7 +68,7 @@
 | 编号 | 模块 | 主要用途与边界 |
 | --- | --- | --- |
 | M23 | docker-monitor | 以 2×2 布局只读展示四个 Docker 任务：TrendRadar、GLM 促销雷达、AIHOT 增量、德亚显卡报价。 |
-| M22 | GPT Planner · Luna Executor | 按任务说明当前 Agent、GPT / Luna 与 Codex / Grok 两条路线的选用、优化前后对照和实测边界；页面只读，不调用模型或执行任务。 |
+| M22 | Planner-Executor | 按任务说明当前 Agent、GPT / Luna 与 Codex / Grok 两条路线的选用、优化前后对照和实测边界；页面只读，不调用模型或执行任务。 |
 | M21 | Awesome Design MD | 搜索、选择和浏览 74 组品牌设计规范；本地与线上使用同一份固定来源资产。 |
 | M19 | 概念寓言馆 | 检索和重读中文寓言、概念定义与故事映射；条目保存在 `data/concept_fables.json`，页面只读。 |
 | M10 | 灵感便签盒 | 保存灵感、摘录与素材，支持标签、色卡、排序、隐藏、Markdown/PDF 导出及 GitHub 备份合并。 |
