@@ -69,7 +69,7 @@ st.markdown(
     }
     .m22-section-title {
         margin: 1.05rem 0 .55rem;
-        color: #dbe4f4;
+        color: inherit;
         font-size: 1.04rem;
         font-weight: 760;
     }
@@ -82,7 +82,7 @@ st.markdown(
         padding: .8rem .85rem;
         border: 1px solid var(--line);
         border-radius: 13px;
-        background: rgba(15, 23, 42, .72);
+        background: #182235;
     }
     .m22-card.sol { border-top: 3px solid var(--sol); }
     .m22-card.luna { border-top: 3px solid var(--luna); }
@@ -119,7 +119,7 @@ st.markdown(
         padding: .78rem .85rem;
         border: 1px solid var(--line);
         border-radius: 13px;
-        background: rgba(15, 23, 42, .62);
+        background: #182235;
         color: var(--muted);
         font-size: .84rem;
         line-height: 1.58;
@@ -131,7 +131,7 @@ st.markdown(
         padding: .82rem .9rem;
         border: 1px solid rgba(52, 211, 153, .25);
         border-radius: 13px;
-        background: rgba(6, 78, 59, .12);
+        background: #102c24;
         color: #b8c9c2;
         line-height: 1.58;
     }
