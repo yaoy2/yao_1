@@ -3,7 +3,7 @@
 import unittest
 from html.parser import HTMLParser
 
-from utils.mail_report_view import report_body_html, report_title
+from utils.mail_report_view import report_action_records, report_body_html, report_title
 
 
 DAILY_REPORT = """# 2026-09-06 每日邮件简报
@@ -176,6 +176,21 @@ class MailReportViewTests(unittest.TestCase):
                 self.assertIn("每日邮件简报", display)
         original = "2026-09-06 每周邮件工作汇总"
         self.assertEqual(original, report_title({"kind": "weekly", "title": original}))
+
+    def test_current_controls_can_replace_action_display_without_rewriting_saved_report(self):
+        source = DAILY_REPORT
+        records = report_action_records(source)
+        self.assertEqual(1, len(records))
+        self.assertEqual("提交课程反馈", records[0]["title"])
+        self.assertIn("A | B", records[0]["requirement"])
+        overview = ParsedHTML(report_body_html(source, include_actions=False, include_audit=False))
+        self.assertTrue(overview.tags("table"))
+        self.assertFalse(overview.tags("article"))
+        self.assertFalse(overview.tags("details"))
+        original = ParsedHTML(report_body_html(source))
+        self.assertEqual(1, len(original.tags("article")))
+        self.assertIn("已逾期", original.text)
+        self.assertEqual(DAILY_REPORT, source)
 
 
 if __name__ == "__main__":

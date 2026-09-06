@@ -59,7 +59,7 @@ def report_title(report):
     return f"{report_date} · {title}"
 
 
-def _action_html(line):
+def _action_record(line):
     match = re.fullmatch(
         r"- \*\*(.+?)\*\*｜截止：(.*?)｜责任：(.*?)｜要求：(.*?)｜提交至：(.*)",
         line, re.DOTALL,
@@ -69,20 +69,28 @@ def _action_html(line):
     heading, deadline, owner, requirement, recipient = match.groups()
     parts = heading.split(" · ")
     badges = []
-    while len(parts) > 1 and parts[0] in {"待处理", "进行中", "待确认", "已逾期", "今日到期", "时间待确认"}:
+    while len(parts) > 1 and parts[0] in {"待处理", "进行中", "需处理", "处理中", "待确认", "已逾期", "今日到期", "时间待确认"}:
         badges.append(parts.pop(0))
     title = " · ".join(parts)
-    state = '<span class="mail-action-state">' + _text(" · ".join(badges)) + "</span>" if badges else ""
+    return {"title": title, "state": " · ".join(badges), "deadline": deadline,
+            "owner": owner, "requirement": requirement, "recipient": recipient}
+
+
+def _action_html(line):
+    record = _action_record(line)
+    if record is None:
+        return None
+    state = '<span class="mail-action-state">' + _text(record["state"]) + "</span>" if record["state"] else ""
     fields = "".join(
         f'<div class="{css}"><dt>{label}</dt><dd>{_text(value) or "待确认"}</dd></div>'
         for label, value, css in (
-            ("截止时间", deadline, "mail-deadline"),
-            ("责任对象", owner, "mail-owner"),
-            ("提交至", recipient, "mail-recipient"),
-            ("具体要求", requirement, "mail-requirement"),
+            ("截止时间", record["deadline"], "mail-deadline"),
+            ("责任对象", record["owner"], "mail-owner"),
+            ("提交至", record["recipient"], "mail-recipient"),
+            ("具体要求", record["requirement"], "mail-requirement"),
         )
     )
-    return f'<article><div class="mail-action-title"><strong>{_text(title)}</strong>{state}</div><dl>{fields}</dl></article>'
+    return f'<article><div class="mail-action-title"><strong>{_text(record["title"])}</strong>{state}</div><dl>{fields}</dl></article>'
 
 
 def _audit_text(text):
@@ -102,17 +110,7 @@ def _audit_text(text):
     return f"附件待补：{count} 份。已完整检查至：{through}。"
 
 
-def report_body_html(markdown):
-    """Format the historical report itself; never substitute today's task state."""
-    content, audit, mail_rows = [], [], []
-    section = ""
-
-    def flush_mail_table():
-        if mail_rows:
-            content.append('<table><thead><tr><th>邮件事项</th><th>内容摘要</th></tr></thead><tbody>'
-                           + "".join(mail_rows) + "</tbody></table>")
-            mail_rows.clear()
-
+def _report_blocks(markdown):
     # Join wrapped paragraphs, while retaining the generator's section and item
     # boundaries. Unknown text is always kept as inert text.
     blocks = []
@@ -126,8 +124,34 @@ def report_body_html(markdown):
             blocks[-1] += "\n" + line
         else:
             blocks.append(line)
+    return blocks
 
-    for line in blocks:
+
+def report_action_records(markdown):
+    """Read generated action fields; callers must uniquely match all fields."""
+    section, records = "", []
+    for line in _report_blocks(markdown):
+        if line.startswith("## "):
+            section = line[3:].strip()
+        elif section == "待处理与时间节点" and line:
+            record = _action_record(line)
+            if record:
+                records.append(record)
+    return records
+
+
+def report_body_html(markdown, *, include_actions=True, include_audit=True):
+    """Format historical text; optional current controls are rendered by the UI."""
+    content, audit, mail_rows = [], [], []
+    section = ""
+
+    def flush_mail_table():
+        if mail_rows:
+            content.append('<table><thead><tr><th>邮件事项</th><th>内容摘要</th></tr></thead><tbody>'
+                           + "".join(mail_rows) + "</tbody></table>")
+            mail_rows.clear()
+
+    for line in _report_blocks(markdown):
         if not line:
             continue
         if not section and (line.startswith("# ") or line.startswith("统计时间：")):
@@ -143,12 +167,14 @@ def report_body_html(markdown):
         if line.startswith("## "):
             flush_mail_table()
             section = line[3:].strip()
-            if section != "采集核对":
-                label = {"邮件概览": "邮件概览", "待处理与时间节点": "需要处理"}.get(section, section)
+            if section != "采集核对" and (include_actions or section != "待处理与时间节点"):
+                label = {"邮件概览": "邮件概览", "待处理与时间节点": "待办事项"}.get(section, section)
                 content.append("<h3>" + _text(label) + "</h3>")
             continue
         if section == "采集核对":
             audit.append("<p>" + _text(_audit_text(line)) + "</p>")
+            continue
+        if section == "待处理与时间节点" and not include_actions:
             continue
         if section == "邮件概览":
             message = re.fullmatch(r"- \[([^\]\n]+)\] (.*)", line, re.DOTALL)
@@ -162,7 +188,7 @@ def report_body_html(markdown):
         action = _action_html(line) if section == "待处理与时间节点" else None
         content.append(action or "<p>" + _text(line.removeprefix("- ")) + "</p>")
     flush_mail_table()
-    if audit:
+    if audit and include_audit:
         content.append('<details class="mail-report-audit"><summary>查看采集详情</summary>' + "".join(audit) + "</details>")
     if not content:
         content.append("<p>此报告尚未提供正文。</p>")

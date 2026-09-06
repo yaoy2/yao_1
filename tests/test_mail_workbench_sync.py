@@ -222,6 +222,34 @@ class MailWorkbenchSyncTests(unittest.TestCase):
         self.assertEqual("success", merged["runs"][0]["status"])
         self.assertEqual("本机更新简报", merged["reports"][0]["title"])
 
+    def test_new_terminal_states_and_later_restoration_follow_status_version(self):
+        for state in ("no_action", "out_of_scope"):
+            with self.subTest(state=state):
+                local, remote = fixture(), fixture()
+                remote["actions"][0].update(status=state, updated_at="2026-09-06T09:00:00+08:00")
+                self.write_local(local)
+                self.sync("pull", FakeRunner([repo_response(), content_response(remote)]))
+                self.assertEqual(state, self.local()["actions"][0]["status"])
+                self.assertIsNone(self.local()["actions"][0]["completed_at"])
+                local = self.local()
+                local["actions"][0].update(status="pending", updated_at="2026-09-06T10:00:00+08:00")
+                merged = sync.merge_for_push(local, remote, self.root)
+                self.assertEqual("pending", merged["actions"][0]["status"])
+                local["actions"][0]["updated_at"] = remote["actions"][0]["updated_at"]
+                self.assertEqual(state, sync.merge_for_push(local, remote, self.root)["actions"][0]["status"])
+
+    def test_report_action_ids_survive_sync_export_with_legacy_report_unchanged(self):
+        remote = fixture()
+        remote["reports"].append({**remote["reports"][0], "id": "new-report", "action_ids": ["a1"]})
+        runner = FakeRunner([repo_response(), content_response(remote), http_result(payload={"content": {"sha": NEW_SHA}})])
+        self.sync("push", runner)
+        payload = json.loads(runner.calls[-1][1]["input"])
+        uploaded = json.loads(base64.b64decode(payload["content"]))
+        reports = {report["id"]: report for report in uploaded["reports"]}
+        self.assertEqual(["a1"], reports["new-report"]["action_ids"])
+        self.assertNotIn("action_ids", reports["p1"])
+        self.assertEqual("摘要内容", reports["p1"]["markdown"])
+
     def test_push_preserves_remote_only_attachments_with_local_same_id_metadata(self):
         local, remote = fixture(), fixture()
         remote["messages"][0]["attachments"].append({**remote["messages"][0]["attachments"][0], "id": "f2", "name": "云端补充.xlsx"})

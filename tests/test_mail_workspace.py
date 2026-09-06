@@ -185,6 +185,89 @@ class MailWorkspaceTest(unittest.TestCase):
         self.assertEqual("done", action["status"])
         self.assertEqual("2026-09-06T08:00:00+08:00", action["completed_at"])
 
+    def test_non_actionable_states_survive_recollection_and_new_actions_stay_active(self):
+        batch = self.batch()
+        original = batch["actions"][0]
+        batch["actions"] = [{**original, "id": state, "status": state}
+                            for state in ("no_action", "out_of_scope")]
+        mail.ingest(self.root, batch)
+        before = {action["id"]: action for action in mail.load_dashboard(self.root)["actions"]}
+        batch.update(id="recollection", started_at="2026-09-06T19:58:00+08:00",
+                     finished_at="2026-09-06T20:00:00+08:00")
+        for action in batch["actions"]:
+            action.update(status="pending", requirement="补充后的要求")
+        batch["actions"].append({**original, "id": "new-notification"})
+        mail.ingest(self.root, batch)
+        after = {action["id"]: action for action in mail.load_dashboard(self.root)["actions"]}
+        for state in ("no_action", "out_of_scope"):
+            self.assertIsNone(after[state]["completed_at"])
+            self.assertEqual("补充后的要求", after[state]["requirement"])
+            for field in ("status", "completed_at", "updated_at"):
+                self.assertEqual(before[state][field], after[state][field])
+        self.assertEqual("pending", after["new-notification"]["status"])
+
+    def test_reports_link_only_active_actions_and_export_keeps_legacy_reports_compatible(self):
+        batch = self.batch()
+        original = batch["actions"][0]
+        batch["actions"] = [{**original, "id": state, "title": state, "status": state}
+                            for state in mail.ACTION_STATUSES]
+        mail.ingest(self.root, batch)
+        for kind in ("daily", "morning", "weekly"):
+            result = mail.generate_report(self.root, kind, "2026-09-06T20:00:00+08:00")
+            report = next(row for row in mail.load_dashboard(self.root)["reports"]
+                          if row["id"] == result["report_id"])
+            self.assertEqual(["in_progress", "needs_confirmation", "pending"], report["action_ids"])
+            self.assertEqual(3, result["active_action_count"])
+            active_section = report["markdown"].split("## 待处理与时间节点\n", 1)[1].split("\n## ", 1)[0]
+            for state in ("done", "no_action", "out_of_scope"):
+                self.assertNotIn(state, active_section)
+        data = mail.load_dashboard(self.root)
+        data["reports"].append({"id": "legacy-report", "kind": "daily", "markdown": "原有简报"})
+        exported = mail.public_snapshot(data, self.root)
+        self.assertEqual(data["reports"][0]["action_ids"], exported["reports"][0]["action_ids"])
+        self.assertNotIn("action_ids", exported["reports"][-1])
+        exported["reports"][0]["action_ids"].append("export-only")
+        self.assertNotIn("export-only", data["reports"][0]["action_ids"])
+
+    def test_morning_includes_overdue_unknown_today_and_next_three_calendar_days(self):
+        batch = self.batch()
+        original = batch["actions"][0]
+        deadlines = {"overdue": "2026-09-05", "today": "2026-09-06",
+                     "third-day": "2026-09-09", "fourth-day": "2026-09-10",
+                     "unknown": None}
+        batch["actions"] = [{**original, "id": key, "due_at": due} for key, due in deadlines.items()]
+        mail.ingest(self.root, batch)
+        result = mail.generate_report(self.root, "morning", "2026-09-06T09:00:00+08:00")
+        report = mail.load_dashboard(self.root)["reports"][0]
+        self.assertEqual(["overdue", "today", "third-day", "unknown"], report["action_ids"])
+        self.assertEqual(4, result["active_action_count"])
+
+    def test_weekly_completed_count_uses_current_done_state_and_report_period(self):
+        batch = self.batch()
+        original = batch["actions"][0]
+        states = [
+            ("week-start", "done", "2026-08-31T00:00:00+08:00"),
+            ("week-end", "done", "2026-09-06T20:00:00+08:00"),
+            ("prior-week", "done", "2026-08-30T23:59:59+08:00"),
+            ("future", "done", "2026-09-06T20:00:01+08:00"),
+            ("declined", "no_action", "2026-09-05T20:00:00+08:00"),
+            ("unrelated", "out_of_scope", "2026-09-05T20:00:00+08:00"),
+            ("reopened", "pending", "2026-09-05T20:00:00+08:00"),
+        ]
+        batch["actions"] = [{**original, "id": key, "title": key, "status": state,
+                             "completed_at": completed} for key, state, completed in states]
+        mail.ingest(self.root, batch)
+        result = mail.generate_report(self.root, "weekly", "2026-09-06T20:00:00+08:00")
+        report = mail.load_dashboard(self.root)["reports"][0]
+        completed_section = report["markdown"].split("## 本周已完成事项\n", 1)[1].split("\n## ", 1)[0]
+        self.assertEqual(2, result["completed_action_count"])
+        self.assertIn("本周已完成：2 项。", completed_section)
+        self.assertIn("week-start｜完成时间：2026-08-31 00:00", completed_section)
+        self.assertIn("week-end｜完成时间：2026-09-06 20:00", completed_section)
+        for key in ("prior-week", "future", "declined", "unrelated", "reopened"):
+            self.assertNotIn(key, completed_section)
+        self.assertEqual(["reopened"], report["action_ids"])
+
     def test_declared_hash_mismatch_does_not_archive_a_success(self):
         batch = self.batch()
         batch["messages"][0]["attachments"][0]["sha256"] = hashlib.sha256(b"different").hexdigest()

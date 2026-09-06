@@ -12,17 +12,13 @@ import streamlit as st
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from utils import budget_auth
-from utils.mail_report_view import REPORT_CSS, report_body_html, report_title
+from utils.mail_action_status import STATUS_LABELS, ACTIVE_STATUSES, ARCHIVED_STATUSES
+from utils.mail_report_view import REPORT_CSS, report_action_records, report_body_html, report_title
 from utils.ui_theme import render_home_link
 
 
 BJT = timezone(timedelta(hours=8), "Asia/Shanghai")
-STATUSES = {
-    "pending": "待处理",
-    "in_progress": "进行中",
-    "done": "已完成",
-    "needs_confirmation": "待确认",
-}
+STATUSES = STATUS_LABELS
 KINDS = {"daily": "每日归档与简报", "morning": "早间到期提醒", "weekly": "每周汇总", "sample": "样本试跑"}
 ATTACHMENT_STATUSES = {"success": "已归档并核验", "missing": "未取得文件", "error": "归档失败", "pending": "待下载"}
 ERRORS = {
@@ -169,20 +165,25 @@ def filter_actions(actions, messages, view, now, category="全部"):
         if category != "全部" and (message.get("category") or "未分类") != category:
             continue
         due = parse_time(action.get("due_at"), deadline=True)
-        active = action.get("status") != "done"
+        status = action.get("status")
+        active = status in ACTIVE_STATUSES
         matches = {
             "未完成": active,
+            "我的待办": status in {"pending", "in_progress"},
             "今天": active and due is not None and due.date() == now.date(),
             "未来7天": active and due is not None and now.date() <= due.date() <= now.date() + timedelta(days=6),
             "逾期": active and due is not None and due < now,
             "待确认": active and (action.get("status") == "needs_confirmation" or due is None),
-            "已完成": not active,
+            "已完成": status == "done",
+            "已办归档": status == "done",
+            "无需处理": status == "no_action",
+            "不相关业务": status == "out_of_scope",
             "全部": True,
         }
         if matches.get(view, False):
             selected.append(action)
     return sorted(selected, key=lambda item: (
-        item.get("status") == "done",
+        item.get("status") in ARCHIVED_STATUSES,
         parse_time(item.get("due_at"), deadline=True) or datetime.max.replace(tzinfo=BJT),
         str(item.get("id", "")),
     ))
@@ -235,6 +236,8 @@ def save_drafts(gateway, loaded, drafts):
     # Enforce write authorization here, independent of disabled browser widgets.
     if not st.session_state.get("mail_authenticated") or not budget_auth.get_budget_password(st.secrets, os.environ):
         raise PermissionError("请先启用待办编辑，再保存状态。")
+    if loaded.get("source") != "github":
+        raise PermissionError("本机快照仅供查看，不能保存状态。")
     updates = build_action_updates(loaded["snapshot"].get("actions", []), drafts)
     if not updates:
         return False
@@ -269,7 +272,31 @@ def render_message(message):
         render_source(message)
 
 
-def render_reports(reports, kinds, start=None, end=None):
+def linked_report_actions(report, actions):
+    """Use stored IDs, or uniquely match all fields in pre-ID legacy reports."""
+    by_id = {item["id"]: item for item in actions}
+    ids = report.get("action_ids")
+    if isinstance(ids, list) and all(isinstance(value, str) for value in ids):
+        return [by_id[value] for value in dict.fromkeys(ids) if value in by_id], sum(value not in by_id for value in set(ids))
+    linked, missing = {}, 0
+    for record in report_action_records(report.get("markdown")):
+        candidates = []
+        for action in actions:
+            deadline = (action.get("due_text") or "未明确") + (f"（{action['due_at']}）" if action.get("due_at") else "")
+            if (record["title"] == action.get("title")
+                    and record["deadline"] == deadline
+                    and record["owner"] == (action.get("owner") or "待确认")
+                    and record["requirement"] == (action.get("requirement") or "")
+                    and record["recipient"] == (action.get("recipient") or "待确认")):
+                candidates.append(action)
+        if len(candidates) == 1:
+            linked[candidates[0]["id"]] = candidates[0]
+        else:
+            missing += 1
+    return list(linked.values()), missing
+
+
+def render_reports(reports, kinds, start=None, end=None, *, snapshot=None, loaded=None, gateway=None, now=None):
     selected = []
     for report in reports:
         report_date = parse_time(report.get("date") or report.get("generated_at"))
@@ -278,66 +305,130 @@ def render_reports(reports, kinds, start=None, end=None):
     for report in sorted(selected, key=lambda item: str(item.get("generated_at", "")), reverse=True):
         with st.expander(plain_label(report_title(report))):
             st.caption(f"统计时段：{display_time(report.get('period_start'))} 至 {display_time(report.get('period_end'))} · 生成于 {display_time(report.get('generated_at'))}")
-            # Only fixed HTML elements are emitted; all mail text is escaped.
-            st.markdown(report_body_html(report.get("markdown")), unsafe_allow_html=True)
+            if snapshot is None or loaded is None or gateway is None:
+                st.markdown(report_body_html(report.get("markdown")), unsafe_allow_html=True)
+                continue
+            st.markdown(report_body_html(report.get("markdown"), include_actions=False, include_audit=False), unsafe_allow_html=True)
+            linked, missing = linked_report_actions(report, snapshot.get("actions", []))
+            st.subheader("待办事项")
+            st.caption("下拉框显示当前状态；报告生成时的记录保留在下方。")
+            active = [action for action in linked if action.get("status") in ACTIVE_STATUSES]
+            archived = [action for action in linked if action.get("status") in ARCHIVED_STATUSES]
+            for action in active:
+                render_action_card(action, snapshot, loaded, gateway, now, context=str(report.get("id", "report")))
+            if not active:
+                st.caption("本报告关联的事项暂无活跃待办。" if not missing else "请核对下方历史记录中的待办。")
+            if archived:
+                with st.expander(f"已归档事项（{len(archived)}）", expanded=False):
+                    st.caption("已处理、无需处理和不属本人业务的事项已停止提醒，可在这里恢复。")
+                    for action in archived:
+                        render_action_card(action, snapshot, loaded, gateway, now, context=str(report.get("id", "report")))
+            if missing:
+                st.caption(f"有 {missing} 项历史记录无法唯一对应当前事项，保留原记录供核对；可在“到期待办”查看当前清单。")
+            with st.expander("报告生成时的记录", expanded=False):
+                st.markdown(report_body_html(report.get("markdown")), unsafe_allow_html=True)
     if not selected:
         st.info("此范围内尚无已生成的报告。")
 
 
-def render_actions(snapshot, loaded, gateway, category, now):
+def render_action_card(action, snapshot, loaded, gateway, now, *, context):
+    """One current-state control per item; archived records use the same restore control."""
     drafts = st.session_state.setdefault("mail_action_drafts", {})
     by_id = {item.get("id"): item for item in snapshot.get("messages", [])}
     readonly = loaded.get("source") != "github" or not st.session_state.get("mail_authenticated")
-    st.caption("待办按截止时间筛选，不受收件日期范围限制。未明确的时间单列待确认；这里的状态只更新工作台。")
-    view = st.radio("待办视图", ["未完成", "今天", "未来7天", "逾期", "待确认", "已完成", "全部"], horizontal=True)
-    pending = build_action_updates(snapshot.get("actions", []), drafts)
-    if loaded.get("source") != "github":
-        st.info("当前读取本机快照；连接私有同步数据源后可在网页更新状态。")
-    elif readonly:
-        st.info("当前为公开浏览。需要修改状态时，请在页面上方启用待办编辑。")
-    if st.button(f"保存状态修改（{len(pending)}项）", disabled=readonly or not pending, type="primary"):
-        try:
-            if save_drafts(gateway, loaded, drafts):
-                st.session_state["mail_save_notice"] = "状态已保存到私有数据源。"
-                st.rerun()
-        except Exception as exc:
-            show_data_error(exc, saving=True)
-    actions = filter_actions(snapshot.get("actions", []), snapshot.get("messages", []), view, now, category)
-    if not actions:
-        st.info("此视图内没有匹配的待办。")
-    for action in actions:
-        action_id = str(action["id"])
-        message = by_id.get(action.get("message_id"), {})
-        body, due_col, status_col = st.columns([5, 2.3, 1.8], vertical_alignment="center")
+    action_id = str(action["id"])
+    message = by_id.get(action.get("message_id"), {})
+    with st.container(border=True):
+        body, status_col = st.columns([5, 1.7], vertical_alignment="center")
         with body:
-            st.text(action.get("title") or action.get("requirement") or "未命名事项")
-            st.caption(plain_label(f"责任对象：{action.get('owner') or '待确认'} · 来源：{message.get('subject') or '原邮件索引未提供'}"))
+            st.markdown("**" + plain_label(action.get("title") or action.get("requirement") or "未命名事项") + "**")
+        with status_col:
+            key = f"mail_status_{context}_{action_id}_{loaded.get('version', 'local')}"
+            current = action.get("status") if action.get("status") in STATUSES else "needs_confirmation"
+            st.session_state[key] = current if readonly else drafts.get(action_id, current)
+            st.selectbox("当前状态", list(STATUSES), key=key, format_func=STATUSES.get,
+                         disabled=readonly, label_visibility="collapsed", help="选择后自动保存；归档仅改变工作台分类，可随时恢复。",
+                         on_change=remember_status, args=(action_id, key, gateway, loaded.get("version")))
+            if action_id in drafts and drafts[action_id] != current:
+                st.caption("尚未保存，事项仍保留原状态。")
+        due_col, owner_col, recipient_col = st.columns([1.1, 1, 1])
         with due_col:
             due = parse_time(action.get("due_at"), deadline=True)
-            label = display_time(action.get("due_at"), deadline=True)
-            st.caption(("🔴 已逾期 · " if due and due < now and action.get("status") != "done" else "截止：") + label)
-            if action.get("due_text"):
-                st.caption(plain_label("原文：" + str(action["due_text"])))
-        with status_col:
-            key = f"mail_status_{action_id}"
-            current = action.get("status") if action.get("status") in STATUSES else "needs_confirmation"
-            # A separate draft survives Streamlit's cleanup of hidden widget state.
-            st.session_state[key] = current if readonly else drafts.get(action_id, current)
-            st.selectbox("处理状态", list(STATUSES), key=key, format_func=STATUSES.get,
-                         disabled=readonly, label_visibility="collapsed",
-                         on_change=remember_status, args=(action_id,))
-        with st.expander("要求、截止依据与提交方式", expanded=False):
-            st.text(action.get("requirement") or "具体要求待确认。")
-            st.text("截止原文：" + str(action.get("due_text") or "原文未明确截止时间。"))
+            overdue = due and now and due < now and action.get("status") in ACTIVE_STATUSES
+            st.caption("截止时间" + (" · 已逾期" if overdue else ""))
+            st.markdown("**" + plain_label(action.get("due_text") or display_time(action.get("due_at"), deadline=True)) + "**")
+        with owner_col:
+            st.caption("责任对象")
+            st.markdown(plain_label(action.get("owner") or "待确认"))
+        with recipient_col:
+            st.caption("提交至")
+            st.markdown(plain_label(action.get("recipient") or "待确认"))
+        st.caption("具体要求")
+        st.markdown(plain_label(action.get("requirement") or "具体要求待确认。"))
+        with st.expander("来源、截止依据与提交方式", expanded=False):
+            st.text("来源：" + str(message.get("subject") or "原邮件索引未提供"))
+            st.text("截止日期：" + display_time(action.get("due_at"), deadline=True))
             st.text("判断依据：" + str(action.get("due_basis") or "未提供，需核对原邮件及附件。"))
-            st.text("提交对象：" + str(action.get("recipient") or "待确认"))
             st.text("提交方式：" + str(action.get("submission_method") or "待确认"))
             st.caption(f"已存状态：{STATUSES.get(action.get('status'), '待确认')} · 最近更新：{display_time(action.get('updated_at'))}")
+            if action.get("status") == "done":
+                st.caption("完成时间：" + display_time(action.get("completed_at")))
             render_source(message)
 
 
-def remember_status(action_id):
-    st.session_state.setdefault("mail_action_drafts", {})[action_id] = st.session_state[f"mail_status_{action_id}"]
+def remember_status(action_id, widget_key, gateway, expected_version):
+    """Streamlit runs callbacks before rebuilding the page and its filters."""
+    drafts = st.session_state.setdefault("mail_action_drafts", {})
+    status = st.session_state[widget_key]
+    drafts[action_id] = status
+    loaded = st.session_state.get("mail_loaded")
+    if loaded and loaded.get("version") != expected_version:
+        st.session_state["mail_save_error"] = ERRORS["conflict"]
+        return
+    try:
+        if not loaded:
+            raise ValueError("Missing snapshot")
+        if save_drafts(gateway, loaded, {action_id: status}):
+            drafts.pop(action_id, None)
+            group = {"done": "已办归档", "no_action": "无需处理", "out_of_scope": "不相关业务"}.get(status)
+            st.session_state["mail_save_notice"] = (f"已保存，事项已移入“{group}”，可随时恢复。" if group
+                                                     else f"已保存为“{STATUSES[status]}”。")
+        else:
+            drafts.pop(action_id, None)
+        st.session_state.pop("mail_save_error", None)
+    except Exception as exc:
+        st.session_state["mail_save_error"] = ERRORS.get(getattr(exc, "code", ""), "保存失败，选择已保留；请刷新核对后重试。")
+
+
+def render_pending_changes(snapshot, loaded, gateway):
+    drafts = st.session_state.setdefault("mail_action_drafts", {})
+    pending = build_action_updates(snapshot.get("actions", []), drafts)
+    if st.session_state.get("mail_save_error"):
+        st.error(st.session_state["mail_save_error"])
+    if pending and st.session_state.get("mail_authenticated"):
+        st.caption(f"有 {len(pending)} 项选择尚未保存。保存成功前，提醒和分类继续按原状态执行。")
+        if st.button(f"重试保存（{len(pending)}项）", type="primary"):
+            try:
+                if save_drafts(gateway, loaded, drafts):
+                    st.session_state.pop("mail_save_error", None)
+                    st.session_state["mail_save_notice"] = "状态已保存，分类与提醒已更新。"
+                    st.rerun()
+            except Exception as exc:
+                show_data_error(exc, saving=True)
+
+
+def render_actions(snapshot, loaded, gateway, category, now):
+    st.caption("我的待办只显示需处理和处理中；待确认、已办归档及其他分类可分别查看。事项不受收件日期范围限制。")
+    view = st.radio("待办视图", ["我的待办", "待确认", "今天", "未来7天", "逾期", "已办归档", "无需处理", "不相关业务", "全部"], horizontal=True)
+    if loaded.get("source") != "github":
+        st.info("当前读取本机快照，仅供查看。")
+    elif not st.session_state.get("mail_authenticated"):
+        st.caption("修改状态请先在页面上方启用待办编辑。")
+    actions = filter_actions(snapshot.get("actions", []), snapshot.get("messages", []), view, now, category)
+    if not actions:
+        st.info("此视图内没有匹配的事项。")
+    for action in actions:
+        render_action_card(action, snapshot, loaded, gateway, now, context="all")
 
 
 def render_attachments(messages):
@@ -381,7 +472,7 @@ def main():
     refresh = refresh_col.button("刷新数据（保留未保存编辑）")
     if editing and logout_col.button("退出编辑"):
         for key in list(st.session_state):
-            if key in {"mail_authenticated", "mail_action_drafts"} or str(key).startswith("mail_status_"):
+            if key in {"mail_authenticated", "mail_action_drafts", "mail_save_error"} or str(key).startswith("mail_status_"):
                 del st.session_state[key]
         st.rerun()
     loaded = st.session_state.get("mail_loaded")
@@ -395,6 +486,7 @@ def main():
             show_data_error(exc)
             st.stop()
     snapshot = loaded["snapshot"]
+    render_pending_changes(snapshot, loaded, mail_private_sync)
     coverage = snapshot.get("coverage") or {}
     st.caption(plain_label(f"账户：{snapshot.get('account') or '未记录'} · 数据更新：{display_time(snapshot.get('updated_at'))} · 来源：{'私有同步' if loaded.get('source') == 'github' else '本机只读快照'}"))
     st.markdown(snapshot_status_html(snapshot), unsafe_allow_html=True)
@@ -428,9 +520,10 @@ def main():
         cols = st.columns(3)
         cols[0].metric("范围内邮件", len(messages))
         cols[1].metric("附件索引", sum(len(item.get("attachments", [])) for item in messages))
-        cols[2].metric("未完成事项（不限收件日期）", len(filter_actions(snapshot.get("actions", []), snapshot.get("messages", []), "未完成", now, category)))
+        cols[2].metric("活跃待办（含待确认）", len(filter_actions(snapshot.get("actions", []), snapshot.get("messages", []), "未完成", now, category)))
         st.caption("报告覆盖选定日期的全部分类；下方逐封邮件遵循分类筛选。")
-        render_reports(snapshot.get("reports", []), {"daily", "morning"}, start, end)
+        render_reports(snapshot.get("reports", []), {"daily", "morning"}, start, end,
+                       snapshot=snapshot, loaded=loaded, gateway=mail_private_sync, now=now)
         st.subheader("邮件摘要")
         for message in messages:
             render_message(message)
@@ -455,7 +548,8 @@ def main():
         else:
             st.info("尚无实际运行记录，不能据计划时间判断任务已执行。")
         st.subheader("每周汇总")
-        render_reports(snapshot.get("reports", []), {"weekly"}, start, end)
+        render_reports(snapshot.get("reports", []), {"weekly"}, start, end,
+                       snapshot=snapshot, loaded=loaded, gateway=mail_private_sync, now=now)
 
 
 if __name__ == "__main__":

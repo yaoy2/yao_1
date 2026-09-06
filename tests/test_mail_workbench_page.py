@@ -1,6 +1,7 @@
 """Page logic checks without starting a Streamlit application or reading mail."""
 
 import importlib.util
+import copy
 import unittest
 from datetime import date, datetime
 from pathlib import Path
@@ -47,6 +48,37 @@ class MailWorkbenchPageTests(unittest.TestCase):
         messages = [{"id": "m", "received_at": "2026-08-01", "category": "教学"}]
         selected = page.filter_actions(actions, messages, "未来7天", datetime(2026, 9, 6, tzinfo=page.BJT), "教学")
         self.assertEqual(["old"], [item["id"] for item in selected])
+
+    def test_closed_categories_never_enter_active_or_due_views(self):
+        actions = [{"id": status, "status": status, "due_at": "2026-09-06"} for status in page.STATUSES]
+        now = datetime(2026, 9, 6, 9, tzinfo=page.BJT)
+        self.assertEqual({"pending", "in_progress"}, {a["id"] for a in page.filter_actions(actions, [], "我的待办", now)})
+        for view in ("未完成", "今天", "未来7天"):
+            with self.subTest(view=view):
+                self.assertEqual(page.ACTIVE_STATUSES, {a["id"] for a in page.filter_actions(actions, [], view, now)})
+        for view, status in (("已办归档", "done"), ("无需处理", "no_action"), ("不相关业务", "out_of_scope")):
+            self.assertEqual([status], [a["id"] for a in page.filter_actions(actions, [], view, now)])
+        self.assertEqual({"needs_confirmation"}, {a["id"] for a in page.filter_actions(actions, [], "待确认", now)})
+
+    def test_report_ids_keep_link_to_reclassified_and_updated_actions(self):
+        actions = [{"id": "a", "title": "补充后标题", "status": "out_of_scope"},
+                   {"id": "b", "title": "其他事项", "status": "pending"}]
+        linked, missing = page.linked_report_actions({"action_ids": ["a", "missing"]}, actions)
+        self.assertEqual(["a"], [item["id"] for item in linked])
+        self.assertEqual(1, missing)
+
+    def test_legacy_report_requires_unique_full_field_match_and_does_not_mutate_history(self):
+        markdown = "## 待处理与时间节点\n\n- **待确认 · 交表**｜截止：下班前（2026-09-07）｜责任：学院｜要求：核对 A | B｜提交至：教务部\n"
+        report = {"markdown": markdown}
+        action = {"id": "a", "title": "交表", "due_text": "下班前", "due_at": "2026-09-07",
+                  "owner": "学院", "requirement": "核对 A | B", "recipient": "教务部", "status": "no_action"}
+        linked, missing = page.linked_report_actions(report, [action])
+        self.assertEqual([action], linked)
+        self.assertEqual(0, missing)
+        ambiguous = [action, {**action, "id": "b"}]
+        self.assertEqual(([], 1), page.linked_report_actions(report, ambiguous))
+        self.assertEqual(([], 1), page.linked_report_actions(report, [{**action, "requirement": "新的要求"}]))
+        self.assertEqual(markdown, report["markdown"])
 
     def test_source_links_reject_other_hosts_credentials_and_unknown_queries(self):
         good = "https://mail.nsu.edu.cn/owa/?ae=Item&a=Open&t=IPM.Note&id=sample%2Fid"
@@ -166,6 +198,49 @@ class MailWorkbenchPageTests(unittest.TestCase):
         with patch.object(page, "st", fake_st):
             self.assertEqual(loaded, page.refresh_snapshot(gateway))
         self.assertEqual({"a": "done"}, fake_st.session_state["mail_action_drafts"])
+
+    def test_dropdown_saves_only_selected_item_then_moves_to_its_archive_group(self):
+        for status in page.ARCHIVED_STATUSES:
+            with self.subTest(status=status):
+                loaded = {"snapshot": {"actions": [{"id": "a", "status": "pending"}, {"id": "b", "status": "pending"}]},
+                          "version": "old", "source": "github"}
+                saved = copy.deepcopy(loaded)
+                saved["version"] = "new"
+                saved["snapshot"]["actions"][0]["status"] = status
+                drafts = {"b": "done"}
+                state = {"mail_loaded": loaded, "mail_authenticated": True, "mail_action_drafts": drafts, "choice": status}
+                fake_st = SimpleNamespace(secrets={"budget_password": "test-edit-password"}, session_state=state)
+                gateway = SimpleNamespace(save_action_updates=Mock(return_value=saved))
+                with patch.object(page, "st", fake_st):
+                    page.remember_status("a", "choice", gateway, "old")
+                self.assertEqual({"a": status}, gateway.save_action_updates.call_args.args[0])
+                self.assertEqual({"b": "done"}, drafts)
+                self.assertEqual("new", state["mail_loaded"]["version"])
+                self.assertIn("移入", state["mail_save_notice"])
+
+    def test_dropdown_failure_preserves_original_active_item_and_user_choice(self):
+        loaded = {"snapshot": {"actions": [{"id": "a", "status": "pending"}]}, "version": "old", "source": "github"}
+        state = {"mail_loaded": loaded, "mail_authenticated": True, "choice": "out_of_scope"}
+        fake_st = SimpleNamespace(secrets={"budget_password": "test-edit-password"}, session_state=state)
+        gateway = SimpleNamespace(save_action_updates=Mock(side_effect=RuntimeError("private details must stay hidden")))
+        with patch.object(page, "st", fake_st):
+            page.remember_status("a", "choice", gateway, "old")
+        self.assertEqual("pending", state["mail_loaded"]["snapshot"]["actions"][0]["status"])
+        self.assertEqual({"a": "out_of_scope"}, state["mail_action_drafts"])
+        self.assertNotIn("mail_save_notice", state)
+        self.assertNotIn("private details", state["mail_save_error"])
+
+    def test_callback_cannot_write_from_stale_render_or_unauthenticated_session(self):
+        for authenticated, version in ((True, "stale"), (False, "current")):
+            with self.subTest(authenticated=authenticated, version=version):
+                loaded = {"snapshot": {"actions": [{"id": "a", "status": "pending"}]}, "version": "current", "source": "github"}
+                state = {"mail_loaded": loaded, "mail_authenticated": authenticated, "choice": "done"}
+                fake_st = SimpleNamespace(secrets={"budget_password": "test-edit-password"}, session_state=state)
+                gateway = SimpleNamespace(save_action_updates=Mock())
+                with patch.object(page, "st", fake_st):
+                    page.remember_status("a", "choice", gateway, version)
+                gateway.save_action_updates.assert_not_called()
+                self.assertEqual("pending", loaded["snapshot"]["actions"][0]["status"])
 
     def test_mail_text_cannot_become_a_tracking_image(self):
         text = "![image](https://example.org/tracker) <img src='https://example.org/'>"

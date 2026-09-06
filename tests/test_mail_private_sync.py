@@ -264,6 +264,47 @@ class MailPrivateSyncTests(unittest.TestCase):
         result = self.save(session, updates=[{"id": "a1", "status": "in_progress"}])
         self.assertIsNone(result["snapshot"]["actions"][0]["completed_at"])
 
+    def test_no_action_and_out_of_scope_save_without_completion_or_source_changes(self):
+        for state in ("no_action", "out_of_scope"):
+            with self.subTest(state=state):
+                source = snapshot_fixture()
+                source["actions"][0].update(status="done", completed_at="2026-09-06T08:00:00+08:00")
+                source["reports"][0]["action_ids"] = ["a1"]
+                session = FakeSession(gets=[FakeResponse(payload={"private": True}), contents_response(source)])
+                saved = self.save(session, updates={"a1": state})["snapshot"]
+                self.assertEqual(state, saved["actions"][0]["status"])
+                self.assertIsNone(saved["actions"][0]["completed_at"])
+                expected = copy.deepcopy(source)
+                expected["updated_at"] = saved["updated_at"]
+                for field in ("status", "updated_at", "completed_at"):
+                    expected["actions"][0][field] = saved["actions"][0][field]
+                self.assertEqual(expected, saved)
+
+    def test_all_archived_states_can_restore_to_active_states(self):
+        for before in ("done", "no_action", "out_of_scope"):
+            for after in ("pending", "needs_confirmation", "in_progress"):
+                with self.subTest(before=before, after=after):
+                    source = snapshot_fixture()
+                    source["actions"][0].update(status=before, completed_at="2026-09-06T08:00:00+08:00")
+                    session = FakeSession(gets=[FakeResponse(payload={"private": True}), contents_response(source)])
+                    saved = self.save(session, updates={"a1": after})["snapshot"]
+                    self.assertEqual(after, saved["actions"][0]["status"])
+                    self.assertIsNone(saved["actions"][0]["completed_at"])
+                    self.assertEqual(saved["updated_at"], saved["actions"][0]["updated_at"])
+
+    def test_report_action_ids_are_optional_but_validated_when_present(self):
+        legacy = snapshot_fixture()
+        self.assertEqual(legacy, sync._validate_snapshot(legacy))
+        for identifiers in ([], ["a1"], ["historical-action-no-longer-present"]):
+            source = snapshot_fixture()
+            source["reports"][0]["action_ids"] = identifiers
+            self.assertEqual(source, sync._validate_snapshot(source))
+        for identifiers in (None, "a1", ["a1", "a1"], [""], [" "], [[]]):
+            with self.subTest(identifiers=identifiers):
+                source = snapshot_fixture()
+                source["reports"][0]["action_ids"] = identifiers
+                self.assert_error("invalid_snapshot", sync._validate_snapshot, source)
+
     def test_timezone_and_timestamps_are_validated_but_date_only_deadlines_preserved(self):
         for zone in ("CST", "UTC+8", "Not/AZone", " Asia/Shanghai", None):
             with self.subTest(zone=zone):

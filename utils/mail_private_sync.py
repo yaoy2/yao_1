@@ -17,13 +17,14 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 import requests
 
 from utils import github_backup_sync
+from utils.mail_action_status import ALL_STATUSES, STATUS_LABELS
 
 
 DEFAULT_REPO = "yaoy2/mail-workbench-data"
 DEFAULT_BRANCH = "main"
 SNAPSHOT_PATH = "dashboard.json"
 API_ROOT = "https://api.github.com"
-ALLOWED_STATUSES = frozenset({"pending", "in_progress", "done", "needs_confirmation"})
+ALLOWED_STATUSES = ALL_STATUSES
 _PUBLIC_APP_REPO = "yaoy2/yao_1"
 
 
@@ -183,6 +184,14 @@ def _validate_snapshot(snapshot):
         _check_timestamp(action.get("due_at"), allow_date=True)
         _check_timestamp(action.get("updated_at"))
         _check_timestamp(action.get("completed_at"))
+    for report in snapshot["reports"]:
+        if "action_ids" not in report:
+            continue
+        identifiers = report["action_ids"]
+        if (not isinstance(identifiers, list)
+                or any(not isinstance(identifier, str) or not identifier.strip() for identifier in identifiers)
+                or len(set(identifiers)) != len(identifiers)):
+            raise MailSyncError("invalid_snapshot", "邮件报告中的待办标识必须为不重复的标识列表。")
     return snapshot
 
 
@@ -247,7 +256,7 @@ def _normalize_updates(updates):
         if not isinstance(action_id, str) or not action_id.strip() or action_id in normalized:
             raise MailSyncError("invalid_update", "待办更新缺少唯一标识，或包含重复标识。")
         if not isinstance(status, str) or status not in ALLOWED_STATUSES:
-            raise MailSyncError("invalid_update", "待办状态只能为待处理、处理中、已完成或待确认。")
+            raise MailSyncError("invalid_update", "待办状态只能为" + "、".join(STATUS_LABELS.values()) + "。")
         normalized[action_id] = status
     return normalized
 

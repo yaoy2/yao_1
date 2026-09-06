@@ -18,11 +18,13 @@ from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
 from urllib.parse import unquote, urlsplit, urlunsplit
 
+from utils.mail_action_status import ACTIVE_STATUSES, ALL_STATUSES, STATUS_LABELS
+
 
 SCHEMA_VERSION = 1
 TIMEZONE = "Asia/Shanghai"
 SHANGHAI = timezone(timedelta(hours=8), name=TIMEZONE)
-ACTION_STATUSES = {"pending", "in_progress", "done", "needs_confirmation"}
+ACTION_STATUSES = ALL_STATUSES
 KINDS = {"daily", "morning", "weekly", "sample"}
 MESSAGE_FIELDS = ("id", "received_at", "sender", "subject", "folder", "category",
                   "summary", "source_url", "archive_path")
@@ -33,7 +35,7 @@ ATTACHMENT_FIELDS = ("id", "name", "size", "sha256", "path", "status", "error")
 RUN_FIELDS = ("id", "kind", "started_at", "finished_at", "status", "message_count",
               "attachment_count", "errors")
 REPORT_FIELDS = ("id", "kind", "date", "period_start", "period_end", "generated_at",
-                  "title", "markdown")
+                  "title", "markdown", "action_ids")
 PUBLIC_ERROR_REASONS = frozenset({
     "未取得实际下载文件", "实际下载文件不存在或不可读取", "下载文件与声明的SHA-256不一致",
     "归档目标内容冲突，已保留原文件", "读取或写入附件失败", "此前归档的附件已缺失或内容校验失败",
@@ -492,10 +494,10 @@ def generate_report(root, kind, at):
                 start = max(prior)
         messages = [message for message in data["messages"]
                     if start <= parse_time(message["received_at"]) <= end]
-        active = [action for action in data["actions"] if action["status"] != "done"]
+        active = [action for action in data["actions"] if action["status"] in ACTIVE_STATUSES]
         active.sort(key=lambda action: (action.get("due_at") or "9999", action["id"]))
         if kind == "morning":
-            horizon = (end.date() + timedelta(days=6)).isoformat()
+            horizon = (end.date() + timedelta(days=3)).isoformat()
             active = [action for action in active if not action.get("due_at") or action["due_at"][:10] <= horizon]
         coverage = data["coverage"]
         period_complete = bool(coverage.get("complete") and coverage.get("since") and coverage.get("through")
@@ -514,7 +516,7 @@ def generate_report(root, kind, at):
         for action in active:
             due = action.get("due_at")
             overdue = bool(due and (due < end.date().isoformat() if len(due) == 10 else parse_time(due) < end))
-            state_label = {"needs_confirmation": "待确认", "in_progress": "进行中", "pending": "待处理"}[action["status"]]
+            state_label = STATUS_LABELS[action["status"]]
             deadline_label = "时间待确认" if not due else ("已逾期" if overdue else ("今日到期" if due[:10] == end.date().isoformat() else ""))
             label = state_label + (" · " + deadline_label if deadline_label else "")
             lines.append("- **" + label + " · " + action["title"] + "**｜截止：" + (action.get("due_text") or "未明确")
@@ -522,19 +524,34 @@ def generate_report(root, kind, at):
                          + "｜要求：" + action.get("requirement", "") + "｜提交至：" + (action.get("recipient") or "待确认"))
         if not active:
             lines.append("暂无已提取的未完成事项。")
+        completed = []
+        if kind == "weekly":
+            completed = [action for action in data["actions"]
+                         if action["status"] == "done" and action.get("completed_at")
+                         and start <= parse_time(action["completed_at"]) <= end]
+            completed.sort(key=lambda action: (parse_time(action["completed_at"]), action["id"]))
+            lines.extend(["", "## 本周已完成事项", "", "本周已完成：" + str(len(completed)) + " 项。"])
+            for action in completed:
+                lines.append("- " + action["title"] + "｜完成时间："
+                             + parse_time(action["completed_at"]).strftime("%Y-%m-%d %H:%M")
+                             + "｜责任：" + (action.get("owner") or "待确认"))
         incomplete = [a for m in data["messages"] for a in m.get("attachments", []) if a["status"] != "success"]
         lines.extend(["", "## 采集核对", "", "未完成附件：" + str(len(incomplete)) + "；最近成功游标：" + (data["coverage"].get("through") or "尚无") + "。"])
         report = {"id": kind + "-" + end.isoformat(timespec="seconds"), "kind": kind,
                   "date": end.date().isoformat(), "period_start": start.isoformat(timespec="seconds"),
                   "period_end": end.isoformat(timespec="seconds"), "generated_at": now_iso(),
-                  "title": title, "markdown": "\n".join(lines) + "\n"}
+                  "title": title, "markdown": "\n".join(lines) + "\n",
+                  "action_ids": [action["id"] for action in active]}
         reports = {report["id"]: report for report in data["reports"]}
         reports[report["id"]] = report
         data.update(reports=list(reports.values()), updated_at=report["generated_at"])
         _atomic_json(_inside(root, "dashboard.json"), data)
-    return {"report_id": report["id"], "kind": kind, "date": report["date"],
-            "message_count": len(messages), "active_action_count": len(active),
-            "coverage_complete": period_complete}
+    result = {"report_id": report["id"], "kind": kind, "date": report["date"],
+              "message_count": len(messages), "active_action_count": len(active),
+              "coverage_complete": period_complete}
+    if kind == "weekly":
+        result["completed_action_count"] = len(completed)
+    return result
 
 
 def cloud_snapshot(root):
@@ -579,7 +596,9 @@ def public_snapshot(data, root):
             message["attachments"].append(item)
         snapshot["messages"].append(message)
     for collection, fields in (("actions", ACTION_FIELDS), ("runs", RUN_FIELDS), ("reports", REPORT_FIELDS)):
-        snapshot[collection] = [{key: item.get(key) for key in fields} for item in data[collection]]
+        snapshot[collection] = [{key: copy.deepcopy(item.get(key)) for key in fields
+                                 if key != "action_ids" or key in item}
+                                for item in data[collection]]
     for run in snapshot["runs"]:
         run["errors"] = [_public_diagnostic(error) for error in (run.get("errors") or [])]
     return snapshot
