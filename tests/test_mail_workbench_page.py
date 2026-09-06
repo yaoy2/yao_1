@@ -6,7 +6,7 @@ import unittest
 from datetime import date, datetime
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 
 PAGE_PATH = Path(__file__).resolve().parents[1] / "pages" / "23_24_mail_workbench.py"
@@ -150,16 +150,46 @@ class MailWorkbenchPageTests(unittest.TestCase):
         self.assertNotIn("mail_authenticated", fake_st.session_state)
 
     def test_main_loads_public_summary_without_an_edit_session(self):
-        columns = [SimpleNamespace(button=Mock(return_value=False)), SimpleNamespace(button=Mock(return_value=False))]
+        columns = [MagicMock(), MagicMock(), MagicMock()]
+        columns[1].button.return_value = False
         fake_st = SimpleNamespace(set_page_config=Mock(), title=Mock(), markdown=Mock(), caption=Mock(),
-                                  columns=Mock(return_value=columns), session_state={})
+                                  columns=Mock(return_value=columns), button=Mock(), session_state={})
         with patch.object(page, "st", fake_st), patch.object(page, "render_home_link"), \
                 patch.object(page, "render_edit_access", return_value=False), \
                 patch.object(page, "refresh_snapshot", side_effect=StopPage) as load:
             with self.assertRaises(StopPage):
                 page.main()
             load.assert_called_once()
-        columns[1].button.assert_not_called()
+        fake_st.button.assert_not_called()
+
+    def test_initial_page_renders_mail_and_original_status_without_opening_a_report(self):
+        from streamlit.testing.v1 import AppTest
+
+        snapshot = {"account": "test@example.invalid", "updated_at": "2026-09-06T09:00:00+08:00",
+                    "coverage": {}, "runs": [], "reports": [],
+                    "messages": [{"id": "m1", "subject": "首页测试邮件", "sender": "测试部门",
+                                  "received_at": "2026-08-01T09:00:00+08:00", "summary": "无需先点简报即可看到的重点", "attachments": []},
+                                 {"id": "m2", "subject": "没有事项的邮件", "received_at": "2026-09-01T09:00:00+08:00", "attachments": []}],
+                    "actions": [{"id": "a1", "message_id": "m1", "title": "测试事项", "status": "out_of_scope"}]}
+        app = AppTest.from_file(str(PAGE_PATH))
+        app.session_state["mail_loaded"] = {"snapshot": snapshot, "version": "fixture", "source": "github"}
+        app.session_state["mail_authenticated"] = True
+        gateway = page.get_mail_gateway()
+        with patch.object(page.budget_auth, "get_budget_password", return_value="test-edit-password"), \
+                patch.object(gateway, "load_snapshot", side_effect=AssertionError("Test must not read real mail")), \
+                patch.object(gateway, "save_action_updates", side_effect=AssertionError("Render must not save mail")) as save:
+            app.run(timeout=15)
+        self.assertEqual([], list(app.exception))
+        self.assertEqual("邮件列表", app.tabs[0].label)
+        inbox_html = " ".join(element.value for element in app.tabs[0].markdown)
+        self.assertIn("首页测试邮件", inbox_html)
+        self.assertIn("无需先点简报即可看到的重点", inbox_html)
+        self.assertIn("没有事项的邮件", inbox_html)
+        statuses = [element for element in app.tabs[0].selectbox if element.label == "当前状态"]
+        self.assertEqual(1, len(statuses))
+        self.assertEqual("out_of_scope", statuses[0].value)
+        self.assertIn("相关 · 待办", statuses[0].options)
+        save.assert_not_called()
 
     def test_anonymous_status_save_is_blocked_before_any_remote_call(self):
         loaded = {"snapshot": {"actions": [{"id": "a", "status": "pending"}]}, "version": "old", "source": "github"}

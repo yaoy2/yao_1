@@ -25,6 +25,15 @@ from utils.ui_theme import render_home_link
 
 BJT = timezone(timedelta(hours=8), "Asia/Shanghai")
 STATUSES = STATUS_LABELS
+INBOX_STATUSES = {
+    "needs_confirmation": "待判断",
+    "pending": "相关 · 待办",
+    "in_progress": "相关 · 处理中",
+    "done": "相关 · 已办",
+    "no_action": "相关 · 无需处理",
+    "out_of_scope": "不相关",
+}
+INBOX_VIEWS = ["全部", "待判断", "相关", "待办", "已办", "无需处理", "不相关"]
 KINDS = {"daily": "每日归档与简报", "morning": "早间到期提醒", "weekly": "每周汇总", "sample": "样本试跑"}
 ATTACHMENT_STATUSES = {"success": "已归档并核验", "missing": "未取得文件", "error": "归档失败", "pending": "待下载"}
 ERRORS = {
@@ -195,6 +204,76 @@ def filter_actions(actions, messages, view, now, category="全部"):
     ))
 
 
+def filter_inbox_messages(messages, actions, view="全部", query="", *, start=None, end=None, category="全部"):
+    """Filter once per mail; a mixed mail retains each item's own decision."""
+    by_message = {}
+    for action in actions:
+        by_message.setdefault(action.get("message_id"), []).append(action)
+    selected = []
+    query = str(query or "").strip().casefold()
+    for message in messages:
+        linked = by_message.get(message.get("id"), [])
+        statuses = {action.get("status") for action in linked}
+        matches = {
+            "全部": True,
+            "待判断": not linked or "needs_confirmation" in statuses,
+            "相关": bool(statuses & {"pending", "in_progress", "done", "no_action"}),
+            "待办": bool(statuses & {"pending", "in_progress"}),
+            "已办": "done" in statuses,
+            "无需处理": "no_action" in statuses,
+            "不相关": "out_of_scope" in statuses,
+        }
+        if not matches.get(view, False):
+            continue
+        if category != "全部" and (message.get("category") or "未分类") != category:
+            continue
+        received = parse_time(message.get("received_at"))
+        if start is not None and (not received or received.date() < start):
+            continue
+        if end is not None and (not received or received.date() > end):
+            continue
+        searchable = " ".join(str(message.get(field) or "") for field in ("subject", "sender", "summary", "category"))
+        searchable += " " + " ".join(str(action.get(field) or "") for action in linked for field in ("title", "requirement"))
+        if query and query not in searchable.casefold():
+            continue
+        selected.append(message)
+    return sorted(selected, key=lambda message: parse_time(message.get("received_at")) or datetime.min.replace(tzinfo=BJT), reverse=True)
+
+
+def inbox_text(value):
+    """Mail text stays inert even though Streamlit transports HTML as Markdown."""
+    text = escape(str(value or ""), quote=True)
+    for char in "!*_[]`()":
+        text = text.replace(char, f"&#{ord(char)};")
+    return text
+
+
+def inbox_message_html(message, actions, now):
+    subject = message.get("subject") or "无主题"
+    summary = message.get("summary") or "尚未生成摘要，可展开查看来源。"
+    if len(actions) == 1 and actions[0].get("requirement"):
+        summary = actions[0]["requirement"]
+    summary = re.sub(r"\s+", " ", str(summary)).strip()
+    active = [action for action in actions if action.get("status") in ACTIVE_STATUSES]
+    deadlines = [parse_time(action.get("due_at"), deadline=True) for action in active]
+    due = min((value for value in deadlines if value), default=None)
+    deadline = ""
+    if due:
+        due_label = ("已逾期" if due < now else "今日截止" if due.date() == now.date() else "截止")
+        due_class = "mail-inbox-urgent" if due.date() <= now.date() else "mail-inbox-deadline"
+        deadline = f'<span class="{due_class}">{due_label} {due:%m-%d}</span>'
+    elif active:
+        deadline = '<span class="mail-inbox-deadline">截止待确认</span>'
+    if len(actions) > 1:
+        deadline += f'<span class="mail-inbox-count">{len(actions)} 项事项 · 逐项判断</span>'
+    attachment_count = len(message.get("attachments", []))
+    metadata = (f"{message.get('sender') or '发件人未记录'} · {display_time(message.get('received_at'))}"
+                f" · {message.get('category') or '未分类'}" + (f" · 附件 {attachment_count}" if attachment_count else ""))
+    return (f'<div class="mail-inbox-copy"><div class="mail-inbox-heading"><strong>{inbox_text(subject)}</strong>{deadline}</div>'
+            f'<p class="mail-inbox-summary">{inbox_text(summary)}</p>'
+            f'<div class="mail-inbox-meta">{inbox_text(metadata)}</div></div>')
+
+
 def build_action_updates(actions, drafts):
     return {str(item["id"]): drafts[str(item["id"])] for item in actions
             if str(item["id"]) in drafts and drafts[str(item["id"])] in STATUSES
@@ -208,7 +287,6 @@ def render_edit_access():
         st.caption("可直接浏览。待办编辑密码尚未配置，暂不能修改状态。")
         return False
     if st.session_state.get("mail_authenticated"):
-        st.caption("待办编辑已启用。")
         return True
     with st.expander("启用待办编辑", expanded=False):
         st.caption("浏览不需要密码；修改待办状态时，使用预算台账的访问密码确认。")
@@ -286,6 +364,86 @@ def render_message(message):
         render_source(message)
 
 
+def render_status_control(action, loaded, gateway, *, context, labels=STATUSES):
+    drafts = st.session_state.setdefault("mail_action_drafts", {})
+    readonly = loaded.get("source") != "github" or not st.session_state.get("mail_authenticated")
+    action_id = str(action["id"])
+    key = f"mail_status_{context}_{action_id}_{loaded.get('version', 'local')}"
+    current = action.get("status") if action.get("status") in STATUSES else "needs_confirmation"
+    st.session_state[key] = current if readonly else drafts.get(action_id, current)
+    st.selectbox("当前状态", list(labels), key=key, format_func=labels.get,
+                 disabled=readonly, label_visibility="collapsed", help="选择后自动保存；可在“全部”中随时改回。",
+                 on_change=remember_status, args=(action_id, key, gateway, loaded.get("version")))
+    if action_id in drafts and drafts[action_id] != current:
+        st.caption("尚未保存，仍按原状态归类。")
+
+
+def render_inbox_message(message, snapshot, loaded, gateway, now):
+    actions = [action for action in snapshot.get("actions", []) if action.get("message_id") == message.get("id")]
+    with st.container(border=True, key=f"mail_inbox_row_{message['id']}"):
+        content_col, choice_col = st.columns([5, 1.65], vertical_alignment="center")
+        with content_col:
+            st.markdown(inbox_message_html(message, actions, now), unsafe_allow_html=True)
+        with choice_col:
+            if not actions:
+                st.caption("尚未提取处理事项")
+            for action in actions:
+                if len(actions) > 1:
+                    st.caption(plain_label(action.get("title") or "未命名事项"))
+                render_status_control(action, loaded, gateway, context="inbox", labels=INBOX_STATUSES)
+        with st.expander("详情与附件", expanded=False):
+            st.text(message.get("summary") or "尚未生成摘要。")
+            for action in actions:
+                st.markdown("**" + plain_label(action.get("title") or "处理事项") + "**")
+                st.text("具体要求：" + str(action.get("requirement") or "待确认"))
+                st.text("截止：" + display_time(action.get("due_at"), deadline=True)
+                        + " · 原文：" + str(action.get("due_text") or "未明确"))
+                st.text("责任对象：" + str(action.get("owner") or "待确认")
+                        + " · 提交至：" + str(action.get("recipient") or "待确认"))
+                st.text("提交方式：" + str(action.get("submission_method") or "待确认"))
+                st.caption(plain_label("截止依据：" + str(action.get("due_basis") or "请核对原邮件及附件")))
+            render_source(message)
+            if message.get("attachments"):
+                render_attachments([message])
+
+
+def render_inbox(snapshot, loaded, gateway, now):
+    messages, actions = snapshot.get("messages", []), snapshot.get("actions", [])
+    view = st.radio("邮件视图", INBOX_VIEWS, horizontal=True, key="mail_inbox_view", label_visibility="collapsed",
+                    format_func=lambda label: f"{label} {len(filter_inbox_messages(messages, actions, label))}")
+    query_col, filter_col = st.columns([4, 1])
+    query = query_col.text_input("搜索邮件", placeholder="搜索主题、发件人或内容", label_visibility="collapsed")
+    start = end = None
+    category = "全部"
+    with filter_col.popover("更多筛选", use_container_width=True):
+        categories = sorted({str(item.get("category") or "未分类") for item in messages})
+        category = st.selectbox("邮件分类", ["全部", *categories], key="mail_inbox_category")
+        if st.checkbox("限定收件日期", key="mail_inbox_date_enabled"):
+            period = st.date_input("收件日期", value=(now.date() - timedelta(days=6), now.date()), key="mail_inbox_dates")
+            if isinstance(period, (tuple, list)) and len(period) == 2:
+                start, end = period
+            else:
+                st.caption("选满起止日期后生效，当前仍显示全部日期。")
+    selected = filter_inbox_messages(messages, actions, view, query, start=start, end=end, category=category)
+    scope = f"显示 {len(selected)} / {len(messages)} 封"
+    if category != "全部":
+        scope += f" · 分类：{category}"
+    if start is not None:
+        scope += f" · {start:%Y-%m-%d} 至 {end:%Y-%m-%d}"
+    st.caption(plain_label(scope) + " · 选择后自动保存，误选可在“全部”中改回。")
+    # Bounded rendering keeps a larger inbox usable while retaining every mail.
+    page_size = 30
+    page_count = max(1, (len(selected) + page_size - 1) // page_size)
+    page_number = 1
+    if page_count > 1:
+        page_number = st.selectbox("列表页码", list(range(1, page_count + 1)), key=f"mail_inbox_page_{view}_{page_count}")
+    for message in selected[(page_number - 1) * page_size:page_number * page_size]:
+        render_inbox_message(message, snapshot, loaded, gateway, now)
+    if not selected:
+        st.info("当前筛选下没有邮件，可切换“全部”或清空筛选。" if messages
+                else "尚未整理出邮件，请在“简报与记录”中核对采集结果。")
+
+
 def linked_report_actions(report, actions):
     """Use stored IDs, or uniquely match all fields in pre-ID legacy reports."""
     by_id = {item["id"]: item for item in actions}
@@ -347,24 +505,14 @@ def render_reports(reports, kinds, start=None, end=None, *, snapshot=None, loade
 
 def render_action_card(action, snapshot, loaded, gateway, now, *, context):
     """One current-state control per item; archived records use the same restore control."""
-    drafts = st.session_state.setdefault("mail_action_drafts", {})
     by_id = {item.get("id"): item for item in snapshot.get("messages", [])}
-    readonly = loaded.get("source") != "github" or not st.session_state.get("mail_authenticated")
-    action_id = str(action["id"])
     message = by_id.get(action.get("message_id"), {})
     with st.container(border=True):
         body, status_col = st.columns([5, 1.7], vertical_alignment="center")
         with body:
             st.markdown("**" + plain_label(action.get("title") or action.get("requirement") or "未命名事项") + "**")
         with status_col:
-            key = f"mail_status_{context}_{action_id}_{loaded.get('version', 'local')}"
-            current = action.get("status") if action.get("status") in STATUSES else "needs_confirmation"
-            st.session_state[key] = current if readonly else drafts.get(action_id, current)
-            st.selectbox("当前状态", list(STATUSES), key=key, format_func=STATUSES.get,
-                         disabled=readonly, label_visibility="collapsed", help="选择后自动保存；归档仅改变工作台分类，可随时恢复。",
-                         on_change=remember_status, args=(action_id, key, gateway, loaded.get("version")))
-            if action_id in drafts and drafts[action_id] != current:
-                st.caption("尚未保存，事项仍保留原状态。")
+            render_status_control(action, loaded, gateway, context=context)
         due_col, owner_col, recipient_col = st.columns([1.1, 1, 1])
         with due_col:
             due = parse_time(action.get("due_at"), deadline=True)
@@ -468,27 +616,37 @@ def render_attachments(messages):
 def main():
     st.set_page_config(page_title="M24 · 邮件工作台", page_icon="✉️", layout="wide")
     render_home_link()
-    st.title("邮件工作台")
-    editing = render_edit_access()
-    # Summaries are public; the private-source module still protects the backing
-    # repository and excludes raw mail bodies. Passwords authorize status writes.
-    mail_private_sync = get_mail_gateway()
-
     st.markdown("""<style>
-    .block-container {padding-top:1.3rem; padding-bottom:2rem;}
-    [data-testid="stVerticalBlock"] {gap:.6rem;}
-    [data-testid="stMetricValue"] {font-size:1.55rem;}
+    .block-container {padding-top:1rem; padding-bottom:2rem;}
+    [data-testid="stVerticalBlock"] {gap:.5rem;}
+    h1 {font-size:1.8rem !important; padding:.25rem 0 .5rem !important;}
     [data-testid="stExpander"] details summary p {font-size:.88rem;}
+    .mail-inbox-copy {color:inherit; line-height:1.5; min-width:0;}
+    .mail-inbox-heading {display:flex; flex-wrap:wrap; align-items:baseline; gap:.25rem .6rem;}
+    .mail-inbox-heading strong {font-size:1rem; line-height:1.45; overflow-wrap:anywhere;}
+    .mail-inbox-summary {margin:.35rem 0 !important; font-size:.88rem;
+      display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:anywhere;}
+    .mail-inbox-meta {font-size:.76rem; color:#6b7280; overflow-wrap:anywhere;}
+    .mail-inbox-deadline, .mail-inbox-urgent, .mail-inbox-count {font-size:.76rem; padding:.1rem .4rem; border-radius:4px; white-space:nowrap;}
+    .mail-inbox-deadline {color:#805b17; background:#fff7e5;}
+    .mail-inbox-urgent {color:#a32b31; background:#fff0f0; font-weight:600;}
+    .mail-inbox-count {color:#596579; background:#f1f4f7;}
     </style>""", unsafe_allow_html=True)
     st.markdown("<style>" + REPORT_CSS + "</style>", unsafe_allow_html=True)
-    st.caption("计划时间（北京时间）：每日 20:00 归档与简报 · 周一至五 09:00 到期提醒 · 周五 17:00 每周汇总")
-    refresh_col, logout_col = st.columns([5, 1])
-    refresh = refresh_col.button("刷新数据（保留未保存编辑）")
-    if editing and logout_col.button("退出编辑"):
+    title_col, refresh_col, access_col = st.columns([5, 1, 1.6], vertical_alignment="center")
+    with title_col:
+        st.title("邮件工作台")
+    refresh = refresh_col.button("刷新", use_container_width=True, help="读取最新数据，并保留尚未保存的选择。")
+    with access_col:
+        editing = render_edit_access()
+        logout = editing and st.button("退出编辑", use_container_width=True)
+    if logout:
         for key in list(st.session_state):
             if key in {"mail_authenticated", "mail_action_drafts", "mail_save_error"} or str(key).startswith("mail_status_"):
                 del st.session_state[key]
         st.rerun()
+    # Browsing preserves the existing summary-only data and write authorization.
+    mail_private_sync = get_mail_gateway()
     loaded = st.session_state.get("mail_loaded")
     if refresh or loaded is None:
         try:
@@ -501,69 +659,53 @@ def main():
             st.stop()
     snapshot = loaded["snapshot"]
     render_pending_changes(snapshot, loaded, mail_private_sync)
-    coverage = snapshot.get("coverage") or {}
-    st.caption(plain_label(f"账户：{snapshot.get('account') or '未记录'} · 数据更新：{display_time(snapshot.get('updated_at'))} · 来源：{'私有同步' if loaded.get('source') == 'github' else '本机只读快照'}"))
     st.markdown(snapshot_status_html(snapshot), unsafe_allow_html=True)
-    with st.expander("数据状态详情", expanded=False):
-        warning = coverage_warning(snapshot)
-        if warning:
-            st.text(warning)
-        if parse_time(coverage.get("since")) and parse_time(coverage.get("through")):
-            st.caption(f"已检查时段：{display_time(coverage.get('since'))} 至 {display_time(coverage.get('through'))}")
-            st.caption("该时段之外的历史邮件不在本次完整检查范围内。")
-        incomplete = incomplete_attachment_count(snapshot.get("messages", []))
-        if incomplete:
-            st.caption(f"另有 {incomplete} 份附件待补，文件名和原因见“附件索引”。")
-        elif not warning:
-            st.caption("上述时段已核对完成，现有附件均已归档。")
     if st.session_state.get("mail_save_notice"):
-        st.success(st.session_state.pop("mail_save_notice"))
+        st.toast(st.session_state.pop("mail_save_notice"))
 
     now = datetime.now(BJT)
-    date_col, category_col = st.columns([3, 2])
-    period = date_col.date_input("收件 / 报告日期范围", value=(now.date() - timedelta(days=6), now.date()))
     categories = sorted({str(item.get("category") or "未分类") for item in snapshot.get("messages", [])})
-    category = category_col.selectbox("邮件分类", ["全部", *categories])
-    if not isinstance(period, (tuple, list)) or len(period) != 2:
-        st.info("请选择起止两个日期。")
-        st.stop()
-    start, end = period
-    messages = filter_messages(snapshot.get("messages", []), start, end, category)
-    daily, actions_tab, attachments_tab, runs_tab = st.tabs(["每日简报", "到期待办", "附件索引", "运行与周报"])
-    with daily:
-        cols = st.columns(3)
-        cols[0].metric("范围内邮件", len(messages))
-        cols[1].metric("附件索引", sum(len(item.get("attachments", [])) for item in messages))
-        cols[2].metric("活跃待办（含待确认）", len(filter_actions(snapshot.get("actions", []), snapshot.get("messages", []), "未完成", now, category)))
-        st.caption("报告覆盖选定日期的全部分类；下方逐封邮件遵循分类筛选。")
-        render_reports(snapshot.get("reports", []), {"daily", "morning"}, start, end,
-                       snapshot=snapshot, loaded=loaded, gateway=mail_private_sync, now=now)
-        st.subheader("邮件摘要")
-        for message in messages:
-            render_message(message)
-        if not messages:
-            st.info("此范围内未记录邮件；不代表邮箱没有来信，请同时核对采集范围与运行结果。")
+    inbox_tab, actions_tab, records_tab = st.tabs(["邮件列表", "到期待办", "简报与记录"])
+    with inbox_tab:
+        render_inbox(snapshot, loaded, mail_private_sync, now)
     with actions_tab:
+        category = st.selectbox("事项分类", ["全部", *categories], key="mail_actions_category")
         render_actions(snapshot, loaded, mail_private_sync, category, now)
-    with attachments_tab:
-        render_attachments(messages)
-    with runs_tab:
-        st.caption("这里记录实际执行结果。计划时间不等于已经执行；周一至五暂不调整节假日和调休。")
-        st.subheader("实际运行记录")
-        runs = snapshot.get("runs", [])
-        if runs:
-            rows = [{"任务": KINDS.get(run.get("kind"), run.get("kind", "未记录")),
-                     "开始": display_time(run.get("started_at")), "结束": display_time(run.get("finished_at")),
-                     "结果": run_status_label(run), "邮件数": run.get("message_count", 0),
-                     "附件数": run.get("attachment_count", 0),
-                     "失败与待补项": "；".join(str(item) for item in (run.get("errors") or []))}
-                    for run in sorted(runs, key=lambda item: str(item.get("started_at", "")), reverse=True)]
-            st.dataframe(rows, hide_index=True, use_container_width=True)
+    with records_tab:
+        with st.expander("数据与运行记录", expanded=False):
+            st.caption(plain_label(f"账户：{snapshot.get('account') or '未记录'} · 数据更新：{display_time(snapshot.get('updated_at'))} · 来源：{'私有同步' if loaded.get('source') == 'github' else '本机只读快照'}"))
+            st.caption("计划时间（北京时间）：每日 20:00 归档与简报 · 周一至五 09:00 到期提醒 · 周五 17:00 每周汇总")
+            warning = coverage_warning(snapshot)
+            if warning:
+                st.text(warning)
+            coverage = snapshot.get("coverage") or {}
+            if parse_time(coverage.get("since")) and parse_time(coverage.get("through")):
+                st.caption(f"已检查时段：{display_time(coverage.get('since'))} 至 {display_time(coverage.get('through'))}")
+                st.caption("该时段之外的历史邮件不在本次完整检查范围内。")
+            st.caption("以下为实际执行结果，计划时间不等于已经执行；周一至五暂不调整节假日和调休。")
+            runs = snapshot.get("runs", [])
+            if runs:
+                rows = [{"任务": KINDS.get(run.get("kind"), run.get("kind", "未记录")),
+                         "开始": display_time(run.get("started_at")), "结束": display_time(run.get("finished_at")),
+                         "结果": run_status_label(run), "邮件数": run.get("message_count", 0),
+                         "附件数": run.get("attachment_count", 0),
+                         "失败与待补项": "；".join(str(item) for item in (run.get("errors") or []))}
+                        for run in sorted(runs, key=lambda item: str(item.get("started_at", "")), reverse=True)]
+                st.dataframe(rows, hide_index=True, use_container_width=True)
+            else:
+                st.info("尚无实际运行记录，不能据计划时间判断任务已执行。")
+        with st.expander("附件索引", expanded=False):
+            render_attachments(snapshot.get("messages", []))
+        period = st.date_input("报告日期范围", value=(now.date() - timedelta(days=6), now.date()), key="mail_report_dates")
+        if isinstance(period, (tuple, list)) and len(period) == 2:
+            st.subheader("每日简报与到期提醒")
+            render_reports(snapshot.get("reports", []), {"daily", "morning"}, *period,
+                           snapshot=snapshot, loaded=loaded, gateway=mail_private_sync, now=now)
+            st.subheader("每周汇总")
+            render_reports(snapshot.get("reports", []), {"weekly"}, *period,
+                           snapshot=snapshot, loaded=loaded, gateway=mail_private_sync, now=now)
         else:
-            st.info("尚无实际运行记录，不能据计划时间判断任务已执行。")
-        st.subheader("每周汇总")
-        render_reports(snapshot.get("reports", []), {"weekly"}, start, end,
-                       snapshot=snapshot, loaded=loaded, gateway=mail_private_sync, now=now)
+            st.info("请选择起止两个日期以查看报告。")
 
 
 if __name__ == "__main__":
