@@ -185,6 +185,76 @@ class MailWorkspaceTest(unittest.TestCase):
         self.assertEqual("done", action["status"])
         self.assertEqual("2026-09-06T08:00:00+08:00", action["completed_at"])
 
+    def test_mail_triage_is_optional_in_legacy_export_and_cannot_be_supplied_by_collection(self):
+        batch = self.batch()
+        batch["messages"][0].update(triage_status="out_of_scope", triage_updated_at="2099-01-01T00:00:00+08:00")
+        mail.ingest(self.root, batch)
+        for data in (mail.load_dashboard(self.root), mail.cloud_snapshot(self.root)):
+            self.assertNotIn("triage_status", data["messages"][0])
+            self.assertNotIn("triage_updated_at", data["messages"][0])
+            self.assertEqual("pending", data["actions"][0]["status"])
+
+    def test_mail_triage_survives_recollection_and_export_without_changing_source_files(self):
+        batch = self.batch()
+        batch["actions"] = []
+        mail.ingest(self.root, batch)
+        data = mail.load_dashboard(self.root)
+        decision = {"triage_status": "no_action", "triage_updated_at": "2026-09-06T08:00:00+08:00"}
+        data["messages"][0].update(decision)
+        original = copy.deepcopy(data["messages"][0])
+        source_path = self.root / original["archive_path"]
+        source_bytes = source_path.read_bytes()
+        mail._atomic_json(self.root / "dashboard.json", data)
+        batch["messages"][0].update(summary="补充后的摘要", triage_status="done", triage_updated_at="2099-01-01T00:00:00+08:00")
+        mail.ingest(self.root, batch)
+        after = mail.load_dashboard(self.root)
+        self.assertEqual("补充后的摘要", after["messages"][0]["summary"])
+        self.assertEqual(original["archive_path"], after["messages"][0]["archive_path"])
+        self.assertEqual(original["attachments"], after["messages"][0]["attachments"])
+        self.assertEqual(source_bytes, source_path.read_bytes())
+        for current in (after, mail.cloud_snapshot(self.root)):
+            self.assertEqual(decision, {key: current["messages"][0][key] for key in decision})
+            self.assertEqual([], current["actions"])
+
+    def test_first_extracted_tasks_inherit_only_explicit_mail_exemptions(self):
+        original = self.batch()["actions"][0]
+        for state in ("no_action", "out_of_scope", "done", "pending", "in_progress", "needs_confirmation"):
+            with self.subTest(state=state):
+                root = self.base / ("triage-" + state)
+                mail.initialize(root, "sample@example.edu")
+                batch = self.batch()
+                batch["actions"] = []
+                mail.ingest(root, batch)
+                data = mail.load_dashboard(root)
+                decision = {"triage_status": state, "triage_updated_at": "2026-09-06T08:00:00+08:00"}
+                data["messages"][0].update(decision)
+                mail._atomic_json(root / "dashboard.json", data)
+                batch["actions"] = [{**original, "id": "first", "status": "done"},
+                                    {**original, "id": "second", "status": "pending"}]
+                mail.ingest(root, batch)
+                result = mail.load_dashboard(root)
+                expected = state if state in {"no_action", "out_of_scope"} else "needs_confirmation"
+                self.assertEqual([expected, expected], [item["status"] for item in result["actions"]])
+                self.assertTrue(all(item["completed_at"] is None for item in result["actions"]))
+                self.assertEqual(decision, {key: result["messages"][0][key] for key in decision})
+                self.assertEqual(0, mail.generate_report(root, "weekly", "2026-09-06T20:00:00+08:00")["completed_action_count"])
+
+    def test_old_mail_triage_never_overwrites_existing_or_later_added_tasks(self):
+        batch = self.batch()
+        mail.ingest(self.root, batch)
+        data = mail.load_dashboard(self.root)
+        data["messages"][0].update(triage_status="out_of_scope", triage_updated_at="2026-09-06T08:00:00+08:00")
+        data["actions"][0].update(status="done", completed_at="2026-09-06T09:00:00+08:00", updated_at="2026-09-06T09:00:00+08:00")
+        original = copy.deepcopy(data["actions"][0])
+        mail._atomic_json(self.root / "dashboard.json", data)
+        batch["actions"].append({**batch["actions"][0], "id": "new-follow-up", "status": "pending"})
+        mail.ingest(self.root, batch)
+        after = {item["id"]: item for item in mail.load_dashboard(self.root)["actions"]}
+        for key in ("status", "completed_at", "updated_at"):
+            self.assertEqual(original[key], after[original["id"]][key])
+        self.assertEqual("pending", after["new-follow-up"]["status"])
+        self.assertIsNone(after["new-follow-up"]["completed_at"])
+
     def test_non_actionable_states_survive_recollection_and_new_actions_stay_active(self):
         batch = self.batch()
         original = batch["actions"][0]

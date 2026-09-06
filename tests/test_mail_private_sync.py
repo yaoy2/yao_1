@@ -36,6 +36,15 @@ def snapshot_fixture():
     }
 
 
+def message_snapshot_fixture():
+    snapshot = snapshot_fixture()
+    snapshot["messages"].append({
+        "id": "m2", "subject": "学院活动信息", "received_at": "2026-09-06T07:30:00+08:00",
+        "body_text": "仅供阅读的邮件正文", "attachments": [{"id": "file2", "filename": "活动介绍.pdf"}],
+    })
+    return snapshot
+
+
 class FakeResponse:
     def __init__(self, status_code=200, payload=None):
         self.status_code = status_code
@@ -76,6 +85,14 @@ class MailPrivateSyncTests(unittest.TestCase):
         kwargs.setdefault("secrets", {})
         return sync.save_action_updates(
             {"a1": "done"} if updates is None else updates, expected_version,
+            session=session, **kwargs,
+        )
+
+    def save_messages(self, session, updates=None, expected_version=OLD_SHA, **kwargs):
+        kwargs.setdefault("environ", {"MAIL_WORKBENCH_TOKEN": TEST_TOKEN})
+        kwargs.setdefault("secrets", {})
+        return sync.save_message_updates(
+            {"m2": "done"} if updates is None else updates, expected_version,
             session=session, **kwargs,
         )
 
@@ -327,6 +344,160 @@ class MailPrivateSyncTests(unittest.TestCase):
         session = FakeSession(gets=[FakeResponse(payload={"private": True}), contents_response(source)])
         result = self.save(session)
         self.assertEqual(timedelta(0), datetime.fromisoformat(result["snapshot"]["updated_at"]).utcoffset())
+
+    def test_message_save_supports_all_six_states_and_changes_only_triage_fields(self):
+        states = {"needs_confirmation", "pending", "in_progress", "done", "no_action", "out_of_scope"}
+        self.assertEqual(states, set(sync.ALLOWED_STATUSES))
+        for state in states:
+            with self.subTest(state=state):
+                source = message_snapshot_fixture()
+                session = FakeSession(gets=[FakeResponse(payload={"private": True}), contents_response(source)])
+                result = self.save_messages(session, updates={"m2": state})
+                method, url, kwargs = session.calls[-1]
+                self.assertEqual("put", method)
+                self.assertTrue(url.endswith("/contents/dashboard.json"))
+                self.assertEqual(OLD_SHA, kwargs["json"]["sha"])
+                self.assertEqual("main", kwargs["json"]["branch"])
+                saved = json.loads(base64.b64decode(kwargs["json"]["content"]))
+                message = saved["messages"][1]
+                self.assertEqual(state, message["triage_status"])
+                self.assertEqual(saved["updated_at"], message["triage_updated_at"])
+                self.assertEqual(timedelta(hours=8), datetime.fromisoformat(message["triage_updated_at"]).utcoffset())
+                self.assertNotIn("completed_at", message)
+                expected = copy.deepcopy(source)
+                expected["updated_at"] = saved["updated_at"]
+                expected["messages"][1].update(triage_status=state, triage_updated_at=saved["updated_at"])
+                self.assertEqual(expected, saved)
+                self.assertEqual(source, message_snapshot_fixture())
+                self.assertEqual({"snapshot": saved, "version": NEW_SHA, "source": "github"}, result)
+                self.assertTrue(all(call[2]["allow_redirects"] is False for call in session.calls))
+
+    def test_message_save_accepts_list_and_restores_an_archived_message_without_action(self):
+        source = message_snapshot_fixture()
+        source["messages"][1].update(triage_status="out_of_scope", triage_updated_at="2026-09-05T12:00:00+08:00")
+        source["timezone"] = "UTC"
+        session = FakeSession(gets=[FakeResponse(payload={"private": True}), contents_response(source)])
+        saved = self.save_messages(session, updates=[{"id": "m2", "status": "pending"}])["snapshot"]
+        self.assertEqual("pending", saved["messages"][1]["triage_status"])
+        self.assertEqual(timedelta(0), datetime.fromisoformat(saved["messages"][1]["triage_updated_at"]).utcoffset())
+        self.assertEqual(source["actions"], saved["actions"])
+        self.assertNotIn("completed_at", saved["messages"][1])
+
+    def test_message_save_readonly_does_not_read_or_write_the_local_file(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "snapshot.json"
+            content = json.dumps(message_snapshot_fixture(), ensure_ascii=False)
+            path.write_text(content, encoding="utf-8")
+            session = FakeSession()
+            self.assert_error("readonly", self.save_messages, session, environ={"MAIL_WORKBENCH_SNAPSHOT": str(path)})
+            self.assertEqual(content, path.read_text(encoding="utf-8"))
+            self.assertEqual([], session.calls)
+
+    def test_message_save_rejects_unknown_or_action_linked_messages_atomically(self):
+        for message_id in ("unknown", "m1"):
+            with self.subTest(message_id=message_id):
+                source = message_snapshot_fixture()
+                session = FakeSession(gets=[FakeResponse(payload={"private": True}), contents_response(source)])
+                self.assert_error("invalid_update", self.save_messages, session, updates={"m2": "done", message_id: "pending"})
+                self.assertEqual(["get", "get"], [call[0] for call in session.calls])
+                self.assertEqual(source, message_snapshot_fixture())
+
+    def test_message_save_rejects_extra_fields_invalid_values_and_duplicate_updates(self):
+        invalid_updates = [
+            {"m2": "archived"}, {"m2": {"status": "done"}}, {"": "done"},
+            [{"id": "m2", "status": "done"}, {"id": "m2", "status": "pending"}],
+        ]
+        for field in ("subject", "body_text", "attachments", "message_id", "triage_status", "triage_updated_at", "completed_at", "updated_at", "actions"):
+            invalid_updates.append([{"id": "m2", "status": "done", field: "tampered"}])
+        for updates in invalid_updates:
+            with self.subTest(updates=updates):
+                session = FakeSession()
+                self.assert_error("invalid_update", self.save_messages, session, updates=updates)
+                self.assertEqual([], session.calls)
+
+    def test_message_save_requires_private_repository_before_content_access(self):
+        for metadata in ({"private": False}, {}, {"private": "true"}):
+            with self.subTest(metadata=metadata):
+                session = FakeSession(gets=[FakeResponse(payload=metadata)])
+                self.assert_error("public_repo", self.save_messages, session)
+                self.assertEqual(1, len(session.calls))
+                self.assertNotIn("/contents/", session.calls[0][1])
+        session = FakeSession()
+        self.assert_error("public_repo", self.save_messages, session, environ={
+            "MAIL_WORKBENCH_REPO": "yaoy2/yao_1", "MAIL_WORKBENCH_TOKEN": TEST_TOKEN,
+        })
+        self.assertEqual([], session.calls)
+
+    def test_message_save_stale_or_missing_version_never_overwrites(self):
+        session = FakeSession(gets=[FakeResponse(payload={"private": True}), contents_response(message_snapshot_fixture())])
+        self.assert_error("conflict", self.save_messages, session, expected_version="older-sha")
+        self.assertEqual(["get", "get"], [call[0] for call in session.calls])
+        for version in (None, ""):
+            with self.subTest(version=version):
+                session = FakeSession()
+                self.assert_error("conflict", self.save_messages, session, expected_version=version)
+                self.assertEqual([], session.calls)
+
+    def test_message_save_put_conflict_is_not_retried(self):
+        session = FakeSession(
+            gets=[FakeResponse(payload={"private": True}), contents_response(message_snapshot_fixture())],
+            put=FakeResponse(409, {"message": TEST_TOKEN}),
+        )
+        self.assert_error("conflict", self.save_messages, session)
+        self.assertEqual(["get", "get", "put"], [call[0] for call in session.calls])
+
+    def test_message_save_permission_or_unconfirmed_write_never_reports_success(self):
+        for response, code in (
+            (FakeResponse(403, {"message": TEST_TOKEN}), "forbidden"),
+            (FakeResponse(payload={"content": {}}), "invalid_response"),
+        ):
+            with self.subTest(code=code):
+                session = FakeSession(
+                    gets=[FakeResponse(payload={"private": True}), contents_response(message_snapshot_fixture())], put=response,
+                )
+                self.assert_error(code, self.save_messages, session)
+                self.assertEqual(["get", "get", "put"], [call[0] for call in session.calls])
+
+    def test_unchanged_message_triage_is_noop_and_preserves_original_time(self):
+        source = message_snapshot_fixture()
+        source["messages"][1].update(triage_status="done", triage_updated_at="2026-09-05T12:00:00+08:00")
+        session = FakeSession(gets=[FakeResponse(payload={"private": True}), contents_response(source)])
+        result = self.save_messages(session)
+        self.assertEqual({"snapshot": source, "version": OLD_SHA, "source": "github"}, result)
+        self.assertEqual(["get", "get"], [call[0] for call in session.calls])
+
+    def test_message_triage_fields_are_optional_for_legacy_snapshots_and_accept_all_states(self):
+        source = message_snapshot_fixture()
+        session = FakeSession(gets=[FakeResponse(payload={"private": True}), contents_response(source)])
+        self.assertEqual(source, self.load(session)["snapshot"])
+        for state in sync.ALLOWED_STATUSES:
+            with self.subTest(state=state):
+                source = message_snapshot_fixture()
+                source["messages"][1].update(triage_status=state, triage_updated_at="2026-09-05T12:00:00Z")
+                self.assertEqual(source, sync._validate_snapshot(source))
+
+    def test_message_triage_fields_require_a_valid_state_and_nonempty_zoned_timestamp_together(self):
+        invalid_fields = [
+            {"triage_status": "done"}, {"triage_updated_at": "2026-09-05T12:00:00+08:00"},
+        ]
+        invalid_fields.extend({"triage_status": state, "triage_updated_at": "2026-09-05T12:00:00+08:00"}
+                              for state in (None, "", "archived", [], True))
+        invalid_fields.extend({"triage_status": "done", "triage_updated_at": timestamp}
+                              for timestamp in (None, "", " ", "2026-09-05", "2026-09-05T12:00:00", "2026-02-30T12:00:00+08:00", 123, []))
+        for fields in invalid_fields:
+            with self.subTest(fields=fields):
+                source = message_snapshot_fixture()
+                source["messages"][1].update(fields)
+                self.assert_error("invalid_snapshot", sync._validate_snapshot, source)
+
+    def test_message_updates_cannot_silently_target_missing_or_duplicate_message_ids(self):
+        for identifier in (None, "", " ", [], "m1"):
+            with self.subTest(identifier=identifier):
+                source = message_snapshot_fixture()
+                source["messages"][1]["id"] = identifier
+                session = FakeSession(gets=[FakeResponse(payload={"private": True}), contents_response(source)])
+                self.assert_error("invalid_snapshot", self.save_messages, session)
+                self.assertEqual(["get", "get"], [call[0] for call in session.calls])
 
     def test_invalid_schema_or_malformed_response_fails_cleanly(self):
         for modify in (

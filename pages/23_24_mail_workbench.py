@@ -213,10 +213,11 @@ def filter_inbox_messages(messages, actions, view="全部", query="", *, start=N
     query = str(query or "").strip().casefold()
     for message in messages:
         linked = by_message.get(message.get("id"), [])
-        statuses = {action.get("status") for action in linked}
+        statuses = ({action.get("status") for action in linked} if linked
+                    else {message.get("triage_status") or "needs_confirmation"})
         matches = {
             "全部": True,
-            "待判断": not linked or "needs_confirmation" in statuses,
+            "待判断": "needs_confirmation" in statuses,
             "相关": bool(statuses & {"pending", "in_progress", "done", "no_action"}),
             "待办": bool(statuses & {"pending", "in_progress"}),
             "已办": "done" in statuses,
@@ -280,6 +281,14 @@ def build_action_updates(actions, drafts):
             and drafts[str(item["id"])] != item.get("status")}
 
 
+def build_message_updates(snapshot, drafts):
+    linked_ids = {action.get("message_id") for action in snapshot.get("actions", [])}
+    return {str(message["id"]): drafts[str(message["id"])] for message in snapshot.get("messages", [])
+            if message.get("id") not in linked_ids and str(message["id"]) in drafts
+            and drafts[str(message["id"])] in STATUSES
+            and drafts[str(message["id"])] != (message.get("triage_status") or "needs_confirmation")}
+
+
 def render_edit_access():
     password = budget_auth.get_budget_password(st.secrets, os.environ)
     if not password:
@@ -310,7 +319,8 @@ def show_data_error(exc, *, saving=False):
 def get_mail_gateway():
     from utils import mail_private_sync
     # The same live process may also hold the old four-status validator.
-    if not set(STATUSES).issubset(mail_private_sync.ALLOWED_STATUSES):
+    if (not set(STATUSES).issubset(mail_private_sync.ALLOWED_STATUSES)
+            or not hasattr(mail_private_sync, "save_message_updates")):
         importlib.reload(mail_private_sync)
     return mail_private_sync
 
@@ -324,12 +334,16 @@ def refresh_snapshot(gateway):
     return loaded
 
 
-def save_drafts(gateway, loaded, drafts):
+def require_edit_access(loaded):
     # Enforce write authorization here, independent of disabled browser widgets.
     if not st.session_state.get("mail_authenticated") or not budget_auth.get_budget_password(st.secrets, os.environ):
         raise PermissionError("请先启用待办编辑，再保存状态。")
     if loaded.get("source") != "github":
         raise PermissionError("本机快照仅供查看，不能保存状态。")
+
+
+def save_drafts(gateway, loaded, drafts):
+    require_edit_access(loaded)
     updates = build_action_updates(loaded["snapshot"].get("actions", []), drafts)
     if not updates:
         return False
@@ -343,6 +357,22 @@ def save_drafts(gateway, loaded, drafts):
         drafts.pop(action_id, None)
         # Widget state is cleared before widgets are constructed on the next run.
         st.session_state.pop(f"mail_status_{action_id}", None)
+    return True
+
+
+def save_message_drafts(gateway, loaded, drafts):
+    require_edit_access(loaded)
+    updates = build_message_updates(loaded["snapshot"], drafts)
+    if not updates:
+        return False
+    saved = gateway.save_message_updates(
+        updates, expected_version=loaded["version"], secrets=st.secrets, environ=os.environ,
+    )
+    if not isinstance(saved, dict) or not isinstance(saved.get("snapshot"), dict):
+        raise ValueError("Invalid save response")
+    st.session_state["mail_loaded"] = saved
+    for message_id in updates:
+        drafts.pop(message_id, None)
     return True
 
 
@@ -378,19 +408,33 @@ def render_status_control(action, loaded, gateway, *, context, labels=STATUSES):
         st.caption("尚未保存，仍按原状态归类。")
 
 
-def render_inbox_message(message, snapshot, loaded, gateway, now):
+def render_message_status_control(message, loaded, gateway, *, context="inbox"):
+    drafts = st.session_state.setdefault("mail_message_drafts", {})
+    readonly = loaded.get("source") != "github" or not st.session_state.get("mail_authenticated")
+    message_id = str(message["id"])
+    key = f"mail_message_status_{context}_{message_id}_{loaded.get('version', 'local')}"
+    current = message.get("triage_status") or "needs_confirmation"
+    st.session_state[key] = current if readonly else drafts.get(message_id, current)
+    st.selectbox("当前状态", list(INBOX_STATUSES), key=key, format_func=INBOX_STATUSES.get,
+                 disabled=readonly, label_visibility="collapsed", help="判断这封邮件，选择后自动保存；可随时改回。",
+                 on_change=remember_message_status, args=(message_id, key, gateway, loaded.get("version")))
+    if message_id in drafts and drafts[message_id] != current:
+        st.caption("尚未保存，仍按原状态归类。")
+
+
+def render_inbox_message(message, snapshot, loaded, gateway, now, *, context="inbox"):
     actions = [action for action in snapshot.get("actions", []) if action.get("message_id") == message.get("id")]
-    with st.container(border=True, key=f"mail_inbox_row_{message['id']}"):
+    with st.container(border=True, key=f"mail_inbox_row_{context}_{message['id']}"):
         content_col, choice_col = st.columns([5, 1.65], vertical_alignment="center")
         with content_col:
             st.markdown(inbox_message_html(message, actions, now), unsafe_allow_html=True)
         with choice_col:
             if not actions:
-                st.caption("尚未提取处理事项")
+                render_message_status_control(message, loaded, gateway, context=context)
             for action in actions:
                 if len(actions) > 1:
                     st.caption(plain_label(action.get("title") or "未命名事项"))
-                render_status_control(action, loaded, gateway, context="inbox", labels=INBOX_STATUSES)
+                render_status_control(action, loaded, gateway, context=context, labels=INBOX_STATUSES)
         with st.expander("详情与附件", expanded=False):
             st.text(message.get("summary") or "尚未生成摘要。")
             for action in actions:
@@ -562,6 +606,25 @@ def remember_status(action_id, widget_key, gateway, expected_version):
         st.session_state["mail_save_error"] = ERRORS.get(getattr(exc, "code", ""), "保存失败，选择已保留；请刷新核对后重试。")
 
 
+def remember_message_status(message_id, widget_key, gateway, expected_version):
+    drafts = st.session_state.setdefault("mail_message_drafts", {})
+    status = st.session_state[widget_key]
+    drafts[message_id] = status
+    loaded = st.session_state.get("mail_loaded")
+    if loaded and loaded.get("version") != expected_version:
+        st.session_state["mail_save_error"] = ERRORS["conflict"]
+        return
+    try:
+        if not loaded:
+            raise ValueError("Missing snapshot")
+        if save_message_drafts(gateway, loaded, {message_id: status}):
+            st.session_state["mail_save_notice"] = f"已保存为“{INBOX_STATUSES[status]}”，可在“全部”中随时改回。"
+        drafts.pop(message_id, None)
+        st.session_state.pop("mail_save_error", None)
+    except Exception as exc:
+        st.session_state["mail_save_error"] = ERRORS.get(getattr(exc, "code", ""), "保存失败，选择已保留；请刷新核对后重试。")
+
+
 def render_pending_changes(snapshot, loaded, gateway):
     drafts = st.session_state.setdefault("mail_action_drafts", {})
     pending = build_action_updates(snapshot.get("actions", []), drafts)
@@ -577,6 +640,18 @@ def render_pending_changes(snapshot, loaded, gateway):
                     st.rerun()
             except Exception as exc:
                 show_data_error(exc, saving=True)
+    message_drafts = st.session_state.setdefault("mail_message_drafts", {})
+    message_pending = build_message_updates(snapshot, message_drafts)
+    if message_pending and st.session_state.get("mail_authenticated"):
+        st.caption(f"有 {len(message_pending)} 封邮件的选择尚未保存，仍按原状态归类。")
+        if st.button(f"重试保存邮件判断（{len(message_pending)}封）"):
+            try:
+                if save_message_drafts(gateway, st.session_state.get("mail_loaded", loaded), message_drafts):
+                    st.session_state.pop("mail_save_error", None)
+                    st.session_state["mail_save_notice"] = "邮件判断已保存。"
+                    st.rerun()
+            except Exception as exc:
+                show_data_error(exc, saving=True)
 
 
 def render_actions(snapshot, loaded, gateway, category, now):
@@ -587,10 +662,21 @@ def render_actions(snapshot, loaded, gateway, category, now):
     elif not st.session_state.get("mail_authenticated"):
         st.caption("修改状态请先在页面上方启用待办编辑。")
     actions = filter_actions(snapshot.get("actions", []), snapshot.get("messages", []), view, now, category)
-    if not actions:
+    linked_ids = {action.get("message_id") for action in snapshot.get("actions", [])}
+    message_view = {"我的待办": "待办", "待确认": "待判断", "已办归档": "已办",
+                    "无需处理": "无需处理", "不相关业务": "不相关", "全部": "全部"}.get(view)
+    message_items = (filter_inbox_messages(
+        [message for message in snapshot.get("messages", []) if message.get("id") not in linked_ids],
+        [], message_view, category=category,
+    ) if message_view else [])
+    if not actions and not message_items:
         st.info("此视图内没有匹配的事项。")
     for action in actions:
         render_action_card(action, snapshot, loaded, gateway, now, context="all")
+    if message_items:
+        st.caption("以下按邮件处理，尚未提取具体任务和截止时间。")
+        for message in message_items:
+            render_inbox_message(message, snapshot, loaded, gateway, now, context="actions")
 
 
 def render_attachments(messages):
@@ -642,7 +728,8 @@ def main():
         logout = editing and st.button("退出编辑", use_container_width=True)
     if logout:
         for key in list(st.session_state):
-            if key in {"mail_authenticated", "mail_action_drafts", "mail_save_error"} or str(key).startswith("mail_status_"):
+            if (key in {"mail_authenticated", "mail_action_drafts", "mail_message_drafts", "mail_save_error"}
+                    or str(key).startswith(("mail_status_", "mail_message_status_"))):
                 del st.session_state[key]
         st.rerun()
     # Browsing preserves the existing summary-only data and write authorization.
@@ -651,7 +738,7 @@ def main():
     if refresh or loaded is None:
         try:
             loaded = refresh_snapshot(mail_private_sync)
-            if st.session_state.get("mail_action_drafts"):
+            if st.session_state.get("mail_action_drafts") or st.session_state.get("mail_message_drafts"):
                 st.info("已刷新最新数据并保留编辑。请核对各事项的已存状态，再保存修改。")
         except Exception as exc:
             st.session_state.pop("mail_loaded", None)

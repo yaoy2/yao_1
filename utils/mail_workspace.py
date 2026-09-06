@@ -28,6 +28,7 @@ ACTION_STATUSES = ALL_STATUSES
 KINDS = {"daily", "morning", "weekly", "sample"}
 MESSAGE_FIELDS = ("id", "received_at", "sender", "subject", "folder", "category",
                   "summary", "source_url", "archive_path")
+MESSAGE_TRIAGE_FIELDS = ("triage_status", "triage_updated_at")
 ACTION_FIELDS = ("id", "message_id", "title", "requirement", "owner", "due_at",
                  "due_text", "due_basis", "recipient", "submission_method", "status",
                  "completed_at", "updated_at")
@@ -371,6 +372,10 @@ def ingest(root, batch):
             stamp = parse_time(incoming["received_at"])
             directory = "archive/" + stamp.date().isoformat() + "/" + hashlib.sha256(identifier.encode()).hexdigest()[:24]
             message = {field: _text(incoming.get(field, previous.get(field))) for field in MESSAGE_FIELDS}
+            # Collection refreshes evidence, never a user's mail-level decision.
+            for field in MESSAGE_TRIAGE_FIELDS:
+                if field in previous:
+                    message[field] = copy.deepcopy(previous[field])
             message["received_at"] = stamp.isoformat(timespec="seconds")
             message["source_url"] = sanitize_source_url(incoming.get("source_url", previous.get("source_url")))
             if "body_text" not in incoming:
@@ -427,6 +432,7 @@ def ingest(root, batch):
                     errors.append("附件未完成: " + identifier + "/" + attachment["id"])
             message_map[identifier] = message
         actions = {action["id"]: action for action in data["actions"]}
+        previously_actioned = {action.get("message_id") for action in data["actions"]}
         for incoming in batch.get("actions", []):
             previous = actions.get(incoming["id"], {})
             action = {field: _text(incoming.get(field, previous.get(field))) for field in ACTION_FIELDS}
@@ -438,6 +444,13 @@ def ingest(root, batch):
                     action[field] = previous.get(field)
             else:
                 action["status"] = incoming.get("status", "pending")
+                message = message_map.get(action["message_id"], {})
+                triage = message.get("triage_status")
+                if action["message_id"] not in previously_actioned and triage in ACTION_STATUSES:
+                    # A mail-level completion does not prove that a newly
+                    # extracted task was completed. Only explicit exemptions
+                    # carry into the first group of extracted tasks.
+                    action["status"] = triage if triage in {"no_action", "out_of_scope"} else "needs_confirmation"
                 action["completed_at"] = (
                     normalize_time(incoming["completed_at"]) if incoming.get("completed_at") else finished
                 ) if action["status"] == "done" else None
@@ -584,6 +597,9 @@ def public_snapshot(data, root):
     root_path = _root_path(root)
     for incoming in data["messages"]:
         message = {key: incoming.get(key, "") for key in MESSAGE_FIELDS}
+        for key in MESSAGE_TRIAGE_FIELDS:
+            if key in incoming:
+                message[key] = copy.deepcopy(incoming[key])
         message["source_url"] = sanitize_source_url(message["source_url"])
         if message["archive_path"]:
             _inside(root_path, message["archive_path"])

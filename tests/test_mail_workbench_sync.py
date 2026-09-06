@@ -156,6 +156,154 @@ class MailWorkbenchSyncTests(unittest.TestCase):
         self.sync("pull", runner)
         self.assertEqual(local, self.local())
 
+    def test_legacy_snapshots_do_not_gain_empty_message_triage_fields(self):
+        before = self.dashboard.read_bytes()
+        self.sync("pull", FakeRunner([repo_response(), content_response()]))
+        self.assertEqual(before, self.dashboard.read_bytes())
+        runner = FakeRunner([repo_response(), content_response(), http_result(payload={"content": {"sha": NEW_SHA}})])
+        self.sync("push", runner)
+        payload = json.loads(runner.calls[-1][1]["input"])
+        uploaded = json.loads(base64.b64decode(payload["content"]))
+        for snapshot in (self.local(), uploaded):
+            self.assertEqual(1, snapshot["schema_version"])
+            self.assertNotIn("triage_status", snapshot["messages"][0])
+            self.assertNotIn("triage_updated_at", snapshot["messages"][0])
+
+    def test_pull_merges_only_matching_message_triage_and_action_state(self):
+        remote = fixture()
+        remote["messages"][0].update(
+            triage_status="out_of_scope", triage_updated_at="2026-09-06T09:00:00+08:00",
+            subject="云端主题不可覆盖", summary="云端摘要不可覆盖", body_text="云端正文不可覆盖",
+            received_at="2026-09-06T08:00:00+08:00", arbitrary_remote_field=PRIVATE_MARKER,
+        )
+        remote["messages"][0]["attachments"][0]["name"] = "云端附件不可覆盖.xlsx"
+        remote["messages"][0]["attachments"].append({
+            **remote["messages"][0]["attachments"][0], "id": "remote-file", "name": "云端附件不可导入.xlsx",
+        })
+        remote["messages"].append({**copy.deepcopy(remote["messages"][0]), "id": "remote-message"})
+        remote["actions"][0].update(
+            status="done", updated_at="2026-09-06T09:00:00+08:00", completed_at="2026-09-06T09:00:00+08:00",
+        )
+        remote["actions"].append({**remote["actions"][0], "id": "remote-action", "message_id": "remote-message"})
+        self.sync("pull", FakeRunner([repo_response(), content_response(remote)]))
+        actual = self.local()
+        expected = copy.deepcopy(self.original)
+        expected["messages"][0].update(
+            triage_status="out_of_scope", triage_updated_at="2026-09-06T09:00:00+08:00",
+        )
+        for key in sync.STATUS_FIELDS:
+            expected["actions"][0][key] = remote["actions"][0][key]
+        expected["updated_at"] = actual["updated_at"]
+        self.assertEqual(expected, actual)
+
+    def test_message_triage_uses_its_own_timestamp_for_pull_and_push(self):
+        cases = (
+            ("2026-09-06T11:00:00+08:00", "2026-09-06T10:00:00+08:00", "pending"),
+            ("2026-09-06T10:00:00+08:00", "2026-09-06T11:00:00+08:00", "done"),
+            ("2026-09-06T10:00:00+08:00", "2026-09-06T10:00:00+08:00", "done"),
+        )
+        for local_time, remote_time, expected_status in cases:
+            with self.subTest(local_time=local_time, remote_time=remote_time):
+                local, remote = fixture(), fixture()
+                local["messages"][0].update(triage_status="pending", triage_updated_at=local_time)
+                remote["messages"][0].update(triage_status="done", triage_updated_at=remote_time)
+                # Deliberately make snapshot and receipt chronology disagree
+                # with the human decision version in both directions.
+                older, newer = (local, remote) if expected_status == "pending" else (remote, local)
+                older["updated_at"] = "2026-09-06T07:00:00+08:00"
+                older["messages"][0]["received_at"] = "2026-09-04T07:00:00+08:00"
+                newer["updated_at"] = "2026-09-06T20:00:00+08:00"
+                newer["messages"][0]["received_at"] = "2026-09-06T19:00:00+08:00"
+                expected_time = local_time if expected_status == "pending" else remote_time
+                local_before, remote_before = copy.deepcopy(local), copy.deepcopy(remote)
+                for merged in (sync.merge_remote_states(local, remote), sync.merge_for_push(local, remote, self.root)):
+                    self.assertEqual(expected_status, merged["messages"][0]["triage_status"])
+                    self.assertEqual(expected_time, merged["messages"][0]["triage_updated_at"])
+                    self.assertEqual(local["messages"][0]["received_at"], merged["messages"][0]["received_at"])
+                    self.assertEqual(self.original["actions"], merged["actions"])
+                self.assertEqual(local_before, local)
+                self.assertEqual(remote_before, remote)
+
+    def test_missing_message_triage_cannot_erase_an_explicit_decision(self):
+        for decision_side in ("local", "remote"):
+            with self.subTest(decision_side=decision_side):
+                local, remote = fixture(), fixture()
+                decision = local if decision_side == "local" else remote
+                legacy = remote if decision_side == "local" else local
+                decision["messages"][0].update(
+                    triage_status="no_action", triage_updated_at="2026-09-06T09:00:00+08:00",
+                )
+                legacy["updated_at"] = "2026-09-06T23:00:00+08:00"
+                legacy["messages"][0]["received_at"] = "2026-09-06T22:00:00+08:00"
+                for merged in (sync.merge_remote_states(local, remote), sync.merge_for_push(local, remote, self.root)):
+                    self.assertEqual("no_action", merged["messages"][0]["triage_status"])
+                    self.assertEqual("2026-09-06T09:00:00+08:00", merged["messages"][0]["triage_updated_at"])
+
+    def test_push_retains_remote_only_message_triage_and_exports_only_allowed_fields(self):
+        local, remote = fixture(), fixture()
+        local["messages"][0].update(
+            triage_status="pending", triage_updated_at="2026-09-06T09:00:00+08:00",
+            arbitrary_local_field=PRIVATE_MARKER,
+        )
+        remote["messages"][0].update(
+            triage_status="done", triage_updated_at="2026-09-06T11:00:00+08:00",
+            subject="云端旧主题", arbitrary_remote_field=PRIVATE_MARKER,
+        )
+        remote["messages"].append({
+            **copy.deepcopy(remote["messages"][0]), "id": "remote-message", "triage_status": "out_of_scope",
+        })
+        self.write_local(local)
+        runner = FakeRunner([repo_response(), content_response(remote), http_result(payload={"content": {"sha": NEW_SHA}})])
+        result = self.sync("push", runner)
+        payload = json.loads(runner.calls[-1][1]["input"])
+        uploaded_bytes = base64.b64decode(payload["content"])
+        uploaded = json.loads(uploaded_bytes)
+        messages = {message["id"]: message for message in uploaded["messages"]}
+        self.assertEqual({"m1", "remote-message"}, set(messages))
+        self.assertEqual("done", messages["m1"]["triage_status"])
+        self.assertEqual("2026-09-06T11:00:00+08:00", messages["m1"]["triage_updated_at"])
+        self.assertEqual("本地材料报送", messages["m1"]["subject"])
+        self.assertEqual("out_of_scope", messages["remote-message"]["triage_status"])
+        self.assertEqual("2026-09-06T11:00:00+08:00", messages["remote-message"]["triage_updated_at"])
+        self.assertNotIn(PRIVATE_MARKER, uploaded_bytes.decode("utf-8"))
+        for message in messages.values():
+            self.assertNotIn("body_text", message)
+            self.assertNotIn("arbitrary_local_field", message)
+            self.assertNotIn("arbitrary_remote_field", message)
+            for attachment in message["attachments"]:
+                self.assertNotIn("download_path", attachment)
+        saved = {message["id"]: message for message in self.local()["messages"]}
+        self.assertEqual(PRIVATE_MARKER, saved["m1"]["body_text"])
+        self.assertNotIn("body_text", saved["remote-message"])
+        self.assertEqual("done", saved["m1"]["triage_status"])
+        self.assertEqual(self.original["actions"], self.local()["actions"])
+        self.assertEqual(1, result["action_count"])
+
+    def test_message_done_does_not_create_or_complete_actions_in_weekly_report(self):
+        for action_status in (None, "pending", "done"):
+            with self.subTest(action_status=action_status):
+                local, remote = fixture(), fixture()
+                if action_status is None:
+                    local["actions"] = []
+                    remote["actions"] = []
+                elif action_status == "done":
+                    for snapshot in (local, remote):
+                        snapshot["actions"][0].update(
+                            status="done", updated_at="2026-09-06T08:00:00+08:00",
+                            completed_at="2026-09-06T08:00:00+08:00",
+                        )
+                remote["messages"][0].update(
+                    triage_status="done", triage_updated_at="2026-09-06T09:00:00+08:00",
+                )
+                self.write_local(local)
+                result = self.sync("pull", FakeRunner([repo_response(), content_response(remote)]))
+                self.assertEqual("done", self.local()["messages"][0]["triage_status"])
+                self.assertEqual(local["actions"], self.local()["actions"])
+                self.assertEqual(int(action_status is not None), result["action_count"])
+                report = mail_workspace.generate_report(self.root, "weekly", "2026-09-06T23:00:00+08:00")
+                self.assertEqual(int(action_status == "done"), report["completed_action_count"])
+                self.assertEqual(local["actions"], self.local()["actions"])
+
     def test_web_completion_survives_later_ingestion_of_changed_requirements(self):
         # The webpage edits the action after our pull, while a later collection
         # changes only its requirement text. Collection time is not a new user
@@ -355,6 +503,47 @@ class MailWorkbenchSyncTests(unittest.TestCase):
         self.assert_code("local_data_error", "push", runner)
         self.assertEqual(self.original, self.local())
         self.assertEqual(2, len(runner.calls))
+
+    def test_first_upload_preserves_mail_exemption_chosen_after_local_extraction(self):
+        for state in ("no_action", "out_of_scope"):
+            with self.subTest(state=state):
+                local = fixture()
+                local["actions"].append({**local["actions"][0], "id": "new-second-task",
+                                         "status": "done", "completed_at": "2026-09-06T08:00:00+08:00"})
+                self.write_local(local)
+                remote = fixture()
+                remote["actions"] = []
+                decision_time = "2026-09-06T09:00:00+08:00"
+                remote["messages"][0].update(triage_status=state, triage_updated_at=decision_time)
+                runner = FakeRunner([repo_response(), content_response(remote),
+                                     http_result(payload={"content": {"sha": NEW_SHA}})])
+                self.sync("push", runner)
+                payload = json.loads(runner.calls[-1][1]["input"])
+                uploaded = json.loads(base64.b64decode(payload["content"]))
+                for result in (uploaded, self.local()):
+                    self.assertEqual([state, state], [row["status"] for row in result["actions"]])
+                    self.assertTrue(all(row["completed_at"] is None for row in result["actions"]))
+                    self.assertTrue(all(row["updated_at"] == decision_time for row in result["actions"]))
+                    self.assertEqual(state, result["messages"][0]["triage_status"])
+
+    def test_mail_exemption_never_overrides_existing_or_newer_task_decisions_on_push(self):
+        for situation in ("existing-task", "existing-other-task", "newer-local-decision", "newer-mail-restoration"):
+            with self.subTest(situation=situation):
+                local, remote = fixture(), fixture()
+                remote["messages"][0].update(triage_status="out_of_scope", triage_updated_at="2026-09-06T09:00:00+08:00")
+                if situation == "existing-other-task":
+                    remote["actions"][0]["id"] = "existing-other"
+                elif situation in {"newer-local-decision", "newer-mail-restoration"}:
+                    remote["actions"] = []
+                    if situation == "newer-local-decision":
+                        local["actions"][0]["updated_at"] = "2026-09-06T10:00:00+08:00"
+                    else:
+                        local["messages"][0].update(triage_status="pending", triage_updated_at="2026-09-06T10:00:00+08:00")
+                before = copy.deepcopy(local["actions"][0])
+                result = sync.merge_for_push(local, remote, self.root)
+                actual = next(row for row in result["actions"] if row["id"] == before["id"])
+                for key in sync.STATUS_FIELDS:
+                    self.assertEqual(before[key], actual[key])
 
 
 if __name__ == "__main__":

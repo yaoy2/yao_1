@@ -6,6 +6,7 @@ import unittest
 from datetime import date, datetime
 from html.parser import HTMLParser
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 
@@ -233,11 +234,14 @@ class MailInboxViewTests(unittest.TestCase):
         self.assertEqual(["pending", "done"], [ui.session_state[control["key"]] for control in controls])
         self.assertTrue(all(control["on_change"] is page.remember_status for control in controls))
 
-    def test_no_action_mail_has_visible_explanation_without_status_or_save_controls(self):
+    def test_no_action_mail_has_its_own_decision_control_without_creating_a_task(self):
         ui, _ = self.render_mail([])
-        self.assertTrue(any(event["value"] == "尚未提取处理事项" and event["expander_depth"] == 0
-                            for event in ui.events))
-        self.assertFalse(any(event["kind"] in {"selectbox", "button"} for event in ui.events))
+        controls = [event for event in ui.events if event["kind"] == "selectbox"]
+        self.assertEqual(1, len(controls))
+        self.assertEqual(0, controls[0]["expander_depth"])
+        self.assertIs(page.remember_message_status, controls[0]["kwargs"]["on_change"])
+        self.assertEqual("m1", controls[0]["kwargs"]["args"][0])
+        self.assertEqual("needs_confirmation", ui.session_state[controls[0]["kwargs"]["key"]])
         self.assertNotIn("mail_action_drafts", ui.session_state)
 
     def test_status_controls_stay_readonly_without_authentication_or_with_local_preview(self):
@@ -261,6 +265,72 @@ class MailInboxViewTests(unittest.TestCase):
                            if event["kind"] == "markdown" and event["expander_depth"] == 0)
         for mail in messages:
             self.assertIn(mail["subject"], visible)
+
+    def test_saved_mail_decision_controls_filters_without_a_task(self):
+        for state, view in (("pending", "待办"), ("done", "已办"), ("out_of_scope", "不相关"), ("no_action", "无需处理")):
+            with self.subTest(state=state):
+                mails = [message(triage_status=state)]
+                self.assertEqual(mails, page.filter_inbox_messages(mails, [], view))
+                self.assertEqual([], page.filter_inbox_messages(mails, [], "待判断"))
+        mails = [message(triage_status="done")]
+        self.assertEqual(mails, page.filter_inbox_messages(mails, [action(status="pending")], "待办"))
+        self.assertEqual([], page.filter_inbox_messages(mails, [action(status="pending")], "已办"))
+
+    def callback_fixture(self, status="out_of_scope", *, saved_status=None, authenticated=True, source="github"):
+        snapshot = {"messages": [message(**({"triage_status": saved_status} if saved_status else {})), message("m2")], "actions": []}
+        loaded = {"snapshot": snapshot, "version": "old", "source": source}
+        state = {"mail_loaded": loaded, "mail_authenticated": authenticated, "choice": status,
+                 "mail_message_drafts": {"m2": "done"}}
+        ui = SimpleNamespace(secrets={"budget_password": "test-edit-password"}, session_state=state)
+        saved = copy.deepcopy(loaded)
+        saved["version"] = "new"
+        saved["snapshot"]["messages"][0].update(triage_status=status, triage_updated_at="2026-09-06T09:00:00+08:00")
+        return ui, SimpleNamespace(save_message_updates=Mock(return_value=saved))
+
+    def test_mail_choice_saves_only_that_message_and_can_restore_without_inventing_tasks(self):
+        for before, after in ((None, "out_of_scope"), ("out_of_scope", "pending"), (None, "done")):
+            with self.subTest(before=before, after=after):
+                ui, gateway = self.callback_fixture(after, saved_status=before)
+                with patch.object(page, "st", ui):
+                    page.remember_message_status("m1", "choice", gateway, "old")
+                self.assertEqual({"m1": after}, gateway.save_message_updates.call_args.args[0])
+                self.assertEqual("old", gateway.save_message_updates.call_args.kwargs["expected_version"])
+                self.assertEqual({"m2": "done"}, ui.session_state["mail_message_drafts"])
+                saved = ui.session_state["mail_loaded"]
+                self.assertEqual("new", saved["version"])
+                self.assertEqual(after, saved["snapshot"]["messages"][0]["triage_status"])
+                self.assertEqual([], saved["snapshot"]["actions"])
+
+    def test_message_save_failure_keeps_old_filter_and_draft(self):
+        ui, gateway = self.callback_fixture("done", saved_status="pending")
+        gateway.save_message_updates.side_effect = RuntimeError("private error must not be shown")
+        with patch.object(page, "st", ui):
+            page.remember_message_status("m1", "choice", gateway, "old")
+        self.assertEqual("pending", ui.session_state["mail_loaded"]["snapshot"]["messages"][0]["triage_status"])
+        self.assertEqual("done", ui.session_state["mail_message_drafts"]["m1"])
+        self.assertNotIn("private error", ui.session_state["mail_save_error"])
+        self.assertNotIn("mail_save_notice", ui.session_state)
+
+    def test_stale_anonymous_and_local_mail_decisions_cannot_write(self):
+        for authenticated, source, version in ((True, "github", "stale"), (False, "github", "old"), (True, "local", "old")):
+            with self.subTest(authenticated=authenticated, source=source, version=version):
+                ui, gateway = self.callback_fixture(authenticated=authenticated, source=source)
+                with patch.object(page, "st", ui):
+                    page.remember_message_status("m1", "choice", gateway, version)
+                gateway.save_message_updates.assert_not_called()
+                self.assertEqual("old", ui.session_state["mail_loaded"]["version"])
+                self.assertIn("m1", ui.session_state["mail_message_drafts"])
+
+    def test_no_mail_update_can_reclassify_a_message_that_now_has_tasks(self):
+        snapshot = {"messages": [message()], "actions": [action(status="done")]}
+        self.assertEqual({}, page.build_message_updates(snapshot, {"m1": "pending", "unknown": "done"}))
+
+    def test_refresh_keeps_unsaved_mail_decisions(self):
+        ui, gateway = self.callback_fixture()
+        gateway.load_snapshot = Mock(return_value=ui.session_state["mail_loaded"])
+        with patch.object(page, "st", ui):
+            page.refresh_snapshot(gateway)
+        self.assertEqual({"m2": "done"}, ui.session_state["mail_message_drafts"])
 
 
 if __name__ == "__main__":

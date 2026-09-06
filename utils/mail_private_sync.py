@@ -1,4 +1,4 @@
-"""Read private mail snapshots and update action status with optimistic locking.
+"""Read private mail snapshots and save user decisions with optimistic locking.
 
 This module never downloads original mail or attachments. ``dashboard.json`` is
 an index in a separately verified private repository, not the app's public repo.
@@ -171,8 +171,19 @@ def _validate_snapshot(snapshot):
     for name in ("messages", "actions", "runs", "reports"):
         if not isinstance(snapshot.get(name), list) or any(not isinstance(item, dict) for item in snapshot[name]):
             raise MailSyncError("invalid_snapshot", "邮件快照的邮件、待办、运行及报告必须为记录列表。")
+    message_ids = set()
     for message in snapshot["messages"]:
+        message_id = message.get("id")
+        if not isinstance(message_id, str) or not message_id.strip() or message_id in message_ids:
+            raise MailSyncError("invalid_snapshot", "邮件缺少唯一标识，或存在重复标识。")
+        message_ids.add(message_id)
         _check_timestamp(message.get("received_at"))
+        if "triage_status" in message or "triage_updated_at" in message:
+            if (not isinstance(message.get("triage_status"), str)
+                    or message["triage_status"] not in ALLOWED_STATUSES
+                    or not message.get("triage_updated_at")):
+                raise MailSyncError("invalid_snapshot", "邮件判断须包含有效状态及判断时间。")
+            _check_timestamp(message["triage_updated_at"])
     seen_ids = set()
     for action in snapshot["actions"]:
         action_id = action.get("id")
@@ -302,6 +313,59 @@ def save_action_updates(updates, expected_version, secrets=None, environ=None, s
     response = _request(
         session, "put", f"{API_ROOT}/repos/{config['repo']}/contents/{SNAPSHOT_PATH}", config,
         json={"message": "mail: update action statuses", "branch": config["branch"],
+              "sha": expected_version, "content": encoded},
+    )
+    _check_status(response, {200}, "snapshot")
+    data = _response_json(response)
+    content = data.get("content")
+    new_sha = content.get("sha") if isinstance(content, dict) else None
+    if not isinstance(new_sha, str) or not new_sha:
+        raise MailSyncError("invalid_response", "仓库未返回新版本，保存结果尚未确认，请刷新核对。")
+    return {"snapshot": snapshot, "version": new_sha, "source": "github"}
+
+
+def save_message_updates(updates, expected_version, secrets=None, environ=None, session=None):
+    """Save triage only for existing mail that has no extracted actions.
+
+    The update shape and SHA guard match ``save_action_updates``. A mail-level
+    ``done`` decision never creates an action or a task completion timestamp.
+    Existing action statuses and every source field remain untouched.
+    """
+    environ = os.environ if environ is None else environ
+    if _text(environ, "MAIL_WORKBENCH_SNAPSHOT"):
+        raise MailSyncError("readonly", "本地快照为只读预览，不能保存邮件判断。")
+    try:
+        changes = _normalize_updates(updates)
+    except MailSyncError:
+        raise MailSyncError("invalid_update", "只能提交邮件标识和有效判断状态，不能修改邮件内容或其他字段。") from None
+    if not isinstance(expected_version, str) or not expected_version:
+        raise MailSyncError("conflict", "保存需要已读取的远端版本，请先刷新邮件工作台。")
+    config = _config(secrets, environ)
+    session = requests if session is None else session
+    current = _read_remote(config, session)
+    if current["version"] != expected_version:
+        raise MailSyncError("conflict", "邮件数据已更新，未覆盖远端；请刷新后核对并重新保存。")
+    snapshot = copy.deepcopy(current["snapshot"])
+    messages = {message["id"]: message for message in snapshot["messages"]}
+    with_actions = {action.get("message_id") for action in snapshot["actions"]}
+    if any(message_id not in messages or message_id in with_actions for message_id in changes):
+        raise MailSyncError("invalid_update", "邮件已不存在或已有处理事项，请刷新后逐项判断。")
+    now = datetime.now(_snapshot_timezone(snapshot)).isoformat(timespec="seconds")
+    changed = False
+    for message_id, status in changes.items():
+        message = messages[message_id]
+        if message.get("triage_status") == status:
+            continue
+        message["triage_status"] = status
+        message["triage_updated_at"] = now
+        changed = True
+    if not changed:
+        return current
+    snapshot["updated_at"] = now
+    encoded = base64.b64encode(json.dumps(snapshot, ensure_ascii=False, indent=2).encode("utf-8")).decode("ascii")
+    response = _request(
+        session, "put", f"{API_ROOT}/repos/{config['repo']}/contents/{SNAPSHOT_PATH}", config,
+        json={"message": "mail: update message decisions", "branch": config["branch"],
               "sha": expected_version, "content": encoded},
     )
     _check_status(response, {200}, "snapshot")

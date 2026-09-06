@@ -212,6 +212,18 @@ def _merge_status(local_action, remote_action):
         local_action[key] = copy.deepcopy(winner.get(key))
 
 
+def _merge_message_triage(local_message, remote_message):
+    """Merge user decisions independently from collection metadata timestamps."""
+    candidates = [row for row in (local_message, remote_message) if "triage_status" in row]
+    if not candidates:
+        return
+    winner = candidates[0]
+    if len(candidates) == 2 and _moment(candidates[1], "triage_updated_at") >= _moment(winner, "triage_updated_at"):
+        winner = candidates[1]
+    for key in mail_workspace.MESSAGE_TRIAGE_FIELDS:
+        local_message[key] = copy.deepcopy(winner[key])
+
+
 def merge_remote_states(local, remote):
     """Pull status fields only; unknown remote records wait for a full push merge."""
     _check_identity(local, remote)
@@ -222,6 +234,10 @@ def merge_remote_states(local, remote):
     for action in result["actions"]:
         if action["id"] in actions:
             _merge_status(action, actions[action["id"]])
+    messages = {row["id"]: row for row in remote["messages"]}
+    for message in result["messages"]:
+        if message["id"] in messages:
+            _merge_message_triage(message, messages[message["id"]])
     if result != local:
         result["updated_at"] = mail_workspace.now_iso()
     return result
@@ -232,6 +248,7 @@ def _merge_messages(local, remote):
     for row in local:
         previous = merged.get(row["id"], {})
         combined = {**previous, **copy.deepcopy(row)}
+        _merge_message_triage(combined, previous)
         attachments = {item["id"]: copy.deepcopy(item) for item in previous.get("attachments", [])}
         attachments.update({item["id"]: copy.deepcopy(item) for item in row.get("attachments", [])})
         combined["attachments"] = list(attachments.values())
@@ -258,12 +275,22 @@ def merge_for_push(local, remote, root):
     remote = mail_workspace.public_snapshot(remote, root)
     result = copy.deepcopy(local)
     result["messages"] = _merge_messages(local["messages"], remote["messages"])
+    messages = {row["id"]: row for row in result["messages"]}
+    remote_actioned = {row.get("message_id") for row in remote["actions"]}
     actions = {row["id"]: copy.deepcopy(row) for row in remote["actions"]}
     for row in local["actions"]:
         previous = actions.get(row["id"])
         combined = {**(previous or {}), **copy.deepcopy(row)}
         if previous is not None:
             _merge_status(combined, previous)
+        elif row.get("message_id") not in remote_actioned:
+            message = messages.get(row.get("message_id"), {})
+            if (message.get("triage_status") in {"no_action", "out_of_scope"}
+                    and _moment(message, "triage_updated_at") >= _moment(row, "updated_at")):
+                # The web user may exempt this mail after local extraction but
+                # before its first upload. Preserve that newer explicit choice.
+                combined.update(status=message["triage_status"], completed_at=None,
+                                updated_at=message["triage_updated_at"])
         actions[row["id"]] = combined
     result["actions"] = list(actions.values())
     result["runs"] = _merge_latest(local["runs"], remote["runs"], ("finished_at", "started_at"))

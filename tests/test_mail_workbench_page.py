@@ -36,6 +36,15 @@ class MailWorkbenchPageTests(unittest.TestCase):
             refreshed = page.get_mail_gateway()
             self.assertTrue(set(page.STATUSES).issubset(refreshed.ALLOWED_STATUSES))
 
+    def test_hot_deploy_refreshes_gateway_missing_mail_decision_api(self):
+        gateway = page.get_mail_gateway()
+        original = gateway.save_message_updates
+        try:
+            del gateway.save_message_updates
+            self.assertTrue(callable(page.get_mail_gateway().save_message_updates))
+        finally:
+            gateway.save_message_updates = original
+
     def test_timezone_filter_uses_beijing_receipt_date(self):
         messages = [
             {"id": "before", "received_at": "2026-09-05T15:59:00Z", "category": "教学"},
@@ -177,7 +186,12 @@ class MailWorkbenchPageTests(unittest.TestCase):
         gateway = page.get_mail_gateway()
         with patch.object(page.budget_auth, "get_budget_password", return_value="test-edit-password"), \
                 patch.object(gateway, "load_snapshot", side_effect=AssertionError("Test must not read real mail")), \
-                patch.object(gateway, "save_action_updates", side_effect=AssertionError("Render must not save mail")) as save:
+                patch.object(gateway, "save_action_updates", side_effect=AssertionError("Render must not save mail")) as save, \
+                patch.object(gateway, "save_message_updates", side_effect=AssertionError("Render must not save mail")) as save_mail:
+            app.run(timeout=15)
+            self.assertEqual([], list(app.exception))
+            # Both tabs can show the same mail without sharing a widget key.
+            next(element for element in app.radio if element.label == "待办视图").set_value("全部")
             app.run(timeout=15)
         self.assertEqual([], list(app.exception))
         self.assertEqual("邮件列表", app.tabs[0].label)
@@ -186,10 +200,11 @@ class MailWorkbenchPageTests(unittest.TestCase):
         self.assertIn("无需先点简报即可看到的重点", inbox_html)
         self.assertIn("没有事项的邮件", inbox_html)
         statuses = [element for element in app.tabs[0].selectbox if element.label == "当前状态"]
-        self.assertEqual(1, len(statuses))
-        self.assertEqual("out_of_scope", statuses[0].value)
+        self.assertEqual(2, len(statuses))
+        self.assertEqual({"out_of_scope", "needs_confirmation"}, {element.value for element in statuses})
         self.assertIn("相关 · 待办", statuses[0].options)
         save.assert_not_called()
+        save_mail.assert_not_called()
 
     def test_anonymous_status_save_is_blocked_before_any_remote_call(self):
         loaded = {"snapshot": {"actions": [{"id": "a", "status": "pending"}]}, "version": "old", "source": "github"}
