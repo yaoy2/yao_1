@@ -4,6 +4,7 @@ import os
 import re
 import sys
 from datetime import date, datetime, time, timedelta, timezone
+from html import escape
 from pathlib import PurePosixPath, PureWindowsPath
 from urllib.parse import parse_qsl, urlsplit
 
@@ -11,6 +12,7 @@ import streamlit as st
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from utils import budget_auth
+from utils.mail_report_view import REPORT_CSS, report_body_html, report_title
 from utils.ui_theme import render_home_link
 
 
@@ -116,12 +118,31 @@ def coverage_warning(snapshot):
     coverage = snapshot.get("coverage") or {}
     runs = snapshot.get("runs", [])
     if runs and all(run.get("kind") == "sample" for run in runs):
-        return "当前只有样本试跑记录，尚未确认正式连续采集；样本不能代表全天邮件或整个邮箱。"
+        return "当前为试跑数据，用于检查读取和展示效果；还没有完成首次正式采集。"
     if not coverage.get("complete"):
-        return "当前采集范围尚未完整核对。" + str(coverage.get("note") or "请查看运行记录中的失败与待补项。")
+        return "部分邮件或附件仍待核对，尚不能确认该时段已检查完整。详情见运行记录。"
     if not parse_time(coverage.get("since")) or not parse_time(coverage.get("through")):
-        return "尚未给出已核对范围的起止时间，无法确认覆盖完整性。"
+        return "尚未记录检查的起止时间，需要核对运行记录。"
     return None
+
+
+def snapshot_status_html(snapshot):
+    runs = snapshot.get("runs", [])
+    if runs and all(run.get("kind") == "sample" for run in runs):
+        label = "试跑数据"
+    elif coverage_warning(snapshot):
+        label = "采集待补全" if runs else "待首次采集"
+    else:
+        label = "已完成时段核对"
+    messages = snapshot.get("messages", [])
+    incomplete = incomplete_attachment_count(messages)
+    attachment_count = sum(len(message.get("attachments", [])) for message in messages)
+    attachment_label = (f'{incomplete} 份附件待补' if incomplete else
+                        ("现有附件均已归档" if attachment_count else "暂无附件记录"))
+    attachment_class = "mail-attachment-pending" if incomplete else ""
+    return (f'<div class="mail-status-bar"><span class="mail-status-chip">{escape(label)}</span>'
+            f'<span>已整理 {len(messages)} 封邮件</span>'
+            f'<span class="{attachment_class}">{attachment_label}</span></div>')
 
 
 def run_status_label(run):
@@ -255,10 +276,10 @@ def render_reports(reports, kinds, start=None, end=None):
         if report.get("kind") in kinds and (start is None or (report_date and start <= report_date.date() <= end)):
             selected.append(report)
     for report in sorted(selected, key=lambda item: str(item.get("generated_at", "")), reverse=True):
-        with st.expander(plain_label(f"{report.get('date') or '日期未记录'} · {report.get('title') or KINDS.get(report.get('kind'), '报告')}")):
-            st.caption(f"覆盖：{display_time(report.get('period_start'))} 至 {display_time(report.get('period_end'))} · 生成于 {display_time(report.get('generated_at'))}")
-            # Plain text prevents mail-derived Markdown images from loading remote trackers.
-            st.text(report.get("markdown") or "此报告尚未提供正文。")
+        with st.expander(plain_label(report_title(report))):
+            st.caption(f"统计时段：{display_time(report.get('period_start'))} 至 {display_time(report.get('period_end'))} · 生成于 {display_time(report.get('generated_at'))}")
+            # Only fixed HTML elements are emitted; all mail text is escaped.
+            st.markdown(report_body_html(report.get("markdown")), unsafe_allow_html=True)
     if not selected:
         st.info("此范围内尚无已生成的报告。")
 
@@ -323,7 +344,7 @@ def render_attachments(messages):
     st.caption("显示本机归档目录下的相对位置。附件文件保存在本机，网页不提供本机文件的下载按钮。")
     incomplete = incomplete_attachment_count(messages)
     if incomplete:
-        st.warning(f"当前范围有 {incomplete} 个附件尚未完成归档或核验，请查看下方失败原因；附件清单未全部完成。")
+        st.caption(f"当前筛选范围有 {incomplete} 份附件待补，具体原因见下表。")
     rows = []
     for message in messages:
         for attachment in message.get("attachments", []):
@@ -354,8 +375,8 @@ def main():
     [data-testid="stMetricValue"] {font-size:1.55rem;}
     [data-testid="stExpander"] details summary p {font-size:.88rem;}
     </style>""", unsafe_allow_html=True)
+    st.markdown("<style>" + REPORT_CSS + "</style>", unsafe_allow_html=True)
     st.caption("计划时间（北京时间）：每日 20:00 归档与简报 · 周一至五 09:00 到期提醒 · 周五 17:00 每周汇总")
-    st.caption("以上是约定的计划时间；是否实际执行，以运行记录为准。周一至五口径暂不调整节假日与调休。")
     refresh_col, logout_col = st.columns([5, 1])
     refresh = refresh_col.button("刷新数据（保留未保存编辑）")
     if editing and logout_col.button("退出编辑"):
@@ -376,16 +397,19 @@ def main():
     snapshot = loaded["snapshot"]
     coverage = snapshot.get("coverage") or {}
     st.caption(plain_label(f"账户：{snapshot.get('account') or '未记录'} · 数据更新：{display_time(snapshot.get('updated_at'))} · 来源：{'私有同步' if loaded.get('source') == 'github' else '本机只读快照'}"))
-    st.caption(f"已核对范围：{display_time(coverage.get('since'))} 至 {display_time(coverage.get('through'))}")
-    st.caption("完整性仅指上述连续时间范围，不代表整个邮箱；范围以外的记录可能来自样本试跑。")
-    warning = coverage_warning(snapshot)
-    if warning:
-        st.warning(plain_label(warning))
-    elif coverage.get("note"):
-        st.info(plain_label(coverage["note"]))
-    incomplete = incomplete_attachment_count(snapshot.get("messages", []))
-    if incomplete:
-        st.warning(f"已收录的邮件中仍有 {incomplete} 个附件未完成归档或核验，请查看附件索引和运行记录。")
+    st.markdown(snapshot_status_html(snapshot), unsafe_allow_html=True)
+    with st.expander("数据状态详情", expanded=False):
+        warning = coverage_warning(snapshot)
+        if warning:
+            st.text(warning)
+        if parse_time(coverage.get("since")) and parse_time(coverage.get("through")):
+            st.caption(f"已检查时段：{display_time(coverage.get('since'))} 至 {display_time(coverage.get('through'))}")
+            st.caption("该时段之外的历史邮件不在本次完整检查范围内。")
+        incomplete = incomplete_attachment_count(snapshot.get("messages", []))
+        if incomplete:
+            st.caption(f"另有 {incomplete} 份附件待补，文件名和原因见“附件索引”。")
+        elif not warning:
+            st.caption("上述时段已核对完成，现有附件均已归档。")
     if st.session_state.get("mail_save_notice"):
         st.success(st.session_state.pop("mail_save_notice"))
 
@@ -417,6 +441,7 @@ def main():
     with attachments_tab:
         render_attachments(messages)
     with runs_tab:
+        st.caption("这里记录实际执行结果。计划时间不等于已经执行；周一至五暂不调整节假日和调休。")
         st.subheader("实际运行记录")
         runs = snapshot.get("runs", [])
         if runs:

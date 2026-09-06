@@ -74,7 +74,8 @@ class MailWorkbenchPageTests(unittest.TestCase):
     def test_sample_only_snapshot_never_appears_fully_collected(self):
         snapshot = {"coverage": {"complete": True, "since": "2026-09-01", "through": "2026-09-06"},
                     "runs": [{"kind": "sample", "status": "success"}]}
-        self.assertIn("只有样本试跑", page.coverage_warning(snapshot))
+        self.assertIn("试跑数据", page.coverage_warning(snapshot))
+        self.assertIn("试跑数据", page.snapshot_status_html(snapshot))
         self.assertIn("不代表全量", page.run_status_label(snapshot["runs"][0]))
 
     def test_full_window_does_not_hide_incomplete_historical_attachment(self):
@@ -85,6 +86,12 @@ class MailWorkbenchPageTests(unittest.TestCase):
         self.assertIsNone(page.coverage_warning(snapshot))
         self.assertEqual(1, page.incomplete_attachment_count(snapshot["messages"]))
         self.assertIn("失败", page.ATTACHMENT_STATUSES["error"])
+        self.assertIn("已完成时段核对", page.snapshot_status_html(snapshot))
+        self.assertIn("1 份附件待补", page.snapshot_status_html(snapshot))
+
+    def test_missing_coverage_dates_do_not_look_complete_in_compact_status(self):
+        snapshot = {"coverage": {"complete": True}, "runs": [{"kind": "daily", "status": "success"}]}
+        self.assertIn("采集待补全", page.snapshot_status_html(snapshot))
 
     def test_missing_password_keeps_public_browsing_but_disables_previous_edit_session(self):
         fake_st = SimpleNamespace(secrets={}, session_state={"mail_authenticated": True},
