@@ -707,7 +707,7 @@ def main():
     [data-testid="stVerticalBlock"] {gap:.5rem;}
     h1 {font-size:1.8rem !important; padding:.25rem 0 .5rem !important;}
     [data-testid="stExpander"] details summary p {font-size:.88rem;}
-    .mail-inbox-copy {color:inherit; line-height:1.5; min-width:0;}
+    .mail-inbox-copy {color:inherit; line-height:1.5; min-width:0; padding-bottom:.45rem;}
     .mail-inbox-heading {display:flex; flex-wrap:wrap; align-items:baseline; gap:.25rem .6rem;}
     .mail-inbox-heading strong {font-size:1rem; line-height:1.45; overflow-wrap:anywhere;}
     .mail-inbox-summary {margin:.35rem 0 !important; font-size:.88rem;
