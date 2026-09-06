@@ -9,6 +9,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from concept_fables.catalog import (
     CATALOG_PATH,
@@ -82,6 +83,53 @@ def _valid_item(**overrides):
     }
     item.update(overrides)
     return item
+
+
+class TestConceptFablesRendering(unittest.TestCase):
+    def test_multiline_detail_and_mappings_use_html_without_markdown(self):
+        from concept_fables import page
+
+        item = _valid_item(
+            story="第一段。\n\n    第二段含 <script>alert(1)</script>。",
+            definition="定义第一段。\n\n    定义第二段。",
+            mappings=[
+                {"story_element": f"故事 {i}\n\n    后续 & <元素>",
+                 "concept_element": f"概念 {i}"}
+                for i in range(4)
+            ],
+        )
+        with patch.object(page.st, "html") as html, \
+                patch.object(page.st, "markdown") as markdown, \
+                patch.object(page.st, "button", return_value=False):
+            page._render_detail(item)
+
+        markdown.assert_not_called()
+        html.assert_called_once()
+        body = html.call_args.args[0]
+        self.assertEqual(body.count('class="cf-map-item"'), 4)
+        for i in range(4):
+            self.assertIn(f"故事 {i}", body)
+            self.assertIn(f"概念 {i}", body)
+        self.assertIn("第一段。\n\n    第二段", body)
+        self.assertIn("定义第一段。\n\n    定义第二段。", body)
+        self.assertIn("&lt;script&gt;alert(1)&lt;/script&gt;", body)
+        self.assertIn("后续 &amp; &lt;元素&gt;", body)
+        self.assertNotIn("<script>", body)
+
+    def test_gallery_fragments_use_html_without_markdown(self):
+        from concept_fables import page
+
+        item = _valid_item(definition="第一段\n\n    第二段", tags=[])
+        with patch.object(page.st, "html") as html, \
+                patch.object(page.st, "markdown") as markdown, \
+                patch.object(page.st, "button", return_value=False):
+            page._render_hero([item])
+            page._render_card(item, "cf_test_card")
+            page._render_empty_catalog()
+
+        markdown.assert_not_called()
+        self.assertEqual(html.call_count, 3)
+        self.assertIn("第一段\n\n    第二段", html.call_args_list[1].args[0])
 
 
 class TestConceptFablesCatalog(unittest.TestCase):

@@ -72,7 +72,7 @@ def _clear_selection() -> None:
 
 
 def _inject_styles() -> None:
-    st.markdown(
+    st.html(
         """
         <style>
         /* White reading canvas, aligned with the shared navigation and M20. */
@@ -365,7 +365,6 @@ def _inject_styles() -> None:
         }
         </style>
         """,
-        unsafe_allow_html=True,
     )
 
 
@@ -373,7 +372,7 @@ def _render_hero(items: list[dict[str, Any]]) -> None:
     concept_count = len(items)
     field_count = max(0, len(_field_options(items)) - 1)
     latest = _latest_update_label(items)
-    st.markdown(
+    st.html(
         f"""
         <section class="cf-hero cf-wrap">
           <div class="cf-kicker"><span>M19</span><span>Concept Archive</span></div>
@@ -386,12 +385,11 @@ def _render_hero(items: list[dict[str, Any]]) -> None:
           </div>
         </section>
         """,
-        unsafe_allow_html=True,
     )
 
 
 def _render_empty_catalog() -> None:
-    st.markdown(
+    st.html(
         """
         <section class="cf-empty cf-wrap">
           <h3>馆藏仍空，等待首篇寓言</h3>
@@ -399,7 +397,6 @@ def _render_empty_catalog() -> None:
           <p>请在 Codex 中调用 <code>$concept-fable-gallery &lt;概念&gt;</code> 生成并入库，然后再回到这里检索与重读。</p>
         </section>
         """,
-        unsafe_allow_html=True,
     )
 
 
@@ -452,7 +449,7 @@ def _render_card(item: dict[str, Any], button_key: str) -> None:
     )
     tags_block = f'<div class="cf-tags">{tag_html}</div>' if tag_html else ""
 
-    st.markdown(
+    st.html(
         f"""
         <article class="cf-card cf-wrap">
           <div class="cf-card-title">{concept}</div>
@@ -462,7 +459,6 @@ def _render_card(item: dict[str, Any], button_key: str) -> None:
           <div class="cf-date">更新 {updated}</div>
         </article>
         """,
-        unsafe_allow_html=True,
     )
     if st.button("打开寓言", key=button_key, use_container_width=True):
         _open_concept(str(item.get("id", "")))
@@ -479,6 +475,8 @@ def _render_gallery(items: list[dict[str, Any]]) -> None:
             _render_card(item, button_key=f"cf_open_{item.get('id', index)}_{index}")
 
 
+# Render these fragments with st.html: blank lines in catalog text and nested
+# templates must never be interpreted as Markdown code blocks.
 def _render_mappings(mappings: list[dict[str, Any]]) -> str:
     if not mappings:
         return ""
@@ -531,7 +529,7 @@ def _render_detail(item: dict[str, Any]) -> None:
     core = _safe(questions.get("core", ""))
     transfer = _safe(questions.get("transfer", ""))
 
-    st.markdown(
+    st.html(
         f"""
         <section class="cf-detail cf-wrap">
           <h2 class="cf-detail-title">{concept}</h2>
@@ -548,7 +546,6 @@ def _render_detail(item: dict[str, Any]) -> None:
           <div class="cf-q"><b>迁移问题</b><br>{transfer}</div>
         </section>
         """,
-        unsafe_allow_html=True,
     )
 
 
