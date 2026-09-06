@@ -75,99 +75,111 @@ def _inject_styles() -> None:
     st.markdown(
         """
         <style>
-        /* Page canvas: warm-night archive on command-center navy */
+        /* White reading canvas, aligned with the shared navigation and M20. */
         .stApp {
-            color: #e8eef6;
-            background:
-                linear-gradient(rgba(245, 184, 75, .035) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(245, 184, 75, .035) 1px, transparent 1px),
-                radial-gradient(circle at top right, rgba(255, 92, 168, .11), transparent 40%),
-                radial-gradient(circle at 18% 12%, rgba(245, 184, 75, .08), transparent 34%),
-                linear-gradient(135deg, #05070d 0%, #0a1220 38%, #121018 70%, #14100d 100%);
-            background-size: 28px 28px, 28px 28px, auto, auto, auto;
+            color-scheme: light;
+            color: #334155;
+            background: #ffffff;
+            font-family: "Inter", -apple-system, BlinkMacSystemFont,
+                "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
         }
-        .block-container {
-            color: #e8eef6;
+        [data-testid="stHeader"] {
+            background: #ffffff;
+            color: #334155;
         }
-        /* Compact dark controls in main content only; leave fixed home link + sidebar alone */
-        section.main .stButton > button {
+        [data-testid="stHeader"] button { color: #334155; }
+        .block-container { color: #334155; }
+        /* Key-scoped controls keep the shared home button and sidebar intact. */
+        [class*="st-key-cf_"] button {
             border-radius: 8px;
-            border: 1px solid rgba(245, 184, 75, .34);
-            background: linear-gradient(180deg, rgba(24, 30, 44, .96), rgba(14, 18, 28, .96));
-            color: #f4ead6;
-            font-weight: 700;
-            box-shadow: inset 0 1px 0 rgba(255, 217, 138, .06);
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
+            color: #1d4ed8;
+            font-family: inherit;
+            font-weight: 600;
         }
-        section.main .stButton > button:hover {
-            border-color: rgba(255, 92, 168, .45);
-            background: linear-gradient(180deg, rgba(36, 28, 38, .98), rgba(18, 20, 30, .98));
-            color: #ffe6b0;
+        [class*="st-key-cf_"] button:hover {
+            border-color: #2563eb;
+            background: #eff6ff;
+            color: #1e40af;
         }
-        section.main .stButton > button:focus {
-            box-shadow: 0 0 0 1px rgba(245, 184, 75, .45);
+        [class*="st-key-cf_"] button:focus-visible {
+            outline: 2px solid #2563eb;
+            outline-offset: 2px;
         }
-        section.main div[data-baseweb="select"] > div,
-        section.main input,
-        section.main textarea,
-        section.main [data-baseweb="input"] {
-            border-radius: 8px !important;
-            border-color: rgba(245, 184, 75, .22) !important;
-            background-color: rgba(8, 12, 20, .92) !important;
-            color: #e8eef6 !important;
+        [class*="st-key-cf_"] [data-baseweb="select"] > div,
+        [class*="st-key-cf_"] [data-baseweb="input"],
+        [class*="st-key-cf_"] [data-baseweb="base-input"],
+        [class*="st-key-cf_"] input {
+            border-radius: 8px;
+            border-color: #cbd5e1;
+            background-color: #ffffff;
+            color: #334155;
+            caret-color: #1d4ed8;
         }
-        section.main div[data-baseweb="select"] > div:hover,
-        section.main input:hover,
-        section.main textarea:hover {
-            border-color: rgba(255, 92, 168, .35) !important;
+        [class*="st-key-cf_"] input::placeholder {
+            color: #64748b;
+            opacity: 1;
         }
-        section.main div[data-baseweb="select"] > div:focus-within,
-        section.main input:focus,
-        section.main textarea:focus {
-            border-color: rgba(245, 184, 75, .55) !important;
-            box-shadow: 0 0 0 1px rgba(245, 184, 75, .28);
+        [class*="st-key-cf_"] [data-baseweb="select"] > div:hover,
+        [class*="st-key-cf_"] [data-baseweb="input"]:hover {
+            border-color: #94a3b8;
         }
-        section.main [data-baseweb="popover"] li,
-        section.main [data-baseweb="menu"] li {
-            background-color: #101826 !important;
-            color: #e8eef6 !important;
+        [class*="st-key-cf_"] [data-baseweb="select"] > div:focus-within,
+        [class*="st-key-cf_"] [data-baseweb="input"]:focus-within {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 2px #dbeafe;
         }
-        section.main .stAlert {
-            border-radius: 10px;
-            border: 1px solid rgba(245, 184, 75, .22);
-            background: rgba(14, 18, 28, .88);
-            color: #d7e0ec;
+        [class*="st-key-cf_"] [data-baseweb="select"] svg {
+            color: #64748b;
+            fill: currentColor;
         }
-        .cf-wrap { color: #e8eef6; }
+        /* Select menus are portals outside the main content container. */
+        body:has(.cf-wrap) [data-baseweb="popover"],
+        body:has(.cf-wrap) [data-baseweb="menu"],
+        body:has(.cf-wrap) [role="listbox"],
+        body:has(.cf-wrap) [role="option"] {
+            background-color: #ffffff;
+            color: #334155;
+        }
+        body:has(.cf-wrap) [role="option"]:hover,
+        body:has(.cf-wrap) [role="option"][aria-selected="true"] {
+            background-color: #eff6ff;
+            color: #1d4ed8;
+        }
+        .cf-wrap {
+            color: #334155;
+            overflow-wrap: anywhere;
+        }
         .cf-hero {
             padding: .95rem 1.05rem;
             margin-bottom: .85rem;
             border-radius: 14px;
-            border: 1px solid rgba(245, 184, 75, .22);
-            background:
-                linear-gradient(135deg, rgba(18, 24, 38, .94), rgba(28, 22, 18, .88)),
-                radial-gradient(circle at top right, rgba(255, 92, 168, .12), transparent 42%);
-            box-shadow: 0 14px 34px rgba(0, 0, 0, .28);
+            border: 1px solid #e2e8f0;
+            border-top: 3px solid #2563eb;
+            background: #ffffff;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, .04);
         }
         .cf-kicker {
             display: inline-flex;
             align-items: center;
             gap: .4rem;
             margin-bottom: .35rem;
-            color: #f5b84b;
+            color: #1d4ed8;
             font-size: .78rem;
-            font-weight: 750;
+            font-weight: 700;
             letter-spacing: .04em;
             text-transform: uppercase;
         }
         .cf-hero h1 {
             margin: 0 0 .35rem;
-            color: #fff7e8;
+            color: #0f172a;
             font-size: 1.72rem;
             line-height: 1.2;
         }
         .cf-hero p {
             margin: 0;
-            color: #b7c2d0;
+            color: #64748b;
             font-size: .95rem;
             line-height: 1.55;
         }
@@ -181,17 +193,17 @@ def _inject_styles() -> None:
             min-width: 5.6rem;
             padding: .38rem .62rem;
             border-radius: 10px;
-            border: 1px solid rgba(245, 184, 75, .18);
-            background: rgba(8, 12, 20, .55);
+            border: 1px solid #e2e8f0;
+            background: #f8fafc;
         }
         .cf-stat b {
             display: block;
-            color: #ffd98a;
+            color: #1d4ed8;
             font-size: 1.05rem;
             line-height: 1.2;
         }
         .cf-stat span {
-            color: #93a0b3;
+            color: #64748b;
             font-size: .74rem;
         }
         .cf-card {
@@ -199,25 +211,25 @@ def _inject_styles() -> None:
             padding: .72rem .78rem .66rem;
             margin-bottom: .55rem;
             border-radius: 12px;
-            border: 1px solid rgba(148, 163, 184, .18);
-            background: linear-gradient(180deg, rgba(16, 22, 34, .92), rgba(12, 16, 26, .92));
-            box-shadow: inset 0 1px 0 rgba(255, 217, 138, .05);
+            border: 1px solid #e2e8f0;
+            background: #ffffff;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, .03);
         }
         .cf-card-title {
             margin: 0 0 .28rem;
-            color: #fff4df;
+            color: #0f172a;
             font-size: 1.02rem;
-            font-weight: 750;
+            font-weight: 700;
             line-height: 1.3;
         }
         .cf-card-meta {
             margin: 0 0 .4rem;
-            color: #9aa8bb;
+            color: #64748b;
             font-size: .78rem;
         }
         .cf-card-def {
             margin: 0 0 .45rem;
-            color: #c5d0de;
+            color: #334155;
             font-size: .86rem;
             line-height: 1.45;
         }
@@ -231,79 +243,80 @@ def _inject_styles() -> None:
             display: inline-flex;
             padding: .12rem .42rem;
             border-radius: 999px;
-            border: 1px solid rgba(255, 92, 168, .28);
-            background: rgba(255, 92, 168, .08);
-            color: #ff9ec8;
+            border: 1px solid #dbeafe;
+            background: #eff6ff;
+            color: #1d4ed8;
             font-size: .72rem;
-            font-weight: 650;
+            font-weight: 600;
         }
         .cf-date {
-            color: #7f8ea3;
+            color: #64748b;
             font-size: .74rem;
         }
         .cf-empty {
             padding: 1.1rem 1.15rem;
             border-radius: 14px;
-            border: 1px dashed rgba(245, 184, 75, .34);
-            background: rgba(14, 18, 28, .78);
+            border: 1px dashed #cbd5e1;
+            background: #f8fafc;
         }
         .cf-empty h3 {
             margin: 0 0 .4rem;
-            color: #ffe6b0;
+            color: #0f172a;
             font-size: 1.08rem;
         }
         .cf-empty p {
             margin: 0 0 .55rem;
-            color: #aeb9c9;
+            color: #475569;
             line-height: 1.55;
         }
         .cf-empty code {
             padding: .12rem .38rem;
             border-radius: 6px;
-            background: rgba(255, 92, 168, .12);
-            color: #ffb3d4;
+            background: #eff6ff;
+            color: #1e40af;
             font-size: .86rem;
         }
         .cf-detail {
             padding: 1rem 1.05rem 1.1rem;
             border-radius: 14px;
-            border: 1px solid rgba(245, 184, 75, .28);
-            background:
-                linear-gradient(180deg, rgba(28, 22, 16, .95), rgba(12, 16, 26, .96));
-            box-shadow: 0 16px 36px rgba(0, 0, 0, .28);
+            border: 1px solid #e2e8f0;
+            background: #ffffff;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, .04);
         }
         .cf-detail-title {
             margin: 0 0 .25rem;
-            color: #fff7e8;
+            color: #0f172a;
             font-size: 1.45rem;
             line-height: 1.25;
         }
         .cf-detail-meta {
             margin: 0 0 .75rem;
-            color: #a8b4c5;
+            color: #64748b;
             font-size: .86rem;
         }
         .cf-story {
             margin: 0 0 .9rem;
             padding: .85rem .9rem;
             border-radius: 12px;
-            border-left: 3px solid #f5b84b;
-            background: rgba(245, 184, 75, .08);
-            color: #f4ead6;
-            font-size: 1rem;
-            line-height: 1.7;
+            border-left: 3px solid #b6a27c;
+            background: #faf9f6;
+            color: #334155;
+            font-family: "Noto Serif SC", "Source Han Serif SC", "Songti SC",
+                "SimSun", serif;
+            font-size: 1.05rem;
+            line-height: 1.85;
             white-space: pre-wrap;
         }
         .cf-section-label {
             margin: 0 0 .35rem;
-            color: #ff9ec8;
+            color: #1d4ed8;
             font-size: .78rem;
-            font-weight: 750;
+            font-weight: 700;
             letter-spacing: .03em;
         }
         .cf-block {
             margin: 0 0 .75rem;
-            color: #d5deea;
+            color: #334155;
             font-size: .92rem;
             line-height: 1.55;
             white-space: pre-wrap;
@@ -317,18 +330,18 @@ def _inject_styles() -> None:
         .cf-map-item {
             padding: .5rem .58rem;
             border-radius: 10px;
-            border: 1px solid rgba(148, 163, 184, .16);
-            background: rgba(8, 12, 20, .45);
+            border: 1px solid #e2e8f0;
+            background: #f8fafc;
         }
         .cf-map-item .k {
             display: block;
             margin-bottom: .18rem;
-            color: #f5b84b;
+            color: #1d4ed8;
             font-size: .74rem;
             font-weight: 700;
         }
         .cf-map-item .v {
-            color: #d7e0ec;
+            color: #334155;
             font-size: .86rem;
             line-height: 1.4;
         }
@@ -336,15 +349,15 @@ def _inject_styles() -> None:
             margin: 0 0 .45rem;
             padding: .55rem .65rem;
             border-radius: 10px;
-            border: 1px solid rgba(255, 92, 168, .18);
-            background: rgba(255, 92, 168, .06);
-            color: #e7edf6;
+            border: 1px solid #dbeafe;
+            background: #eff6ff;
+            color: #334155;
             font-size: .9rem;
             line-height: 1.5;
         }
         .cf-q b {
-            color: #ffb3d4;
-            font-weight: 750;
+            color: #1e40af;
+            font-weight: 700;
         }
         @media (max-width: 900px) {
             .cf-map-grid { grid-template-columns: 1fr; }
