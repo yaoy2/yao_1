@@ -3,6 +3,7 @@
 import os
 import re
 import sys
+import importlib
 from datetime import date, datetime, time, timedelta, timezone
 from html import escape
 from pathlib import PurePosixPath, PureWindowsPath
@@ -13,6 +14,11 @@ import streamlit as st
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from utils import budget_auth
 from utils.mail_action_status import STATUS_LABELS, ACTIVE_STATUSES, ARCHIVED_STATUSES
+from utils import mail_report_view
+# Streamlit can retain imported modules while replacing the page on deployment.
+# Refresh only the pre-triage module, which cannot supply the new report API.
+if not hasattr(mail_report_view, "report_action_records"):
+    importlib.reload(mail_report_view)
 from utils.mail_report_view import REPORT_CSS, report_action_records, report_body_html, report_title
 from utils.ui_theme import render_home_link
 
@@ -221,6 +227,14 @@ def show_data_error(exc, *, saving=False):
     fallback = ("保存失败，您的编辑已保留。请检查连接后重试。" if saving
                 else "邮件数据读取失败，无法确认最新内容。请检查数据源连接后重试。")
     st.error(ERRORS.get(code, fallback))
+
+
+def get_mail_gateway():
+    from utils import mail_private_sync
+    # The same live process may also hold the old four-status validator.
+    if not set(STATUSES).issubset(mail_private_sync.ALLOWED_STATUSES):
+        importlib.reload(mail_private_sync)
+    return mail_private_sync
 
 
 def refresh_snapshot(gateway):
@@ -458,7 +472,7 @@ def main():
     editing = render_edit_access()
     # Summaries are public; the private-source module still protects the backing
     # repository and excludes raw mail bodies. Passwords authorize status writes.
-    from utils import mail_private_sync
+    mail_private_sync = get_mail_gateway()
 
     st.markdown("""<style>
     .block-container {padding-top:1.3rem; padding-bottom:2rem;}

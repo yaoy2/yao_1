@@ -20,6 +20,22 @@ class StopPage(BaseException):
 
 
 class MailWorkbenchPageTests(unittest.TestCase):
+    def test_hot_deploy_refreshes_pre_triage_report_module(self):
+        original = page.mail_report_view.report_action_records
+        try:
+            del page.mail_report_view.report_action_records
+            reloaded_page = importlib.util.module_from_spec(SPEC)
+            SPEC.loader.exec_module(reloaded_page)
+            self.assertTrue(callable(reloaded_page.report_action_records))
+        finally:
+            page.mail_report_view.report_action_records = original
+
+    def test_hot_deploy_refreshes_old_status_validator_before_saving(self):
+        gateway = page.get_mail_gateway()
+        with patch.object(gateway, "ALLOWED_STATUSES", frozenset({"pending", "in_progress", "done", "needs_confirmation"})):
+            refreshed = page.get_mail_gateway()
+            self.assertTrue(set(page.STATUSES).issubset(refreshed.ALLOWED_STATUSES))
+
     def test_timezone_filter_uses_beijing_receipt_date(self):
         messages = [
             {"id": "before", "received_at": "2026-09-05T15:59:00Z", "category": "教学"},
