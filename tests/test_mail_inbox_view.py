@@ -172,31 +172,6 @@ class MailInboxViewTests(unittest.TestCase):
                 self.assertIn("&lt;img", output)
                 self.assertNotRegex(output, r"!?\[[^\]]*\]\(")
 
-    def test_active_deadlines_are_highlighted_without_false_archive_overdue(self):
-        for state in page.STATUSES:
-            with self.subTest(state=state):
-                output = page.inbox_message_html(message(), [action(status=state, due_at="2026-09-05")], self.now)
-                if state in page.ACTIVE_STATUSES:
-                    self.assertIn("已逾期", output)
-                    self.assertIn("mail-inbox-urgent", output)
-                else:
-                    self.assertNotIn("已逾期", output)
-                    self.assertNotIn("mail-inbox-urgent", output)
-
-    def test_date_only_today_is_not_overdue_and_archived_deadline_does_not_win(self):
-        actions = [action("archived", status="done", due_at="2026-09-01"),
-                   action("current", due_at="2026-09-06")]
-        output = page.inbox_message_html(message(), actions, self.now)
-        self.assertIn("今日截止", output)
-        self.assertIn("09-06", output)
-        self.assertNotIn("已逾期", output)
-        self.assertIn("2 项事项", output)
-
-    def test_unknown_deadline_is_explicit_only_for_active_items(self):
-        self.assertIn("截止待确认", page.inbox_message_html(message(), [action()], self.now))
-        self.assertNotIn("截止待确认", page.inbox_message_html(message(), [], self.now))
-        self.assertNotIn("已逾期", page.inbox_message_html(message(), [action(due_at="下周")], self.now))
-
     def render_mail(self, actions, *, authenticated=True, source="github"):
         mail = message(subject="首屏邮件主题", summary="首屏邮件摘要")
         snapshot = {"messages": [mail], "actions": actions}
@@ -209,12 +184,16 @@ class MailInboxViewTests(unittest.TestCase):
         gateway.save_action_updates.assert_not_called()
         return ui, gateway
 
-    def test_subject_summary_and_editor_are_visible_without_expanding_details(self):
+    def test_subject_and_editor_are_visible_with_summary_and_metadata_in_details(self):
         ui, gateway = self.render_mail([action()])
         visible = " ".join(event["value"] for event in ui.events
-                           if event["kind"] == "markdown" and event["expander_depth"] == 0)
+                           if event["kind"] in {"markdown", "caption", "text"} and event["expander_depth"] == 0)
+        details = " ".join(event["value"] for event in ui.events
+                           if event["kind"] in {"markdown", "caption", "text"} and event["expander_depth"] > 0)
         self.assertIn("首屏邮件主题", visible)
-        self.assertIn("首屏邮件摘要", visible)
+        for value in ("首屏邮件摘要", "教务部门", "教学", "2026-09-06"):
+            self.assertNotIn(value, visible)
+            self.assertIn(page.plain_label(value), details)
         controls = [event for event in ui.events if event["kind"] == "selectbox"]
         self.assertEqual(1, len(controls))
         control = controls[0]
@@ -226,13 +205,21 @@ class MailInboxViewTests(unittest.TestCase):
         self.assertFalse(control["kwargs"]["disabled"])
 
     def test_mixed_mail_has_distinct_controls_with_original_saved_states(self):
-        ui, _ = self.render_mail([action("pending-id"), action("done-id", status="done"),
+        ui, _ = self.render_mail([action("pending-id", title="第一项处理事项完整名称"),
+                                  action("done-id", status="done", title="第二项处理事项完整名称"),
                                   action("other-mail", message_id="m2")])
         controls = [event["kwargs"] for event in ui.events if event["kind"] == "selectbox"]
         self.assertEqual(["pending-id", "done-id"], [control["args"][0] for control in controls])
         self.assertEqual(2, len({control["key"] for control in controls}))
         self.assertEqual(["pending", "done"], [ui.session_state[control["key"]] for control in controls])
         self.assertTrue(all(control["on_change"] is page.remember_status for control in controls))
+        visible = " ".join(event["value"] for event in ui.events
+                           if event["kind"] in {"markdown", "caption", "text"} and event["expander_depth"] == 0)
+        details = " ".join(event["value"] for event in ui.events
+                           if event["kind"] in {"markdown", "caption", "text"} and event["expander_depth"] > 0)
+        for title in ("第一项处理事项完整名称", "第二项处理事项完整名称"):
+            self.assertNotIn(title, visible)
+            self.assertIn(title, details)
 
     def test_no_action_mail_has_its_own_decision_control_without_creating_a_task(self):
         ui, _ = self.render_mail([])

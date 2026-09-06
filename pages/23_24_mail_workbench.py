@@ -250,29 +250,9 @@ def inbox_text(value):
 
 
 def inbox_message_html(message, actions, now):
+    """Keep the collapsed list to mail titles; all content lives in details."""
     subject = message.get("subject") or "无主题"
-    summary = message.get("summary") or "尚未生成摘要，可展开查看来源。"
-    if len(actions) == 1 and actions[0].get("requirement"):
-        summary = actions[0]["requirement"]
-    summary = re.sub(r"\s+", " ", str(summary)).strip()
-    active = [action for action in actions if action.get("status") in ACTIVE_STATUSES]
-    deadlines = [parse_time(action.get("due_at"), deadline=True) for action in active]
-    due = min((value for value in deadlines if value), default=None)
-    deadline = ""
-    if due:
-        due_label = ("已逾期" if due < now else "今日截止" if due.date() == now.date() else "截止")
-        due_class = "mail-inbox-urgent" if due.date() <= now.date() else "mail-inbox-deadline"
-        deadline = f'<span class="{due_class}">{due_label} {due:%m-%d}</span>'
-    elif active:
-        deadline = '<span class="mail-inbox-deadline">截止待确认</span>'
-    if len(actions) > 1:
-        deadline += f'<span class="mail-inbox-count">{len(actions)} 项事项 · 逐项判断</span>'
-    attachment_count = len(message.get("attachments", []))
-    metadata = (f"{message.get('sender') or '发件人未记录'} · {display_time(message.get('received_at'))}"
-                f" · {message.get('category') or '未分类'}" + (f" · 附件 {attachment_count}" if attachment_count else ""))
-    return (f'<div class="mail-inbox-copy"><div class="mail-inbox-heading"><strong>{inbox_text(subject)}</strong>{deadline}</div>'
-            f'<p class="mail-inbox-summary">{inbox_text(summary)}</p>'
-            f'<div class="mail-inbox-meta">{inbox_text(metadata)}</div></div>')
+    return f'<div class="mail-inbox-heading"><strong>{inbox_text(subject)}</strong></div>'
 
 
 def build_action_updates(actions, drafts):
@@ -431,14 +411,18 @@ def render_inbox_message(message, snapshot, loaded, gateway, now, *, context="in
         with choice_col:
             if not actions:
                 render_message_status_control(message, loaded, gateway, context=context)
-            for action in actions:
+            for number, action in enumerate(actions, 1):
                 if len(actions) > 1:
-                    st.caption(plain_label(action.get("title") or "未命名事项"))
+                    st.caption(f"事项 {number}")
                 render_status_control(action, loaded, gateway, context=context, labels=INBOX_STATUSES)
         with st.expander("详情与附件", expanded=False):
+            st.caption(plain_label(
+                f"发件人：{message.get('sender') or '未记录'} · 收件时间：{display_time(message.get('received_at'))}"
+                f" · 分类：{message.get('category') or '未分类'} · 附件 {len(message.get('attachments', []))} 份"))
             st.text(message.get("summary") or "尚未生成摘要。")
-            for action in actions:
-                st.markdown("**" + plain_label(action.get("title") or "处理事项") + "**")
+            for number, action in enumerate(actions, 1):
+                title = (f"事项 {number} · " if len(actions) > 1 else "") + (action.get("title") or "处理事项")
+                st.markdown("**" + plain_label(title) + "**")
                 st.text("具体要求：" + str(action.get("requirement") or "待确认"))
                 st.text("截止：" + display_time(action.get("due_at"), deadline=True)
                         + " · 原文：" + str(action.get("due_text") or "未明确"))
@@ -707,16 +691,8 @@ def main():
     [data-testid="stVerticalBlock"] {gap:.5rem;}
     h1 {font-size:1.8rem !important; padding:.25rem 0 .5rem !important;}
     [data-testid="stExpander"] details summary p {font-size:.88rem;}
-    .mail-inbox-copy {color:inherit; line-height:1.5; min-width:0; padding-bottom:.45rem;}
-    .mail-inbox-heading {display:flex; flex-wrap:wrap; align-items:baseline; gap:.25rem .6rem;}
+    .mail-inbox-heading {color:inherit; line-height:1.45; min-width:0;}
     .mail-inbox-heading strong {font-size:1rem; line-height:1.45; overflow-wrap:anywhere;}
-    .mail-inbox-summary {margin:.35rem 0 !important; font-size:.88rem;
-      display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:anywhere;}
-    .mail-inbox-meta {font-size:.76rem; color:#6b7280; overflow-wrap:anywhere;}
-    .mail-inbox-deadline, .mail-inbox-urgent, .mail-inbox-count {font-size:.76rem; padding:.1rem .4rem; border-radius:4px; white-space:nowrap;}
-    .mail-inbox-deadline {color:#805b17; background:#fff7e5;}
-    .mail-inbox-urgent {color:#a32b31; background:#fff0f0; font-weight:600;}
-    .mail-inbox-count {color:#596579; background:#f1f4f7;}
     </style>""", unsafe_allow_html=True)
     st.markdown("<style>" + REPORT_CSS + "</style>", unsafe_allow_html=True)
     title_col, refresh_col, access_col = st.columns([5, 1, 1.6], vertical_alignment="center")

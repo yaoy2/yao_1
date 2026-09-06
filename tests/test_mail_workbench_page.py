@@ -177,7 +177,7 @@ class MailWorkbenchPageTests(unittest.TestCase):
         snapshot = {"account": "test@example.invalid", "updated_at": "2026-09-06T09:00:00+08:00",
                     "coverage": {}, "runs": [], "reports": [],
                     "messages": [{"id": "m1", "subject": "首页测试邮件", "sender": "测试部门",
-                                  "received_at": "2026-08-01T09:00:00+08:00", "summary": "无需先点简报即可看到的重点", "attachments": []},
+                                  "received_at": "2026-08-01T09:00:00+08:00", "summary": "展开后查看的邮件重点", "attachments": []},
                                  {"id": "m2", "subject": "没有事项的邮件", "received_at": "2026-09-01T09:00:00+08:00", "attachments": []}],
                     "actions": [{"id": "a1", "message_id": "m1", "title": "测试事项", "status": "out_of_scope"}]}
         app = AppTest.from_file(str(PAGE_PATH))
@@ -197,7 +197,8 @@ class MailWorkbenchPageTests(unittest.TestCase):
         self.assertEqual("邮件列表", app.tabs[0].label)
         inbox_html = " ".join(element.value for element in app.tabs[0].markdown)
         self.assertIn("首页测试邮件", inbox_html)
-        self.assertIn("无需先点简报即可看到的重点", inbox_html)
+        self.assertNotIn("展开后查看的邮件重点", inbox_html)
+        self.assertTrue(any("展开后查看的邮件重点" in element.value for element in app.tabs[0].text))
         self.assertIn("没有事项的邮件", inbox_html)
         statuses = [element for element in app.tabs[0].selectbox if element.label == "当前状态"]
         self.assertEqual(2, len(statuses))
