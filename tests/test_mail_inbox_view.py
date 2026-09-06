@@ -213,6 +213,7 @@ class MailInboxViewTests(unittest.TestCase):
         self.assertEqual(2, len({control["key"] for control in controls}))
         self.assertEqual(["pending", "done"], [ui.session_state[control["key"]] for control in controls])
         self.assertTrue(all(control["on_change"] is page.remember_status for control in controls))
+        self.assertTrue(all(event["expander_depth"] > 0 for event in ui.events if event["kind"] == "selectbox"))
         visible = " ".join(event["value"] for event in ui.events
                            if event["kind"] in {"markdown", "caption", "text"} and event["expander_depth"] == 0)
         details = " ".join(event["value"] for event in ui.events

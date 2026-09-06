@@ -411,10 +411,12 @@ def render_inbox_message(message, snapshot, loaded, gateway, now, *, context="in
         with choice_col:
             if not actions:
                 render_message_status_control(message, loaded, gateway, context=context)
-            for number, action in enumerate(actions, 1):
-                if len(actions) > 1:
-                    st.caption(f"事项 {number}")
-                render_status_control(action, loaded, gateway, context=context, labels=INBOX_STATUSES)
+            elif len(actions) == 1:
+                render_status_control(actions[0], loaded, gateway, context=context, labels=INBOX_STATUSES)
+            else:
+                statuses = {action.get("status") for action in actions}
+                label = INBOX_STATUSES.get(next(iter(statuses)), "待判断") if len(statuses) == 1 else "状态不同"
+                st.caption(f"{len(actions)} 项 · {label}")
         with st.expander("详情与附件", expanded=False):
             st.caption(plain_label(
                 f"发件人：{message.get('sender') or '未记录'} · 收件时间：{display_time(message.get('received_at'))}"
@@ -422,7 +424,14 @@ def render_inbox_message(message, snapshot, loaded, gateway, now, *, context="in
             st.text(message.get("summary") or "尚未生成摘要。")
             for number, action in enumerate(actions, 1):
                 title = (f"事项 {number} · " if len(actions) > 1 else "") + (action.get("title") or "处理事项")
-                st.markdown("**" + plain_label(title) + "**")
+                if len(actions) > 1:
+                    task_col, task_status_col = st.columns([5, 1.65], vertical_alignment="center")
+                    with task_col:
+                        st.markdown("**" + plain_label(title) + "**")
+                    with task_status_col:
+                        render_status_control(action, loaded, gateway, context=context, labels=INBOX_STATUSES)
+                else:
+                    st.markdown("**" + plain_label(title) + "**")
                 st.text("具体要求：" + str(action.get("requirement") or "待确认"))
                 st.text("截止：" + display_time(action.get("due_at"), deadline=True)
                         + " · 原文：" + str(action.get("due_text") or "未明确"))
