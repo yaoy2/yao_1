@@ -72,13 +72,13 @@ class HomePageTest(unittest.TestCase):
         by_code = {tool["code"]: tool for tool in tools}
         codes = [tool["code"] for tool in tools]
 
-        self.assertEqual("M23", tools[0]["code"])
-        self.assertEqual("pages/22_23_docker_monitor.py", tools[0]["page"])
-        self.assertEqual("M22", tools[1]["code"])
-        self.assertEqual("pages/21_22_gpt_planner_luna_executor.py", tools[1]["page"])
-        self.assertEqual("M21", tools[2]["code"])
-        self.assertEqual("pages/20_21_awesome_design_md.py", tools[2]["page"])
-        self.assertEqual("M20", tools[3]["code"])
+        self.assertEqual("M24", tools[0]["code"])
+        self.assertEqual("pages/22_23_docker_monitor.py", by_code["M23"]["page"])
+        self.assertEqual("M23", tools[1]["code"])
+        self.assertEqual("pages/21_22_gpt_planner_luna_executor.py", by_code["M22"]["page"])
+        self.assertEqual("M22", tools[2]["code"])
+        self.assertEqual("pages/20_21_awesome_design_md.py", by_code["M21"]["page"])
+        self.assertEqual("M21", tools[3]["code"])
         self.assertEqual("pages/19_20_ding2026.py", by_code["M20"]["page"])
         self.assertEqual("M19", tools[4]["code"])
         self.assertEqual("pages/18_19_concept_fables.py", by_code["M19"]["page"])
@@ -89,14 +89,14 @@ class HomePageTest(unittest.TestCase):
         self.assertEqual("M15", tools[7]["code"])
         self.assertEqual("pages/15_0_email_notice.py", by_code["M15"]["page"])
         self.assertTrue(by_code["M14"]["locked"])
-        self.assertEqual(codes[codes.index("M06") : codes.index("M06") + 3], ["M06", "M16", "M13"])
+        self.assertEqual(codes[codes.index("M06") : codes.index("M06") + 4], ["M06", "M20", "M16", "M13"])
         self.assertEqual("pages/15_16_report_grader.py", by_code["M16"]["page"])
         self.assertTrue(by_code["M16"]["blocked"])
         self.assertTrue(by_code["M13"]["blocked"])
         blocked_codes = {tool["code"] for tool in tools if tool.get("blocked")}
-        self.assertEqual({"M01", "M02", "M03", "M04", "M05", "M13", "M16"}, blocked_codes)
+        self.assertEqual({"M01", "M02", "M03", "M04", "M05", "M13", "M16", "M20"}, blocked_codes)
         self.assertEqual("M01", tools[-1]["code"])
-        self.assertEqual(22, len(tools))
+        self.assertEqual(23, len(tools))
 
     def test_homepage_sections_match_approved_apple_nav(self):
         _page_source, namespace = load_homepage_bits()
@@ -108,7 +108,7 @@ class HomePageTest(unittest.TestCase):
         self.assertEqual("行政", by_code["M11"]["section"])
         self.assertEqual("行政", by_code["M08"]["section"])
         self.assertEqual("行政", by_code["M06"]["section"])
-        self.assertEqual("行政", by_code["M20"]["section"])
+        self.assertEqual("archived", by_code["M20"]["section"])
         self.assertEqual("教学", by_code["M17"]["section"])
         self.assertEqual("教学", by_code["M18"]["section"])
         self.assertEqual("个人", by_code["M19"]["section"])
@@ -122,9 +122,11 @@ class HomePageTest(unittest.TestCase):
         admin_codes = [tool["code"] for tool in namespace["tools_for_section"](tools, "行政")]
         teaching_codes = [tool["code"] for tool in namespace["tools_for_section"](tools, "教学")]
         archived_codes = [tool["code"] for tool in namespace["tools_for_section"](tools, "archived")]
-        self.assertEqual(["M20", "M15", "M14", "M11", "M08", "M06"], admin_codes)
+        self.assertEqual(["M24", "M15", "M14", "M11", "M08", "M06"], admin_codes)
         self.assertEqual(["M18", "M17"], teaching_codes)
         self.assertIn("M13", archived_codes)
+        self.assertIn("M20", archived_codes)
+        self.assertNotIn("M20", admin_codes)
         self.assertNotIn("M13", admin_codes)
         self.assertNotIn("M13", [tool["code"] for tool in namespace["tools_for_section"](tools, "个人")])
         self.assertEqual("/20_ding2026", namespace["build_streamlit_page_href"]("pages/19_20_ding2026.py"))
@@ -154,14 +156,14 @@ class HomePageTest(unittest.TestCase):
         page1_codes = [tool["code"] for tool in homepage_pages[0]]
         page2_codes = [tool["code"] for tool in homepage_pages[1]]
 
-        self.assertEqual("M23", tools[0]["code"])
-        self.assertEqual("M22", tools[1]["code"])
-        self.assertEqual("M21", tools[2]["code"])
-        self.assertEqual("M20", tools[3]["code"])
+        self.assertEqual("M24", tools[0]["code"])
+        self.assertEqual("M23", tools[1]["code"])
+        self.assertEqual("M22", tools[2]["code"])
+        self.assertEqual("M21", tools[3]["code"])
         self.assertEqual("M19", tools[4]["code"])
         self.assertEqual("M18", tools[5]["code"])
         self.assertEqual("M17", tools[6]["code"])
-        self.assertEqual(codes[codes.index("M06") : codes.index("M06") + 3], ["M06", "M16", "M13"])
+        self.assertEqual(codes[codes.index("M06") : codes.index("M06") + 4], ["M06", "M20", "M16", "M13"])
         self.assertTrue(tools[codes.index("M16")]["blocked"])
         self.assertTrue(tools[codes.index("M13")]["blocked"])
         self.assertTrue(tools[codes.index("M05")]["blocked"])
@@ -169,9 +171,9 @@ class HomePageTest(unittest.TestCase):
         self.assertNotIn("M13", page1_codes)
         self.assertIn("M16", page2_codes)
         self.assertIn("M13", page2_codes)
-        self.assertEqual(["M23", "M22", "M21", "M20", "M19", "M18", "M17", "M15", "M14"], page1_codes)
-        self.assertEqual(["M11", "M10", "M09", "M08", "M07", "M06", "M16", "M13", "M05"], page2_codes)
-        self.assertEqual(["M04", "M03", "M02", "M01"], [tool["code"] for tool in homepage_pages[2]])
+        self.assertEqual(["M24", "M23", "M22", "M21", "M19", "M18", "M17", "M15", "M14"], page1_codes)
+        self.assertEqual(["M11", "M10", "M09", "M08", "M07", "M06", "M20", "M16", "M13"], page2_codes)
+        self.assertEqual(["M05", "M04", "M03", "M02", "M01"], [tool["code"] for tool in homepage_pages[2]])
 
 
 if __name__ == "__main__":
