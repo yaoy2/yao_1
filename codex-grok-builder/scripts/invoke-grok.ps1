@@ -36,6 +36,29 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+function Assert-CDriveRuntimePath {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    $fullPath = [System.IO.Path]::GetFullPath($Path)
+    if (-not $fullPath.StartsWith('C:\', [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "Codex runtime paths must be on C drive: $fullPath"
+    }
+    $currentPath = $fullPath
+    while (-not [string]::IsNullOrWhiteSpace($currentPath)) {
+        if (Test-Path -LiteralPath $currentPath) {
+            $currentItem = Get-Item -LiteralPath $currentPath -Force
+            if ($currentItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint) {
+                throw "Codex runtime paths must not use a junction or symbolic link: $currentPath"
+            }
+        }
+        $parentPath = Split-Path -Path $currentPath -Parent
+        if ($parentPath -eq $currentPath) { break }
+        $currentPath = $parentPath
+    }
+    return $fullPath
+}
+
+
 $projectItem = Get-Item -LiteralPath $ProjectPath -Force
 if (-not $projectItem.PSIsContainer) {
     throw "ProjectPath must be a directory: $ProjectPath"
@@ -46,21 +69,30 @@ if ($taskItem.PSIsContainer) {
     throw "TaskFile must be a file: $TaskFile"
 }
 
-$grokCommand = Get-Command grok -ErrorAction Stop
+$grokExecutable = Assert-CDriveRuntimePath 'C:\Users\Yao\.grok\bin\grok.exe'
+$gitExecutable = Assert-CDriveRuntimePath 'C:\Users\Yao\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\git\cmd\git.exe'
+foreach ($executable in @($grokExecutable, $gitExecutable)) {
+    if (-not (Test-Path -LiteralPath $executable -PathType Leaf)) {
+        throw "Required C-drive executable is unavailable: $executable"
+    }
+}
+$runtimePathPrefix = @((Split-Path -Path $gitExecutable -Parent), (Split-Path -Path $grokExecutable -Parent)) -join ';'
 $projectFullPath = $projectItem.FullName
 $taskFullPath = $taskItem.FullName
 
 if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
-    $tempRoot = [System.IO.Path]::GetTempPath()
-    $OutputDirectory = Join-Path $tempRoot 'codex-grok-builder'
+    $OutputDirectory = 'C:\Users\Yao\AppData\Local\Temp\codex-grok-builder'
 }
 
-$outputFullPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutputDirectory)
-if (Test-Path -LiteralPath $outputFullPath) {
-    $outputItem = Get-Item -LiteralPath $outputFullPath -Force
-    if (-not $outputItem.PSIsContainer) {
-        throw "OutputDirectory must be a directory: $OutputDirectory"
-    }
+$outputFullPath = [System.IO.Path]::GetFullPath($OutputDirectory)
+$projectPrefix = $projectFullPath.TrimEnd('\', '/') + [System.IO.Path]::DirectorySeparatorChar
+$isProjectOutput = $outputFullPath.Equals($projectFullPath, [System.StringComparison]::OrdinalIgnoreCase) -or
+    $outputFullPath.StartsWith($projectPrefix, [System.StringComparison]::OrdinalIgnoreCase)
+if (-not $isProjectOutput) {
+    $outputFullPath = Assert-CDriveRuntimePath $outputFullPath
+}
+if ((Test-Path -LiteralPath $outputFullPath) -and -not (Test-Path -LiteralPath $outputFullPath -PathType Container)) {
+    throw "OutputDirectory must be a directory: $outputFullPath"
 }
 
 $timestamp = Get-Date -Format 'yyyyMMddTHHmmss'
@@ -150,7 +182,8 @@ Write-Host "CODEX_GROK_SUMMARY=$summaryPath"
 
 if ($DryRun) {
     [pscustomobject]@{
-        Executable = $grokCommand.Source
+        Executable = $grokExecutable
+        GitExecutable = $gitExecutable
         ProjectPath = $projectFullPath
         TaskFile = $taskFullPath
         SessionId = $effectiveSessionId
@@ -266,13 +299,15 @@ $exitCode = 1
 # Preserve native exit codes even when a caller enables PowerShell's opt-in
 # conversion of native failures into terminating PowerShell errors.
 $PSNativeCommandUseErrorActionPreference = $false
+$originalProcessPath = $env:PATH
 try {
+    $env:PATH = $runtimePathPrefix + ';' + $originalProcessPath
     if ($Quiet) {
         # Suppress console streaming only after the complete stdout stream has
         # been written through the same logging path used by normal mode.
-        & $grokCommand.Source @grokArgs 2> $stderrPath | Tee-Object -FilePath $logPath | Out-Null
+        & $grokExecutable @grokArgs 2> $stderrPath | Tee-Object -FilePath $logPath | Out-Null
     } else {
-        & $grokCommand.Source @grokArgs 2> $stderrPath | Tee-Object -FilePath $logPath
+        & $grokExecutable @grokArgs 2> $stderrPath | Tee-Object -FilePath $logPath
     }
     $grokExitCode = $LASTEXITCODE
     if ($null -eq $grokExitCode) {
@@ -282,6 +317,7 @@ try {
 } catch {
     $wrapperError = $_.Exception.Message
 } finally {
+    $env:PATH = $originalProcessPath
     $runTimer.Stop()
     $completionUsage = Read-CliCompletionUsage $logPath
     [pscustomobject]@{

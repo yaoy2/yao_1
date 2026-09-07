@@ -13,7 +13,7 @@
 - 薄入口页：`pages/18_19_concept_fables.py`
 - 首页注册：`hello.py` 中的 M19 卡片
 - 数据：`data/concept_fables.json`
-- 仓库 Skill：`.codex/skills/concept-fable-gallery/`（`SKILL.md`、`agents/openai.yaml`、`scripts/upsert_concept.py`）
+- 仓库 Skill：`.agents/skills/concept-fable-gallery/`（`SKILL.md`、`agents/openai.yaml`、`scripts/upsert_concept.py`）
 - 测试：`tests/test_concept_fables.py`
 
 ## 读写边界
@@ -46,7 +46,7 @@
 - 新建：生成稳定 slug 作为 `id`，`created_at` / `updated_at` 同为当日。
 - 更新（归一化概念已存在）：保留原 `id` 与 `created_at`，刷新 `updated_at` 与其余字段；就地替换，不追加重复项。
 - 不原地修改调用方传入的 catalog / payload；返回新对象。
-- CLI：`python .codex/skills/concept-fable-gallery/scripts/upsert_concept.py <payload.json> [--catalog PATH] [--today YYYY-MM-DD]`，标准输出一行含 `action` / `id` / `catalog` 的紧凑 JSON。
+- CLI：`python .agents/skills/concept-fable-gallery/scripts/upsert_concept.py <payload.json> [--catalog PATH] [--today YYYY-MM-DD]`，标准输出一行含 `action` / `id` / `catalog` 的紧凑 JSON。
 
 ## 变更边界
 
@@ -58,7 +58,7 @@
 
 ```text
 python -m py_compile concept_fables/catalog.py
-python -m py_compile .codex/skills/concept-fable-gallery/scripts/upsert_concept.py
+python -m py_compile .agents/skills/concept-fable-gallery/scripts/upsert_concept.py
 python -m pytest tests/test_concept_fables.py -q
-python -X utf8 E:/codex/.codex/skills/.system/skill-creator/scripts/quick_validate.py .codex/skills/concept-fable-gallery
+python -X utf8 C:/Users/Yao/.codex/skills/.system/skill-creator/scripts/quick_validate.py .agents/skills/concept-fable-gallery
 ```
