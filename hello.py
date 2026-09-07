@@ -59,13 +59,14 @@ TOOLS = [
     },
     {
         "title": "Ding2026 文件中转发放系统",
-        "desc": "展示学院行政文件如何被识别、手动分发、进入中转裁决，并按五条时间轴安全归档。",
-        "tag": "文件治理",
+        "desc": "旧版已停用，原有功能和统计作废。后续使用本机双击执行的会议纪要分发工具。",
+        "tag": "已停用",
         "created": "2026_08_31",
         "page": "pages/19_20_ding2026.py",
         "code": "M20",
         "accent": "green",
-        "section": "行政",
+        "blocked": True,
+        "section": "archived",
     },
     {
         "title": "概念寓言馆",
