@@ -362,7 +362,7 @@ def build_nav_html(current_section, tools):
         label = "archived" if section == "archived" else section
         cats.append(
             f'<a class="nav-cat{current}" data-section="{escape(section)}" '
-            f'href="{escape(build_section_href(section), quote=True)}">{escape(label)}</a>'
+            f'href="{escape(build_section_href(section), quote=True)}" target="_self">{escape(label)}</a>'
         )
         flyouts.append(
             f'<div class="nav-flyout fly-{escape(section)}">'
