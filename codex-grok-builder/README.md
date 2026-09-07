@@ -15,11 +15,11 @@ When model selection is open, the current agent should usually complete small ed
 ## Workflow and Boundaries
 
 1. Codex reads repository rules, existing changes, and enough context to orient the task, then defines the plan, allowed and forbidden files, test commands, and acceptance criteria. Stop prereading once the goal, scope, and acceptance are clear; do not write the complete implementation before delegation.
-2. The user approves Grok's specific plan, edit scope, and test commands. Reuse still-valid authorization in the same task; seek renewed approval when scope or conditions change.
+2. Check existing authorization for Grok implementation. Necessary scoped edits and checks proceed without another plan approval; ask only for additional authority or material scope changes. Planning-only requests remain read-only.
 3. Combine related work into one packet. Grok handles scoped exploration, implementation, tests, and routine repairs without the controller inspecting every tool call.
 4. Grok returns changed files, check results, and relevant log locations. Codex focuses on the actual diff, material risks, and a small amount of verifiable evidence. Add checks or repairs only for defects or unresolved concerns.
 
-A task packet is not a permission sandbox. Grok must not independently expand scope, commit, push, deploy, use credentials, or perform destructive actions. Specific plan and command approvals remain required; the wrapper does not change global permissions.
+A task packet is not a permission sandbox. Grok must not independently expand scope, commit, push, deploy, use credentials, or perform destructive actions. Map existing task authority to the packet and command allowlist; the wrapper does not change global permissions.
 
 ## Installation and Requirements
 
@@ -55,3 +55,5 @@ Default `dontAsk` and existing configuration jointly determine actual permission
 Check PowerShell parsing, then use `-DryRun` to inspect the project, packet, commands, and output location. For wrapper repairs, use a mock CLI to check failure exit codes, log separation, resume names, and side-effect-free previews. Real coding still requires actual diff inspection and proportionate tests.
 
 The wrapper reads actual usage/cost from the CLI's terminal report. Its `run.json` provides `TokenUsage`, `NumTurns`, `ResolvedModels`, `CliReportedCostUsd`, and `UsageStatus`; unavailable fields remain `null`, and `ActualSubscriptionCharge` is `unknown`. Total tokens, higher-priced model usage, subscription allowance, and fees are separate measures; a CLI estimate is not a subscription bill. The synthetic `merge_rows` task on 2026-09-05 passed the same 12 checks on the first attempt with no repairs. Without a complete strong-model baseline, this establishes neither token savings nor a cost ranking. See the [public validation record](../docs/history/2026-09-05-skill-cost-optimization.md).
+
+On this host the wrapper verifies C-drive Grok/Git and non-redirected runtime paths, prepends PATH only during its invocation, and retains Quiet, isolated logs and usage summaries. Reconcile source and installed changes before updating; do not overwrite unreviewed local edits.

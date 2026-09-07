@@ -1,11 +1,11 @@
 # Windows 数据布局与分级参考
 
 分析 Windows 扫描结果时读这份。讲"东西存在哪、怎么辨认、归哪一级"。
-注意：Windows 代码路径在 macOS 上无法验证，分析时对路径存在性保持谨慎。
+路径和平台行为按本次实测判断；跨平台旧结论不能代替当前验证。分析默认只读，清理按 SKILL.md 的独立授权流程执行。
 
 ## 多盘符
 
-Windows 通常多个盘（C:、D:…）。磁盘总览会列出所有盘，但**分析和清理聚焦系统盘 C:**——缓存、AppData、临时文件几乎都在 C:。其他盘（D: 等）一般是用户自存的资料/游戏，归 🟡 让用户自己判断，不要自动给删除按钮。
+Windows 通常有多个盘（C:、D:…）。分析范围跟随用户指定的盘或目录；默认扫描器只统计常见热点，列出磁盘容量不代表已扫描各盘全部内容。其他盘也按实际数据用途判断，不能仅凭盘符定级或授权删除。
 
 ## 关键目录
 
@@ -16,7 +16,7 @@ Windows 通常多个盘（C:、D:…）。磁盘总览会列出所有盘，但**
 | `%APPDATA%`（Roaming） | 应用配置/数据 | 🟡 |
 | 浏览器缓存 `%LOCALAPPDATA%\Google\Chrome\User Data\*\Cache`、Edge 同构 | 浏览器缓存 | 🟢 |
 | 浏览器 `User Data\<Profile>`（非 Cache 部分） | 书签/登录态 | 🟡 |
-| `%USERPROFILE%\.cache`、`.npm`、`.gradle`、`.m2`、`.nuget\packages`、`%LOCALAPPDATA%\pip\Cache`、`Yarn` | 开发缓存 | 🟢 |
+| `%USERPROFILE%\.cache`、`.npm`、`.gradle`、`.m2`、`.nuget\packages`、`%LOCALAPPDATA%\pip\Cache`、`Yarn` | 缓存与部分工具运行组件 | 只对已核验可再生的具体缓存子路径归 🟢；不得把 Codex 运行时所在的整个 .cache 当作缓存删除 |
 | `C:\Program Files`、`Program Files (x86)` | 应用本体 | 🔴 仅重复/想卸时上灯，否则归蓝色 |
 | `%USERPROFILE%\Downloads` 的安装包 | exe/msi 残留 | 🟢 |
 | `C:\$Recycle.Bin` | 回收站 | 🟡 提示用户清空 |

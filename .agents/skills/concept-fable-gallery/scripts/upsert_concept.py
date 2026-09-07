@@ -11,7 +11,7 @@ from typing import Any
 
 
 def _repo_root() -> Path:
-    # scripts/ -> concept-fable-gallery/ -> skills/ -> .codex/ -> repo root
+    # scripts/ -> concept-fable-gallery/ -> skills/ -> .agents/ -> repo root
     return Path(__file__).resolve().parents[4]
 
 

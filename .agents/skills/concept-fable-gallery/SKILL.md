@@ -1,13 +1,13 @@
 ---
 name: concept-fable-gallery
-description: "当用户给出一个抽象概念，并要求用寓言、寓言法、故事化讲解，或把结果写入/收录到「概念寓言馆 / M19」时使用。把概念改写成可记忆的中文寓言，给出领域定义与故事映射，并自动写入更新仓库内 M19 概念寓言目录。不适用于普通散文、新闻稿、通知或与寓言馆无关的泛写作。"
+description: "当用户给出一个抽象概念，并要求用寓言、寓言法、故事化讲解，或把结果写入/收录到「概念寓言馆 / M19」时使用。把概念改写成可记忆的中文寓言，给出领域定义与故事映射，需要收录时写入更新仓库内 M19 概念寓言目录。不适用于普通散文、新闻稿、通知或与寓言馆无关的泛写作。"
 ---
 
 # 概念寓言馆（M19）
 
 把抽象概念改写成可记忆的中文寓言，结构化收录到本仓库 `data/concept_fables.json`，供只读 Streamlit 页 M19 展示。
 
-普通用户只需给出概念，或调用 `$concept-fable-gallery <概念>`。Streamlit 页只读，不提供写入表单。
+仅要求用寓言解释概念时直接交付正文与分析，不写文件或运行 Git。明确要求收录、更新寓言馆，或已有授权覆盖本次收录时，才执行下方写入流程。单独 `$concept-fable-gallery <概念>` 默认讲解；使用“收录”明确保存意图。Streamlit 页只读，不提供写入表单。
 
 ## 寓言写作契约（必须完整遵守）
 
@@ -65,7 +65,7 @@ description: "当用户给出一个抽象概念，并要求用寓言、寓言法
 唯一支持的自动写入路径：
 
 ```text
-python .codex/skills/concept-fable-gallery/scripts/upsert_concept.py <payload.json> [--catalog PATH] [--today YYYY-MM-DD]
+python .agents/skills/concept-fable-gallery/scripts/upsert_concept.py <payload.json> [--catalog PATH] [--today YYYY-MM-DD]
 ```
 
 - 位置参数：UTF-8 JSON payload 文件路径
@@ -78,12 +78,12 @@ payload 文件尽量写在仓库外的临时路径，内容不含密钥。
 
 ## 自动收录 + Git 执行顺序
 
-未来每次被调用时，严格按下列顺序执行；任一步被脏工作区或其他层阻塞时，停在该层并原样说明，不得 stash / reset / force / discard。
+只有本次收录已获授权时，按下列顺序执行；任一步被脏工作区或其他层阻塞时，停在该层并原样说明，不得 stash / reset / force / discard。
 
 1. 阅读仓库根 `AGENTS.md`、schema-v1 约定，并按归一化概念查找是否已有条目。保留工作区中与本任务无关的既有改动。
 2. 在内存中完成寓言、分析与 payload；此时不要改生产目录文件。
 3. 数据变更前运行：`git status --short`、`git fetch origin`，并比较 `HEAD...origin/main`。
-4. 若 `origin/main` 领先且工作区干净：执行 `git pull --rebase origin main`。若远端领先但无关脏文件使安全 pull 不可行：停止并告知用户。绝不 stash、reset、force、丢弃改动。
+4. 若 `origin/main` 仅领先且工作区干净：执行 `git pull --ff-only origin main`。有本地未推送提交时先检查差异，再按根规则使用 `git pull --rebase origin main`，不改写已发布历史。若远端领先但无关脏文件使安全 pull 不可行：停止并告知用户。绝不 stash、reset、force、丢弃改动。
 5. 调用确定性 CLI，payload 文件尽量放在仓库外。不写入密钥。
 6. 运行 `python -m pytest tests/test_concept_fables.py -q`，再重新加载 catalog，确认该归一化概念恰好一条，且可见 `story` 与展示稿一致。
 7. 只暂存 `data/concept_fables.json`；检查 staged diff / 文件名列表。不暂存无关文件。

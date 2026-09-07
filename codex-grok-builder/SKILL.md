@@ -25,9 +25,9 @@ The wording does not need to mention Codex's role explicitly; this skill supplie
 ## Preconditions
 
 - Use the model and reasoning effort selected for the current Codex task. Do not require a fixed model or effort as a prerequisite. If the user explicitly requests a setting and it is observable, verify it once; if it cannot be verified, state that limitation without claiming a change and continue independent authorized work. Change model settings only when requested.
-- Check `grok --no-auto-update models` for its explicit authentication message and available model IDs; a model list alone is not login evidence. Run `grok --no-auto-update --cwd <project> inspect` once for the target and review effective permission sources without exposing credentials. Recheck only on contradictory evidence or an authentication failure. `inspect` succeeding means configuration was discovered, not that the task's file boundaries are sandbox-enforced.
+- Use the verified C-drive executable from the wrapper dry run. Check `grok --no-auto-update models` for its explicit authentication message and available model IDs; a model list alone is not login evidence. Run `grok --no-auto-update --cwd <project> inspect` once for the target and review effective permission sources without exposing credentials. Recheck only on contradictory evidence or an authentication failure. `inspect` succeeding means configuration was discovered, not that the task's file boundaries are sandbox-enforced.
 - Read the active repository instructions and record the pre-existing `git status --short`. Preserve unrelated user changes.
-- Obtain approval for the plan, mutation scope, and test commands before invoking Grok. A message that clearly asks to execute an already-presented plan counts as approval.
+- Check that the user has authorized Grok implementation and the packet stays within the requested objective, objects and operations. Existing implementation authorization covers necessary routine edits and checks; do not demand another plan approval. Ask only for missing authority or material scope changes. A planning-only request remains read-only.
 - Never put API keys, tokens, passwords, or private data in the handoff prompt.
 
 ## Cost-aware planning
@@ -45,7 +45,7 @@ Once Codex can state the objective, boundaries, decisive evidence and acceptance
 ## Workflow
 
 1. Codex inspects the relevant repository state and produces a concrete plan containing the objective, file scope, forbidden scope, necessary implementation decisions, acceptance criteria, and test commands. Include concrete risks only where observed. Reuse a plan and its approval when they are already present in the task.
-2. After approval, Codex writes a temporary task packet outside the repository. Use this structure:
+2. Once authority is established, Codex writes a temporary task packet outside the repository. Use this structure:
 
    ```markdown
    # Approved implementation task
@@ -60,11 +60,11 @@ Once Codex can state the objective, boundaries, decisive evidence and acceptance
    ```
 
    Tell Grok to implement the packet exactly, report any necessary deviation, avoid commits and pushes, and finish with changed files plus test results.
-3. Invoke [scripts/invoke-grok.ps1](scripts/invoke-grok.ps1). Its default `dontAsk` mode does not ask interactively and denies tools not allowed by the effective rules. Local/global configuration can contribute rules; the task packet is not a hard filesystem sandbox. Pass approved commands with narrowly matching `-AllowRule` values; never infer broader shell authorization from a task goal. The wrapper permits read/search/edit and `git status`/`git diff` by default. Do not change global permissions or use a bypass to cure an execution failure.
+3. Invoke [scripts/invoke-grok.ps1](scripts/invoke-grok.ps1). Its default `dontAsk` mode does not ask interactively and denies tools not allowed by the effective rules. Local/global configuration can contribute rules; the task packet is not a hard filesystem sandbox. Translate the task's authorized checks into narrowly matching `-AllowRule` values. The coordinator may select routine commands needed for that scope; never widen permissions to unrelated shell operations. The wrapper permits read/search/edit and `git status`/`git diff` by default. Do not change global permissions or use a bypass to cure an execution failure.
 4. Prefer `-Quiet`: full stdout still goes to the run log, but token-by-token thought events and repeated tool catalogs do not flood the main agent's context. Capture session ID, independent run ID, stdout/stderr paths, and summary path. Read only relevant completion, tool-result, usage or error events when diagnosing. Neither a zero process exit nor Grok's own completion claim proves the task passed.
-5. Codex independently reviews the actual diff against the approved packet, checks for scope expansion, and reruns the relevant approved tests/build once. Do not repeat unrelated suites or reopen accepted work without new evidence. Record skipped or unavailable checks distinctly from failures.
+5. Codex independently reviews the actual diff and acceptance evidence. Reuse verifiable check results for the current files; rerun relevant checks only for missing evidence, new changes, explicit user requirements or concrete concerns. If the user requested Luna review, use one independent Luna reviewer under the same scope and retain main-model final acceptance. Do not add a reviewer for routine work merely for reassurance. Record unavailable checks separately from failures.
 6. If acceptance fails, classify the cause before retrying: permission, environment, ambiguous packet, design error, or implementation error. Only a concrete implementation repair goes straight back to Grok. Create a focused evidence packet and resume the same session with `-ResumeSessionId`; recheck the affected behavior. Authentication and permission failures are not reasons to spend another model run on the same task unchanged.
-7. Stop further Grok repair calls after two repair cycles or after the same blocker recurs twice. Complete read-only diagnosis within the existing authorization, then report the root cause or remaining uncertainty, evidence, and a concrete next step. Do not reset the counter, start another session to evade the limit, or switch implementers without the required approval. If a step needs new authority, broader scope, secrets, deployment, push, or destructive operations, pause that step and continue independent authorized work; request only the missing approval after making the proposed action reviewable.
+7. After two repair cycles or a recurring root cause, stop repeating the same Grok call and diagnose. Continue with Grok when new evidence supports a revised repair strategy inside existing authority, recording cumulative attempts and a stopping condition. Do not reset counts through a new session. Preserve an explicitly selected implementer; ask only if a replacement or material scope change lacks authority. A stopped execution path is not a completed task: continue independent work and report the exact missing condition when no effective authorized step remains.
 
 ## Invocation
 
@@ -101,6 +101,8 @@ Accept only when all applicable conditions hold:
 
 - The diff stays inside the approved scope and preserves pre-existing unrelated changes.
 - No secret, commit, push, deployment, destructive cleanup, or external write occurred without explicit authorization.
-- Relevant tests and build commands pass when rerun by Codex.
+- Necessary checks pass against the final files, with independently assessed evidence; disclose any relevant check that could not run.
 - The implementation matches the acceptance criteria, not merely the task wording.
 - Any unverified behavior, warning, or skipped check is clearly reported.
+
+On this Windows host, the wrapper verifies C-drive Grok and bundled Git, rejects redirected runtime paths, and changes PATH only for its invocation. Runtime logs default to C drive; an explicitly authorized project log may remain in that project. Do not alter system PATH or install tools to satisfy the workflow.

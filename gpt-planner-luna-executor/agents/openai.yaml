@@ -1,6 +1,6 @@
 interface:
   display_name: "GPT 规划 · Luna 执行"
   short_description: "按任务难度安排 GPT 网页规划与 Luna 执行，减少重复交接和返工"
-  default_prompt: "使用 $gpt-planner-luna-executor：根据这个任务的难度安排 GPT 规划和 Luna 执行，控制交接与返工成本。"
+  default_prompt: "使用 $gpt-planner-luna-executor：按我要求的分工安排 GPT 网页规划或 Luna 执行，复用已有授权，不额外增加审查流程。"
 policy:
   allow_implicit_invocation: true

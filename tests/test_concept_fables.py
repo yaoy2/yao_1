@@ -27,15 +27,15 @@ from concept_fables.catalog import (
 REPO_ROOT = Path(__file__).resolve().parents[1]
 UPSERT_SCRIPT = (
     REPO_ROOT
-    / ".codex"
+    / ".agents"
     / "skills"
     / "concept-fable-gallery"
     / "scripts"
     / "upsert_concept.py"
 )
-SKILL_MD = REPO_ROOT / ".codex" / "skills" / "concept-fable-gallery" / "SKILL.md"
+SKILL_MD = REPO_ROOT / ".agents" / "skills" / "concept-fable-gallery" / "SKILL.md"
 SKILL_AGENT_YAML = (
-    REPO_ROOT / ".codex" / "skills" / "concept-fable-gallery" / "agents" / "openai.yaml"
+    REPO_ROOT / ".agents" / "skills" / "concept-fable-gallery" / "agents" / "openai.yaml"
 )
 
 
