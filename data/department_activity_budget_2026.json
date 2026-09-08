@@ -497,7 +497,8 @@
       "姚雨廷",
       "智靖雅",
       "李叶",
-      "易文琦"
+      "易文琦",
+      "胡莉"
     ],
     "8": [
       "黄健",
@@ -671,7 +672,7 @@
   },
   "reimbursed_months": [],
   "reimbursement_confirmed": false,
-  "updated_at": "2026-09-08T16:46:56+08:00",
+  "updated_at": "2026-09-08T16:47:08+08:00",
   "initial_import": {
     "workbook": "Z-2026年部门预算下发—健康科技医疗学院.xlsx",
     "sheet": "部门活动经费",
