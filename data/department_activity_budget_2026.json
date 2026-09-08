@@ -672,9 +672,12 @@
     "11": null,
     "12": null
   },
-  "reimbursed_months": [],
-  "reimbursement_confirmed": false,
-  "updated_at": "2026-09-08T16:47:35+08:00",
+  "reimbursed_months": [
+    1,
+    2
+  ],
+  "reimbursement_confirmed": true,
+  "updated_at": "2026-09-08T16:51:58+08:00",
   "initial_import": {
     "workbook": "Z-2026年部门预算下发—健康科技医疗学院.xlsx",
     "sheet": "部门活动经费",
