@@ -89,11 +89,15 @@ def collect_workspace(root, *, kind="daily", at=None, since=None):
     folders = config["mail_folders"]
     if not isinstance(folders, list) or not folders or any(not isinstance(x, str) or not x for x in folders):
         raise ValueError("invalid folder configuration")
+    storage_mode = config.get("collection_storage", "full")
+    if not isinstance(storage_mode, str) or storage_mode not in {"full", "on_demand"}:
+        raise ValueError("invalid collection storage configuration")
     batch = {"schema_version": 1, "account": setup["account"], "id": "imap-" + uuid4().hex,
              "kind": kind, "started_at": now_iso(), "window": {"since": start, "through": end, "complete": False},
-             "messages": [], "actions": [], "errors": []}
-    retries = [m["id"] for m in dashboard["messages"]
-               if any(a.get("status") != "success" for a in m.get("attachments", []))]
+             "messages": [], "actions": [], "errors": [], "storage_mode": storage_mode}
+    retries = ([m["id"] for m in dashboard["messages"]
+                if any(a.get("status") != "success" for a in m.get("attachments", []))]
+               if storage_mode == "full" else [])
     incoming = _inside(root, "incoming")
     incoming.mkdir(exist_ok=True)
     client, password = None, None
@@ -105,8 +109,10 @@ def collect_workspace(root, *, kind="daily", at=None, since=None):
         password = None
         batch = mail_imap.collect(client, account=setup["account"], folders=folders,
                                   since=start, through=end, staging_dir=incoming,
-                                  source_url=config["source_url"], retry_message_ids=retries)
+                                  source_url=config["source_url"], retry_message_ids=retries,
+                                  storage_mode=storage_mode)
         batch["kind"] = kind
+        batch["storage_mode"] = storage_mode
         reconcile_existing(batch, dashboard)
     except CredentialError:
         batch["errors"].append("IMAP_LOCAL_CREDENTIAL_REQUIRED")
@@ -123,6 +129,7 @@ def collect_workspace(root, *, kind="daily", at=None, since=None):
     path = _inside(root, "incoming/" + batch["id"] + ".json")
     _atomic_json(path, batch)
     summary = {"status": "staged" if batch["window"]["complete"] else "partial",
+               "storage_mode": storage_mode,
                "batch_path": str(path), "window": copy.deepcopy(batch["window"]),
                "message_count": len(batch["messages"]),
                "attachment_count": sum(len(m.get("attachments", [])) for m in batch["messages"]),

@@ -283,6 +283,7 @@ def parse_message(raw: bytes, *, received_at: str, folder: str, source_url: str)
             "category": "待整理", "summary": summary, "source_url": source_url,
             "body_text": body_text, "headers_text": headers_text,
             "internet_message_id": internet_message_id, "attachments": attachments,
+            "mime_structure_complete": structure_complete,
             "attachments_complete": structure_complete and all(attachment["size"] > 0 for attachment in attachments),
             "expected_attachment_count": len(attachments),
             "raw_sha256": raw_sha256, "authentication_notice": authentication_notice}
