@@ -311,6 +311,8 @@ def filing_destination(value):
     """Display only a relative location under the configured Ding2026 folder."""
     if not isinstance(value, str) or not value or any(ord(char) < 32 for char in value):
         return None
+    if value == ".":
+        return str(PureWindowsPath("E:/GoogleDrive/Ding2026"))
     text = value.replace("\\", "/")
     parts = text.split("/")
     if (len(parts) < 2 or parts[0] != "邮件存档"
@@ -957,7 +959,7 @@ def main():
     render_pending_changes(snapshot, loaded, mail_private_sync)
     st.markdown(snapshot_status_html(snapshot), unsafe_allow_html=True)
     if snapshot.get("collection_storage") == "on_demand":
-        st.caption(r"平时只整理摘要与待办；选择存档时，才把整封邮件附件保存到 E:\GoogleDrive\Ding2026\邮件存档。")
+        st.caption(r"平时只整理摘要与待办；选择存档时，才把整封邮件附件直接保存到 E:\GoogleDrive\Ding2026。")
     if st.session_state.get("mail_save_notice"):
         st.toast(st.session_state.pop("mail_save_notice"))
 

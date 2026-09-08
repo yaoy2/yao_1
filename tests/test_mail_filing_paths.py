@@ -10,7 +10,7 @@ from unittest.mock import Mock, patch
 
 from tests.test_mail_filing_worker import source
 from tests.test_mail_workbench_sync import fixture
-from utils.mail_filing import export_message, message_directory
+from utils.mail_filing import export_message
 
 
 @unittest.skipUnless(os.name == "nt", "Windows directory-handle and junction regression")
@@ -88,6 +88,8 @@ class FilingWindowsPathTests(unittest.TestCase):
         self.assertEqual(("success", 1), (result["status"], result["saved_count"]))
         file_path = self.destination / result["files"][0]["path"]
         self.assertEqual(b"real-attachment", file_path.read_bytes())
+        self.assertEqual(self.destination, file_path.parent)
+        self.assertEqual(".", result["destination"])
         self.assertTrue(file_path.resolve().is_relative_to(self.destination))
         self.assert_no_leaked_handles()
 
@@ -112,8 +114,7 @@ class FilingWindowsPathTests(unittest.TestCase):
         self.assert_no_leaked_handles()
 
     def test_preexisting_output_junction_is_rejected(self):
-        directory = self.destination / message_directory(self.message)
-        directory.parent.mkdir()
+        directory = self.destination / "材料.xlsx"
         self.make_junction(directory, self.outside)
         result = self.export()
         self.assertEqual(("error", 0), (result["status"], result["saved_count"]))

@@ -86,6 +86,9 @@ class FilingStateTests(unittest.TestCase):
 
     def test_relative_destination_rejects_drive_escape_and_reserved_names(self):
         self.assertEqual("", filing.safe_relative_destination(""))
+        self.assertEqual(".", filing.safe_relative_destination("."))
+        self.assertEqual(".", filing.public_filing(receipt(status="success", destination=".",
+                                                        saved_count=1, total_count=1))["destination"])
         self.assertEqual("邮件存档/2026-09-08_工作通知", filing.safe_relative_destination("邮件存档/2026-09-08_工作通知"))
         for path in ("E:/GoogleDrive/Ding2026", "/邮件存档/a", "邮件存档", "other/a", "邮件存档/../secret",
                      "邮件存档/a/../../secret", "邮件存档\\x", "邮件存档//x", "邮件存档/CON", "邮件存档/name.",

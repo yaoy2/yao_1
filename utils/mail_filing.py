@@ -1,4 +1,4 @@
-"""Save explicitly filed mail attachments into a readable, local folder.
+"""Save explicitly filed attachments directly in the configured local root.
 
 Only the fixed receiver configuration chooses a destination. Mail text and
 remote filing metadata never supply filesystem paths or commands.
@@ -54,7 +54,7 @@ def _child(root, relative):
     return path
 
 
-def _name(value, limit=100):
+def _name(value, limit=240):
     value = unicodedata.normalize("NFC", str(value or "附件"))
     value = re.sub(r'[<>:"/\\|?*\x00-\x1f\x7f]', "_", value).strip(" .") or "附件"
     if re.match(r"^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\.|$)", value, re.I):
@@ -65,25 +65,15 @@ def _name(value, limit=100):
     return value
 
 
-def message_directory(message):
-    try:
-        day = mail_workspace.parse_time(message["received_at"]).date().isoformat()
-    except (KeyError, ValueError, TypeError):
-        day = "日期未明"
-    identifier = hashlib.sha256(message["id"].encode("utf-8")).hexdigest()[:12]
-    return f"邮件存档/{day}_{_name(message.get('subject') or '无主题', 64)}__{identifier}"
-
-
 @contextmanager
-def _pinned_directory(root, relative):
+def _pinned_directory(root):
     """Keep Windows ancestors fixed while files are created and renamed.
 
     Reject reparse points on the opened handles. Omitting FILE_SHARE_DELETE
     prevents a checked directory from being renamed into a junction mid-copy.
     """
     if os.name != "nt":
-        _child(root, relative).mkdir(parents=True, exist_ok=True)
-        _child(root, relative)
+        checked_root(root)
         yield
         return
     import ctypes
@@ -109,15 +99,10 @@ def _pinned_directory(root, relative):
     close.restype = wintypes.BOOL
     handles = []
     directories = [*reversed(root.parents), root]
-    cursor = root
-    for part in relative.split("/"):
-        cursor /= part
-        directories.append(cursor)
     try:
         for directory in directories:
             if not directory.exists():
-                # Its parent is already pinned, so creation cannot be redirected.
-                directory.mkdir(exist_ok=True)
+                raise FilingFileError("DESTINATION_UNAVAILABLE")
             # FILE_LIST_DIRECTORY participates in Windows share checks;
             # FILE_READ_ATTRIBUTES alone would still permit directory renames.
             handle = create(str(directory), 0x81, 0x3, None, 3, 0x02200000, None)
@@ -129,30 +114,27 @@ def _pinned_directory(root, relative):
                 raise FilingFileError("DESTINATION_UNSAFE")
             if not info.attributes & 0x10 or info.attributes & 0x400:
                 raise FilingFileError("DESTINATION_UNSAFE")
-        _child(root, relative)
+        checked_root(root)
         yield
     finally:
         for handle in reversed(handles):
             close(handle)
 
 
-def _save_bytes(root, directory, name, content, expected_sha):
-    _child(root, directory)
-    with _pinned_directory(root, directory):
-        return _save_bytes_in_pinned_directory(root, directory, name, content, expected_sha)
+def _save_bytes(root, name, content, expected_sha):
+    checked_root(root)
+    with _pinned_directory(root):
+        return _save_bytes_in_pinned_directory(root, name, content, expected_sha)
 
 
-def _save_bytes_in_pinned_directory(root, directory, name, content, expected_sha):
+def _save_bytes_in_pinned_directory(root, name, content, expected_sha):
     """Exclusive final creation; preserve conflicting user files as versions."""
     if not content:
         raise FilingFileError("ATTACHMENT_EMPTY")
     sha = hashlib.sha256(content).hexdigest()
     if sha != expected_sha:
         raise FilingFileError("ATTACHMENT_HASH_MISMATCH")
-    folder = _child(root, directory)
-    folder.mkdir(parents=True, exist_ok=True)
-    folder = _child(root, directory)
-    target = _child(root, directory + "/" + name)
+    target = _child(root, name)
     for attempt in range(2):
         if target.exists():
             if target.is_file() and target.stat().st_size == len(content) and mail_workspace._sha_file(target) == sha:
@@ -161,9 +143,11 @@ def _save_bytes_in_pinned_directory(root, directory, name, content, expected_sha
                 raise FilingFileError("DESTINATION_CONFLICT")
             suffix = Path(name).suffix
             stem = name[:-len(suffix)] if suffix else name
-            target = _child(root, directory + "/" + f"{stem}__{sha[:16]}{suffix}")
+            # Reserve room for the conflict hash within Windows' filename limit.
+            stem = stem[:237 - len(suffix)].rstrip(" .") or "附件"
+            target = _child(root, f"{stem}__{sha[:16]}{suffix}")
             continue
-        temporary = _child(root, directory + "/.filing-" + uuid4().hex + ".partial")
+        temporary = _child(root, ".filing-" + uuid4().hex + ".partial")
         try:
             with temporary.open("xb") as stream:
                 stream.write(content)
@@ -217,8 +201,7 @@ def export_message(workspace_root, destination_root, message, *, source_reader=r
         result["total_count"] = max(len(attachments), expected if type(expected) is int and expected >= 0 else 0)
         if parsed.get("attachments_complete") is not True or expected != len(attachments):
             errors.append("ATTACHMENT_INVENTORY_INCOMPLETE")
-        directory = message_directory(message)
-        for index, attachment in enumerate(attachments, 1):
+        for attachment in attachments:
             content = attachment.get("data")
             if not isinstance(content, bytes) or not content:
                 errors.append("ATTACHMENT_EMPTY" if content == b"" else "ATTACHMENT_MISSING")
@@ -226,13 +209,13 @@ def export_message(workspace_root, destination_root, message, *, source_reader=r
             if attachment.get("size") != len(content):
                 errors.append("ATTACHMENT_HASH_MISMATCH")
                 continue
-            name = f"{index:02d}_" + _name(attachment.get("name"))
+            name = _name(attachment.get("name"))
             try:
-                relative = _save_bytes(destination_root, directory, name, content, attachment.get("sha256"))
+                relative = _save_bytes(destination_root, name, content, attachment.get("sha256"))
                 result["files"].append({"name": attachment.get("name", "附件"), "path": relative,
                                         "size": len(content), "sha256": attachment["sha256"]})
                 result["saved_count"] += 1
-                result["destination"] = directory
+                result["destination"] = "."
             except FilingFileError as exc:
                 errors.append(str(exc))
             except OSError:
