@@ -1,6 +1,15 @@
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
 import streamlit as st
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from utils.ui_theme import apply_global_theme
 
 try:
     from Deepself.deepself_chat import (
@@ -21,6 +30,11 @@ except ModuleNotFoundError:
 
 
 st.set_page_config(page_title="Deepself 对话框", page_icon="💬", layout="centered")
+apply_global_theme(include_sidebar=False)
+st.markdown(
+    '<style>[data-testid="stMainBlockContainer"] {max-width: 900px;}</style>',
+    unsafe_allow_html=True,
+)
 
 
 def _secrets():
