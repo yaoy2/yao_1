@@ -8,7 +8,6 @@ import re
 import tempfile
 import threading
 from datetime import datetime, timedelta, timezone
-from html import escape
 from pathlib import Path
 
 from utils import github_backup_sync
@@ -148,57 +147,54 @@ def monthly_rows(data, today=None):
     return rows
 
 
-def roster_columns(data):
-    height = max(1, max(len(names or []) for names in data["months"].values()))
-    return {f"{month}月": (["待补全"] if names is None else names or ["已确认0人"])
-            + [""] * (height - max(1, len(names or [])))
+def roster_editor_columns(data):
+    """Keep blanks editable; status labels must never become teachers' names."""
+    height = max(1, max(len(names or []) for names in data["months"].values())) + 1
+    return {f"{month}月": list(names or []) + [""] * (height - len(names or []))
             for month in range(1, 13) for names in [data["months"][str(month)]]}
 
 
-def build_roster_html(data, selected_month=None):
-    """Excel-style month columns, with the amount and headcount kept above names."""
-    validate_budget(data, data["year"])
-    columns = roster_columns(data)
-    amounts, headcounts = [], []
+def apply_roster_editor(data, base_columns, changes):
+    """Apply cumulative widget edits to a stable grid, then count nonempty names.
+
+    The visible grid retains cleared cells so later edits keep their row positions.
+    Persisted monthly lists omit blanks. Reapply the widget's complete delta to the
+    same base on every callback; applying it to a compacted roster would delete or
+    replace the wrong person on the second edit.
+    """
+    columns = copy.deepcopy(base_columns)
+    expected = {f"{month}月" for month in range(1, 13)}
+    if set(columns) != expected or len({len(values) for values in columns.values()}) != 1:
+        raise ValueError("名单表格结构不正确，请重新加载数据。")
+    if changes.get("deleted_rows"):
+        raise ValueError("请清空对应月份的姓名单元格，避免整行删除影响其他月份。")
+    height = len(columns["1月"])
+    for row, edits in changes.get("edited_rows", {}).items():
+        if not str(row).isdigit() or not 0 <= int(row) < height or not isinstance(edits, dict):
+            raise ValueError("修改的名单位置已失效，请重新加载数据。")
+        for column, value in edits.items():
+            if column not in expected:
+                raise ValueError("只能修改月份中的姓名，不能修改序号。")
+            columns[column][int(row)] = value
+    for added in changes.get("added_rows", []):
+        if not isinstance(added, dict) or set(added) - expected:
+            raise ValueError("新增行只能填写各月份的姓名。")
+        for column in columns:
+            columns[column].append(added.get(column))
+    updated = copy.deepcopy(data)
     for month in range(1, 13):
-        names = data["months"][str(month)]
-        amounts.append("待补全" if names is None else f"{len(names) * MONTHLY_RATE:,}")
-        headcounts.append("待补全" if names is None else str(len(names)))
-
-    def row(label, values, header=False):
-        cells = [f'<th scope="row">{escape(str(label))}</th>']
-        for month, value in enumerate(values, 1):
-            tag = "th" if header else "td"
-            selected = ' class="selected-month"' if month == selected_month else ""
-            cells.append(f"<{tag}{selected}>{escape(str(value))}</{tag}>")
-        return "<tr>" + "".join(cells) + "</tr>"
-
-    parts = ["""<style>
-    .department-activity-sheet {overflow:auto;max-height:560px;border:1px solid #cbd3dc;
-        border-radius:6px;background:#fff;color:#233044;}
-    .department-activity-sheet table {border-collapse:separate;border-spacing:0;
-        width:100%;font-size:13px;line-height:1.4;}
-    .department-activity-sheet th,.department-activity-sheet td {box-sizing:border-box;
-        min-width:68px;height:31px;padding:5px 9px;text-align:center;white-space:nowrap;
-        border-right:1px solid #d9dfe6;border-bottom:1px solid #d9dfe6;}
-    .department-activity-sheet thead th,.department-activity-sheet thead td {
-        position:sticky;z-index:2;background:#eef2f5;height:32px;}
-    .department-activity-sheet thead tr:nth-child(1)>* {top:0;}
-    .department-activity-sheet thead tr:nth-child(2)>* {top:32px;}
-    .department-activity-sheet thead tr:nth-child(3)>* {top:64px;}
-    .department-activity-sheet tr>:first-child {position:sticky;left:0;z-index:1;
-        background:#eef2f5;min-width:72px;font-weight:normal;}
-    .department-activity-sheet thead tr>:first-child {z-index:3;}
-    .department-activity-sheet .selected-month {background:#e6f4ef;}
-    </style><div class="department-activity-sheet"><table aria-label="部门活动经费月度名单"><thead>"""]
-    parts.append(row("月份", [f"{month}月" for month in range(1, 13)], header=True))
-    parts.append(row("费用（元）", amounts))
-    parts.append(row("人数", headcounts))
-    parts.append("</thead><tbody>")
-    for index, values in enumerate(zip(*columns.values()), 1):
-        parts.append(row(index, values))
-    parts.append("</tbody></table></div>")
-    return "".join(parts)
+        names = []
+        for value in columns[f"{month}月"]:
+            if value is None:
+                continue
+            if not isinstance(value, str):
+                raise ValueError("姓名单元格须填写文字，留空表示删除该人。")
+            if value.strip():
+                names.append(value.strip())
+        # An untouched empty future month stays unknown, not a confirmed zero.
+        if names or data["months"][str(month)] is not None:
+            updated["months"][str(month)] = names
+    return validate_budget(updated, data["year"])
 
 
 def _paths(year):

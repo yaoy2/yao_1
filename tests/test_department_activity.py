@@ -4,7 +4,6 @@ import json
 import tempfile
 import unittest
 from datetime import date, datetime, timezone
-from html.parser import HTMLParser
 from pathlib import Path
 from unittest.mock import patch
 
@@ -135,10 +134,10 @@ class MonthlyCalculationTest(unittest.TestCase):
         data = activity.set_rosters(activity.new_budget(2026), [1, 2], names)
         data["months"]["1"].append("新教师")
         self.assertEqual(6, len(data["months"]["2"]))
-        columns = activity.roster_columns(data)
+        columns = activity.roster_editor_columns(data)
         self.assertEqual(12, len(columns))
-        self.assertEqual({7}, {len(column) for column in columns.values()})
-        self.assertEqual("待补全", columns["3月"][0])
+        self.assertEqual({8}, {len(column) for column in columns.values()})
+        self.assertEqual("", columns["3月"][0])
 
     def test_invalid_saved_structure_is_rejected(self):
         for field, value in (("year", 2025), ("months", {}), ("reimbursed_months", [1, 1]),
@@ -149,47 +148,76 @@ class MonthlyCalculationTest(unittest.TestCase):
                 activity.validate_budget(data, 2026)
 
 
-class TableReader(HTMLParser):
-    def __init__(self):
-        super().__init__()
-        self.rows = []
-        self.in_cell = False
+class RosterEditorTest(unittest.TestCase):
+    def setUp(self):
+        self.data = activity.set_reimbursed_months(sample_budget(), [1, 3], TODAY)
+        self.base = activity.roster_editor_columns(self.data)
 
-    def handle_starttag(self, tag, attrs):
-        if tag == "tr":
-            self.rows.append([])
-        if tag in ("td", "th"):
-            self.rows[-1].append("")
-            self.in_cell = True
+    def test_all_month_columns_are_editable_without_counting_placeholders(self):
+        self.assertEqual([f"{m}月" for m in range(1, 13)], list(self.base))
+        self.assertEqual("", self.base["9月"][-1])
+        self.assertTrue(all(value == "" for value in self.base["11月"]))
+        self.assertEqual(self.data, activity.apply_roster_editor(self.data, self.base, {}))
 
-    def handle_data(self, text):
-        if self.in_cell:
-            self.rows[-1][-1] += text
+    def test_clear_and_add_cells_recalculate_only_the_changed_month(self):
+        original_base = copy.deepcopy(self.base)
+        changes = {"edited_rows": {"0": {"9月": None}, "4": {"9月": "新教师"}}}
+        result = activity.apply_roster_editor(self.data, self.base, changes)
+        self.assertEqual(["李四", "王五", "赵六", "新教师"], result["months"]["9"])
+        self.assertEqual(210, activity.summarize(result, TODAY)["balance"])
+        self.assertEqual(original_base, self.base)
+        for month in range(1, 13):
+            if month != 9:
+                self.assertEqual(self.data["months"][str(month)], result["months"][str(month)])
 
-    def handle_endtag(self, tag):
-        if tag in ("td", "th"):
-            self.in_cell = False
+    def test_second_edit_uses_visible_row_positions_after_first_cell_was_cleared(self):
+        first = activity.apply_roster_editor(self.data, self.base, {"edited_rows": {0: {"9月": ""}}})
+        second = activity.apply_roster_editor(first, self.base, {
+            "edited_rows": {0: {"9月": ""}, 1: {"9月": "李四更名"}}})
+        self.assertEqual(["李四更名", "王五", "赵六"], second["months"]["9"])
+        self.assertEqual(270, activity.summarize(second, TODAY)["total"])
+        self.assertEqual(180, activity.summarize(second, TODAY)["balance"])
 
+    def test_added_rows_are_not_appended_twice_on_later_edits(self):
+        added = {"added_rows": [{"9月": "新增甲"}, {"9月": "新增乙", "10月": "新增甲"}]}
+        first = activity.apply_roster_editor(self.data, self.base, added)
+        again = activity.apply_roster_editor(first, self.base, added)
+        self.assertEqual(first, again)
+        self.assertEqual(6, len(again["months"]["9"]))
+        self.assertEqual(360, activity.summarize(again, TODAY)["total"])
+        changed = activity.apply_roster_editor(again, self.base, {
+            "added_rows": [{"9月": "改名甲"}, {"9月": None, "10月": "新增甲"}]})
+        self.assertEqual("改名甲", changed["months"]["9"][-1])
+        self.assertEqual(5, len(changed["months"]["9"]))
 
-class RosterLayoutTest(unittest.TestCase):
-    def test_excel_order_and_all_month_columns_preserve_names_and_unknowns(self):
-        reader = TableReader()
-        reader.feed(activity.build_roster_html(sample_budget(), 9))
-        self.assertEqual(["月份"] + [f"{m}月" for m in range(1, 13)], reader.rows[0])
-        self.assertEqual(["费用（元）", "60", "90", "30"], reader.rows[1][:4])
-        self.assertEqual(["人数", "2", "3", "1"], reader.rows[2][:4])
-        self.assertEqual(["1", "张三", "张三", "张三"], reader.rows[3][:4])
-        self.assertEqual("待补全", reader.rows[3][11])
-        self.assertTrue(all(len(row) == 13 for row in reader.rows))
+    def test_empty_added_row_is_no_op_and_future_months_stay_unknown(self):
+        updated = activity.apply_roster_editor(self.data, self.base, {"added_rows": [{}]})
+        self.assertEqual(self.data, updated)
+        self.assertIsNone(updated["months"]["11"])
 
-    def test_user_entered_name_is_escaped_as_text(self):
-        name = '<img src=x onerror="alert(1)"> & 新教师'
-        data = activity.set_rosters(sample_budget(), [9], [name])
-        html = activity.build_roster_html(data)
-        self.assertNotIn("<img", html)
-        reader = TableReader()
-        reader.feed(html)
-        self.assertEqual(name, reader.rows[3][9])
+    def test_clearing_entire_known_month_produces_confirmed_zero(self):
+        updated = activity.apply_roster_editor(self.data, self.base, {
+            "edited_rows": {index: {"9月": "  "} for index in range(4)}})
+        self.assertEqual([], updated["months"]["9"])
+        self.assertEqual(0, activity.monthly_rows(updated, TODAY)[8]["教师人数"])
+        self.assertEqual(90, activity.summarize(updated, TODAY)["balance"])
+
+    def test_pasting_into_empty_future_month_counts_names_when_month_arrives(self):
+        updated = activity.apply_roster_editor(self.data, self.base, {
+            "edited_rows": {0: {"11月": "张三"}, 1: {"11月": "李四"}}})
+        self.assertEqual(["张三", "李四"], updated["months"]["11"])
+        self.assertIsNone(updated["months"]["12"])
+        self.assertEqual(300, activity.summarize(updated, TODAY)["total"])
+        self.assertEqual(420, activity.summarize(updated, date(2026, 11, 1))["total"])
+
+    def test_invalid_or_whole_row_deletion_does_not_change_other_months(self):
+        original = copy.deepcopy(self.data)
+        for changes in ({"deleted_rows": [0]}, {"edited_rows": {999: {"9月": "甲"}}},
+                        {"edited_rows": {0: {"序号": 3}}}, {"added_rows": [{"序号": 5}]},
+                        {"edited_rows": {0: {"9月": 123}}}):
+            with self.subTest(changes=changes), self.assertRaises(ValueError):
+                activity.apply_roster_editor(self.data, self.base, changes)
+        self.assertEqual(original, self.data)
 
 
 class Response:
