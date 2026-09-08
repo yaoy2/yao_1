@@ -65,7 +65,8 @@ def render_sidebar_nav() -> None:
         return (
             f'<a class="custom-nav-item" href="{href}" target="_self">'
             f'<span class="custom-nav-code">{code}</span>'
-            f'<span class="custom-nav-main"><strong>{title}{lock}{blocked_mark}</strong><em>{tag}</em></span>'
+            f'<span class="custom-nav-main"><strong><span class="custom-nav-label">{title}</span>'
+            f'<span class="custom-nav-marks">{lock}{blocked_mark}</span></strong><em>{tag}</em></span>'
             "</a>"
         )
 

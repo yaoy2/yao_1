@@ -300,6 +300,8 @@ hr { border-color: var(--colors-hairline); margin: 1.25rem 0; }
     gap: .06rem;
 }
 [data-testid="stSidebar"] .custom-nav-main strong {
+    display: flex;
+    align-items: baseline;
     overflow: hidden;
     color: var(--colors-ink) !important;
     font-family: var(--font-display);
@@ -308,6 +310,16 @@ hr { border-color: var(--colors-hairline); margin: 1.25rem 0; }
     line-height: 1.25;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+[data-testid="stSidebar"] .custom-nav-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+[data-testid="stSidebar"] .custom-nav-marks {
+    flex-shrink: 0;
+    white-space: pre;
 }
 [data-testid="stSidebar"] .custom-nav-main em {
     overflow: hidden;
