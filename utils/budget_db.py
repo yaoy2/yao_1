@@ -308,6 +308,7 @@ def sync_backup_files():
 
 
 def get_filtered_records(month=None, category=None, status=None, keyword=None):
+    """流水明细：已报销置底，各组按登记时间倒序，同秒登记按 ID 倒序。"""
     conn = get_connection()
     conditions = []
     values = []
@@ -325,7 +326,9 @@ def get_filtered_records(month=None, category=None, status=None, keyword=None):
         values.extend([f"%{keyword}%", f"%{keyword}%"])
     where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
     rows = conn.execute(
-        f"SELECT * FROM expense_records {where} ORDER BY record_date DESC, id DESC", values
+        f"""SELECT * FROM expense_records {where}
+        ORDER BY CASE WHEN reimbursement_status = '已报销' THEN 1 ELSE 0 END,
+                 created_at DESC, id DESC""", values
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
