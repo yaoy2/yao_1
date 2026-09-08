@@ -61,12 +61,13 @@ def render_sidebar_nav() -> None:
         tag = escape(str(tool.get("tag", "")))
         href = escape(_streamlit_page_href(tool.get("page", "")), quote=True)
         lock = " 🔒" if tool.get("locked") else ""
-        blocked_mark = " ❌" if tool.get("blocked") else ""
+        blocked_mark = "❌ " if tool.get("blocked") else ""
         return (
             f'<a class="custom-nav-item" href="{href}" target="_self">'
             f'<span class="custom-nav-code">{code}</span>'
-            f'<span class="custom-nav-main"><strong><span class="custom-nav-label">{title}</span>'
-            f'<span class="custom-nav-marks">{lock}{blocked_mark}</span></strong><em>{tag}</em></span>'
+            f'<span class="custom-nav-main"><strong><span class="custom-nav-marks">{blocked_mark}</span>'
+            f'<span class="custom-nav-label">{title}</span>'
+            f'<span class="custom-nav-marks">{lock}</span></strong><em>{tag}</em></span>'
             "</a>"
         )
 
