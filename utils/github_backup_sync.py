@@ -8,6 +8,7 @@ import requests
 DEFAULT_REPO = "yaoy2/yao_1"
 DEFAULT_BRANCH = "main"
 API_ROOT = "https://api.github.com"
+_ANY_VERSION = object()
 
 
 def _read_mapping_value(mapping, key):
@@ -47,7 +48,8 @@ def get_backup_sync_config(secrets=None, environ=None):
     return {"enabled": bool(token), "token": token, "repo": repo, "branch": branch}
 
 
-def sync_file_to_github(local_path, repo_path, message, secrets=None, environ=None, session=None):
+def sync_file_to_github(local_path, repo_path, message, secrets=None, environ=None, session=None,
+                        expected_sha=_ANY_VERSION):
     config = get_backup_sync_config(secrets, environ)
     if not config["enabled"]:
         return {"ok": False, "skipped": True, "reason": "missing_token"}
@@ -72,6 +74,11 @@ def sync_file_to_github(local_path, repo_path, message, secrets=None, environ=No
     elif get_response.status_code != 404:
         raise RuntimeError(f"GitHub 读取备份文件失败：HTTP {get_response.status_code}")
 
+    if expected_sha is not _ANY_VERSION and sha != expected_sha:
+        raise RuntimeError("远端数据已更新，本次未覆盖；请刷新最新数据后核对并重新保存。")
+    if get_response.status_code == 200 and expected_sha is not _ANY_VERSION and not sha:
+        raise RuntimeError("远端未返回有效版本，本次未保存；请刷新后重试。")
+
     payload = {
         "message": message,
         "content": base64.b64encode(local_path.read_bytes()).decode("ascii"),
@@ -81,9 +88,12 @@ def sync_file_to_github(local_path, repo_path, message, secrets=None, environ=No
         payload["sha"] = sha
 
     put_response = session.put(url, headers=headers, json=payload, timeout=20)
+    if put_response.status_code == 409:
+        raise RuntimeError("远端数据已更新（HTTP 409），本次未覆盖；请刷新最新数据后核对并重新保存。")
     if put_response.status_code not in (200, 201):
         raise RuntimeError(f"GitHub 写入备份文件失败：HTTP {put_response.status_code}")
-    return {"ok": True, "skipped": False, "path": repo_path}
+    return {"ok": True, "skipped": False, "path": repo_path,
+            "sha": put_response.json().get("content", {}).get("sha")}
 
 
 def read_file_from_github(repo_path, secrets=None, environ=None, session=None):
@@ -108,7 +118,8 @@ def read_file_from_github(repo_path, secrets=None, environ=None, session=None):
 
     encoded_content = str(response.json().get("content", ""))
     content = base64.b64decode("".join(encoded_content.split())).decode("utf-8")
-    return {"ok": True, "skipped": False, "path": repo_path, "content": content}
+    return {"ok": True, "skipped": False, "path": repo_path, "content": content,
+            "sha": response.json().get("sha")}
 
 
 def download_file_from_github(local_path, repo_path, secrets=None, environ=None, session=None):
