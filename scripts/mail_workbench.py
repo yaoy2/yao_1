@@ -1,7 +1,9 @@
 """Command line entry point for a local mail workspace (no login or credentials)."""
 
 import argparse
+import copy
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -10,6 +12,29 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from utils import mail_workspace
+
+
+def redact_review_batch(root, path, batch, *, effective_storage_mode=None):
+    """Remove transient review text only from this collector's owned batch."""
+    if (effective_storage_mode or batch.get("storage_mode")) != "on_demand":
+        return None
+    root = mail_workspace._root_path(root)
+    source = Path(path)
+    identifier = batch.get("id")
+    if (not isinstance(identifier, str) or not re.fullmatch(r"imap-[0-9a-f]{32}", identifier)
+            or source.is_symlink() or source.resolve().parent != (root / "incoming").resolve()
+            or source.name != identifier + ".json"):
+        return False
+    redacted = copy.deepcopy(batch)
+    for message in redacted.get("messages", []):
+        for key in ("body_text", "headers_text", "body_html", "attachment_reviews", "raw_eml_download_path", "raw_sha256"):
+            message.pop(key, None)
+        for attachment in message.get("attachments", []):
+            attachment.pop("data", None)
+            attachment.pop("download_path", None)
+    redacted["review_content_removed"] = True
+    mail_workspace._atomic_json(source, redacted)
+    return True
 
 
 def main(argv=None):
@@ -36,6 +61,10 @@ def main(argv=None):
             with Path(args.batch).open("r", encoding="utf-8-sig") as handle:
                 batch = json.load(handle)
             result = mail_workspace.ingest(args.root, batch)
+            removed = redact_review_batch(
+                args.root, args.batch, batch, effective_storage_mode=result["storage_mode"])
+            if removed is not None:
+                result["review_content_removed"] = removed
         elif args.command == "report":
             result = mail_workspace.generate_report(args.root, args.kind, args.at)
         elif args.command == "publish":

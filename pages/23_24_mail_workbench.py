@@ -69,7 +69,8 @@ FILING_ERROR_LABELS = {
     "FILING_INTERRUPTED": "存档中断，需重试",
 }
 KINDS = {"daily": "每日归档与简报", "morning": "早间到期提醒", "weekly": "每周汇总", "sample": "样本试跑"}
-ATTACHMENT_STATUSES = {"success": "已归档并核验", "missing": "未取得文件", "error": "归档失败", "pending": "待下载"}
+ATTACHMENT_STATUSES = {"success": "已归档并核验", "not_requested": "未选择存档", "missing": "未取得文件",
+                       "error": "归档失败", "pending": "待下载"}
 ERRORS = {
     "missing_token": "私有邮件数据源尚未配置，暂时无法读取邮件。",
     "missing_config": "私有邮件数据源尚未配置，暂时无法读取邮件。",
@@ -155,8 +156,17 @@ def source_link_label(url):
 
 
 def incomplete_attachment_count(messages):
-    return sum(attachment.get("status") != "success"
+    return sum(attachment.get("status") not in {"success", "not_requested"}
                for message in messages for attachment in message.get("attachments", []))
+
+
+def incomplete_filing_count(messages, actions):
+    linked = {action.get("message_id") for action in actions}
+    archived = {action.get("message_id") for action in actions if action.get("status") == "archived"}
+    return sum(isinstance(message.get("filing"), dict)
+               and message["filing"].get("status") in {"partial", "error"}
+               and (message.get("id") in archived if message.get("id") in linked
+                    else message.get("triage_status") == "archived") for message in messages)
 
 
 def coverage_warning(snapshot):
@@ -165,6 +175,8 @@ def coverage_warning(snapshot):
     if runs and all(run.get("kind") == "sample" for run in runs):
         return "当前为试跑数据，用于检查读取和展示效果；还没有完成首次正式采集。"
     if not coverage.get("complete"):
+        if snapshot.get("collection_storage") == "on_demand":
+            return "邮件采集时段仍待核对，尚不能确认该时段已检查完整。详情见运行记录。"
         return "部分邮件或附件仍待核对，尚不能确认该时段已检查完整。详情见运行记录。"
     if not parse_time(coverage.get("since")) or not parse_time(coverage.get("through")):
         return "尚未记录检查的起止时间，需要核对运行记录。"
@@ -180,10 +192,14 @@ def snapshot_status_html(snapshot):
     else:
         label = "已完成时段核对"
     messages = snapshot.get("messages", [])
-    incomplete = incomplete_attachment_count(messages)
-    attachment_count = sum(len(message.get("attachments", [])) for message in messages)
-    attachment_label = (f'{incomplete} 份附件待补' if incomplete else
-                        ("现有附件均已归档" if attachment_count else "暂无附件记录"))
+    if snapshot.get("collection_storage") == "on_demand":
+        incomplete = incomplete_filing_count(messages, snapshot.get("actions", []))
+        attachment_label = "附件按需存档" + (f" · {incomplete} 封存档待补" if incomplete else "")
+    else:
+        incomplete = incomplete_attachment_count(messages)
+        attachment_count = sum(len(message.get("attachments", [])) for message in messages)
+        attachment_label = (f'{incomplete} 份附件待补' if incomplete else
+                            ("现有附件均已归档" if attachment_count else "暂无附件记录"))
     attachment_class = "mail-attachment-pending" if incomplete else ""
     return (f'<div class="mail-status-bar"><span class="mail-status-chip">{escape(label)}</span>'
             f'<span>已整理 {len(messages)} 封邮件</span>'
@@ -604,7 +620,7 @@ def render_inbox_message(message, snapshot, loaded, gateway, now, *, context="in
                 st.caption(plain_label("截止依据：" + str(action.get("due_basis") or "请核对原邮件及附件")))
             render_source(message)
             if message.get("attachments"):
-                render_attachments([message])
+                render_attachments([message], snapshot=snapshot)
 
 
 def render_inbox(snapshot, loaded, gateway, now):
@@ -873,11 +889,17 @@ def render_actions(snapshot, loaded, gateway, category, now):
             render_inbox_message(message, snapshot, loaded, gateway, now, context="actions")
 
 
-def render_attachments(messages):
-    st.caption("显示本机归档目录下的相对位置。附件文件保存在本机，网页不提供本机文件的下载按钮。")
-    incomplete = incomplete_attachment_count(messages)
-    if incomplete:
-        st.caption(f"当前筛选范围有 {incomplete} 份附件待补，具体原因见下表。")
+def render_attachments(messages, *, snapshot=None):
+    if (snapshot or {}).get("collection_storage") == "on_demand":
+        st.caption("选择存档后才保存附件；下表也保留此前的归档记录。")
+        incomplete = incomplete_filing_count(messages, snapshot.get("actions", []))
+        if incomplete:
+            st.caption(f"当前筛选范围有 {incomplete} 封存档待补，请在邮件详情查看原因或重试。")
+    else:
+        st.caption("显示本机归档目录下的相对位置。附件文件保存在本机，网页不提供本机文件的下载按钮。")
+        incomplete = incomplete_attachment_count(messages)
+        if incomplete:
+            st.caption(f"当前筛选范围有 {incomplete} 份附件待补，具体原因见下表。")
     rows = []
     for message in messages:
         for attachment in message.get("attachments", []):
@@ -885,7 +907,8 @@ def render_attachments(messages):
                 "收件时间": display_time(message.get("received_at")), "邮件主题": message.get("subject", ""),
                 "附件": attachment.get("name", ""), "状态": ATTACHMENT_STATUSES.get(attachment.get("status"), "未核验"),
                 "字节数": attachment.get("size"), "本机相对位置": relative_archive_path(attachment.get("path")),
-                "失败原因": attachment.get("error") or "", "SHA-256": attachment.get("sha256") or "未核验",
+                "失败原因": ("" if attachment.get("status") == "not_requested" else attachment.get("error") or ""),
+                "SHA-256": attachment.get("sha256") or "未核验",
             })
     if rows:
         st.dataframe(rows, hide_index=True, use_container_width=True)
@@ -933,6 +956,8 @@ def main():
     snapshot = loaded["snapshot"]
     render_pending_changes(snapshot, loaded, mail_private_sync)
     st.markdown(snapshot_status_html(snapshot), unsafe_allow_html=True)
+    if snapshot.get("collection_storage") == "on_demand":
+        st.caption(r"平时只整理摘要与待办；选择存档时，才把整封邮件附件保存到 E:\GoogleDrive\Ding2026\邮件存档。")
     if st.session_state.get("mail_save_notice"):
         st.toast(st.session_state.pop("mail_save_notice"))
 
@@ -968,7 +993,7 @@ def main():
             else:
                 st.info("尚无实际运行记录，不能据计划时间判断任务已执行。")
         with st.expander("附件索引", expanded=False):
-            render_attachments(snapshot.get("messages", []))
+            render_attachments(snapshot.get("messages", []), snapshot=snapshot)
         period = st.date_input("报告日期范围", value=(now.date() - timedelta(days=6), now.date()), key="mail_report_dates")
         if isinstance(period, (tuple, list)) and len(period) == 2:
             st.subheader("每日简报与到期提醒")

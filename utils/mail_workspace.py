@@ -219,7 +219,7 @@ def status(root):
             "updated_at": data["updated_at"], "coverage": data["coverage"],
             "message_count": len(data["messages"]), "action_count": len(data["actions"]),
             "attachment_count": sum(len(m.get("attachments", [])) for m in data["messages"]),
-            "incomplete_attachments": sum(a.get("status") != "success"
+            "incomplete_attachments": sum(a.get("status") not in {"success", "not_requested"}
                 for m in data["messages"] for a in m.get("attachments", [])),
             "run_count": len(data["runs"]), "report_count": len(data["reports"])}
 
@@ -412,6 +412,13 @@ def ingest(root, batch):
     root = _root_path(root)
     with _locked(root):
         data = load_dashboard(root)
+        config_path = _inside(root, "config.json")
+        config = json.loads(config_path.read_text(encoding="utf-8-sig")) if config_path.is_file() else {}
+        on_demand = (config.get("collection_storage") == "on_demand"
+                     or data.get("collection_storage") == "on_demand"
+                     or batch.get("storage_mode") == "on_demand")
+        if on_demand:
+            data["collection_storage"] = "on_demand"
         since, through = _validate_batch(batch, data)
         finished = normalize_time(batch.get("finished_at") or now_iso())
         started = normalize_time(batch.get("started_at") or finished)
@@ -435,12 +442,17 @@ def ingest(root, batch):
                 message["filing"] = public_filing(previous["filing"])
             message["received_at"] = stamp.isoformat(timespec="seconds")
             message["source_url"] = sanitize_source_url(incoming.get("source_url", previous.get("source_url")))
-            raw_metadata, raw_error = _archive_raw_eml(root, directory, incoming, previous)
+            if on_demand:
+                raw_metadata = {key: copy.deepcopy(previous[key]) for key in
+                                ("raw_eml_path", "raw_eml_sha256", "raw_eml_size") if key in previous}
+                raw_error = ""
+            else:
+                raw_metadata, raw_error = _archive_raw_eml(root, directory, incoming, previous)
             message.update(raw_metadata)
             if raw_error:
                 errors.append(raw_error + ": " + identifier)
-            if "body_text" not in incoming:
-                message["archive_path"] = previous["archive_path"]
+            if on_demand or "body_text" not in incoming:
+                message["archive_path"] = previous.get("archive_path", "")
             else:
                 snapshot = {"format": "imap_text_snapshot" if incoming.get("raw_eml_download_path") else "browser_text_snapshot", "is_original_eml": False,
                             "id": identifier, "received_at": message["received_at"],
@@ -466,12 +478,28 @@ def ingest(root, batch):
             attachments = dict(previous_attachments)
             incoming_attachment_ids = {attachment["id"] for attachment in incoming.get("attachments", [])}
             for attachment in incoming.get("attachments", []):
-                attachments[attachment["id"]] = _archive_attachment(
-                    root, directory, attachment, previous_attachments.get(attachment["id"]), hash_index)
+                old = previous_attachments.get(attachment["id"])
+                if on_demand:
+                    # Keep the historical file index when it matches. New
+                    # attachments remain metadata until an explicit filing job.
+                    if old and old.get("status") == "success" and old.get("sha256") == attachment.get("sha256"):
+                        attachments[attachment["id"]] = copy.deepcopy(old)
+                    else:
+                        size = attachment.get("size")
+                        digest = attachment.get("sha256")
+                        attachments[attachment["id"]] = {
+                            "id": attachment["id"], "name": _text(attachment.get("name") or "attachment"),
+                            "size": size if type(size) is int and size >= 0 else None,
+                            "sha256": digest if isinstance(digest, str) and re.fullmatch(r"[0-9a-f]{64}", digest) else "",
+                            "path": "", "status": "not_requested", "error": _text(attachment.get("error")),
+                        }
+                else:
+                    attachments[attachment["id"]] = _archive_attachment(
+                        root, directory, attachment, old, hash_index)
             # A metadata-only retry may omit previously known attachments. Such
             # retained indexes must still point to intact local files.
             for attachment_id, previous_attachment in list(attachments.items()):
-                if attachment_id not in incoming_attachment_ids and previous_attachment.get("status") == "success":
+                if not on_demand and attachment_id not in incoming_attachment_ids and previous_attachment.get("status") == "success":
                     retained = copy.deepcopy(previous_attachment)
                     try:
                         retained_path = _inside(root, retained["path"])
@@ -482,15 +510,16 @@ def ingest(root, batch):
                         retained.update(status="error", error="此前归档的附件已缺失或内容校验失败")
                     attachments[attachment_id] = retained
             message["attachments"] = list(attachments.values())
-            if incoming.get("attachments_complete") is False:
+            complete = incoming.get("mime_structure_complete", incoming.get("attachments_complete")) if on_demand else incoming.get("attachments_complete")
+            if complete is False:
                 errors.append("附件清单未确认完整: " + identifier)
             expected_count = incoming.get("expected_attachment_count")
             if expected_count is not None and expected_count != len(incoming.get("attachments", [])):
                 errors.append("实际附件清单数量与声明不符: " + identifier)
             for attachment in message["attachments"]:
-                if attachment["status"] == "success":
+                if attachment["status"] == "success" and not on_demand:
                     successful += 1
-                else:
+                elif not on_demand and attachment["status"] != "not_requested":
                     incomplete += 1
                     errors.append("附件未完成: " + identifier + "/" + attachment["id"])
             message_map[identifier] = message
@@ -532,7 +561,8 @@ def ingest(root, batch):
             if complete:
                 coverage["since"] = min(since, old_since).isoformat(timespec="seconds") if old_since else since.isoformat(timespec="seconds")
                 coverage["through"] = max(through, old_through).isoformat(timespec="seconds") if old_through else through.isoformat(timespec="seconds")
-                coverage.update(complete=True, note=_text(batch["window"].get("note")) or "已核验连续窗口及附件")
+                coverage.update(complete=True, note=_text(batch["window"].get("note")) or
+                                ("已核验连续收信窗口；附件仅在选择存档后保存" if on_demand else "已核验连续窗口及附件"))
             else:
                 coverage.update(complete=False, note="本次采集未完成；成功游标保持不变")
         run = {"id": batch_id, "kind": batch["kind"], "started_at": started,
@@ -546,6 +576,7 @@ def ingest(root, batch):
         _atomic_json(_inside(root, "dashboard.json"), data)
     return {"run_id": batch_id, "status": run["status"], "message_count": run["message_count"],
             "attachment_count": successful, "incomplete_attachments": incomplete,
+            "storage_mode": "on_demand" if on_demand else "full",
             "error_count": len(run["errors"]), "coverage": data["coverage"]}
 
 
@@ -576,13 +607,15 @@ def generate_report(root, kind, at):
         labels = {"daily": "每日邮件简报", "morning": "工作日截止事项提醒", "weekly": "每周邮件工作汇总"}
         title = end.date().isoformat() + " " + labels[kind]
         lines = ["# " + title, "", "统计时间：" + start.isoformat(timespec="minutes") + " 至 " + end.isoformat(timespec="minutes"),
-                 "", "覆盖状态：" + ("本统计窗口已核验完整。" if period_complete else "归档尚未覆盖完整统计窗口，以下仅为已读取内容。")]
+                 "", "覆盖状态：" + ("本统计窗口已核验完整。" if period_complete else "采集尚未覆盖完整统计窗口，以下仅为已读取内容。")]
+        if data.get("collection_storage") == "on_demand":
+            lines.extend(["", "保存方式：平时仅保留摘要、待办和附件索引；选择存档后才保存该邮件附件。"])
         if kind != "morning":
             lines.extend(["", "## 邮件概览", ""])
             for message in messages:
                 lines.append("- [" + (message["category"] or "未分类") + "] " + message["subject"] + "：" + (message["summary"] or "摘要待整理"))
             if not messages:
-                lines.append("本统计区间内没有已归档邮件记录；这不代表邮箱没有新邮件。")
+                lines.append("本统计区间内没有已整理邮件记录；这不代表邮箱没有新邮件。")
         lines.extend(["", "## 待处理与时间节点", ""])
         for action in active:
             due = action.get("due_at")
@@ -652,6 +685,8 @@ def public_snapshot(data, root):
     if data.get("schema_version") != SCHEMA_VERSION or data.get("timezone") != TIMEZONE:
         raise ValueError("unsupported workspace schema or timezone")
     snapshot = {key: copy.deepcopy(data[key]) for key in ("schema_version", "timezone", "account", "updated_at")}
+    if data.get("collection_storage") == "on_demand":
+        snapshot["collection_storage"] = "on_demand"
     snapshot["coverage"] = {key: data["coverage"].get(key) for key in ("since", "through", "complete", "note")}
     snapshot["messages"] = []
     root_path = _root_path(root)

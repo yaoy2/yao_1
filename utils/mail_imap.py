@@ -287,14 +287,38 @@ def _write_message(parsed: dict, raw: bytes, staging: Path) -> dict:
     return message
 
 
+def _on_demand_message(parsed: dict) -> dict:
+    """Keep review text and attachment metadata, never raw bytes or file paths."""
+    fields = ("id", "received_at", "sender", "subject", "folder", "category", "source_url",
+              "body_text", "internet_message_id", "expected_attachment_count", "authentication_notice")
+    message = {key: parsed[key] for key in fields if key in parsed}
+    # Empty attachment content is an observation, not an unfulfilled download
+    # request. The MIME tree must nevertheless have been parsed completely.
+    structure_complete = parsed.get("mime_structure_complete", parsed.get("attachments_complete")) is True
+    message.update(summary="待整理", storage_mode="on_demand", mime_structure_complete=structure_complete,
+                   attachments_complete=structure_complete, attachments=[])
+    for source in parsed.get("attachments", []):
+        attachment = {key: source[key] for key in ("id", "name", "content_type", "size", "sha256", "error") if key in source}
+        attachment.update(status="not_requested", path="")
+        if source.get("size") == 0:
+            attachment["error"] = "MIME_ATTACHMENT_EMPTY"
+        message["attachments"].append(attachment)
+    from utils.mail_review_text import extract_attachment_reviews
+    message["attachment_reviews"] = extract_attachment_reviews(parsed.get("attachments", []))
+    return message
+
+
 def collect(client, *, account: str, folders: list[str], since: str, through: str,
             staging_dir: Path, source_url: str, retry_message_ids: list[str] | None = None,
-            max_message_bytes: int = MAX_MESSAGE_BYTES) -> dict:
+            max_message_bytes: int = MAX_MESSAGE_BYTES, storage_mode: str = "full") -> dict:
     """Collect the inclusive timestamp window, plus explicitly requested retries.
 
     SEARCH uses enlarged UTC calendar boundaries because IMAP date searches
     ignore timezone. The final filter uses each UID's precise INTERNALDATE.
     Folder names except the documented INBOX alias are matched exactly.
+    ``on_demand`` keeps RFC bytes in memory, stages no message or attachment
+    files, and suppresses historical attachment retries. Its body text is only
+    for the caller's temporary review batch and must be redacted after review.
     """
     start, end = _timestamp(since), _timestamp(through)
     if start > end:
@@ -303,19 +327,22 @@ def collect(client, *, account: str, folders: list[str], since: str, through: st
         raise ValueError("explicit folders are required")
     if not isinstance(max_message_bytes, int) or max_message_bytes <= 0:
         raise ValueError("max_message_bytes must be positive")
+    if not isinstance(storage_mode, str) or storage_mode not in {"full", "on_demand"}:
+        raise ValueError("invalid collection storage mode")
     staging_dir = Path(staging_dir).expanduser()
     if not staging_dir.is_absolute():
         raise ValueError("staging_dir must be absolute")
     staging_dir.mkdir(parents=True, exist_ok=True)
     staging = Path(tempfile.mkdtemp(prefix="imap-", dir=staging_dir)).resolve()
-    retries = set(retry_message_ids or [])
+    retries = set(retry_message_ids or []) if storage_mode == "full" else set()
     if any(not isinstance(identifier, str) or not identifier for identifier in retries):
         raise ValueError("retry_message_ids must be nonempty strings")
     batch = {"schema_version": 1, "id": "imap-" + uuid4().hex, "kind": "daily", "account": account,
              "started_at": _iso_now(), "finished_at": None,
              "window": {"since": start.isoformat(timespec="seconds"), "through": end.isoformat(timespec="seconds"), "complete": False},
-             "messages": [], "actions": [], "errors": []}
+             "messages": [], "actions": [], "errors": [], "storage_mode": storage_mode}
     evidence = {"transport": "imap", "readonly": True, "staging_dir": str(staging),
+                "storage_mode": storage_mode,
                 "max_message_bytes": max_message_bytes, "size_mismatches": 0, "folders": [],
                 "skipped_authentication_notifications": {"count": 0, "received_at": []},
                 "retry": {"requested_count": len(retries), "resolved_count": 0, "unresolved_count": len(retries)}}
@@ -414,9 +441,11 @@ def collect(client, *, account: str, folders: list[str], since: str, through: st
                         error("IMAP_MESSAGE_ID_CONTENT_CONFLICT", record)
                     continue
                 try:
-                    message = _write_message(parsed, raw, staging)
+                    message = (_on_demand_message(parsed) if storage_mode == "on_demand"
+                               else _write_message(parsed, raw, staging))
                 except OSError:
                     raise ImapCollectionError("IMAP_STAGING_WRITE_FAILED") from None
+                message["storage_mode"] = storage_mode
                 if not inside_window and identifier in retries:
                     message["retry_of_existing"] = True
                 batch["messages"].append(message)
