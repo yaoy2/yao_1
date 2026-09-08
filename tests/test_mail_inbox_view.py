@@ -209,11 +209,14 @@ class MailInboxViewTests(unittest.TestCase):
                                   action("done-id", status="done", title="第二项处理事项完整名称"),
                                   action("other-mail", message_id="m2")])
         controls = [event["kwargs"] for event in ui.events if event["kind"] == "selectbox"]
-        self.assertEqual(["pending-id", "done-id"], [control["args"][0] for control in controls])
-        self.assertEqual(2, len({control["key"] for control in controls}))
-        self.assertEqual(["pending", "done"], [ui.session_state[control["key"]] for control in controls])
-        self.assertTrue(all(control["on_change"] is page.remember_status for control in controls))
-        self.assertTrue(all(event["expander_depth"] > 0 for event in ui.events if event["kind"] == "selectbox"))
+        self.assertEqual(["m1", "pending-id", "done-id"], [control["args"][0] for control in controls])
+        self.assertEqual(3, len({control["key"] for control in controls}))
+        self.assertEqual(["__mixed__", "pending", "done"], [ui.session_state[control["key"]] for control in controls])
+        self.assertIs(controls[0]["on_change"], page.remember_group_status)
+        self.assertTrue(all(control["on_change"] is page.remember_status for control in controls[1:]))
+        depths = [event["expander_depth"] for event in ui.events if event["kind"] == "selectbox"]
+        self.assertEqual(0, depths[0])
+        self.assertTrue(all(depth > 0 for depth in depths[1:]))
         visible = " ".join(event["value"] for event in ui.events
                            if event["kind"] in {"markdown", "caption", "text"} and event["expander_depth"] == 0)
         details = " ".join(event["value"] for event in ui.events
