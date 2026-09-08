@@ -46,10 +46,10 @@ def _after(at, previous=None):
 
 
 def safe_relative_destination(value):
-    """Allow an empty pending target, or a child of the fixed filing directory."""
+    """Allow pending, the configured root marker, or a legacy receipt path."""
     if not isinstance(value, str):
         raise ValueError("invalid filing destination")
-    if value == "":
+    if value in {"", "."}:
         return value
     parts = value.split("/")
     if len(parts) < 2 or parts[0] != "邮件存档":

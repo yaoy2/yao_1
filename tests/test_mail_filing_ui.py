@@ -159,6 +159,9 @@ class FilingDisplayTests(unittest.TestCase):
         self.assertIn("已取消", page.filing_progress({"filing": filing("cancelled")}))
 
     def test_destination_is_constructed_only_below_the_known_filing_directory(self):
+        self.assertEqual(r"E:\GoogleDrive\Ding2026", page.filing_destination("."))
+        root_message = {"filing": filing("success", destination=".", saved_count=2, total_count=2)}
+        self.assertEqual("存档 · 已保存 2 份附件", page.filing_progress(root_message))
         self.assertEqual(r"E:\GoogleDrive\Ding2026\邮件存档\2026-09-08 合成通知",
                          page.filing_destination("邮件存档/2026-09-08 合成通知"))
         for path in ("E:/GoogleDrive/Ding2026/邮件存档/notice", "C:/private/notice", "//host/share/notice",
