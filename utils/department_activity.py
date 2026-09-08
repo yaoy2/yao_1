@@ -8,6 +8,7 @@ import re
 import tempfile
 import threading
 from datetime import datetime, timedelta, timezone
+from html import escape
 from pathlib import Path
 
 from utils import github_backup_sync
@@ -73,14 +74,33 @@ def set_rosters(data, months, names):
     updated = copy.deepcopy(data)
     if not months:
         raise ValueError("请至少选择一个月份。")
+    if not isinstance(names, list):
+        raise ValueError("教师名单必须逐人填写。")
     for month in months:
         if type(month) is not int or not 1 <= month <= 12:
             raise ValueError("月份必须在1—12月之间。")
-        old_names = updated["months"][str(month)]
-        if month in updated["reimbursed_months"] and len(names) != len(old_names):
-            raise ValueError(f"{month}月已报销，不能更改人数；如需纠正，请先取消该月报销标记。")
         updated["months"][str(month)] = list(names)
     return validate_budget(updated, data["year"])
+
+
+def change_people(data, month, additions=None, remove_indices=None):
+    """Apply one month's hires/departures, keeping every other month intact."""
+    if type(month) is not int or not 1 <= month <= 12:
+        raise ValueError("月份必须在1—12月之间。")
+    names = data["months"][str(month)]
+    if names is None:
+        raise ValueError("请先补全该月名单，或从已录入月份复制名单。")
+    additions = [] if additions is None else additions
+    remove_indices = [] if remove_indices is None else remove_indices
+    if not isinstance(additions, list):
+        raise ValueError("新增姓名须逐人填写。")
+    if any(type(index) is not int or not 0 <= index < len(names) for index in remove_indices):
+        raise ValueError("离职人员选择已失效，请刷新名单后重新选择。")
+    if not additions and not remove_indices:
+        raise ValueError("请填写新入职姓名，或选择离职人员。")
+    removed = set(remove_indices)
+    remaining = [name for index, name in enumerate(names) if index not in removed]
+    return set_rosters(data, [month], remaining + additions)
 
 
 def set_reimbursed_months(data, months, today=None):
@@ -133,6 +153,52 @@ def roster_columns(data):
     return {f"{month}月": (["待补全"] if names is None else names or ["已确认0人"])
             + [""] * (height - max(1, len(names or [])))
             for month in range(1, 13) for names in [data["months"][str(month)]]}
+
+
+def build_roster_html(data, selected_month=None):
+    """Excel-style month columns, with the amount and headcount kept above names."""
+    validate_budget(data, data["year"])
+    columns = roster_columns(data)
+    amounts, headcounts = [], []
+    for month in range(1, 13):
+        names = data["months"][str(month)]
+        amounts.append("待补全" if names is None else f"{len(names) * MONTHLY_RATE:,}")
+        headcounts.append("待补全" if names is None else str(len(names)))
+
+    def row(label, values, header=False):
+        cells = [f'<th scope="row">{escape(str(label))}</th>']
+        for month, value in enumerate(values, 1):
+            tag = "th" if header else "td"
+            selected = ' class="selected-month"' if month == selected_month else ""
+            cells.append(f"<{tag}{selected}>{escape(str(value))}</{tag}>")
+        return "<tr>" + "".join(cells) + "</tr>"
+
+    parts = ["""<style>
+    .department-activity-sheet {overflow:auto;max-height:560px;border:1px solid #cbd3dc;
+        border-radius:6px;background:#fff;color:#233044;}
+    .department-activity-sheet table {border-collapse:separate;border-spacing:0;
+        width:100%;font-size:13px;line-height:1.4;}
+    .department-activity-sheet th,.department-activity-sheet td {box-sizing:border-box;
+        min-width:68px;height:31px;padding:5px 9px;text-align:center;white-space:nowrap;
+        border-right:1px solid #d9dfe6;border-bottom:1px solid #d9dfe6;}
+    .department-activity-sheet thead th,.department-activity-sheet thead td {
+        position:sticky;z-index:2;background:#eef2f5;height:32px;}
+    .department-activity-sheet thead tr:nth-child(1)>* {top:0;}
+    .department-activity-sheet thead tr:nth-child(2)>* {top:32px;}
+    .department-activity-sheet thead tr:nth-child(3)>* {top:64px;}
+    .department-activity-sheet tr>:first-child {position:sticky;left:0;z-index:1;
+        background:#eef2f5;min-width:72px;font-weight:normal;}
+    .department-activity-sheet thead tr>:first-child {z-index:3;}
+    .department-activity-sheet .selected-month {background:#e6f4ef;}
+    </style><div class="department-activity-sheet"><table aria-label="部门活动经费月度名单"><thead>"""]
+    parts.append(row("月份", [f"{month}月" for month in range(1, 13)], header=True))
+    parts.append(row("费用（元）", amounts))
+    parts.append(row("人数", headcounts))
+    parts.append("</thead><tbody>")
+    for index, values in enumerate(zip(*columns.values()), 1):
+        parts.append(row(index, values))
+    parts.append("</tbody></table></div>")
+    return "".join(parts)
 
 
 def _paths(year):
