@@ -7,56 +7,40 @@ st.set_page_config(
     page_icon="📥",
     layout="wide"
 )
+render_home_link()
 
 # --- 样式美化 (保持与项目一致) ---
 def apply_custom_styling():
     st.markdown("""
     <style>
-    .main-title {
-        font-size: 2.8rem !important;
-        font-weight: 800 !important;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin-bottom: 0.5rem !important;
-        text-align: center;
-    }
-    .sub-title {
-        font-size: 1.2rem !important;
-        color: #6c757d !important;
-        text-align: center;
-        margin-bottom: 2rem !important;
-        font-weight: 300;
-    }
-    .custom-card {
-        border-radius: 12px;
-        padding: 1.5rem;
-        background: white;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-        border: 1px solid #e9ecef;
-        margin-bottom: 1.5rem;
-    }
-    .route-header {
-        font-size: 1.3rem !important;
-        font-weight: 700 !important;
-        color: #667eea !important;
-        margin-bottom: 0.5rem !important;
-    }
-    .tag {
-        display: inline-block;
-        padding: 2px 10px;
-        border-radius: 12px;
-        font-size: 0.8rem;
-        font-weight: 600;
-        margin-right: 4px;
-    }
-    .tag-link { background: #e8f0fe; color: #1a73e8; }
-    .tag-file { background: #fef3e0; color: #e67e22; }
-    </style>
+        .custom-card {
+            border-radius: 12px;
+            padding: 1rem;
+            background: var(--colors-canvas);
+            box-shadow: none;
+            border: 1px solid var(--colors-hairline);
+            margin-bottom: .8rem;
+        }
+        .route-header {
+            font-size: 1.3rem !important;
+            font-weight: 600 !important;
+            color: var(--colors-primary) !important;
+            margin-bottom: 0.5rem !important;
+        }
+        .tag {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-right: 4px;
+        }
+        .tag-link { background: var(--colors-primary-soft); color: var(--colors-primary); }
+        .tag-file { background: #fef3e0; color: #e67e22; }
+        </style>
     """, unsafe_allow_html=True)
 
 apply_custom_styling()
-render_home_link()
 
 # --- 页面标题 ---
 st.markdown('<p class="main-title">📥 微信公众号文章归档工具</p>', unsafe_allow_html=True)

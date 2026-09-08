@@ -6,6 +6,8 @@ wechat_app.py
 
 import streamlit as st
 
+from utils.ui_theme import apply_global_theme
+
 from wechat_core import (
     TARGET_DIRS,
     archive_local_files,
@@ -19,6 +21,7 @@ st.set_page_config(
     page_icon="🗂️",
     layout="wide",
 )
+apply_global_theme(include_sidebar=False)
 
 st.title("🗂️ 四路线归档窗口")
 st.caption("专用端口建议：8502。8501 留给主工具箱或单页预览，避免串台。")

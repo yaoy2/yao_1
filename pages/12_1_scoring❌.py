@@ -46,156 +46,30 @@ def apply_custom_styling():
     """应用自定义样式（使用纯Streamlit方法）"""
     st.markdown("""
     <style>
-    /* 主标题样式 */
-    .main-title {
-        font-size: 2.8rem !important;
-        font-weight: 800 !important;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin-bottom: 0.5rem !important;
-        text-align: center;
-    }
-    
-    /* 副标题样式 */
-    .sub-title {
-        font-size: 1.2rem !important;
-        color: #6c757d !important;
-        text-align: center;
-        margin-bottom: 2rem !important;
-        font-weight: 300;
-    }
-    
-    /* 卡片样式 */
-    .custom-card {
-        border-radius: 12px;
-        padding: 1.5rem;
-        background: white;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-        border: 1px solid #e9ecef;
-        margin-bottom: 1.5rem;
-        transition: all 0.3s ease;
-    }
-    
-    .custom-card:hover {
-        box-shadow: 0 8px 30px rgba(0,0,0,0.12);
-        transform: translateY(-2px);
-    }
-    
-    /* 指标卡片 */
-    .metric-card {
-        background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
-        border-radius: 12px;
-        padding: 1.2rem;
-        text-align: center;
-        border-left: 4px solid #667eea;
-    }
-    
-    /* 步骤指示器 */
-    .step-indicator {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        font-weight: bold;
-        margin-right: 10px;
-    }
-    
-    /* 进度条样式 */
-    .stProgress > div > div > div > div {
-        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-    }
-    
-    /* 选项卡样式 */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-    }
-    
-    .stTabs [data-baseweb="tab"] {
-        border-radius: 8px 8px 0 0;
-        padding: 12px 24px;
-        font-weight: 500;
-        background: #f8f9fa;
-        border: 1px solid #e9ecef;
-        transition: all 0.3s ease;
-    }
-    
-    .stTabs [data-baseweb="tab"]:hover {
-        background: #e9ecef;
-    }
-    
-    .stTabs [aria-selected="true"] {
-        background: white !important;
-        border-bottom: 2px solid #667eea !important;
-        color: #667eea !important;
-    }
-    
-    /* 按钮美化 */
-    .stButton > button {
-        border-radius: 8px !important;
-        font-weight: 500 !important;
-        transition: all 0.3s ease !important;
-        border: none !important;
-    }
-    
-    .stButton > button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
-    }
-    
-    /* 上传区域美化 */
-    .uploadedFile {
-        border: 2px dashed #dee2e6 !important;
-        border-radius: 10px !important;
-        padding: 15px !important;
-        background: #f8f9fa !important;
-    }
-    
-    /* 成功/错误消息 */
-    .stAlert {
-        border-radius: 10px !important;
-        border-left: 4px solid !important;
-    }
-    
-    .stAlert [data-testid="stMarkdownContainer"] {
-        font-weight: 500;
-    }
-    
-    /* 数据表格美化 */
-    .dataframe {
-        border-radius: 10px !important;
-        overflow: hidden !important;
-    }
-    
-    /* 状态指示器 */
-    .status-badge {
-        display: inline-block;
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-size: 0.85rem;
-        font-weight: 500;
-    }
-    
-    .status-success {
-        background: #d4edda;
-        color: #155724;
-    }
-    
-    .status-warning {
-        background: #fff3cd;
-        color: #856404;
-    }
-    
-    .status-error {
-        background: #f8d7da;
-        color: #721c24;
-    }
-    
-    </style>
+        .custom-card, .metric-card {
+            padding: 1rem;
+            margin-bottom: .8rem;
+            border: 1px solid var(--colors-hairline);
+            border-radius: var(--rounded-lg);
+            background: var(--colors-canvas);
+        }
+        .metric-card { background: var(--colors-surface-pearl); }
+        .step-indicator {
+            display: inline-grid;
+            place-items: center;
+            width: 32px;
+            height: 32px;
+            margin-right: 10px;
+            border-radius: 50%;
+            background: var(--colors-primary);
+            color: var(--colors-body-on-dark);
+            font-weight: 600;
+        }
+        .status-badge { padding: .2rem .55rem; border-radius: var(--rounded-pill); font-size: .8rem; }
+        .status-success { background: var(--colors-success-soft); color: var(--colors-success); }
+        .status-warning { background: var(--colors-warning-soft); color: var(--colors-warning); }
+        .status-error { background: var(--colors-danger-soft); color: var(--colors-danger); }
+        </style>
     """, unsafe_allow_html=True)
 
 # --- 高级UI组件 ---
@@ -203,7 +77,7 @@ def create_metric_card(title, value, delta=None, icon="📊"):
     """创建美观的指标卡片"""
     col1, col2 = st.columns([1, 4])
     with col1:
-        st.markdown(f'<div style="font-size: 2rem; color: #667eea;">{icon}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="font-size: 2rem; color: var(--colors-primary);">{icon}</div>', unsafe_allow_html=True)
     with col2:
         st.metric(title, value, delta)
     return None
@@ -212,7 +86,7 @@ def create_step_indicator(step_number, title, is_active=True):
     """创建步骤指示器"""
     if is_active:
         st.markdown(f"""
-        <div style="display: flex; align-items: center; margin-bottom: 1rem; padding: 12px; background: linear-gradient(135deg, rgba(102,126,234,0.1) 0%, rgba(118,75,162,0.1) 100%); border-radius: 10px; border-left: 4px solid #667eea;">
+        <div style="display: flex; align-items: center; margin-bottom: 1rem; padding: 12px; background: var(--colors-primary-soft); border-radius: 10px; border-left: 4px solid var(--colors-primary);">
             <div class="step-indicator">{step_number}</div>
             <div style="font-weight: 600; font-size: 1.1rem; color: #2c3e50;">{title}</div>
         </div>
@@ -264,7 +138,7 @@ def create_feature_card(icon, title, description):
     """创建功能特性卡片"""
     st.markdown(f"""
     <div class="custom-card" style="text-align: center;">
-        <div style="font-size: 2.5rem; margin-bottom: 1rem; color: #667eea;">{icon}</div>
+        <div style="font-size: 2.5rem; margin-bottom: 1rem; color: var(--colors-primary);">{icon}</div>
         <h4 style="margin-bottom: 0.5rem; color: #2c3e50; font-weight: 600;">{title}</h4>
         <p style="color: #6c757d; font-size: 0.9rem; margin: 0;">{description}</p>
     </div>
@@ -947,7 +821,7 @@ def main():
         else:
             # 空状态设计
             st.markdown("""
-            <div style="text-align: center; padding: 4rem; background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%); border-radius: 12px;">
+            <div style="text-align: center; padding: 1.5rem; background: var(--colors-canvas-parchment); border-radius: 12px;">
                 <div style="font-size: 4rem; margin-bottom: 1rem;">📊</div>
                 <h3 style="color: #2c3e50; margin-bottom: 1rem;">等待数据导入</h3>
                 <p style="color: #6c757d;">请先在「成绩计算」页面完成数据处理</p>

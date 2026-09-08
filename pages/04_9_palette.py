@@ -118,8 +118,9 @@ def render_palette_showcase(pal: dict) -> str:
         margin: 0 auto 10px;
         padding: 7px;
         border-radius: 20px;
-        background: #050505;
-        box-shadow: 0 10px 28px rgba(15, 23, 42, .18);
+        background: var(--colors-canvas);
+        border: 1px solid var(--colors-hairline);
+        box-shadow: none;
       }}
       .palette-showcase * {{
         box-sizing: border-box;
@@ -139,20 +140,20 @@ def render_palette_showcase(pal: dict) -> str:
         border: 1.5px solid currentColor;
         border-radius: 11px;
         font-size: 10px;
-        font-weight: 800;
+        font-weight: 600;
         opacity: .86;
       }}
       .palette-title {{
         margin-top: 12px;
         font-size: clamp(22px, 3.4vw, 31px);
         line-height: 1.05;
-        font-weight: 900;
+        font-weight: 600;
         letter-spacing: 0;
       }}
       .palette-subtitle {{
         margin-top: 5px;
         font-size: 12px;
-        font-weight: 800;
+        font-weight: 600;
       }}
       .palette-script {{
         position: absolute;
@@ -171,7 +172,7 @@ def render_palette_showcase(pal: dict) -> str:
         bottom: 14px;
         text-align: right;
         font-size: 13px;
-        font-weight: 900;
+        font-weight: 600;
       }}
       .palette-scene {{
         position: absolute;
@@ -179,7 +180,7 @@ def render_palette_showcase(pal: dict) -> str:
         bottom: 15px;
         max-width: 55%;
         font-size: 10px;
-        font-weight: 800;
+        font-weight: 600;
       }}
       .palette-row {{
         display: flex;
@@ -193,13 +194,13 @@ def render_palette_showcase(pal: dict) -> str:
       }}
       .palette-role {{
         font-size: 10px;
-        font-weight: 900;
+        font-weight: 600;
         opacity: .72;
       }}
       .palette-name {{
         margin-top: 1px;
         font-size: 15px;
-        font-weight: 900;
+        font-weight: 600;
       }}
       .palette-meta {{
         text-align: right;
@@ -207,12 +208,12 @@ def render_palette_showcase(pal: dict) -> str:
       .palette-hex {{
         font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
         font-size: 14px;
-        font-weight: 900;
+        font-weight: 600;
       }}
       .palette-usage {{
         margin-top: 1px;
         font-size: 9px;
-        font-weight: 800;
+        font-weight: 600;
         opacity: .82;
       }}
       .palette-application {{
@@ -233,7 +234,7 @@ def render_palette_showcase(pal: dict) -> str:
         border-radius: 9px;
         text-align: center;
         font-size: 10px;
-        font-weight: 900;
+        font-weight: 600;
       }}
       @media (max-width: 700px) {{
         .palette-showcase {{ max-width: 430px; padding: 7px; border-radius: 19px; }}

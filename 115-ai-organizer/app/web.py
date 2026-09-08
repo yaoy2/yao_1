@@ -9,6 +9,10 @@ import streamlit as st
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+if str(ROOT.parent) not in sys.path:
+    sys.path.append(str(ROOT.parent))
+
+from utils.ui_theme import apply_global_theme
 
 from app.config import load_settings
 from app.db import db_session, file_stats, init_db, list_plans, set_plan_approved
@@ -18,22 +22,25 @@ from app.reporting import collect_report, export_reports
 
 
 st.set_page_config(page_title="115 文件整理系统", page_icon="📁", layout="wide")
+apply_global_theme(include_sidebar=False)
 
 st.markdown(
     """
     <style>
-    .block-container {padding-top: 1rem; padding-bottom: 1rem; max-width: 1400px;}
-    div[data-testid="stMetric"] {background: #f6f8fb; border: 1px solid #e6ebf2; padding: 8px 10px; border-radius: 8px;}
-    .plan-row {display:flex; gap:12px; align-items:flex-start; border:1px solid #e6ebf2; border-radius:8px; padding:8px 10px; margin-bottom:6px; background:#fff;}
+    .plan-row {display:flex; gap:12px; align-items:flex-start; border:1px solid var(--colors-hairline); border-radius:var(--rounded-sm); padding:12px; margin-bottom:8px; background:var(--colors-canvas); overflow-wrap:anywhere;}
     .plan-main {flex: 1 1 auto; min-width: 0;}
     .plan-side {width: 280px; flex: 0 0 280px; font-size: 13px;}
-    .name {font-weight: 650; font-size: 14px;}
-    .muted {color:#5b6573; font-size:12px;}
-    .tag {display:inline-block; padding:1px 6px; border-radius:999px; font-size:11px; margin-right:6px; background:#eef3fb;}
-    .tag-low {background:#fff4e5;}
-    .tag-medium {background:#eef6ff;}
-    .tag-high {background:#e7f8ed;}
-    .tag-wait {background:#fdecec;}
+    .name {font-weight:600; font-size:14px; color:var(--colors-ink);}
+    .muted {color:var(--colors-ink-muted-48); font-size:12px;}
+    .tag {display:inline-block; padding:2px 7px; border-radius:var(--rounded-pill); font-size:11px; margin-right:6px; background:var(--colors-primary-soft); color:var(--colors-primary);}
+    .tag-low {background:var(--colors-warning-soft); color:var(--colors-warning);}
+    .tag-medium {background:var(--colors-primary-soft); color:var(--colors-primary);}
+    .tag-high {background:var(--colors-success-soft); color:var(--colors-success);}
+    .tag-wait {background:var(--colors-danger-soft); color:var(--colors-danger);}
+    @media (max-width:720px) {
+        .plan-row {flex-direction:column;}
+        .plan-side {width:auto; flex:auto;}
+    }
     </style>
     """,
     unsafe_allow_html=True,

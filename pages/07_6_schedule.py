@@ -358,22 +358,22 @@ def _card_html(rec: dict) -> str:
 def render_grid(grid: dict[str, dict[int, list[dict]]], teacher_category_map: dict[str, str]) -> None:
     table_style = """
     <style>
-      .tb-wrap {overflow-x:auto;}
-      table.tb {border-collapse:collapse; width:100%; min-width:1200px; background:#ffffff;}
-      .tb th, .tb td {border:1px solid #dbe4f0; vertical-align:top; padding:8px;}
-      .tb th {background:#f1f5f9; font-weight:700; color:#0f172a;}
-      .period-col {width:78px; text-align:center; background:#f8fafc; font-weight:700;}
-      .dept-grid {display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:6px;}
-      .dept-col {min-width:0;}
-      .teacher-card {display:block; width:100%; margin:4px 0; border:1px solid #dbeafe; background:#f8fbff; border-radius:8px; font-size:12px;}
-      .teacher-card details {display:block;}
-      .teacher-summary {list-style:none; cursor:pointer; padding:6px 7px;}
-      .teacher-summary::-webkit-details-marker {display:none;}
-      .teacher-name {font-size:12px; font-weight:700; color:#0b4b8c; line-height:1.2; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-      .teacher-detail {font-size:11px; color:#334155; border-top:1px solid #e5effb; padding:6px 7px; line-height:1.4; word-break:break-all;}
-      .teacher-detail .k {display:inline-block; min-width:28px; color:#64748b;}
-      @media (max-width: 1280px) {.dept-grid {grid-template-columns:repeat(4, minmax(0, 1fr));}}
-    </style>
+        .tb-wrap {overflow-x:auto;}
+        table.tb {border-collapse:collapse; width:100%; min-width:1200px; background:var(--colors-canvas);}
+        .tb th, .tb td {border:1px solid var(--colors-hairline); vertical-align:top; padding:8px;}
+        .tb th {background:var(--colors-canvas-parchment); font-weight: 600; color:var(--colors-ink);}
+        .period-col {width:78px; text-align:center; background:var(--colors-surface-pearl); font-weight: 600;}
+        .dept-grid {display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:6px;}
+        .dept-col {min-width:0;}
+        .teacher-card {display:block; width:100%; margin:4px 0; border:1px solid var(--colors-primary-soft); background:var(--colors-surface-pearl); border-radius:8px; font-size:12px;}
+        .teacher-card details {display:block;}
+        .teacher-summary {list-style:none; cursor:pointer; padding:6px 7px;}
+        .teacher-summary::-webkit-details-marker {display:none;}
+        .teacher-name {font-size:12px; font-weight: 600; color:var(--colors-primary); line-height:1.2; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+        .teacher-detail {font-size:11px; color:var(--colors-ink-muted-80); border-top:1px solid var(--colors-hairline); padding:6px 7px; line-height:1.4; word-break:break-all;}
+        .teacher-detail .k {display:inline-block; min-width:28px; color:var(--colors-ink-muted-48);}
+        @media (max-width: 1280px) {.dept-grid {grid-template-columns:repeat(4, minmax(0, 1fr));}}
+        </style>
     """
     st.markdown(table_style, unsafe_allow_html=True)
     rows = []

@@ -12,6 +12,7 @@ from utils.ui_theme import render_home_link
 
 
 st.set_page_config(page_title="待办清单", page_icon="✓", layout="wide")
+render_home_link()
 
 
 DUE_TIME_OPTIONS = ["", "09:30", "10:00", "11:30", "14:00", "17:00"]
@@ -120,158 +121,47 @@ def apply_style():
     st.markdown(
         """
         <style>
-        .block-container {
-            padding-top: 1.5rem !important;
+        /* Dense editing applies only to saved task rows, not forms or navigation. */
+        [class*="st-key-todo-row-"] [data-testid="stHorizontalBlock"] { gap: .35rem; }
+        [class*="st-key-todo-row-"] :is([data-testid="stTextInput"], [data-testid="stSelectbox"]) { margin-bottom: 0; }
+        [class*="st-key-todo-row-"] div[data-baseweb="input"],
+        [class*="st-key-todo-row-"] div[data-baseweb="select"] > div {
+            min-height: 32px;
+            border: 1px solid var(--colors-hairline);
+            border-radius: var(--rounded-sm);
         }
-        div[data-testid="stVerticalBlockBorderWrapper"] {
-            border-radius: 8px !important;
-            border-color: rgba(24,34,48,.12) !important;
-            box-shadow: 0 10px 24px rgba(24,34,48,.06);
+        [class*="st-key-todo-row-"] input { padding: .25rem .4rem; font-size: .82rem; }
+        [class*="st-key-todo-row-"] [data-testid="stButton"] button {
+            min-height: 32px;
+            padding: .2rem .35rem;
         }
-        div[data-testid="stHorizontalBlock"] {
-            gap: .25rem !important;
-        }
-        div[data-testid="stMarkdown"],
-        div[data-testid="stMarkdownContainer"] p {
-            margin-bottom: 0 !important;
-        }
-        .todo-title {
-            font-size: 2rem;
-            line-height: 1.15;
-            font-weight: 850;
-            margin: 0 0 .25rem;
-            color: #182230;
-        }
-        .todo-subtitle {
-            color: #667085;
-            margin-bottom: .9rem;
-        }
-        div[data-testid="stCheckbox"] {
-            min-height: 20px !important;
-            margin-bottom: 0 !important;
-        }
-        div[data-testid="stCheckbox"] label {
-            min-height: 20px !important;
-            padding: 0 !important;
-        }
-        div[data-testid="stDateInput"],
-        div[data-testid="stTextInput"],
-        div[data-testid="stSelectbox"] {
-            margin-bottom: 0 !important;
-        }
-        div[data-testid="stDateInput"] div[data-baseweb="input"],
-        div[data-testid="stTextInput"] div[data-baseweb="input"],
-        div[data-testid="stSelectbox"] div[data-baseweb="select"] {
-            min-height: 20px !important;
-            height: 20px !important;
-            border: 0 !important;
-            background: transparent !important;
-            box-shadow: none !important;
-        }
-        div[data-testid="stDateInput"] div[data-baseweb="input"] > div,
-        div[data-testid="stTextInput"] div[data-baseweb="input"] > div,
-        div[data-testid="stSelectbox"] div[data-baseweb="select"] > div {
-            min-height: 20px !important;
-            height: 20px !important;
-            padding-top: 0 !important;
-            padding-bottom: 0 !important;
-        }
-        div[data-testid="stDateInput"] input,
-        div[data-testid="stTextInput"] input,
-        div[data-testid="stSelectbox"] input {
-            min-height: 20px !important;
-            height: 20px !important;
-            padding: 0 .25rem !important;
-            font-size: .78rem !important;
-            line-height: 1 !important;
-            border: 0 !important;
-            background: transparent !important;
-        }
-        div[data-testid="stSelectbox"] svg {
-            width: 14px !important;
-            height: 14px !important;
-        }
-        div[data-testid="stButton"] button {
-            min-height: 20px !important;
-            height: 20px !important;
-            padding: 0 .12rem !important;
-            border: 0 !important;
-            border-radius: 4px !important;
-            background: transparent !important;
-            line-height: 1 !important;
-        }
+        [class*="st-key-delete_todo_"] button { color: var(--colors-danger); }
         .todo-row-text {
-            min-height: 20px;
             display: flex;
             align-items: center;
-            font-size: .82rem;
+            min-height: 32px;
+            color: var(--colors-ink);
+            font-size: .9rem;
             font-weight: 400;
-            color: #182230;
-            line-height: 1;
-            overflow: hidden;
-            padding-top: 0;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+            line-height: 1.45;
+            overflow-wrap: anywhere;
         }
-        .todo-row-text.done {
-            text-decoration: line-through;
-            color: #98A2B3;
-        }
-        .todo-meta {
-            display: flex;
-            gap: .5rem;
-            flex-wrap: wrap;
-            margin-top: .2rem;
-            color: #667085;
-            font-size: .82rem;
-        }
-        .todo-pill {
-            border: 1px solid rgba(24,34,48,.1);
-            border-radius: 999px;
-            padding: .08rem .45rem;
-            background: rgba(255,255,255,.68);
-        }
+        .todo-row-text.done { color: var(--colors-ink-muted-48); text-decoration: line-through; }
         .todo-date-inline {
-            min-height: 20px;
-            height: 20px;
+            min-height: 32px;
             display: flex;
             align-items: center;
             justify-content: flex-end;
-            color: #475467;
+            color: var(--colors-ink-muted-48);
             font-size: .78rem;
-            line-height: 20px;
-            white-space: nowrap;
-            padding-top: 0;
+            font-variant-numeric: tabular-nums;
         }
-        .todo-icon-btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 26px;
-            height: 26px;
-            border-radius: 50%;
-            text-decoration: none !important;
-            font-size: 14px;
-            line-height: 1;
-            transition: background .15s;
-        }
-        .todo-save-btn {
-            background: #e8f5e9;
-            color: #2e7d32;
-        }
-        .todo-save-btn:hover {
-            background: #c8e6c9;
-            color: #1b5e20;
-            text-decoration: none !important;
-        }
-        .todo-delete-btn {
-            background: #ffebee;
-            color: #c62828;
-        }
-        .todo-delete-btn:hover {
-            background: #ffcdd2;
-            color: #b71c1c;
-            text-decoration: none !important;
+        .todo-meta { display: flex; flex-wrap: wrap; gap: .5rem; color: var(--colors-ink-muted-48); font-size: .82rem; }
+        .todo-pill { padding: .15rem .5rem; border-radius: var(--rounded-pill); background: var(--colors-canvas-parchment); }
+        @media (max-width: 720px) {
+            [class*="st-key-todo-row-"] [data-testid="stButton"] button,
+            [class*="st-key-todo-row-"] div[data-baseweb="input"],
+            [class*="st-key-todo-row-"] div[data-baseweb="select"] > div { min-height: 44px; }
         }
         </style>
         """,
@@ -358,78 +248,78 @@ def toggle_todo_done(record_id, checkbox_key):
 
 
 def render_todo_record(record):
-    done = record.get("status") == "done"
-    stored_due_date = _compact_date_label(record.get("due_date"))
-    stored_due_time = str(record.get("due_time") or "")
+    with st.container(key=f"todo-row-{record['id']}"):
+        done = record.get("status") == "done"
+        stored_due_date = _compact_date_label(record.get("due_date"))
+        stored_due_time = str(record.get("due_time") or "")
 
-    check_col, body_col, created_col, spacer_col, due_date_col, due_time_col, save_col, delete_col = st.columns(
-        [0.045, 0.76, 0.12, 0.40, 0.18, 0.11, 0.045, 0.045],
-        gap="small",
-        vertical_alignment="center",
-    )
-    with check_col:
-        checkbox_key = f"todo_done_{record['id']}_{record.get('status')}"
-        checked = st.checkbox(
-            "完成",
-            value=done,
-            key=checkbox_key,
-            label_visibility="collapsed",
-            on_change=toggle_todo_done,
-            args=(record["id"], checkbox_key),
+        check_col, body_col, created_col, spacer_col, due_date_col, due_time_col, save_col, delete_col = st.columns(
+            [0.25, 5, 0.75, 0.2, 1, 0.8, 0.35, 0.35],
+            gap="small",
+            vertical_alignment="center",
         )
+        with check_col:
+            checkbox_key = f"todo_done_{record['id']}_{record.get('status')}"
+            checked = st.checkbox(
+                "完成",
+                value=done,
+                key=checkbox_key,
+                label_visibility="collapsed",
+                on_change=toggle_todo_done,
+                args=(record["id"], checkbox_key),
+            )
 
-    with body_col:
-        content_class = "todo-row-text done" if done else "todo-row-text"
-        st.markdown(
-            f"""<div class="{content_class}">{_escape_html(record.get('content', ''))}</div>""",
-            unsafe_allow_html=True,
-        )
-    with created_col:
-        st.markdown(
-            f"""<div class="todo-date-inline">{_escape_html(_compact_date_label(record.get('record_date', '')))}</div>""",
-            unsafe_allow_html=True,
-        )
-    with spacer_col:
-        st.empty()
-    with due_date_col:
-        new_due_date = st.text_input(
-            "截止日期",
-            value=stored_due_date,
-            key=f"todo_due_date_{record['id']}",
-            label_visibility="collapsed",
-        )
-    with due_time_col:
-        due_time_options = _due_time_options(stored_due_time)
-        new_due_time = st.selectbox(
-            "截止时间",
-            options=due_time_options,
-            index=_due_time_index(stored_due_time, due_time_options),
-            key=f"todo_due_time_{record['id']}",
-            label_visibility="collapsed",
-        )
-    with save_col:
-        st.button(
-            "✓",
-            key=f"save_due_{record['id']}",
-            help="保存截止日期/时间",
-            use_container_width=True,
-            on_click=save_todo_due_fields,
-            args=(record["id"],),
-        )
-    with delete_col:
-        st.button(
-            "×",
-            key=f"delete_todo_{record['id']}",
-            help="删除这条待办",
-            use_container_width=True,
-            on_click=delete_todo_record,
-            args=(record["id"],),
-        )
+        with body_col:
+            content_class = "todo-row-text done" if done else "todo-row-text"
+            st.markdown(
+                f"""<div class="{content_class}">{_escape_html(record.get('content', ''))}</div>""",
+                unsafe_allow_html=True,
+            )
+        with created_col:
+            st.markdown(
+                f"""<div class="todo-date-inline">{_escape_html(_compact_date_label(record.get('record_date', '')))}</div>""",
+                unsafe_allow_html=True,
+            )
+        with spacer_col:
+            st.empty()
+        with due_date_col:
+            new_due_date = st.text_input(
+                "截止日期",
+                value=stored_due_date,
+                key=f"todo_due_date_{record['id']}",
+                label_visibility="collapsed",
+            )
+        with due_time_col:
+            due_time_options = _due_time_options(stored_due_time)
+            new_due_time = st.selectbox(
+                "截止时间",
+                options=due_time_options,
+                index=_due_time_index(stored_due_time, due_time_options),
+                key=f"todo_due_time_{record['id']}",
+                label_visibility="collapsed",
+            )
+        with save_col:
+            st.button(
+                "✓",
+                key=f"save_due_{record['id']}",
+                help="保存截止日期/时间",
+                use_container_width=True,
+                on_click=save_todo_due_fields,
+                args=(record["id"],),
+            )
+        with delete_col:
+            st.button(
+                "×",
+                key=f"delete_todo_{record['id']}",
+                help="删除这条待办",
+                use_container_width=True,
+                on_click=delete_todo_record,
+                args=(record["id"],),
+            )
 
 
 require_todo_auth()
 apply_style()
-render_home_link()
 restore_todo_backup_from_github()
 todo_db.init_db()
 merge_remote_todos_from_github()

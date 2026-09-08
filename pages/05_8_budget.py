@@ -21,6 +21,7 @@ get_category_unit_pivot = budget_db.get_category_unit_pivot
 replace_all_records = getattr(budget_db, "replace_all_records", None)
 
 st.set_page_config(page_title="预算速记台账", page_icon="💰", layout="wide")
+render_home_link()
 
 
 def sync_budget_backup_to_github():
@@ -66,7 +67,6 @@ def require_budget_auth():
 
 
 require_budget_auth()
-render_home_link()
 init_db()
 
 st.title(f"💰 {BUDGET_YEAR}年度预算速记台账")
@@ -74,42 +74,42 @@ st.title(f"💰 {BUDGET_YEAR}年度预算速记台账")
 st.markdown(
     """
     <style>
-    div[data-testid="stVerticalBlockBorderWrapper"] {
-        padding: 0.25rem 0.85rem;
-    }
-    div[data-testid="stVerticalBlockBorderWrapper"] [data-testid="stHorizontalBlock"] {
-        gap: 0.65rem;
-        align-items: center;
-    }
-    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlock"] {
-        gap: 0;
-    }
-    div[data-testid="stVerticalBlockBorderWrapper"] [data-testid="stSelectbox"] {
-        margin-bottom: 0;
-    }
-    div[data-testid="stVerticalBlockBorderWrapper"] [data-testid="stSelectbox"] [data-baseweb="select"] > div {
-        min-height: 2.35rem;
-        padding-top: 0;
-        padding-bottom: 0;
-    }
-    div[data-testid="stVerticalBlockBorderWrapper"] details {
-        margin-bottom: 0;
-    }
-    div[data-testid="stVerticalBlockBorderWrapper"] details summary {
-        min-height: 2.35rem;
-        padding-top: 0.35rem;
-        padding-bottom: 0.35rem;
-    }
-    .budget-record-line {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        line-height: 2.35rem;
-    }
-    .budget-record-line strong {
-        font-weight: 700;
-    }
-    </style>
+        div[data-testid="stVerticalBlockBorderWrapper"] {
+            padding: 0.25rem 0.85rem;
+        }
+        div[data-testid="stVerticalBlockBorderWrapper"] [data-testid="stHorizontalBlock"] {
+            gap: 0.65rem;
+            align-items: center;
+        }
+        div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stVerticalBlock"] {
+            gap: 0;
+        }
+        div[data-testid="stVerticalBlockBorderWrapper"] [data-testid="stSelectbox"] {
+            margin-bottom: 0;
+        }
+        div[data-testid="stVerticalBlockBorderWrapper"] [data-testid="stSelectbox"] [data-baseweb="select"] > div {
+            min-height: 2.35rem;
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+        div[data-testid="stVerticalBlockBorderWrapper"] details {
+            margin-bottom: 0;
+        }
+        div[data-testid="stVerticalBlockBorderWrapper"] details summary {
+            min-height: 2.35rem;
+            padding-top: 0.35rem;
+            padding-bottom: 0.35rem;
+        }
+        .budget-record-line {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            line-height: 2.35rem;
+        }
+        .budget-record-line strong {
+            font-weight: 600;
+        }
+        </style>
     """,
     unsafe_allow_html=True,
 )

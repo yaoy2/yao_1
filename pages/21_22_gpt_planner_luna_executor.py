@@ -17,138 +17,127 @@ render_home_link()
 st.markdown(
     """
     <style>
-    .m22-shell {
-        --ink: #172b46;
-        --muted: #475569;
-        --line: #e2e8f0;
-        --sol: #7c3aed;
-        --luna: #2563eb;
-        --gpt: #059669;
-        color: var(--ink);
-        background: #ffffff;
-    }
-    .m22-hero, .m22-card, .m22-note, .m22-public {
-        box-shadow: 0 2px 8px rgba(15, 23, 42, .04);
-    }
-    .m22-hero {
-        padding: 1.1rem 1.2rem;
-        margin-bottom: .85rem;
-        border: 1px solid var(--line);
-        border-radius: 16px;
-        background: #ffffff;
-    }
-    .m22-kicker {
-        color: #6d28d9;
-        font-size: .76rem;
-        font-weight: 780;
-        letter-spacing: .08em;
-        text-transform: uppercase;
-    }
-    .m22-hero h1 {
-        margin: .28rem 0 .35rem;
-        color: var(--ink);
-        font-size: clamp(1.55rem, 3vw, 2.15rem);
-    }
-    .m22-hero p {
-        max-width: 880px;
-        margin: 0;
-        color: var(--muted);
-        line-height: 1.65;
-    }
-    .m22-badges {
-        display: flex;
-        flex-wrap: wrap;
-        gap: .38rem;
-        margin-top: .75rem;
-    }
-    .m22-badge {
-        padding: .2rem .55rem;
-        border: 1px solid #e5dff3;
-        border-radius: 999px;
-        color: #6d28d9;
-        background: #ffffff;
-        font-size: .75rem;
-        font-weight: 700;
-    }
-    .m22-section-title {
-        margin: 1.05rem 0 .55rem;
-        color: var(--ink);
-        font-size: 1.04rem;
-        font-weight: 760;
-    }
-    .m22-grid {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: .65rem;
-    }
-    .m22-card {
-        padding: .8rem .85rem;
-        border: 1px solid var(--line);
-        border-radius: 13px;
-        background: #ffffff;
-    }
-    .m22-card.sol { border-top: 3px solid var(--sol); }
-    .m22-card.luna { border-top: 3px solid var(--luna); }
-    .m22-card.gpt { border-top: 3px solid var(--gpt); }
-    .m22-card small {
-        color: #64748b;
-        font-size: .7rem;
-        font-weight: 760;
-        letter-spacing: .05em;
-    }
-    .m22-card h3 {
-        margin: .25rem 0 .38rem;
-        color: var(--ink);
-        font-size: 1rem;
-    }
-    .m22-card p {
-        margin: 0;
-        color: var(--muted);
-        font-size: .86rem;
-        line-height: 1.55;
-    }
-    .m22-routes {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: .65rem;
-    }
-    .m22-limit {
-        display: grid;
-        grid-template-columns: 1.05fr 1fr;
-        gap: .65rem;
-        margin-top: .65rem;
-    }
-    .m22-note {
-        padding: .78rem .85rem;
-        border: 1px solid var(--line);
-        border-radius: 13px;
-        background: #ffffff;
-        color: var(--muted);
-        font-size: .84rem;
-        line-height: 1.58;
-    }
-    .m22-note strong, .m22-hero strong { color: var(--ink); }
-    .m22-shell code {
-        padding: .08em .3em;
-        border-radius: 4px;
-        color: #5b21b6;
-        background: #f5f3ff;
-    }
-    .m22-public {
-        margin-top: .8rem;
-        padding: .82rem .9rem;
-        border: 1px solid var(--line);
-        border-radius: 13px;
-        background: #ffffff;
-        color: var(--muted);
-        line-height: 1.58;
-    }
-    .m22-public strong { color: #065f46; }
-    .m22-public a { color: #047857; }
-    @media (max-width: 850px) {
-        .m22-grid, .m22-routes, .m22-limit { grid-template-columns: 1fr; }
-    }
-    </style>
+        .m22-shell {
+            color: var(--colors-ink);
+            background: var(--colors-canvas);
+        }
+        .m22-hero {
+            padding: 1.1rem 1.2rem;
+            margin-bottom: .85rem;
+            border: 1px solid var(--colors-hairline);
+            border-radius: var(--rounded-lg);
+            background: var(--colors-canvas);
+        }
+        .m22-kicker {
+            color: var(--colors-primary);
+            font-size: .76rem;
+            font-weight: 600;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+        }
+        .m22-hero h1 {
+            margin: .28rem 0 .35rem;
+            color: var(--colors-ink);
+            font-size: clamp(1.55rem, 3vw, 2.15rem);
+        }
+        .m22-hero p {
+            max-width: 880px;
+            margin: 0;
+            color: var(--colors-ink-muted-48);
+            line-height: 1.65;
+        }
+        .m22-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .38rem;
+            margin-top: .75rem;
+        }
+        .m22-badge {
+            padding: .2rem .55rem;
+            border: 1px solid var(--colors-hairline);
+            border-radius: 999px;
+            color: var(--colors-primary);
+            background: var(--colors-canvas);
+            font-size: .75rem;
+            font-weight: 600;
+        }
+        .m22-section-title {
+            margin: 1.05rem 0 .55rem;
+            color: var(--colors-ink);
+            font-size: 1.04rem;
+            font-weight: 600;
+        }
+        .m22-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: .65rem;
+        }
+        .m22-card {
+            padding: .8rem .85rem;
+            border: 1px solid var(--colors-hairline);
+            border-radius: var(--rounded-lg);
+            background: var(--colors-canvas);
+        }
+        .m22-card.sol, .m22-card.luna, .m22-card.gpt { border-top: 3px solid var(--colors-primary); }
+        .m22-card small {
+            color: var(--colors-ink-muted-48);
+            font-size: .7rem;
+            font-weight: 600;
+            letter-spacing: .05em;
+        }
+        .m22-card h3 {
+            margin: .25rem 0 .38rem;
+            color: var(--colors-ink);
+            font-size: 1rem;
+        }
+        .m22-card p {
+            margin: 0;
+            color: var(--colors-ink-muted-48);
+            font-size: .86rem;
+            line-height: 1.55;
+        }
+        .m22-routes {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: .65rem;
+        }
+        .m22-limit {
+            display: grid;
+            grid-template-columns: 1.05fr 1fr;
+            gap: .65rem;
+            margin-top: .65rem;
+        }
+        .m22-note {
+            padding: .78rem .85rem;
+            border: 1px solid var(--colors-hairline);
+            border-radius: var(--rounded-lg);
+            background: var(--colors-canvas);
+            color: var(--colors-ink-muted-48);
+            font-size: .84rem;
+            line-height: 1.58;
+        }
+        .m22-note strong, .m22-hero strong { color: var(--colors-ink); }
+        .m22-shell code {
+            padding: .08em .3em;
+            border-radius: 4px;
+            color: var(--colors-primary);
+            background: var(--colors-canvas-parchment);
+        }
+        .m22-public {
+            margin-top: .8rem;
+            padding: .82rem .9rem;
+            border: 1px solid var(--colors-hairline);
+            border-radius: var(--rounded-lg);
+            background: var(--colors-canvas);
+            color: var(--colors-ink-muted-48);
+            line-height: 1.58;
+        }
+        .m22-public strong { color: var(--colors-ink); }
+        .m22-public a { color: var(--colors-primary); }
+        @media (max-width: 850px) {
+            .m22-grid, .m22-routes, .m22-limit { grid-template-columns: 1fr; }
+        }
+        </style>
     <div class="m22-shell">
       <section class="m22-hero">
         <div class="m22-kicker">M22 · PUBLIC SKILL SHOWCASE · 2026-09-06 更新</div>

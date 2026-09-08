@@ -16,6 +16,7 @@ from utils.ui_theme import render_home_link
 
 # ── 页面配置（必须在任何 st 命令之前）──
 st.set_page_config(page_title="LLM 余额管理", page_icon="💰", layout="wide")
+render_home_link()
 
 # ── 路径 ──
 ROOT = Path(__file__).parent.parent
@@ -71,26 +72,18 @@ def apply_llm_budget_style():
         div[data-testid="stLinkButton"] a {
             white-space: nowrap !important;
         }
-        div[data-testid="stButton"] button {
-            min-height: 2.5rem !important;
-        }
         div[data-testid="stSelectbox"],
         div[data-testid="stTextInput"],
         div[data-testid="stNumberInput"] {
             margin-bottom: .65rem !important;
         }
-        div[data-testid="stAlert"] {
-            min-height: 4.25rem;
-            display: flex;
-            align-items: center;
-        }
         .llm-provider-title {
             min-height: 3.25rem;
             display: flex;
             align-items: flex-start;
-            color: #182230;
+            color: var(--colors-ink);
             font-size: 1.55rem;
-            font-weight: 750;
+            font-weight: 600;
             line-height: 1.16;
             margin: 0 0 .35rem;
         }
@@ -173,7 +166,6 @@ require_llm_budget_auth()
 
 apply_llm_budget_style()
 
-render_home_link()
 
 st.title("💰 LLM 余额管理")
 st.caption("各家 LLM API / Token Plan 余额统一管理")

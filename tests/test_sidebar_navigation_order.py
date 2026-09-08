@@ -53,7 +53,7 @@ class _FakeStreamlit:
 def test_home_link_uses_streamlit_homepage_route(monkeypatch):
     fake_st = _FakeStreamlit()
     monkeypatch.setattr(ui_theme, "st", fake_st)
-    monkeypatch.setattr(ui_theme, "render_sidebar_nav", lambda: None)
+    monkeypatch.setattr(ui_theme, "_load_homepage_tools", lambda: [])
 
     ui_theme.render_home_link()
 
@@ -99,7 +99,8 @@ def test_sidebar_matches_homepage_apple_visual_tokens(monkeypatch):
 
     css = "\n".join(body for body, _kwargs in fake_st.markdown_calls)
     assert '[data-testid="stSidebar"] .custom-nav-item' in css
-    assert 'font-family: "SF Pro Text", "Inter"' in css
+    assert '--font-text: "SF Pro Text", "Inter"' in css
+    assert 'font-family: var(--font-text)' in css
     assert "#f5f5f7" in css
     assert "#1d1d1f" in css
     assert "#0066cc" in css
