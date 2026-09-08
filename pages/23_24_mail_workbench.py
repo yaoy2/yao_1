@@ -696,13 +696,11 @@ def main():
     st.set_page_config(page_title="M24 · 邮件工作台", page_icon="✉️", layout="wide")
     render_home_link()
     st.markdown("""<style>
-    .block-container {padding-top:1rem; padding-bottom:2rem;}
-    [data-testid="stVerticalBlock"] {gap:.5rem;}
-    h1 {font-size:1.8rem !important; padding:.25rem 0 .5rem !important;}
-    [data-testid="stExpander"] details summary p {font-size:.88rem;}
-    .mail-inbox-heading {color:inherit; line-height:1.45; min-width:0;}
-    .mail-inbox-heading strong {font-size:1rem; line-height:1.45; overflow-wrap:anywhere;}
-    </style>""", unsafe_allow_html=True)
+        [data-testid="stVerticalBlock"] {gap:.5rem;}
+        [data-testid="stExpander"] details summary p {font-size:.88rem;}
+        .mail-inbox-heading {color:inherit; line-height:1.45; min-width:0;}
+        .mail-inbox-heading strong {font-size:1rem; line-height:1.45; overflow-wrap:anywhere;}
+        </style>""", unsafe_allow_html=True)
     st.markdown("<style>" + REPORT_CSS + "</style>", unsafe_allow_html=True)
     title_col, refresh_col, access_col = st.columns([5, 1, 1.6], vertical_alignment="center")
     with title_col:

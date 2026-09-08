@@ -15,33 +15,17 @@ from utils.ui_theme import render_home_link
 
 
 st.set_page_config(page_title="邮件通知编辑器", page_icon="✉️", layout="wide")
+render_home_link()
 
 
 def apply_style():
     st.markdown(
         """
         <style>
-        .block-container {
-            max-width: 1500px;
-            padding-top: 1.25rem !important;
-            padding-bottom: 2rem !important;
-        }
-        .notice-title {
-            margin: 0 0 .25rem;
-            color: #182230;
-            font-size: 2rem;
-            line-height: 1.15;
-            font-weight: 850;
-        }
-        .notice-subtitle {
-            margin: 0 0 1rem;
-            color: #667085;
-            line-height: 1.65;
-        }
-        iframe {
+        iframe[data-testid="stCustomComponentV1"] {
             border-radius: 8px;
-            background: #fff;
-            box-shadow: 0 8px 24px rgba(24, 34, 48, .08);
+            background: var(--colors-canvas);
+            box-shadow: none;
         }
         </style>
         """,
@@ -85,7 +69,6 @@ def safe_filename(number, subject):
     return re.sub(r'[\\/:*?"<>|]', "_", raw_name) + ".html"
 
 
-render_home_link()
 apply_style()
 
 _session_default("notice_header", DEFAULT_HEADER)

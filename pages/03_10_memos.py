@@ -12,6 +12,7 @@ from utils.ui_theme import render_home_link
 
 
 st.set_page_config(page_title="灵感便签盒", page_icon="🧾", layout="wide")
+render_home_link()
 
 
 def color_text(hex_code):
@@ -132,76 +133,12 @@ def apply_style():
     st.markdown(
         """
         <style>
-        .block-container {
-            padding-top: 1.7rem !important;
-            padding-bottom: 1.5rem !important;
-        }
-        .memo-hero {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-            gap: 1.5rem;
-            margin-bottom: 1.1rem;
-        }
-        .memo-mark {
-            display: inline-flex;
-            gap: .5rem;
-            align-items: center;
-            color: #344054;
-            font-size: .82rem;
-            letter-spacing: .08em;
-            text-transform: uppercase;
-            margin-bottom: .45rem;
-        }
         .memo-dot {
             width: 9px;
             height: 9px;
             border-radius: 999px;
-            background: #2D6A4F;
-            box-shadow: 14px 0 0 #1B3A5C, 28px 0 0 #810000;
-        }
-        .memo-title {
-            font-size: 2.35rem;
-            line-height: 1.1;
-            margin: 0;
-            font-weight: 850;
-            color: #182230;
-        }
-        .memo-subtitle {
-            margin: .45rem 0 0;
-            color: #667085;
-            font-size: 1.42rem;
-            font-weight: 500;
-            font-family: "STXingcao", "华文行草", "FZShuTi", "方正舒体", "STXinwei", "华文新魏", cursive;
-            letter-spacing: 0;
-        }
-        .memo-stat-row {
-            display: flex;
-            gap: .65rem;
-            flex-wrap: wrap;
-            justify-content: flex-end;
-        }
-        .memo-stat {
-            min-width: 96px;
-            text-align: center;
-            padding: .72rem .65rem;
-            border: 1px solid rgba(24,34,48,.1);
-            border-radius: 8px;
-            background: rgba(255,255,255,.78);
-            box-shadow: 0 10px 26px rgba(24,34,48,.07);
-        }
-        .memo-stat b {
-            display: block;
-            font-size: 1.3rem;
-        }
-        .memo-stat span {
-            color: #667085;
-            font-size: .76rem;
-        }
-        div[data-testid="stVerticalBlockBorderWrapper"] {
-            border-radius: 8px !important;
-            border-color: rgba(24,34,48,.11) !important;
-            box-shadow: 0 12px 30px rgba(24,34,48,.06);
+            background: var(--colors-primary);
+            box-shadow: none;
         }
         textarea {
             min-height: 130px !important;
@@ -212,25 +149,25 @@ def apply_style():
         }
         div[data-testid="stForm"] div[data-baseweb="select"] > div,
         div[data-testid="stForm"] input {
-            min-height: 54px !important;
+            min-height: 40px !important;
         }
         .inline-field-label {
-            min-height: 54px;
+            min-height: 40px;
             display: flex;
             align-items: center;
-            color: #182230;
-            font-weight: 700;
+            color: var(--colors-ink);
+            font-weight: 600;
             white-space: nowrap;
         }
         .memo-card {
             position: relative;
             width: 100%;
-            min-height: 210px;
+            min-height: 164px;
             padding: 1.05rem 1rem 1rem;
             margin: 0 0 .82rem;
             border: 1px solid var(--card-border);
-            border-radius: 8px;
-            box-shadow: 0 18px 30px rgba(24,34,48,.24);
+            border-radius: var(--rounded-lg);
+            box-shadow: none;
             overflow: hidden;
         }
         .memo-card::before {
@@ -246,7 +183,7 @@ def apply_style():
             color: var(--card-text);
             text-align: center;
             font-size: .76rem;
-            font-weight: 800;
+            font-weight: 600;
             letter-spacing: .42em;
             opacity: .86;
             white-space: nowrap;
@@ -255,14 +192,14 @@ def apply_style():
         }
         .memo-poster-title {
             position: relative;
-            min-height: 106px;
+            min-height: 76px;
             display: flex;
             align-items: center;
             justify-content: center;
             color: var(--card-text);
-            font-family: "Kaiti SC", KaiTi, STKaiti, "Songti SC", SimSun, serif;
-            font-size: 1.62rem;
-            font-weight: 850;
+            font-family: var(--font-display);
+            font-size: 1.3rem;
+            font-weight: 600;
             line-height: 1.18;
             text-align: center;
             letter-spacing: .04em;
@@ -286,10 +223,10 @@ def apply_style():
         }
         .memo-tag-main {
             color: var(--card-text);
-            font-weight: 700;
+            font-weight: 600;
         }
         .memo-fulltext {
-            font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", sans-serif;
+            font-family: var(--font-text);
             font-size: .95rem;
             line-height: 1.6;
             text-align: justify;
@@ -301,19 +238,10 @@ def apply_style():
         .export-strip {
             margin-top: 1.15rem;
             padding: .95rem 1rem;
-            border: 1px solid rgba(24,34,48,.11);
-            border-radius: 8px;
-            background: rgba(255,255,255,.8);
-            box-shadow: 0 12px 30px rgba(24,34,48,.07);
-        }
-        @media (max-width: 980px) {
-            .memo-hero {
-                align-items: flex-start;
-                flex-direction: column;
-            }
-            .memo-stat-row {
-                justify-content: flex-start;
-            }
+            border: 1px solid var(--colors-hairline);
+            border-radius: var(--rounded-lg);
+            background: var(--colors-canvas);
+            box-shadow: none;
         }
         </style>
         """,
@@ -321,7 +249,6 @@ def apply_style():
     )
 
 apply_style()
-render_home_link()
 restore_web_memo_backup_from_github()
 web_memo_db.init_db()
 merge_remote_web_memos_from_github()

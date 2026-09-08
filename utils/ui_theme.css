@@ -1,0 +1,326 @@
+/* App shell: the same light canvas before, during and after page navigation. */
+html, body, #root, .stApp,
+[data-testid="stAppViewContainer"], [data-testid="stMain"] {
+    color-scheme: light;
+    background: var(--colors-canvas) !important;
+    color: var(--colors-ink);
+    font-family: var(--font-text);
+}
+
+[data-testid="stMainBlockContainer"] {
+    max-width: 1440px;
+    padding: 5.5rem 2rem 2.5rem;
+}
+
+[data-testid="stHeader"] {
+    background: var(--colors-canvas-parchment) !important;
+    color: var(--colors-ink);
+    border-bottom: 1px solid var(--colors-hairline);
+}
+
+[data-testid="stHeader"] button,
+[data-testid="stSidebarCollapseButton"] button,
+[data-testid="stSidebarCollapsedControl"] button {
+    color: var(--colors-ink) !important;
+}
+
+[data-testid="stDecoration"] { display: none; }
+
+[data-testid="stMain"] :is(h1, h2, h3) {
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: -.025em;
+    line-height: 1.25;
+    /* Inherit from content surfaces, including the homepage's dark quote. */
+    color: inherit;
+}
+
+[data-testid="stMain"] h1 { font-size: clamp(1.65rem, 3vw, 2.15rem); }
+[data-testid="stMain"] h2 { font-size: 1.45rem; }
+[data-testid="stMain"] h3 { font-size: 1.12rem; }
+[data-testid="stWidgetLabel"], [data-testid="stMarkdownContainer"] { color: inherit; }
+[data-testid="stCaptionContainer"] { color: var(--colors-ink-muted-48); }
+
+/* Use semantic primary/secondary buttons; never recolor every button as primary. */
+:is([data-testid="stButton"], [data-testid="stDownloadButton"],
+    [data-testid="stFormSubmitButton"]) > button,
+[data-testid="stLinkButton"] > a {
+    min-height: 2.4rem;
+    padding: .4rem .85rem;
+    border: 1px solid var(--colors-hairline);
+    border-radius: var(--rounded-sm);
+    background: var(--colors-canvas);
+    color: var(--colors-primary);
+    font-family: var(--font-text);
+    font-weight: 600;
+    box-shadow: none;
+    transition: border-color .15s ease, background-color .15s ease;
+}
+
+:is([data-testid="stButton"], [data-testid="stDownloadButton"],
+    [data-testid="stFormSubmitButton"]) > button[kind="primary"],
+[data-testid="stLinkButton"] > a[kind="primary"] {
+    border-color: var(--colors-primary);
+    border-radius: var(--rounded-pill);
+    background: var(--colors-primary);
+    color: var(--colors-body-on-dark);
+}
+
+:is([data-testid="stButton"], [data-testid="stDownloadButton"],
+    [data-testid="stFormSubmitButton"]) > button:not(:disabled):hover,
+[data-testid="stLinkButton"] > a:hover {
+    border-color: var(--colors-primary-focus);
+}
+
+:is(button, a, input, textarea, summary):focus-visible {
+    outline: 2px solid var(--colors-primary-focus);
+    outline-offset: 2px;
+}
+
+:is([data-testid="stButton"], [data-testid="stDownloadButton"],
+    [data-testid="stFormSubmitButton"]) > button:disabled {
+    background: var(--colors-canvas-parchment);
+    border-color: var(--colors-hairline);
+    color: var(--colors-ink-muted-48);
+    cursor: not-allowed;
+}
+
+/* Scope inputs to Streamlit widgets, preserving color pickers and content samples. */
+[data-baseweb="input"], [data-baseweb="base-input"],
+[data-baseweb="select"] > div, [data-baseweb="textarea"] {
+    background-color: var(--colors-canvas) !important;
+    color: var(--colors-ink) !important;
+    border-color: var(--colors-hairline);
+    border-radius: var(--rounded-sm);
+}
+
+[data-baseweb="input"] input, [data-baseweb="select"] input,
+[data-baseweb="textarea"] textarea {
+    color: var(--colors-ink) !important;
+    caret-color: var(--colors-primary);
+}
+
+[data-baseweb="input"] input::placeholder,
+[data-baseweb="textarea"] textarea::placeholder {
+    color: var(--colors-ink-muted-48);
+    opacity: 1;
+}
+
+[data-baseweb="input"]:focus-within, [data-baseweb="select"]:focus-within > div,
+[data-baseweb="textarea"]:focus-within {
+    border-color: var(--colors-primary-focus);
+}
+
+/* Select/date menus and dialogs live in portals outside the main page. */
+[data-baseweb="popover"] > div,
+[data-baseweb="menu"], [role="listbox"],
+[data-baseweb="calendar"], [role="dialog"] {
+    color-scheme: light;
+    background-color: var(--colors-canvas) !important;
+    color: var(--colors-ink) !important;
+    border-color: var(--colors-hairline);
+}
+
+[role="option"] { color: var(--colors-ink); }
+[role="option"]:hover, [role="option"][aria-selected="true"] {
+    background-color: var(--colors-primary-soft) !important;
+    color: var(--colors-primary) !important;
+}
+
+[data-baseweb="tab-list"] { gap: .25rem; border-bottom: 1px solid var(--colors-hairline); }
+[data-baseweb="tab"] {
+    padding: .5rem .85rem;
+    color: var(--colors-ink-muted-48);
+    font-weight: 600;
+    background: transparent;
+}
+[data-baseweb="tab"][aria-selected="true"] { color: var(--colors-primary); }
+[data-baseweb="tab-highlight"] { background-color: var(--colors-primary); }
+
+[data-testid="stExpander"] details,
+[data-testid="stForm"], [data-testid="stDataFrame"],
+[data-testid="stFileUploaderDropzone"] {
+    border-color: var(--colors-hairline);
+    border-radius: var(--rounded-sm);
+    background-color: var(--colors-canvas);
+    color: var(--colors-ink);
+    box-shadow: none;
+}
+[data-testid="stExpander"] summary { font-weight: 600; }
+[data-testid="stMetric"] {
+    padding: .75rem .9rem;
+    border: 1px solid var(--colors-hairline);
+    border-radius: var(--rounded-sm);
+    background: var(--colors-surface-pearl);
+    color: var(--colors-ink);
+    font-variant-numeric: tabular-nums;
+}
+[data-testid="stMetricValue"] { font-size: 1.55rem; font-weight: 600; }
+[data-testid="stAlert"] { border-radius: var(--rounded-sm); }
+[data-testid="stChatMessage"] { background: var(--colors-canvas-parchment); color: var(--colors-ink); }
+[data-testid="stChatInput"], [data-testid="stBottomBlockContainer"] {
+    background: var(--colors-canvas);
+    color: var(--colors-ink);
+}
+hr { border-color: var(--colors-hairline); margin: 1.25rem 0; }
+
+/* Compact, consistent page summaries. */
+:is(.ding-hero, .memo-hero) {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: .75rem 1.25rem;
+    margin-bottom: 1rem;
+}
+:is(.ding-title, .memo-title, .todo-title, .notice-title, .main-title) {
+    margin: 0 0 .3rem;
+    color: var(--colors-ink);
+    font-family: var(--font-display);
+    font-size: clamp(1.65rem, 3vw, 2.15rem);
+    font-weight: 600;
+    letter-spacing: -.025em;
+    line-height: 1.25;
+}
+:is(.ding-subtitle, .memo-subtitle, .todo-subtitle, .notice-subtitle, .sub-title) {
+    margin: .35rem 0 .8rem;
+    color: var(--colors-ink-muted-48);
+    font-family: var(--font-text);
+    font-size: .95rem;
+    font-weight: 400;
+    line-height: 1.6;
+}
+:is(.ding-kicker, .memo-mark) {
+    margin-bottom: .4rem;
+    color: var(--colors-primary);
+    font-size: .75rem;
+    font-weight: 600;
+    letter-spacing: .04em;
+}
+.memo-mark { display: inline-flex; align-items: center; gap: .5rem; }
+:is(.ding-stat-row, .memo-stat-row) { display: flex; flex-wrap: wrap; gap: .5rem; }
+:is(.ding-stat, .memo-stat) {
+    min-width: 5.5rem;
+    padding: .5rem .75rem;
+    border: 1px solid var(--colors-hairline);
+    border-radius: var(--rounded-sm);
+    background: var(--colors-surface-pearl);
+    text-align: center;
+}
+:is(.ding-stat, .memo-stat) b { display: block; font-size: 1.25rem; font-variant-numeric: tabular-nums; }
+:is(.ding-stat, .memo-stat) span { color: var(--colors-ink-muted-48); font-size: .76rem; }
+
+/* The return control stays in document flow and cannot cover titles or dialogs. */
+.st-key-home-link-fixed {
+    display: flex;
+    align-items: flex-end;
+    margin-bottom: .25rem;
+}
+.st-key-home-link-fixed [data-testid="stButton"] { align-self: flex-end; }
+
+@media (max-width: 720px) {
+    [data-testid="stMainBlockContainer"] { padding: 4.5rem 1rem 2rem; }
+    :is([data-testid="stButton"], [data-testid="stDownloadButton"],
+        [data-testid="stFormSubmitButton"]) > button,
+    [data-testid="stLinkButton"] > a { min-height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    :is(button, a) { transition: none !important; }
+}
+
+/* Shared sidebar navigation. */
+[data-testid="stSidebar"] {
+    background: var(--colors-canvas-parchment) !important;
+    border-right: 1px solid var(--colors-hairline) !important;
+    color: var(--colors-ink) !important;
+    font-family: var(--font-text);
+}
+[data-testid="stSidebar"] [data-testid="stSidebarNav"] {
+    display: none !important;
+}
+[data-testid="stSidebar"] [data-testid="stSidebarCollapseButton"] button {
+    color: var(--colors-ink) !important;
+    background: transparent !important;
+}
+[data-testid="stSidebar"] ::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: rgba(29, 29, 31, .2) !important;
+}
+[data-testid="stSidebar"] .custom-nav-title {
+    display: flex;
+    align-items: center;
+    gap: .48rem;
+    margin: .3rem .45rem .72rem;
+    color: var(--colors-ink) !important;
+    font-family: var(--font-display);
+    font-size: .9rem;
+    font-weight: 600;
+    letter-spacing: -.01em;
+}
+[data-testid="stSidebar"] .custom-nav-brand-mark {
+    display: inline-grid;
+    place-items: center;
+    width: 1.3rem;
+    height: 1.3rem;
+    border-radius: 50%;
+    background: var(--colors-ink) !important;
+    color: var(--colors-canvas) !important;
+    font-size: .67rem;
+    font-weight: 600;
+}
+[data-testid="stSidebar"] .custom-nav-item {
+    display: grid;
+    grid-template-columns: 2.75rem minmax(0, 1fr);
+    gap: .55rem;
+    align-items: center;
+    margin: .18rem .35rem;
+    padding: .54rem .58rem;
+    border: 1px solid var(--colors-hairline) !important;
+    border-radius: 12px !important;
+    background: var(--colors-canvas) !important;
+    color: var(--colors-ink) !important;
+    text-decoration: none !important;
+    transition: border-color .16s ease, background-color .16s ease;
+}
+[data-testid="stSidebar"] .custom-nav-item:hover {
+    border-color: rgba(0, 102, 204, .38) !important;
+    background: var(--colors-canvas) !important;
+    box-shadow: none;
+}
+[data-testid="stSidebar"] .custom-nav-code {
+    color: var(--colors-primary) !important;
+    font-family: var(--font-text);
+    font-size: .72rem;
+    font-weight: 600;
+}
+[data-testid="stSidebar"] .custom-nav-main {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: .06rem;
+}
+[data-testid="stSidebar"] .custom-nav-main strong {
+    overflow: hidden;
+    color: var(--colors-ink) !important;
+    font-family: var(--font-display);
+    font-size: .84rem;
+    font-weight: 600;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+[data-testid="stSidebar"] .custom-nav-main em {
+    overflow: hidden;
+    color: var(--colors-ink-muted-48) !important;
+    font-size: .7rem;
+    font-style: normal;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+[data-testid="stSidebar"] .custom-nav-section {
+    margin: .75rem .48rem .25rem;
+    color: var(--colors-ink-muted-48) !important;
+    font-size: .7rem;
+    font-weight: 600;
+    letter-spacing: .02em;
+}

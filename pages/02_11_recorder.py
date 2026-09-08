@@ -12,6 +12,7 @@ from utils.ui_theme import render_home_link
 
 
 st.set_page_config(page_title="Recorder_笔记", page_icon="🎙️", layout="wide")
+render_home_link()
 
 
 STATUS_LABELS = {
@@ -25,64 +26,8 @@ def apply_style():
     st.markdown(
         """
         <style>
-        .block-container {
-            padding-top: 1.7rem !important;
-            padding-bottom: 1.5rem !important;
-        }
-        .ding-hero {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-            gap: 1.25rem;
-            margin-bottom: 1.05rem;
-        }
-        .ding-kicker {
-            color: #475467;
-            font-size: .82rem;
-            font-weight: 800;
-            letter-spacing: .08em;
-            text-transform: uppercase;
-            margin-bottom: .45rem;
-        }
-        .ding-title {
-            margin: 0;
-            color: #182230;
-            font-size: 2.2rem;
-            line-height: 1.12;
-            font-weight: 850;
-            letter-spacing: 0;
-        }
-        .ding-subtitle {
-            margin: .45rem 0 0;
-            color: #667085;
-            font-size: .96rem;
-            line-height: 1.7;
-        }
-        .ding-stat-row {
-            display: flex;
-            gap: .65rem;
-            flex-wrap: wrap;
-            justify-content: flex-end;
-        }
-        .ding-stat {
-            min-width: 96px;
-            text-align: center;
-            padding: .72rem .65rem;
-            border: 1px solid rgba(24,34,48,.1);
-            border-radius: 8px;
-            background: rgba(255,255,255,.8);
-            box-shadow: 0 10px 26px rgba(24,34,48,.07);
-        }
-        .ding-stat b {
-            display: block;
-            font-size: 1.25rem;
-        }
-        .ding-stat span {
-            color: #667085;
-            font-size: .76rem;
-        }
         .record-meta {
-            color: #667085;
+            color: var(--colors-ink-muted-48);
             font-size: .78rem;
             line-height: 1.35;
             margin: .15rem 0 .2rem;
@@ -96,10 +41,10 @@ def apply_style():
         }
         .record-title {
             margin: 0;
-            color: #182230;
+            color: var(--colors-ink);
             font-size: 1.08rem;
             line-height: 1.28;
-            font-weight: 800;
+            font-weight: 600;
             letter-spacing: 0;
         }
         .status-pill {
@@ -108,39 +53,23 @@ def apply_style():
             border-radius: 999px;
             padding: .16rem .52rem;
             font-size: .76rem;
-            font-weight: 800;
-            border: 1px solid rgba(24,34,48,.1);
-            background: #fff;
+            font-weight: 600;
+            border: 1px solid var(--colors-hairline);
+            background: var(--colors-canvas);
         }
-        .status-done { color: #166534; background: #f0fdf4; }
-        .status-pending { color: #92400e; background: #fffbeb; }
-        .status-failed { color: #991b1b; background: #fef2f2; }
-        div[data-testid="stVerticalBlockBorderWrapper"] {
-            border-radius: 8px !important;
-        }
+        .status-done { color: var(--colors-success); background: var(--colors-success-soft); }
+        .status-pending { color: var(--colors-warning); background: var(--colors-warning-soft); }
+        .status-failed { color: var(--colors-danger); background: var(--colors-danger-soft); }
         div[data-testid="stVerticalBlockBorderWrapper"] > div {
             padding-top: .48rem !important;
             padding-bottom: .42rem !important;
         }
-        div[data-testid="stExpander"] details {
-            border-radius: 8px !important;
-            border-color: rgba(24,34,48,.1) !important;
-        }
         div[data-testid="stExpander"] summary {
             min-height: 2rem !important;
-            font-weight: 700;
+            font-weight: 600;
         }
         textarea {
             line-height: 1.45 !important;
-        }
-        @media (max-width: 980px) {
-            .ding-hero {
-                align-items: flex-start;
-                flex-direction: column;
-            }
-            .ding-stat-row {
-                justify-content: flex-start;
-            }
         }
         </style>
         """,
@@ -218,7 +147,6 @@ def sync_recorder_cloud_to_github():
 
 require_recorder_auth()
 apply_style()
-render_home_link()
 ding_minutes.init_db()
 config = ding_minutes.load_config()
 runtime_config = config | {"api_key": ding_minutes.get_deepseek_api_key(st.secrets, os.environ)}

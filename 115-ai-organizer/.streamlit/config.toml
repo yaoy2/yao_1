@@ -1,7 +1,4 @@
-[client]
-showSidebarNavigation = false
-
-# Keep the first frame and native widgets consistent with the shared Apple UI.
+# This app also launches from its own directory. Match the repository theme.
 [theme]
 base = "light"
 primaryColor = "#0066cc"

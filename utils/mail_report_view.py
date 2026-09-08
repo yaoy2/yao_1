@@ -7,31 +7,31 @@ from html import escape
 
 REPORT_CSS = """
 .mail-report {max-width:1120px; color:inherit; font-size:.9rem; line-height:1.65;}
-.mail-report h3 {font-size:1rem; font-weight:650; margin:1.05rem 0 .5rem; padding:0;}
+.mail-report h3 {font-size:1rem; font-weight:600; margin:1.05rem 0 .5rem; padding:0;}
 .mail-report p {margin:.25rem 0 .65rem;}
-.mail-report .mail-report-note {color:#64748b; font-size:.8rem; margin:0 0 .7rem;}
+.mail-report .mail-report-note {color:var(--colors-ink-muted-48, #6e6e73); font-size:.8rem; margin:0 0 .7rem;}
 .mail-report table {width:100%; border-collapse:collapse; table-layout:fixed; margin:.4rem 0 .9rem;}
-.mail-report th {text-align:left; font-size:.8rem; font-weight:600; background:#f4f6f8; color:#475569;}
-.mail-report th, .mail-report td {padding:.65rem .8rem; border:1px solid #e4e8ed; vertical-align:top; overflow-wrap:anywhere;}
+.mail-report th {text-align:left; font-size:.8rem; font-weight:600; background:var(--colors-canvas-parchment, #f5f5f7); color:var(--colors-ink-muted-80, #333333);}
+.mail-report th, .mail-report td {padding:.65rem .8rem; border:1px solid var(--colors-hairline, #e0e0e0); vertical-align:top; overflow-wrap:anywhere;}
 .mail-report th:first-child {width:32%;}
 .mail-report td strong {font-weight:600;}
-.mail-report .mail-category {display:block; color:#64748b; font-size:.76rem; margin-top:.2rem;}
-.mail-report article {border:1px solid #e4e8ed; border-radius:9px; padding:.75rem .9rem; margin:.55rem 0;}
+.mail-report .mail-category {display:block; color:var(--colors-ink-muted-48, #6e6e73); font-size:.76rem; margin-top:.2rem;}
+.mail-report article {border:1px solid var(--colors-hairline, #e0e0e0); border-radius:9px; padding:.75rem .9rem; margin:.55rem 0;}
 .mail-report .mail-action-title {display:flex; align-items:baseline; flex-wrap:wrap; gap:.35rem .6rem; margin-bottom:.45rem;}
-.mail-report .mail-action-title strong {font-weight:650;}
-.mail-report .mail-action-state {background:#f3f4f6; border-radius:5px; color:#596579; padding:.1rem .4rem; font-size:.75rem;}
+.mail-report .mail-action-title strong {font-weight:600;}
+.mail-report .mail-action-state {background:var(--colors-canvas-parchment, #f5f5f7); border-radius:5px; color:var(--colors-ink-muted-48, #6e6e73); padding:.1rem .4rem; font-size:.75rem;}
 .mail-report dl {display:grid; grid-template-columns:1.1fr 1fr 1fr; gap:.55rem .9rem; margin:0;}
 .mail-report dl div {min-width:0; overflow-wrap:anywhere;}
-.mail-report dt {font-size:.76rem; color:#64748b; font-weight:400; margin:0 0 .1rem;}
+.mail-report dt {font-size:.76rem; color:var(--colors-ink-muted-48, #6e6e73); font-weight:400; margin:0 0 .1rem;}
 .mail-report dd {margin:0; font-size:.85rem;}
 .mail-report .mail-deadline dd {font-weight:600;}
-.mail-report .mail-requirement {grid-column:1 / -1; border-top:1px solid #eef0f3; padding-top:.5rem;}
-.mail-report .mail-report-audit {border-top:1px solid #e4e8ed; margin-top:1rem; padding-top:.55rem; color:#64748b; font-size:.8rem;}
-.mail-report .mail-report-audit summary {cursor:pointer; font-weight:500;}
+.mail-report .mail-requirement {grid-column:1 / -1; border-top:1px solid var(--colors-hairline, #e0e0e0); padding-top:.5rem;}
+.mail-report .mail-report-audit {border-top:1px solid var(--colors-hairline, #e0e0e0); margin-top:1rem; padding-top:.55rem; color:var(--colors-ink-muted-48, #6e6e73); font-size:.8rem;}
+.mail-report .mail-report-audit summary {cursor:pointer; font-weight:600;}
 .mail-report .mail-report-audit p {margin:.4rem 0;}
-.mail-status-bar {display:flex; align-items:center; flex-wrap:wrap; gap:.45rem 1rem; margin:.2rem 0; font-size:.82rem; color:#596579;}
-.mail-status-bar .mail-status-chip {background:#edf2f7; color:#40556e; border-radius:5px; padding:.2rem .5rem; font-weight:600;}
-.mail-status-bar .mail-attachment-pending {color:#946200;}
+.mail-status-bar {display:flex; align-items:center; flex-wrap:wrap; gap:.45rem 1rem; margin:.2rem 0; font-size:.82rem; color:var(--colors-ink-muted-48, #6e6e73);}
+.mail-status-bar .mail-status-chip {background:var(--colors-primary-soft, #eef5fc); color:var(--colors-primary, #0066cc); border-radius:5px; padding:.2rem .5rem; font-weight:600;}
+.mail-status-bar .mail-attachment-pending {color:var(--colors-warning, #8a5700);}
 @media (max-width:680px) {
   .mail-report th, .mail-report td {padding:.5rem;}
   .mail-report dl {grid-template-columns:1fr; gap:.45rem;}

@@ -16,44 +16,44 @@ render_home_link()
 st.markdown(
     """
     <style>
-    .guide-hero {
-        padding: 1.15rem 1.25rem;
-        border: 1px solid rgba(22, 101, 52, .18);
-        border-radius: 14px;
-        background: linear-gradient(135deg, rgba(236, 253, 245, .92), rgba(239, 246, 255, .92));
-        margin-bottom: 1rem;
-    }
-    .guide-hero h1 { margin: 0 0 .35rem; color: #17324d; font-size: 2rem; }
-    .guide-hero p { margin: 0; color: #496477; }
-    .status-line {
-        display: flex; flex-wrap: wrap; gap: .45rem; margin-top: .75rem;
-    }
-    .status-chip {
-        display: inline-flex; align-items: center; padding: .25rem .58rem;
-        border-radius: 999px; font-size: .8rem; font-weight: 750;
-        border: 1px solid rgba(15, 23, 42, .1); background: white; color: #334155;
-    }
-    .status-chip.ok { color: #166534; background: #f0fdf4; }
-    .status-chip.wait { color: #9a3412; background: #fff7ed; }
-    .module-card {
-        min-height: 118px; padding: .85rem .95rem; border-radius: 12px;
-        border: 1px solid rgba(71, 85, 105, .18); background: rgba(255,255,255,.84);
-    }
-    .module-code { color: #0891b2; font-family: Consolas, monospace; font-weight: 850; }
-    .module-card h3 { margin: .25rem 0 .25rem; color: #1e293b; font-size: 1.02rem; }
-    .module-card p { margin: 0; color: #64748b; font-size: .86rem; line-height: 1.5; }
-    .flow-box {
-        min-height: 128px; padding: .75rem .8rem; border-radius: 11px;
-        border: 1px solid rgba(14, 116, 144, .16); background: rgba(240, 249, 255, .78);
-    }
-    .flow-number { color: #0e7490; font-size: 1.25rem; font-weight: 900; }
-    .flow-box strong { display: block; margin: .1rem 0 .3rem; color: #1e293b; }
-    .flow-box span { color: #64748b; font-size: .84rem; line-height: 1.45; }
-    .warning-box {
-        padding: .75rem .9rem; border-left: 4px solid #f59e0b;
-        border-radius: 8px; background: #fffbeb; color: #78350f; margin: .45rem 0;
-    }
-    </style>
+        .guide-hero {
+            padding: 1.15rem 1.25rem;
+            border: 1px solid var(--colors-hairline);
+            border-radius: 14px;
+            background: var(--colors-canvas-parchment);
+            margin-bottom: 1rem;
+        }
+        .guide-hero h1 { margin: 0 0 .35rem; color: var(--colors-ink); font-size: 2rem; }
+        .guide-hero p { margin: 0; color: var(--colors-ink-muted-48); }
+        .status-line {
+            display: flex; flex-wrap: wrap; gap: .45rem; margin-top: .75rem;
+        }
+        .status-chip {
+            display: inline-flex; align-items: center; padding: .25rem .58rem;
+            border-radius: 999px; font-size: .8rem; font-weight: 600;
+            border: 1px solid var(--colors-hairline); background: var(--colors-canvas); color: var(--colors-ink-muted-80);
+        }
+        .status-chip.ok { color: var(--colors-success); background: var(--colors-success-soft); }
+        .status-chip.wait { color: var(--colors-warning); background: var(--colors-warning-soft); }
+        .module-card {
+            min-height: 118px; padding: .85rem .95rem; border-radius: 12px;
+            border: 1px solid var(--colors-hairline); background: var(--colors-canvas);
+        }
+        .module-code { color: var(--colors-primary); font-family: Consolas, monospace; font-weight: 600; }
+        .module-card h3 { margin: .25rem 0 .25rem; color: var(--colors-ink); font-size: 1.02rem; }
+        .module-card p { margin: 0; color: var(--colors-ink-muted-48); font-size: .86rem; line-height: 1.5; }
+        .flow-box {
+            min-height: 128px; padding: .75rem .8rem; border-radius: 11px;
+            border: 1px solid var(--colors-hairline); background: var(--colors-surface-pearl);
+        }
+        .flow-number { color: var(--colors-primary); font-size: 1.25rem; font-weight: 600; }
+        .flow-box strong { display: block; margin: .1rem 0 .3rem; color: var(--colors-ink); }
+        .flow-box span { color: var(--colors-ink-muted-48); font-size: .84rem; line-height: 1.45; }
+        .warning-box {
+            padding: .75rem .9rem; border-left: 4px solid #f59e0b;
+            border-radius: 8px; background: var(--colors-warning-soft); color: #78350f; margin: .45rem 0;
+        }
+        </style>
     <div class="guide-hero">
       <h1>评分工作台使用说明</h1>
       <p>先看本页确认入口和数据状态，再进入M17完成花名册、评分、调整、审核与导出。</p>

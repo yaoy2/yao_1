@@ -20,41 +20,41 @@ render_home_link()
 st.markdown(
     """
     <style>
-    .m21-hero {
-        padding: 1rem 1.1rem;
-        margin-bottom: .8rem;
-        border: 1px solid rgba(104, 211, 145, .24);
-        border-radius: 14px;
-        background: linear-gradient(135deg, rgba(18, 34, 31, .94), rgba(14, 24, 39, .94));
-    }
-    .m21-kicker {
-        color: #7ee2a8;
-        font-size: .78rem;
-        font-weight: 750;
-        letter-spacing: .06em;
-        text-transform: uppercase;
-    }
-    .m21-hero h1 {
-        margin: .25rem 0 .35rem;
-        color: #f1fff6;
-        font-size: 1.75rem;
-    }
-    .m21-hero p {
-        margin: 0;
-        color: #b9c9c4;
-        line-height: 1.55;
-    }
-    .m21-readonly {
-        display: inline-block;
-        padding: .18rem .52rem;
-        border: 1px solid rgba(126, 226, 168, .34);
-        border-radius: 999px;
-        color: #9cf0bd;
-        background: rgba(126, 226, 168, .08);
-        font-size: .76rem;
-        font-weight: 700;
-    }
-    </style>
+        .m21-hero {
+            padding: 1rem 1.1rem;
+            margin-bottom: .8rem;
+            border: 1px solid var(--colors-hairline);
+            border-radius: var(--rounded-lg);
+            background: var(--colors-canvas-parchment);
+        }
+        .m21-kicker {
+            color: var(--colors-primary);
+            font-size: .78rem;
+            font-weight: 600;
+            letter-spacing: .06em;
+            text-transform: uppercase;
+        }
+        .m21-hero h1 {
+            margin: .25rem 0 .35rem;
+            color: var(--colors-ink);
+            font-size: 1.75rem;
+        }
+        .m21-hero p {
+            margin: 0;
+            color: var(--colors-ink-muted-48);
+            line-height: 1.55;
+        }
+        .m21-readonly {
+            display: inline-block;
+            padding: .18rem .52rem;
+            border: 1px solid var(--colors-hairline);
+            border-radius: 999px;
+            color: var(--colors-primary);
+            background: var(--colors-primary-soft);
+            font-size: .76rem;
+            font-weight: 600;
+        }
+        </style>
     """,
     unsafe_allow_html=True,
 )

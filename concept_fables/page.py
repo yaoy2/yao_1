@@ -75,111 +75,39 @@ def _inject_styles() -> None:
     st.html(
         """
         <style>
-        /* White reading canvas, aligned with the shared navigation and M20. */
-        .stApp {
-            color-scheme: light;
-            color: #334155;
-            background: #ffffff;
-            font-family: "Inter", -apple-system, BlinkMacSystemFont,
-                "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
-        }
-        [data-testid="stHeader"] {
-            background: #ffffff;
-            color: #334155;
-        }
-        [data-testid="stHeader"] button { color: #334155; }
-        .block-container { color: #334155; }
-        /* Key-scoped controls keep the shared home button and sidebar intact. */
-        [class*="st-key-cf_"] button {
-            border-radius: 8px;
-            border: 1px solid #cbd5e1;
-            background: #ffffff;
-            color: #1d4ed8;
-            font-family: inherit;
-            font-weight: 600;
-        }
-        [class*="st-key-cf_"] button:hover {
-            border-color: #2563eb;
-            background: #eff6ff;
-            color: #1e40af;
-        }
-        [class*="st-key-cf_"] button:focus-visible {
-            outline: 2px solid #2563eb;
-            outline-offset: 2px;
-        }
-        [class*="st-key-cf_"] [data-baseweb="select"] > div,
-        [class*="st-key-cf_"] [data-baseweb="input"],
-        [class*="st-key-cf_"] [data-baseweb="base-input"],
-        [class*="st-key-cf_"] input {
-            border-radius: 8px;
-            border-color: #cbd5e1;
-            background-color: #ffffff;
-            color: #334155;
-            caret-color: #1d4ed8;
-        }
-        [class*="st-key-cf_"] input::placeholder {
-            color: #64748b;
-            opacity: 1;
-        }
-        [class*="st-key-cf_"] [data-baseweb="select"] > div:hover,
-        [class*="st-key-cf_"] [data-baseweb="input"]:hover {
-            border-color: #94a3b8;
-        }
-        [class*="st-key-cf_"] [data-baseweb="select"] > div:focus-within,
-        [class*="st-key-cf_"] [data-baseweb="input"]:focus-within {
-            border-color: #2563eb;
-            box-shadow: 0 0 0 2px #dbeafe;
-        }
-        [class*="st-key-cf_"] [data-baseweb="select"] svg {
-            color: #64748b;
-            fill: currentColor;
-        }
-        /* Select menus are portals outside the main content container. */
-        body:has(.cf-wrap) [data-baseweb="popover"],
-        body:has(.cf-wrap) [data-baseweb="menu"],
-        body:has(.cf-wrap) [role="listbox"],
-        body:has(.cf-wrap) [role="option"] {
-            background-color: #ffffff;
-            color: #334155;
-        }
-        body:has(.cf-wrap) [role="option"]:hover,
-        body:has(.cf-wrap) [role="option"][aria-selected="true"] {
-            background-color: #eff6ff;
-            color: #1d4ed8;
-        }
         .cf-wrap {
-            color: #334155;
+            color: var(--colors-ink-muted-80);
             overflow-wrap: anywhere;
         }
         .cf-hero {
             padding: .95rem 1.05rem;
             margin-bottom: .85rem;
             border-radius: 14px;
-            border: 1px solid #e2e8f0;
-            border-top: 3px solid #2563eb;
-            background: #ffffff;
-            box-shadow: 0 2px 8px rgba(15, 23, 42, .04);
+            border: 1px solid var(--colors-hairline);
+            border-top: 3px solid var(--colors-primary);
+            background: var(--colors-canvas);
+            box-shadow: none;
         }
         .cf-kicker {
             display: inline-flex;
             align-items: center;
             gap: .4rem;
             margin-bottom: .35rem;
-            color: #1d4ed8;
+            color: var(--colors-primary);
             font-size: .78rem;
-            font-weight: 700;
+            font-weight: 600;
             letter-spacing: .04em;
             text-transform: uppercase;
         }
         .cf-hero h1 {
             margin: 0 0 .35rem;
-            color: #0f172a;
+            color: var(--colors-ink);
             font-size: 1.72rem;
             line-height: 1.2;
         }
         .cf-hero p {
             margin: 0;
-            color: #64748b;
+            color: var(--colors-ink-muted-48);
             font-size: .95rem;
             line-height: 1.55;
         }
@@ -193,17 +121,17 @@ def _inject_styles() -> None:
             min-width: 5.6rem;
             padding: .38rem .62rem;
             border-radius: 10px;
-            border: 1px solid #e2e8f0;
-            background: #f8fafc;
+            border: 1px solid var(--colors-hairline);
+            background: var(--colors-surface-pearl);
         }
         .cf-stat b {
             display: block;
-            color: #1d4ed8;
+            color: var(--colors-primary);
             font-size: 1.05rem;
             line-height: 1.2;
         }
         .cf-stat span {
-            color: #64748b;
+            color: var(--colors-ink-muted-48);
             font-size: .74rem;
         }
         .cf-card {
@@ -211,25 +139,25 @@ def _inject_styles() -> None:
             padding: .72rem .78rem .66rem;
             margin-bottom: .55rem;
             border-radius: 12px;
-            border: 1px solid #e2e8f0;
-            background: #ffffff;
-            box-shadow: 0 2px 6px rgba(15, 23, 42, .03);
+            border: 1px solid var(--colors-hairline);
+            background: var(--colors-canvas);
+            box-shadow: none;
         }
         .cf-card-title {
             margin: 0 0 .28rem;
-            color: #0f172a;
+            color: var(--colors-ink);
             font-size: 1.02rem;
-            font-weight: 700;
+            font-weight: 600;
             line-height: 1.3;
         }
         .cf-card-meta {
             margin: 0 0 .4rem;
-            color: #64748b;
+            color: var(--colors-ink-muted-48);
             font-size: .78rem;
         }
         .cf-card-def {
             margin: 0 0 .45rem;
-            color: #334155;
+            color: var(--colors-ink-muted-80);
             font-size: .86rem;
             line-height: 1.45;
         }
@@ -243,55 +171,55 @@ def _inject_styles() -> None:
             display: inline-flex;
             padding: .12rem .42rem;
             border-radius: 999px;
-            border: 1px solid #dbeafe;
-            background: #eff6ff;
-            color: #1d4ed8;
+            border: 1px solid var(--colors-primary-soft);
+            background: var(--colors-primary-soft);
+            color: var(--colors-primary);
             font-size: .72rem;
             font-weight: 600;
         }
         .cf-date {
-            color: #64748b;
+            color: var(--colors-ink-muted-48);
             font-size: .74rem;
         }
         .cf-empty {
             padding: 1.1rem 1.15rem;
             border-radius: 14px;
-            border: 1px dashed #cbd5e1;
-            background: #f8fafc;
+            border: 1px dashed var(--colors-hairline);
+            background: var(--colors-surface-pearl);
         }
         .cf-empty h3 {
             margin: 0 0 .4rem;
-            color: #0f172a;
+            color: var(--colors-ink);
             font-size: 1.08rem;
         }
         .cf-empty p {
             margin: 0 0 .55rem;
-            color: #475569;
+            color: var(--colors-ink-muted-48);
             line-height: 1.55;
         }
         .cf-empty code {
             padding: .12rem .38rem;
             border-radius: 6px;
-            background: #eff6ff;
-            color: #1e40af;
+            background: var(--colors-primary-soft);
+            color: var(--colors-primary);
             font-size: .86rem;
         }
         .cf-detail {
             padding: 1rem 1.05rem 1.1rem;
             border-radius: 14px;
-            border: 1px solid #e2e8f0;
-            background: #ffffff;
-            box-shadow: 0 2px 8px rgba(15, 23, 42, .04);
+            border: 1px solid var(--colors-hairline);
+            background: var(--colors-canvas);
+            box-shadow: none;
         }
         .cf-detail-title {
             margin: 0 0 .25rem;
-            color: #0f172a;
+            color: var(--colors-ink);
             font-size: 1.45rem;
             line-height: 1.25;
         }
         .cf-detail-meta {
             margin: 0 0 .75rem;
-            color: #64748b;
+            color: var(--colors-ink-muted-48);
             font-size: .86rem;
         }
         .cf-story {
@@ -300,23 +228,23 @@ def _inject_styles() -> None:
             border-radius: 12px;
             border-left: 3px solid #b6a27c;
             background: #faf9f6;
-            color: #334155;
+            color: var(--colors-ink-muted-80);
             font-family: "Noto Serif SC", "Source Han Serif SC", "Songti SC",
-                "SimSun", serif;
+            "SimSun", serif;
             font-size: 1.05rem;
             line-height: 1.85;
             white-space: pre-wrap;
         }
         .cf-section-label {
             margin: 0 0 .35rem;
-            color: #1d4ed8;
+            color: var(--colors-primary);
             font-size: .78rem;
-            font-weight: 700;
+            font-weight: 600;
             letter-spacing: .03em;
         }
         .cf-block {
             margin: 0 0 .75rem;
-            color: #334155;
+            color: var(--colors-ink-muted-80);
             font-size: .92rem;
             line-height: 1.55;
             white-space: pre-wrap;
@@ -330,18 +258,18 @@ def _inject_styles() -> None:
         .cf-map-item {
             padding: .5rem .58rem;
             border-radius: 10px;
-            border: 1px solid #e2e8f0;
-            background: #f8fafc;
+            border: 1px solid var(--colors-hairline);
+            background: var(--colors-surface-pearl);
         }
         .cf-map-item .k {
             display: block;
             margin-bottom: .18rem;
-            color: #1d4ed8;
+            color: var(--colors-primary);
             font-size: .74rem;
-            font-weight: 700;
+            font-weight: 600;
         }
         .cf-map-item .v {
-            color: #334155;
+            color: var(--colors-ink-muted-80);
             font-size: .86rem;
             line-height: 1.4;
         }
@@ -349,15 +277,15 @@ def _inject_styles() -> None:
             margin: 0 0 .45rem;
             padding: .55rem .65rem;
             border-radius: 10px;
-            border: 1px solid #dbeafe;
-            background: #eff6ff;
-            color: #334155;
+            border: 1px solid var(--colors-primary-soft);
+            background: var(--colors-primary-soft);
+            color: var(--colors-ink-muted-80);
             font-size: .9rem;
             line-height: 1.5;
         }
         .cf-q b {
-            color: #1e40af;
-            font-weight: 700;
+            color: var(--colors-primary);
+            font-weight: 600;
         }
         @media (max-width: 900px) {
             .cf-map-grid { grid-template-columns: 1fr; }
