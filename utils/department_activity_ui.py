@@ -66,7 +66,8 @@ def _editor_base(state_key, grid_key, editor_key):
 
 
 def render_department_activity_budget(year):
-    with st.expander("👥 部门活动经费 · 点击展开详情",
+    st.subheader("👥 部门活动经费")
+    with st.expander("展开查看：每月名单与预算详情",
                      expanded=st.session_state.get(f"department_activity_{year}_expanded", False)):
         _render_details(year)
 
