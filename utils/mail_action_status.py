@@ -7,8 +7,9 @@ STATUS_LABELS = {
     "done": "已处理",
     "no_action": "无需处理",
     "out_of_scope": "不属本人业务",
+    "archived": "存档",
 }
 
 ALL_STATUSES = frozenset(STATUS_LABELS)
 ACTIVE_STATUSES = frozenset({"needs_confirmation", "pending", "in_progress"})
-ARCHIVED_STATUSES = frozenset({"done", "no_action", "out_of_scope"})
+ARCHIVED_STATUSES = frozenset({"done", "no_action", "out_of_scope", "archived"})

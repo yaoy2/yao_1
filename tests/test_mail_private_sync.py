@@ -259,7 +259,7 @@ class MailPrivateSyncTests(unittest.TestCase):
         session = FakeSession()
         self.assert_error("invalid_update", self.save, session, updates={"unknown": "done"})
         self.assertNotIn("put", [call[0] for call in session.calls])
-        for updates in ({"a1": "archived"}, [{"id": "a1", "status": "done"}, {"id": "a1", "status": "pending"}]):
+        for updates in ({"a1": "unknown_state"}, [{"id": "a1", "status": "done"}, {"id": "a1", "status": "pending"}]):
             with self.subTest(updates=updates):
                 session = FakeSession()
                 self.assert_error("invalid_update", self.save, session, updates=updates)
@@ -345,9 +345,9 @@ class MailPrivateSyncTests(unittest.TestCase):
         result = self.save(session)
         self.assertEqual(timedelta(0), datetime.fromisoformat(result["snapshot"]["updated_at"]).utcoffset())
 
-    def test_message_save_supports_all_six_states_and_changes_only_triage_fields(self):
+    def test_message_save_supports_existing_states_and_changes_only_triage_fields(self):
         states = {"needs_confirmation", "pending", "in_progress", "done", "no_action", "out_of_scope"}
-        self.assertEqual(states, set(sync.ALLOWED_STATUSES))
+        self.assertEqual(states | {"archived"}, set(sync.ALLOWED_STATUSES))
         for state in states:
             with self.subTest(state=state):
                 source = message_snapshot_fixture()
@@ -404,7 +404,7 @@ class MailPrivateSyncTests(unittest.TestCase):
 
     def test_message_save_rejects_extra_fields_invalid_values_and_duplicate_updates(self):
         invalid_updates = [
-            {"m2": "archived"}, {"m2": {"status": "done"}}, {"": "done"},
+            {"m2": "unknown_state"}, {"m2": {"status": "done"}}, {"": "done"},
             [{"id": "m2", "status": "done"}, {"id": "m2", "status": "pending"}],
         ]
         for field in ("subject", "body_text", "attachments", "message_id", "triage_status", "triage_updated_at", "completed_at", "updated_at", "actions"):
@@ -481,7 +481,7 @@ class MailPrivateSyncTests(unittest.TestCase):
             {"triage_status": "done"}, {"triage_updated_at": "2026-09-05T12:00:00+08:00"},
         ]
         invalid_fields.extend({"triage_status": state, "triage_updated_at": "2026-09-05T12:00:00+08:00"}
-                              for state in (None, "", "archived", [], True))
+                              for state in (None, "", "unknown_state", [], True))
         invalid_fields.extend({"triage_status": "done", "triage_updated_at": timestamp}
                               for timestamp in (None, "", " ", "2026-09-05", "2026-09-05T12:00:00", "2026-02-30T12:00:00+08:00", 123, []))
         for fields in invalid_fields:

@@ -1,7 +1,7 @@
 """Local, credential-free mail archive and dashboard snapshots.
 
-Collection is intentionally separate: this module consumes verified browser
-observations and files already downloaded by the operator. It never logs in.
+Collection is intentionally separate: this module consumes verified browser or
+IMAP observations and downloaded files. It never logs in.
 """
 
 from __future__ import annotations
@@ -19,6 +19,7 @@ from pathlib import Path
 from urllib.parse import unquote, urlsplit, urlunsplit
 
 from utils.mail_action_status import ACTIVE_STATUSES, ALL_STATUSES, STATUS_LABELS
+from utils.mail_filing_state import public_filing
 
 
 SCHEMA_VERSION = 1
@@ -43,6 +44,7 @@ PUBLIC_ERROR_REASONS = frozenset({
     "采集窗口未确认完整", "采集窗口与成功游标之间有缺口，游标未推进",
     "部分附件未完成，见附件索引", "附件清单未确认完整", "实际附件清单数量与声明不符",
     "采集器报告错误，详细原因仅保存在本机运行记录",
+    "附件内容为空，未记为归档成功", "IMAP原始邮件中的附件内容为空，需取得非空原件",
 })
 
 
@@ -262,8 +264,12 @@ def _validate_batch(batch, data):
         if "body_text" in message and not isinstance(message["body_text"], str):
             raise ValueError("body_text must be a string")
         received = parse_time(message.get("received_at"))
-        if not since <= received <= through:
+        if not since <= received <= through and not (
+                message.get("retry_of_existing") is True and identifier in known_ids):
             raise ValueError("message lies outside the declared collection window")
+        raw_source = message.get("raw_eml_download_path")
+        if raw_source and not Path(raw_source).is_absolute():
+            raise ValueError("raw_eml_download_path must be an absolute path")
         attachments = message.get("attachments", [])
         if not isinstance(attachments, list):
             raise ValueError("attachments must be an array")
@@ -301,7 +307,7 @@ def _archive_attachment(root, directory, incoming, previous, hash_index):
     if not source:
         if previous and previous.get("status") == "success":
             archived = _inside(root, previous["path"])
-            if archived.is_file() and _sha_file(archived) == previous.get("sha256"):
+            if archived.is_file() and archived.stat().st_size > 0 and _sha_file(archived) == previous.get("sha256"):
                 return copy.deepcopy(previous)
         result["status"] = "error" if incoming.get("status") == "error" else "missing"
         result["error"] = _text(incoming.get("error")) or "未取得实际下载文件"
@@ -324,6 +330,9 @@ def _archive_attachment(root, directory, incoming, previous, hash_index):
             target.flush()
             os.fsync(target.fileno())
         sha = digest.hexdigest()
+        if not size:
+            result.update(status="error", error="附件内容为空，未记为归档成功")
+            return result
         expected = incoming.get("sha256")
         if expected and expected != sha:
             result.update(status="error", error="下载文件与声明的SHA-256不一致")
@@ -353,6 +362,52 @@ def _archive_attachment(root, directory, incoming, previous, hash_index):
     return result
 
 
+def _archive_raw_eml(root, directory, incoming, previous):
+    """Keep original server bytes locally; version by hash and verify every copy."""
+    fields = ("raw_eml_path", "raw_eml_sha256", "raw_eml_size")
+    retained = {key: previous[key] for key in fields if key in previous}
+    source = incoming.get("raw_eml_download_path")
+    if not source:
+        if retained:
+            try:
+                path = _inside(root, retained["raw_eml_path"])
+                if not path.is_file() or _sha_file(path) != retained.get("raw_eml_sha256"):
+                    return retained, "此前归档的原始邮件已缺失或内容校验失败"
+            except (OSError, ValueError, KeyError):
+                return retained, "此前归档的原始邮件已缺失或内容校验失败"
+        return retained, ""
+    temporary = None
+    try:
+        target_dir = _inside(root, directory)
+        target_dir.mkdir(parents=True, exist_ok=True)
+        fd, temporary = tempfile.mkstemp(prefix=".mail-eml-", suffix=".tmp", dir=target_dir)
+        digest, size = hashlib.sha256(), 0
+        with os.fdopen(fd, "wb") as target, Path(source).open("rb") as original:
+            for chunk in iter(lambda: original.read(1024 * 1024), b""):
+                digest.update(chunk)
+                size += len(chunk)
+                target.write(chunk)
+            target.flush()
+            os.fsync(target.fileno())
+        sha = digest.hexdigest()
+        if not size or sha != incoming.get("raw_sha256"):
+            return retained, "原始邮件为空或与声明的SHA-256不一致"
+        relative = directory + "/original-" + sha + ".eml"
+        destination = _inside(root, relative)
+        if destination.exists():
+            if _sha_file(destination) != sha:
+                return retained, "原始邮件归档目标内容冲突，已保留原文件"
+        else:
+            os.replace(temporary, destination)
+            temporary = None
+        return {"raw_eml_path": relative, "raw_eml_sha256": sha, "raw_eml_size": size}, ""
+    except OSError:
+        return retained, "读取或写入原始邮件失败"
+    finally:
+        if temporary and os.path.exists(temporary):
+            os.unlink(temporary)
+
+
 def ingest(root, batch):
     root = _root_path(root)
     with _locked(root):
@@ -376,17 +431,25 @@ def ingest(root, batch):
             for field in MESSAGE_TRIAGE_FIELDS:
                 if field in previous:
                     message[field] = copy.deepcopy(previous[field])
+            if "filing" in previous:
+                message["filing"] = public_filing(previous["filing"])
             message["received_at"] = stamp.isoformat(timespec="seconds")
             message["source_url"] = sanitize_source_url(incoming.get("source_url", previous.get("source_url")))
+            raw_metadata, raw_error = _archive_raw_eml(root, directory, incoming, previous)
+            message.update(raw_metadata)
+            if raw_error:
+                errors.append(raw_error + ": " + identifier)
             if "body_text" not in incoming:
                 message["archive_path"] = previous["archive_path"]
             else:
-                snapshot = {"format": "browser_text_snapshot", "is_original_eml": False,
+                snapshot = {"format": "imap_text_snapshot" if incoming.get("raw_eml_download_path") else "browser_text_snapshot", "is_original_eml": False,
                             "id": identifier, "received_at": message["received_at"],
                             "sender": message["sender"], "subject": message["subject"],
                             "source_url": message["source_url"], "body_text": incoming["body_text"],
                             "observed_attachments": [{"id": a["id"], "name": _text(a.get("name"))}
                                                      for a in incoming.get("attachments", [])]}
+                if raw_metadata:
+                    snapshot["original_eml"] = raw_metadata
                 for local_field in ("headers_text", "internet_message_id"):
                     if incoming.get(local_field) is not None:
                         snapshot[local_field] = _text(incoming[local_field])
@@ -412,7 +475,7 @@ def ingest(root, batch):
                     retained = copy.deepcopy(previous_attachment)
                     try:
                         retained_path = _inside(root, retained["path"])
-                        intact = retained_path.is_file() and _sha_file(retained_path) == retained.get("sha256")
+                        intact = retained_path.is_file() and retained_path.stat().st_size > 0 and _sha_file(retained_path) == retained.get("sha256")
                     except OSError:
                         intact = False
                     if not intact:
@@ -450,7 +513,7 @@ def ingest(root, batch):
                     # A mail-level completion does not prove that a newly
                     # extracted task was completed. Only explicit exemptions
                     # carry into the first group of extracted tasks.
-                    action["status"] = triage if triage in {"no_action", "out_of_scope"} else "needs_confirmation"
+                    action["status"] = triage if triage in {"no_action", "out_of_scope", "archived"} else "needs_confirmation"
                 action["completed_at"] = (
                     normalize_time(incoming["completed_at"]) if incoming.get("completed_at") else finished
                 ) if action["status"] == "done" else None
@@ -500,11 +563,6 @@ def generate_report(root, kind, at):
         start = _day_start(end)
         if kind == "weekly":
             start -= timedelta(days=end.weekday())
-        elif kind == "daily":
-            prior = [parse_time(report["period_end"]) for report in data["reports"]
-                     if report["kind"] == "daily" and parse_time(report["period_end"]) < end]
-            if prior:
-                start = max(prior)
         messages = [message for message in data["messages"]
                     if start <= parse_time(message["received_at"]) <= end]
         active = [action for action in data["actions"] if action["status"] in ACTIVE_STATUSES]
@@ -577,6 +635,8 @@ def _public_diagnostic(value):
     if not value:
         return ""
     text = _text(value)
+    if text == "MIME_ATTACHMENT_EMPTY":
+        return "IMAP原始邮件中的附件内容为空，需取得非空原件"
     if text in PUBLIC_ERROR_REASONS:
         return text
     for prefix, reason in (("附件未完成: ", "部分附件未完成，见附件索引"),
@@ -600,6 +660,8 @@ def public_snapshot(data, root):
         for key in MESSAGE_TRIAGE_FIELDS:
             if key in incoming:
                 message[key] = copy.deepcopy(incoming[key])
+        if "filing" in incoming:
+            message["filing"] = public_filing(incoming["filing"])
         message["source_url"] = sanitize_source_url(message["source_url"])
         if message["archive_path"]:
             _inside(root_path, message["archive_path"])

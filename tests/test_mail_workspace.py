@@ -159,14 +159,14 @@ class MailWorkspaceTest(unittest.TestCase):
         self.assertEqual("_CON.txt", mail.safe_filename("CON.txt"))
         self.assertEqual("中文通知.docx", mail.safe_filename("中文通知.docx"))
 
-    def test_reports_preserve_date_only_deadline_and_prior_evening_window(self):
+    def test_reports_preserve_date_only_deadline_and_calendar_day_window(self):
         mail.ingest(self.root, self.batch())
         mail.generate_report(self.root, "daily", "2026-09-05T20:00:00+08:00")
         incomplete_report = mail.generate_report(self.root, "daily", "2026-09-06T20:00:00+08:00")
         self.assertFalse(incomplete_report["coverage_complete"])
         mail.generate_report(self.root, "morning", "2026-09-07T09:00:00+08:00")
         data = mail.load_dashboard(self.root)
-        self.assertEqual("2026-09-05T20:00:00+08:00", data["reports"][1]["period_start"])
+        self.assertEqual("2026-09-06T00:00:00+08:00", data["reports"][1]["period_start"])
         markdown = data["reports"][2]["markdown"]
         self.assertIn("今日到期", markdown)
         self.assertIn("9月7日下班前", markdown)

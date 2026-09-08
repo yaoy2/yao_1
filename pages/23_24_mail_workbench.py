@@ -13,6 +13,10 @@ import streamlit as st
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from utils import budget_auth
+from utils import mail_action_status
+# A live Streamlit process may still hold the status module from before filing.
+if "archived" not in mail_action_status.STATUS_LABELS:
+    importlib.reload(mail_action_status)
 from utils.mail_action_status import STATUS_LABELS, ACTIVE_STATUSES, ARCHIVED_STATUSES
 from utils import mail_report_view
 # Streamlit can retain imported modules while replacing the page on deployment.
@@ -31,9 +35,39 @@ INBOX_STATUSES = {
     "in_progress": "相关 · 处理中",
     "done": "相关 · 已办",
     "no_action": "相关 · 无需处理",
+    "archived": "存档",
     "out_of_scope": "不相关",
 }
-INBOX_VIEWS = ["全部", "待判断", "相关", "待办", "已办", "无需处理", "不相关"]
+INBOX_VIEWS = ["全部", "待判断", "相关", "待办", "已办", "无需处理", "存档", "不相关"]
+FILING_HELP = "选择“存档”会请求保存整封邮件的全部附件；只存档一个子事项也一样。接收电脑需在线，其他电脑通过 Google Drive 同步。"
+FILING_ERROR_LABELS = {
+    "SOURCE_MESSAGE_MISSING": "原邮件索引缺失",
+    "SOURCE_EML_MISSING": "原始邮件文件缺失",
+    "SOURCE_EML_INVALID": "原始邮件内容无法解析",
+    "SOURCE_EML_HASH_MISMATCH": "原始邮件校验不一致",
+    "SOURCE_MISSING": "原邮件或附件文件缺失",
+    "SOURCE_CORRUPT": "原邮件或附件内容损坏",
+    "SOURCE_NOT_FOUND": "邮箱中未找到原邮件",
+    "SOURCE_AUTH_REQUIRED": "接收电脑需重新完成邮箱认证",
+    "SOURCE_FETCH_FAILED": "暂未能从邮箱补取原邮件",
+    "SENSITIVE_SOURCE_SKIPPED": "认证类邮件已跳过，附件未保存",
+    "SOURCE_ID_MISMATCH": "原邮件身份校验不一致",
+    "SOURCE_PATH_REJECTED": "原文件位置未通过检查",
+    "SOURCE_ID_UNSEARCHABLE": "无法按现有邮件编号补取原文",
+    "ATTACHMENT_INVENTORY_INCOMPLETE": "附件清单尚未核对完整",
+    "ATTACHMENT_MISSING": "部分附件未取得文件",
+    "ATTACHMENT_EMPTY": "邮件中的附件为空，未保存空文件",
+    "ATTACHMENT_HASH_MISMATCH": "附件校验不一致",
+    "ATTACHMENT_READ_FAILED": "附件暂时无法读取",
+    "DESTINATION_UNAVAILABLE": "接收电脑的存档目录暂不可用",
+    "DESTINATION_UNSAFE": "存档目录未通过位置检查",
+    "DESTINATION_CONFLICT": "存档目录已有不同内容，未覆盖",
+    "FILE_COPY_FAILED": "附件复制失败",
+    "FILE_VERIFY_FAILED": "保存后的附件未通过校验",
+    "STATE_WRITE_FAILED": "存档进度记录未能保存",
+    "MANIFEST_WRITE_FAILED": "附件清单未能保存",
+    "FILING_INTERRUPTED": "存档中断，需重试",
+}
 KINDS = {"daily": "每日归档与简报", "morning": "早间到期提醒", "weekly": "每周汇总", "sample": "样本试跑"}
 ATTACHMENT_STATUSES = {"success": "已归档并核验", "missing": "未取得文件", "error": "归档失败", "pending": "待下载"}
 ERRORS = {
@@ -192,6 +226,7 @@ def filter_actions(actions, messages, view, now, category="全部"):
             "已完成": status == "done",
             "已办归档": status == "done",
             "无需处理": status == "no_action",
+            "存档": status == "archived",
             "不相关业务": status == "out_of_scope",
             "全部": True,
         }
@@ -218,10 +253,11 @@ def filter_inbox_messages(messages, actions, view="全部", query="", *, start=N
         matches = {
             "全部": True,
             "待判断": "needs_confirmation" in statuses,
-            "相关": bool(statuses & {"pending", "in_progress", "done", "no_action"}),
+            "相关": bool(statuses & {"pending", "in_progress", "done", "no_action", "archived"}),
             "待办": bool(statuses & {"pending", "in_progress"}),
             "已办": "done" in statuses,
             "无需处理": "no_action" in statuses,
+            "存档": "archived" in statuses,
             "不相关": "out_of_scope" in statuses,
         }
         if not matches.get(view, False):
@@ -253,6 +289,112 @@ def inbox_message_html(message, actions, now):
     """Keep the collapsed list to mail titles; all content lives in details."""
     subject = message.get("subject") or "无主题"
     return f'<div class="mail-inbox-heading"><strong>{inbox_text(subject)}</strong></div>'
+
+
+def filing_destination(value):
+    """Display only a relative location under the configured Ding2026 folder."""
+    if not isinstance(value, str) or not value or any(ord(char) < 32 for char in value):
+        return None
+    text = value.replace("\\", "/")
+    parts = text.split("/")
+    if (len(parts) < 2 or parts[0] != "邮件存档"
+            or PureWindowsPath(value).drive or PureWindowsPath(value).root
+            or any(not part or part in {".", ".."} or part != part.rstrip(" .")
+                   or any(char in part for char in '<>:"|?*') for part in parts)):
+        return None
+    return str(PureWindowsPath("E:/GoogleDrive/Ding2026", *parts))
+
+
+def filing_progress(message):
+    """A selected action state is not evidence that attachments reached disk."""
+    filing = message.get("filing")
+    if not isinstance(filing, dict):
+        return ""
+    status = filing.get("status")
+    saved, total, errors = (filing.get(field) for field in ("saved_count", "total_count", "error_count"))
+    counts_valid = all(type(value) is int and value >= 0 for value in (saved, total, errors))
+    if status == "pending":
+        return "存档 · 等待本机保存"
+    if status == "success":
+        if not counts_valid or saved != total or errors:
+            return "存档结果待核对"
+        if total == 0 and not filing.get("destination"):
+            return "存档 · 已确认无附件"
+        if not filing_destination(filing.get("destination")):
+            return "存档结果待核对"
+        return f"存档 · 已保存 {saved} 份附件"
+    if status == "partial":
+        return (f"存档 · 已保存 {saved}/{total} 份，附件待补" if counts_valid and saved <= total
+                else "存档 · 附件待补")
+    if status == "error":
+        return "存档 · 未保存"
+    if status == "cancelled":
+        return "存档请求已取消"
+    return "存档状态待核对"
+
+
+def filing_failure_reasons(message):
+    filing = message.get("filing")
+    if not isinstance(filing, dict) or filing.get("status") not in {"partial", "error"}:
+        return []
+    codes = filing.get("error_codes")
+    reasons = [FILING_ERROR_LABELS[code] for code in codes
+               if isinstance(code, str) and code in FILING_ERROR_LABELS] if isinstance(codes, list) else []
+    return list(dict.fromkeys(reasons)) or ["保存未完成，具体原因待核对"]
+
+
+def retry_filing(message_id, gateway, expected_version):
+    """Explicit retries retain current results until a checked cloud save wins."""
+    errors = st.session_state.setdefault("mail_filing_errors", {})
+    loaded = st.session_state.get("mail_loaded")
+    if not loaded or loaded.get("version") != expected_version:
+        errors[message_id] = ERRORS["conflict"]
+        return
+    try:
+        require_edit_access(loaded)
+        snapshot = loaded["snapshot"]
+        messages = [message for message in snapshot.get("messages", []) if str(message.get("id")) == message_id]
+        if len(messages) != 1 or messages[0].get("filing", {}).get("status") not in {"partial", "error"}:
+            errors[message_id] = ERRORS["conflict"]
+            return
+        linked = [action for action in snapshot.get("actions", []) if str(action.get("message_id")) == message_id]
+        archived = (any(action.get("status") == "archived" for action in linked) if linked
+                    else messages[0].get("triage_status") == "archived")
+        if not archived:
+            errors[message_id] = "邮件已不在存档状态，请刷新后核对。"
+            return
+        saved = gateway.save_filing_requests([message_id], expected_version=expected_version,
+                                            secrets=st.secrets, environ=os.environ)
+        if (not isinstance(saved, dict) or not isinstance(saved.get("snapshot"), dict)
+                or not isinstance(saved.get("version"), str) or not saved["version"]):
+            raise ValueError("Invalid filing save response")
+        st.session_state["mail_loaded"] = saved
+        errors.pop(message_id, None)
+        st.session_state["mail_save_notice"] = "已重新提交存档请求，等待本机保存附件。"
+    except Exception as exc:
+        errors[message_id] = ERRORS.get(getattr(exc, "code", ""), "重试存档失败，原存档结果已保留；请刷新核对后重试。")
+
+
+def render_filing_details(message, loaded, gateway, *, context):
+    filing = message.get("filing")
+    if not isinstance(filing, dict):
+        return
+    destination = filing_destination(filing.get("destination"))
+    if filing_progress(message) == "存档 · 已确认无附件":
+        st.text("原邮件无附件，无需保存文件。")
+    else:
+        st.text("保存目录：" + (destination or "待本机确认有效位置"))
+    st.caption("接收电脑在线时会保存附件；其他电脑通过 Google Drive 同步。选择“存档”不代表附件已保存，请以上方进度为准。")
+    message_id = str(message["id"])
+    error = st.session_state.get("mail_filing_errors", {}).get(message_id)
+    if error:
+        st.error(error)
+    if filing.get("status") in {"partial", "error"}:
+        st.caption("原因：" + "；".join(filing_failure_reasons(message)) + "。")
+        readonly = loaded.get("source") != "github" or not st.session_state.get("mail_authenticated")
+        st.button("重试存档", key=f"mail_filing_retry_{context}_{message_id}_{loaded.get('version', 'local')}",
+                  disabled=readonly, help="重新请求接收电脑保存本封邮件的全部附件；已有结果会保留到本次重试完成。",
+                  on_click=retry_filing, args=(message_id, gateway, loaded.get("version")))
 
 
 def build_action_updates(actions, drafts):
@@ -300,7 +442,8 @@ def get_mail_gateway():
     from utils import mail_private_sync
     # The same live process may also hold the old four-status validator.
     if (not set(STATUSES).issubset(mail_private_sync.ALLOWED_STATUSES)
-            or not hasattr(mail_private_sync, "save_message_updates")):
+            or not hasattr(mail_private_sync, "save_message_updates")
+            or not hasattr(mail_private_sync, "save_filing_requests")):
         importlib.reload(mail_private_sync)
     return mail_private_sync
 
@@ -382,7 +525,7 @@ def render_status_control(action, loaded, gateway, *, context, labels=STATUSES):
     current = action.get("status") if action.get("status") in STATUSES else "needs_confirmation"
     st.session_state[key] = current if readonly else drafts.get(action_id, current)
     st.selectbox("当前状态", list(labels), key=key, format_func=labels.get,
-                 disabled=readonly, label_visibility="collapsed", help="选择后自动保存；可在“全部”中随时改回。",
+                 disabled=readonly, label_visibility="collapsed", help="选择后自动保存；可在“全部”中随时改回。" + FILING_HELP,
                  on_change=remember_status, args=(action_id, key, gateway, loaded.get("version")))
     if action_id in drafts and drafts[action_id] != current:
         st.caption("尚未保存，仍按原状态归类。")
@@ -396,7 +539,7 @@ def render_message_status_control(message, loaded, gateway, *, context="inbox"):
     current = message.get("triage_status") or "needs_confirmation"
     st.session_state[key] = current if readonly else drafts.get(message_id, current)
     st.selectbox("当前状态", list(INBOX_STATUSES), key=key, format_func=INBOX_STATUSES.get,
-                 disabled=readonly, label_visibility="collapsed", help="判断这封邮件，选择后自动保存；可随时改回。",
+                 disabled=readonly, label_visibility="collapsed", help="判断这封邮件，选择后自动保存；可随时改回。" + FILING_HELP,
                  on_change=remember_message_status, args=(message_id, key, gateway, loaded.get("version")))
     if message_id in drafts and drafts[message_id] != current:
         st.caption("尚未保存，仍按原状态归类。")
@@ -415,7 +558,7 @@ def render_group_status_control(message, actions, loaded, gateway, *, context="i
     st.selectbox("整封邮件判断", options, key=key,
                  format_func=lambda status: f"{len(actions)} 项 · " + INBOX_STATUSES.get(status, "状态不同"),
                  disabled=readonly, label_visibility="collapsed",
-                 help=f"一次修改这封邮件的全部 {len(actions)} 个子事项，选择后自动保存；展开后仍可分别调整。",
+                 help=f"一次修改这封邮件的全部 {len(actions)} 个子事项，选择后自动保存；展开后仍可分别调整。" + FILING_HELP,
                  on_change=remember_group_status, args=(str(message["id"]), key, gateway, loaded.get("version")))
     if not readonly and any(str(a["id"]) in drafts and drafts[str(a["id"])] != a.get("status") for a in actions):
         st.caption("整封判断尚未保存，仍按原状态归类。")
@@ -427,6 +570,8 @@ def render_inbox_message(message, snapshot, loaded, gateway, now, *, context="in
         content_col, choice_col = st.columns([5, 1.65], vertical_alignment="center")
         with content_col:
             st.markdown(inbox_message_html(message, actions, now), unsafe_allow_html=True)
+            if progress := filing_progress(message):
+                st.caption(progress)
         with choice_col:
             if not actions:
                 render_message_status_control(message, loaded, gateway, context=context)
@@ -438,6 +583,7 @@ def render_inbox_message(message, snapshot, loaded, gateway, now, *, context="in
             st.caption(plain_label(
                 f"发件人：{message.get('sender') or '未记录'} · 收件时间：{display_time(message.get('received_at'))}"
                 f" · 分类：{message.get('category') or '未分类'} · 附件 {len(message.get('attachments', []))} 份"))
+            render_filing_details(message, loaded, gateway, context=f"inbox_{context}")
             st.text(message.get("summary") or "尚未生成摘要。")
             for number, action in enumerate(actions, 1):
                 title = (f"事项 {number} · " if len(actions) > 1 else "") + (action.get("title") or "处理事项")
@@ -546,7 +692,7 @@ def render_reports(reports, kinds, start=None, end=None, *, snapshot=None, loade
                 st.caption("本报告关联的事项暂无活跃待办。" if not missing else "请核对下方历史记录中的待办。")
             if archived:
                 with st.expander(f"已归档事项（{len(archived)}）", expanded=False):
-                    st.caption("已处理、无需处理和不属本人业务的事项已停止提醒，可在这里恢复。")
+                    st.caption("已处理、存档、无需处理和不属本人业务的事项已停止提醒，可在这里恢复。")
                     for action in archived:
                         render_action_card(action, snapshot, loaded, gateway, now, context=str(report.get("id", "report")))
             if missing:
@@ -565,6 +711,8 @@ def render_action_card(action, snapshot, loaded, gateway, now, *, context):
         body, status_col = st.columns([5, 1.7], vertical_alignment="center")
         with body:
             st.markdown("**" + plain_label(action.get("title") or action.get("requirement") or "未命名事项") + "**")
+            if progress := filing_progress(message):
+                st.caption(progress)
         with status_col:
             render_status_control(action, loaded, gateway, context=context)
         due_col, owner_col, recipient_col = st.columns([1.1, 1, 1])
@@ -582,6 +730,7 @@ def render_action_card(action, snapshot, loaded, gateway, now, *, context):
         st.caption("具体要求")
         st.markdown(plain_label(action.get("requirement") or "具体要求待确认。"))
         with st.expander("来源、截止依据与提交方式", expanded=False):
+            render_filing_details(message, loaded, gateway, context=f"action_{context}_{action['id']}")
             st.text("来源：" + str(message.get("subject") or "原邮件索引未提供"))
             st.text("截止日期：" + display_time(action.get("due_at"), deadline=True))
             st.text("判断依据：" + str(action.get("due_basis") or "未提供，需核对原邮件及附件。"))
@@ -606,9 +755,11 @@ def remember_status(action_id, widget_key, gateway, expected_version):
             raise ValueError("Missing snapshot")
         if save_drafts(gateway, loaded, {action_id: status}):
             drafts.pop(action_id, None)
-            group = {"done": "已办归档", "no_action": "无需处理", "out_of_scope": "不相关业务"}.get(status)
+            group = {"done": "已办归档", "no_action": "无需处理", "archived": "存档", "out_of_scope": "不相关业务"}.get(status)
             st.session_state["mail_save_notice"] = (f"已保存，事项已移入“{group}”，可随时恢复。" if group
                                                      else f"已保存为“{STATUSES[status]}”。")
+            if status == "archived":
+                st.session_state["mail_save_notice"] = "事项已移入“存档”，整封邮件的附件等待本机保存；请查看存档进度。"
         else:
             drafts.pop(action_id, None)
         st.session_state.pop("mail_save_error", None)
@@ -640,6 +791,8 @@ def remember_group_status(message_id, widget_key, gateway, expected_version):
         st.session_state["mail_save_notice"] = (
             f"已将这封邮件的 {len(selected)} 个子事项统一设为“{INBOX_STATUSES[status]}”，仍可展开单独调整。"
             if changed else f"这封邮件的 {len(selected)} 个子事项均为“{INBOX_STATUSES[status]}”。")
+        if status == "archived":
+            st.session_state["mail_save_notice"] += "附件保存结果请查看存档进度。"
     except Exception as exc:
         st.session_state["mail_save_error"] = ERRORS.get(
             getattr(exc, "code", ""), "整封判断保存失败，全部选择已保留；请刷新核对后重试。")
@@ -658,6 +811,8 @@ def remember_message_status(message_id, widget_key, gateway, expected_version):
             raise ValueError("Missing snapshot")
         if save_message_drafts(gateway, loaded, {message_id: status}):
             st.session_state["mail_save_notice"] = f"已保存为“{INBOX_STATUSES[status]}”，可在“全部”中随时改回。"
+            if status == "archived":
+                st.session_state["mail_save_notice"] = "已设为存档，附件等待本机保存；请查看存档进度。"
         drafts.pop(message_id, None)
         st.session_state.pop("mail_save_error", None)
     except Exception as exc:
@@ -694,8 +849,8 @@ def render_pending_changes(snapshot, loaded, gateway):
 
 
 def render_actions(snapshot, loaded, gateway, category, now):
-    st.caption("我的待办只显示需处理和处理中；待确认、已办归档及其他分类可分别查看。事项不受收件日期范围限制。")
-    view = st.radio("待办视图", ["我的待办", "待确认", "今天", "未来7天", "逾期", "已办归档", "无需处理", "不相关业务", "全部"], horizontal=True)
+    st.caption("我的待办只显示需处理和处理中；待确认、已办归档、存档及其他分类可分别查看。事项不受收件日期范围限制。")
+    view = st.radio("待办视图", ["我的待办", "待确认", "今天", "未来7天", "逾期", "已办归档", "无需处理", "存档", "不相关业务", "全部"], horizontal=True)
     if loaded.get("source") != "github":
         st.info("当前读取本机快照，仅供查看。")
     elif not st.session_state.get("mail_authenticated"):
@@ -703,7 +858,7 @@ def render_actions(snapshot, loaded, gateway, category, now):
     actions = filter_actions(snapshot.get("actions", []), snapshot.get("messages", []), view, now, category)
     linked_ids = {action.get("message_id") for action in snapshot.get("actions", [])}
     message_view = {"我的待办": "待办", "待确认": "待判断", "已办归档": "已办",
-                    "无需处理": "无需处理", "不相关业务": "不相关", "全部": "全部"}.get(view)
+                    "无需处理": "无需处理", "存档": "存档", "不相关业务": "不相关", "全部": "全部"}.get(view)
     message_items = (filter_inbox_messages(
         [message for message in snapshot.get("messages", []) if message.get("id") not in linked_ids],
         [], message_view, category=category,
@@ -759,8 +914,8 @@ def main():
         logout = editing and st.button("退出编辑", use_container_width=True)
     if logout:
         for key in list(st.session_state):
-            if (key in {"mail_authenticated", "mail_action_drafts", "mail_message_drafts", "mail_save_error"}
-                    or str(key).startswith(("mail_status_", "mail_message_status_", "mail_group_status_"))):
+            if (key in {"mail_authenticated", "mail_action_drafts", "mail_message_drafts", "mail_save_error", "mail_filing_errors"}
+                    or str(key).startswith(("mail_status_", "mail_message_status_", "mail_group_status_", "mail_filing_retry_"))):
                 del st.session_state[key]
         st.rerun()
     # Browsing preserves the existing summary-only data and write authorization.
