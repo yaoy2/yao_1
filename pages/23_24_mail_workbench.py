@@ -402,6 +402,25 @@ def render_message_status_control(message, loaded, gateway, *, context="inbox"):
         st.caption("尚未保存，仍按原状态归类。")
 
 
+def render_group_status_control(message, actions, loaded, gateway, *, context="inbox"):
+    """A parent choice applies to every extracted item in this one email."""
+    drafts = st.session_state.setdefault("mail_action_drafts", {})
+    readonly = loaded.get("source") != "github" or not st.session_state.get("mail_authenticated")
+    statuses = {action.get("status") for action in actions}
+    selected = statuses if readonly else {drafts.get(str(action["id"]), action.get("status")) for action in actions}
+    current = next(iter(selected)) if len(selected) == 1 else "__mixed__"
+    options = (["__mixed__"] if current == "__mixed__" else []) + list(INBOX_STATUSES)
+    key = f"mail_group_status_{context}_{message['id']}_{loaded.get('version', 'local')}"
+    st.session_state[key] = current
+    st.selectbox("整封邮件判断", options, key=key,
+                 format_func=lambda status: f"{len(actions)} 项 · " + INBOX_STATUSES.get(status, "状态不同"),
+                 disabled=readonly, label_visibility="collapsed",
+                 help=f"一次修改这封邮件的全部 {len(actions)} 个子事项，选择后自动保存；展开后仍可分别调整。",
+                 on_change=remember_group_status, args=(str(message["id"]), key, gateway, loaded.get("version")))
+    if not readonly and any(str(a["id"]) in drafts and drafts[str(a["id"])] != a.get("status") for a in actions):
+        st.caption("整封判断尚未保存，仍按原状态归类。")
+
+
 def render_inbox_message(message, snapshot, loaded, gateway, now, *, context="inbox"):
     actions = [action for action in snapshot.get("actions", []) if action.get("message_id") == message.get("id")]
     with st.container(border=True, key=f"mail_inbox_row_{context}_{message['id']}"):
@@ -414,9 +433,7 @@ def render_inbox_message(message, snapshot, loaded, gateway, now, *, context="in
             elif len(actions) == 1:
                 render_status_control(actions[0], loaded, gateway, context=context, labels=INBOX_STATUSES)
             else:
-                statuses = {action.get("status") for action in actions}
-                label = INBOX_STATUSES.get(next(iter(statuses)), "待判断") if len(statuses) == 1 else "状态不同"
-                st.caption(f"{len(actions)} 项 · {label}")
+                render_group_status_control(message, actions, loaded, gateway, context=context)
         with st.expander("详情与附件", expanded=False):
             st.caption(plain_label(
                 f"发件人：{message.get('sender') or '未记录'} · 收件时间：{display_time(message.get('received_at'))}"
@@ -599,6 +616,35 @@ def remember_status(action_id, widget_key, gateway, expected_version):
         st.session_state["mail_save_error"] = ERRORS.get(getattr(exc, "code", ""), "保存失败，选择已保留；请刷新核对后重试。")
 
 
+def remember_group_status(message_id, widget_key, gateway, expected_version):
+    status = st.session_state.get(widget_key)
+    if status not in STATUSES:
+        return
+    loaded = st.session_state.get("mail_loaded")
+    actions = [action for action in (loaded or {}).get("snapshot", {}).get("actions", [])
+               if str(action.get("message_id")) == message_id]
+    if not actions:
+        st.session_state["mail_save_error"] = ERRORS["conflict"]
+        return
+    selected = {str(action["id"]): status for action in actions}
+    drafts = st.session_state.setdefault("mail_action_drafts", {})
+    drafts.update(selected)
+    if loaded.get("version") != expected_version:
+        st.session_state["mail_save_error"] = ERRORS["conflict"]
+        return
+    try:
+        changed = save_drafts(gateway, loaded, dict(selected))
+        for action_id in selected:
+            drafts.pop(action_id, None)
+        st.session_state.pop("mail_save_error", None)
+        st.session_state["mail_save_notice"] = (
+            f"已将这封邮件的 {len(selected)} 个子事项统一设为“{INBOX_STATUSES[status]}”，仍可展开单独调整。"
+            if changed else f"这封邮件的 {len(selected)} 个子事项均为“{INBOX_STATUSES[status]}”。")
+    except Exception as exc:
+        st.session_state["mail_save_error"] = ERRORS.get(
+            getattr(exc, "code", ""), "整封判断保存失败，全部选择已保留；请刷新核对后重试。")
+
+
 def remember_message_status(message_id, widget_key, gateway, expected_version):
     drafts = st.session_state.setdefault("mail_message_drafts", {})
     status = st.session_state[widget_key]
@@ -696,11 +742,13 @@ def main():
     st.set_page_config(page_title="M24 · 邮件工作台", page_icon="✉️", layout="wide")
     render_home_link()
     st.markdown("""<style>
-        [data-testid="stVerticalBlock"] {gap:.5rem;}
-        [data-testid="stExpander"] details summary p {font-size:.88rem;}
-        .mail-inbox-heading {color:inherit; line-height:1.45; min-width:0;}
-        .mail-inbox-heading strong {font-size:1rem; line-height:1.45; overflow-wrap:anywhere;}
-        </style>""", unsafe_allow_html=True)
+    .block-container {padding-top:1rem; padding-bottom:2rem;}
+    [data-testid="stVerticalBlock"] {gap:.5rem;}
+    h1 {font-size:1.8rem !important; padding:.25rem 0 .5rem !important;}
+    [data-testid="stExpander"] details summary p {font-size:.88rem;}
+    .mail-inbox-heading {color:inherit; line-height:1.45; min-width:0;}
+    .mail-inbox-heading strong {font-size:1rem; line-height:1.45; overflow-wrap:anywhere;}
+    </style>""", unsafe_allow_html=True)
     st.markdown("<style>" + REPORT_CSS + "</style>", unsafe_allow_html=True)
     title_col, refresh_col, access_col = st.columns([5, 1, 1.6], vertical_alignment="center")
     with title_col:
@@ -712,7 +760,7 @@ def main():
     if logout:
         for key in list(st.session_state):
             if (key in {"mail_authenticated", "mail_action_drafts", "mail_message_drafts", "mail_save_error"}
-                    or str(key).startswith(("mail_status_", "mail_message_status_"))):
+                    or str(key).startswith(("mail_status_", "mail_message_status_", "mail_group_status_"))):
                 del st.session_state[key]
         st.rerun()
     # Browsing preserves the existing summary-only data and write authorization.
