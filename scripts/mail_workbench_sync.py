@@ -22,7 +22,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from utils import mail_private_sync, mail_workspace
+from utils import mail_private_sync, mail_workspace, mail_filing_state
 
 
 DEFAULT_REPO = "yaoy2/mail-workbench-data"
@@ -224,6 +224,12 @@ def _merge_message_triage(local_message, remote_message):
         local_message[key] = copy.deepcopy(winner[key])
 
 
+def _merge_message_filing(local_message, remote_message):
+    filing = mail_filing_state.merge_filing(local_message.get("filing"), remote_message.get("filing"))
+    if filing is not None:
+        local_message["filing"] = filing
+
+
 def merge_remote_states(local, remote):
     """Pull status fields only; unknown remote records wait for a full push merge."""
     _check_identity(local, remote)
@@ -238,6 +244,7 @@ def merge_remote_states(local, remote):
     for message in result["messages"]:
         if message["id"] in messages:
             _merge_message_triage(message, messages[message["id"]])
+            _merge_message_filing(message, messages[message["id"]])
     if result != local:
         result["updated_at"] = mail_workspace.now_iso()
     return result
@@ -249,6 +256,7 @@ def _merge_messages(local, remote):
         previous = merged.get(row["id"], {})
         combined = {**previous, **copy.deepcopy(row)}
         _merge_message_triage(combined, previous)
+        _merge_message_filing(combined, previous)
         attachments = {item["id"]: copy.deepcopy(item) for item in previous.get("attachments", [])}
         attachments.update({item["id"]: copy.deepcopy(item) for item in row.get("attachments", [])})
         combined["attachments"] = list(attachments.values())
@@ -285,7 +293,7 @@ def merge_for_push(local, remote, root):
             _merge_status(combined, previous)
         elif row.get("message_id") not in remote_actioned:
             message = messages.get(row.get("message_id"), {})
-            if (message.get("triage_status") in {"no_action", "out_of_scope"}
+            if (message.get("triage_status") in {"no_action", "out_of_scope", "archived"}
                     and _moment(message, "triage_updated_at") >= _moment(row, "updated_at")):
                 # The web user may exempt this mail after local extraction but
                 # before its first upload. Preserve that newer explicit choice.

@@ -18,6 +18,7 @@ import requests
 
 from utils import github_backup_sync
 from utils.mail_action_status import ALL_STATUSES, STATUS_LABELS
+from utils import mail_filing_state
 
 
 DEFAULT_REPO = "yaoy2/mail-workbench-data"
@@ -178,6 +179,11 @@ def _validate_snapshot(snapshot):
             raise MailSyncError("invalid_snapshot", "邮件缺少唯一标识，或存在重复标识。")
         message_ids.add(message_id)
         _check_timestamp(message.get("received_at"))
+        if "filing" in message:
+            try:
+                mail_filing_state.validate_filing(message["filing"])
+            except (ValueError, TypeError):
+                raise MailSyncError("invalid_snapshot", "邮件存档请求或结果格式不正确。") from None
         if "triage_status" in message or "triage_updated_at" in message:
             if (not isinstance(message.get("triage_status"), str)
                     or message["triage_status"] not in ALLOWED_STATUSES
@@ -296,8 +302,13 @@ def save_action_updates(updates, expected_version, secrets=None, environ=None, s
     actions = {action["id"]: action for action in snapshot["actions"]}
     if any(action_id not in actions for action_id in changes):
         raise MailSyncError("invalid_update", "待办已不存在或标识不正确，请刷新后核对。")
+    message_ids = {message["id"] for message in snapshot["messages"]}
+    if any(status == "archived" and actions[action_id].get("message_id") not in message_ids
+           for action_id, status in changes.items()):
+        raise MailSyncError("invalid_update", "待办所属邮件已不存在，无法请求附件存档。")
     now = datetime.now(_snapshot_timezone(snapshot)).isoformat(timespec="seconds")
     changed = False
+    touched_messages, requested_messages = set(), set()
     for action_id, status in changes.items():
         action = actions[action_id]
         if action["status"] == status:
@@ -306,8 +317,14 @@ def save_action_updates(updates, expected_version, secrets=None, environ=None, s
         action["updated_at"] = now
         action["completed_at"] = now if status == "done" else None
         changed = True
+        if action.get("message_id") in message_ids:
+            touched_messages.add(action["message_id"])
+            if status == "archived":
+                requested_messages.add(action["message_id"])
     if not changed:
         return current
+    mail_filing_state.queue_filing(snapshot, sorted(requested_messages), now)
+    mail_filing_state.cancel_unrequested(snapshot, sorted(touched_messages), now)
     snapshot["updated_at"] = now
     encoded = base64.b64encode(json.dumps(snapshot, ensure_ascii=False, indent=2).encode("utf-8")).decode("ascii")
     response = _request(
@@ -352,6 +369,7 @@ def save_message_updates(updates, expected_version, secrets=None, environ=None, 
         raise MailSyncError("invalid_update", "邮件已不存在或已有处理事项，请刷新后逐项判断。")
     now = datetime.now(_snapshot_timezone(snapshot)).isoformat(timespec="seconds")
     changed = False
+    touched_messages, requested_messages = [], []
     for message_id, status in changes.items():
         message = messages[message_id]
         if message.get("triage_status") == status:
@@ -359,8 +377,13 @@ def save_message_updates(updates, expected_version, secrets=None, environ=None, 
         message["triage_status"] = status
         message["triage_updated_at"] = now
         changed = True
+        touched_messages.append(message_id)
+        if status == "archived":
+            requested_messages.append(message_id)
     if not changed:
         return current
+    mail_filing_state.queue_filing(snapshot, requested_messages, now)
+    mail_filing_state.cancel_unrequested(snapshot, touched_messages, now)
     snapshot["updated_at"] = now
     encoded = base64.b64encode(json.dumps(snapshot, ensure_ascii=False, indent=2).encode("utf-8")).decode("ascii")
     response = _request(
@@ -374,4 +397,45 @@ def save_message_updates(updates, expected_version, secrets=None, environ=None, 
     new_sha = content.get("sha") if isinstance(content, dict) else None
     if not isinstance(new_sha, str) or not new_sha:
         raise MailSyncError("invalid_response", "仓库未返回新版本，保存结果尚未确认，请刷新核对。")
+    return {"snapshot": snapshot, "version": new_sha, "source": "github"}
+
+
+def save_filing_requests(message_ids, expected_version, secrets=None, environ=None, session=None):
+    """Explicitly retry attachment filing for archived mail in one guarded write.
+
+    Paths, counts and worker results cannot be supplied by the web caller.
+    Changing a request never changes the user's action or mail-level judgment.
+    """
+    environ = os.environ if environ is None else environ
+    if _text(environ, "MAIL_WORKBENCH_SNAPSHOT"):
+        raise MailSyncError("readonly", "本地快照为只读预览，不能请求附件存档。")
+    if (not isinstance(message_ids, list) or not message_ids
+            or any(not isinstance(identifier, str) or not identifier.strip() for identifier in message_ids)
+            or len(message_ids) != len(set(message_ids))):
+        raise MailSyncError("invalid_update", "存档请求须包含不重复的邮件标识。")
+    if not isinstance(expected_version, str) or not expected_version:
+        raise MailSyncError("conflict", "保存需要已读取的远端版本，请先刷新邮件工作台。")
+    config = _config(secrets, environ)
+    session = requests if session is None else session
+    current = _read_remote(config, session)
+    if current["version"] != expected_version:
+        raise MailSyncError("conflict", "邮件数据已更新，未覆盖远端；请刷新后核对并重新保存。")
+    snapshot = copy.deepcopy(current["snapshot"])
+    if any(not mail_filing_state.is_filing_requested(snapshot, identifier) for identifier in message_ids):
+        raise MailSyncError("invalid_update", "邮件不存在或当前未选择存档，请刷新后核对。")
+    now = datetime.now(_snapshot_timezone(snapshot)).isoformat(timespec="seconds")
+    mail_filing_state.queue_filing(snapshot, message_ids, now)
+    snapshot["updated_at"] = now
+    encoded = base64.b64encode(json.dumps(snapshot, ensure_ascii=False, indent=2).encode("utf-8")).decode("ascii")
+    response = _request(
+        session, "put", f"{API_ROOT}/repos/{config['repo']}/contents/{SNAPSHOT_PATH}", config,
+        json={"message": "mail: request attachment filing", "branch": config["branch"],
+              "sha": expected_version, "content": encoded},
+    )
+    _check_status(response, {200}, "snapshot")
+    data = _response_json(response)
+    content = data.get("content")
+    new_sha = content.get("sha") if isinstance(content, dict) else None
+    if not isinstance(new_sha, str) or not new_sha:
+        raise MailSyncError("invalid_response", "仓库未返回新版本，存档请求结果尚未确认，请刷新核对。")
     return {"snapshot": snapshot, "version": new_sha, "source": "github"}

@@ -179,7 +179,7 @@ class GroupStatusControlTests(unittest.TestCase):
         gateway.save_action_updates.assert_not_called()
         return ui, ui.selectbox.call_args, gateway
 
-    def test_uniform_parent_shows_six_decisions_and_callback_is_scoped_to_mail(self):
+    def test_uniform_parent_shows_all_decisions_and_callback_is_scoped_to_mail(self):
         ui, call, gateway = self.render(["pending"] * 12)
         self.assertEqual("整封邮件判断", call.args[0])
         self.assertEqual(list(page.INBOX_STATUSES), call.args[1])
@@ -191,7 +191,7 @@ class GroupStatusControlTests(unittest.TestCase):
         self.assertIn("12", call.kwargs["format_func"]("pending"))
         self.assertIn(page.INBOX_STATUSES["pending"], call.kwargs["format_func"]("pending"))
 
-    def test_mixed_children_show_nonpersistable_sentinel_and_all_six_choices(self):
+    def test_mixed_children_show_nonpersistable_sentinel_and_all_choices(self):
         ui, call, _ = self.render(["pending", "done"])
         self.assertEqual("__mixed__", ui.session_state[call.kwargs["key"]])
         self.assertEqual(["__mixed__", *page.INBOX_STATUSES], call.args[1])
