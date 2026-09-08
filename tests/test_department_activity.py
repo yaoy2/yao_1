@@ -4,6 +4,7 @@ import json
 import tempfile
 import unittest
 from datetime import date, datetime, timezone
+from html.parser import HTMLParser
 from pathlib import Path
 from unittest.mock import patch
 
@@ -80,16 +81,53 @@ class MonthlyCalculationTest(unittest.TestCase):
         data = activity.set_reimbursed_months(data, [1], TODAY)
         self.assertEqual(60, activity.summarize(data, TODAY)["reimbursed"])
 
-    def test_editing_paid_headcount_requires_removing_reimbursement(self):
+    def test_editing_paid_headcount_recalculates_selected_month_amount(self):
         data = activity.set_reimbursed_months(sample_budget(), [1], TODAY)
         original = copy.deepcopy(data)
-        with self.assertRaisesRegex(ValueError, "已报销"):
-            activity.set_rosters(data, [2, 1], ["甲"])
+        updated = activity.set_rosters(data, [1], ["张三", "李四", "新教师"])
+        result = activity.summarize(updated, TODAY)
+        self.assertEqual(330, result["total"])
+        self.assertEqual(90, result["reimbursed"])
+        self.assertEqual(240, result["balance"])
         self.assertEqual(original, data)
-        corrected = activity.set_rosters(data, [1], ["更正姓名", "李四"])
-        self.assertEqual(60, activity.summarize(corrected, TODAY)["reimbursed"])
-        unpaid = activity.set_reimbursed_months(data, [], TODAY)
-        self.assertEqual(["甲"], activity.set_rosters(unpaid, [1], ["甲"])["months"]["1"])
+
+    def test_hires_departures_update_current_budget_and_balance_only_for_selected_month(self):
+        data = activity.set_reimbursed_months(sample_budget(), [1, 3], TODAY)
+        original = copy.deepcopy(data)
+        hired = activity.change_people(data, 9, additions=["新教师"])
+        result = activity.summarize(hired, TODAY)
+        self.assertEqual((330, 90, 240), (result["total"], result["reimbursed"], result["balance"]))
+        self.assertEqual(150, activity.monthly_rows(hired, TODAY)[8]["预算（元）"])
+        departed = activity.change_people(hired, 9, remove_indices=[1, 3])
+        self.assertEqual(["张三", "王五", "新教师"], departed["months"]["9"])
+        self.assertEqual(180, activity.summarize(departed, TODAY)["balance"])
+        for month in range(1, 13):
+            if month != 9:
+                self.assertEqual(original["months"][str(month)], departed["months"][str(month)])
+        self.assertEqual(original, data)
+
+    def test_departure_can_remove_one_of_same_name_people_or_all_people(self):
+        data = activity.set_rosters(sample_budget(), [9], ["同名", "同名"])
+        updated = activity.change_people(data, 9, remove_indices=[1, 1])
+        self.assertEqual(["同名"], updated["months"]["9"])
+        updated = activity.change_people(updated, 9, remove_indices=[0])
+        self.assertEqual([], updated["months"]["9"])
+        self.assertEqual(0, activity.monthly_rows(updated, TODAY)[8]["预算（元）"])
+
+    def test_invalid_staff_change_leaves_budget_intact(self):
+        data = sample_budget()
+        original = copy.deepcopy(data)
+        for month, additions, removals in ((13, ["甲"], []), (11, ["甲"], []),
+                                           (9, [], [4]), (9, [], [-1]), (9, [" "], []),
+                                           (9, [], [])):
+            with self.subTest(month=month, additions=additions, removals=removals), self.assertRaises(ValueError):
+                activity.change_people(data, month, additions, removals)
+        self.assertEqual(original, data)
+
+    def test_future_staff_change_waits_for_month_to_accrue(self):
+        data = activity.change_people(sample_budget(), 10, additions=["新教师"])
+        self.assertEqual(300, activity.summarize(data, TODAY)["total"])
+        self.assertEqual(390, activity.summarize(data, date(2026, 10, 1))["total"])
 
     def test_name_parsing_keeps_same_name_people_and_months_independent(self):
         names = activity.parse_names(" 张三\n李四，王五、赵六；王 斌\t张三\n")
@@ -109,6 +147,49 @@ class MonthlyCalculationTest(unittest.TestCase):
             data[field] = value
             with self.subTest(field=field), self.assertRaises(ValueError):
                 activity.validate_budget(data, 2026)
+
+
+class TableReader(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.rows = []
+        self.in_cell = False
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "tr":
+            self.rows.append([])
+        if tag in ("td", "th"):
+            self.rows[-1].append("")
+            self.in_cell = True
+
+    def handle_data(self, text):
+        if self.in_cell:
+            self.rows[-1][-1] += text
+
+    def handle_endtag(self, tag):
+        if tag in ("td", "th"):
+            self.in_cell = False
+
+
+class RosterLayoutTest(unittest.TestCase):
+    def test_excel_order_and_all_month_columns_preserve_names_and_unknowns(self):
+        reader = TableReader()
+        reader.feed(activity.build_roster_html(sample_budget(), 9))
+        self.assertEqual(["月份"] + [f"{m}月" for m in range(1, 13)], reader.rows[0])
+        self.assertEqual(["费用（元）", "60", "90", "30"], reader.rows[1][:4])
+        self.assertEqual(["人数", "2", "3", "1"], reader.rows[2][:4])
+        self.assertEqual(["1", "张三", "张三", "张三"], reader.rows[3][:4])
+        self.assertEqual("待补全", reader.rows[3][11])
+        self.assertTrue(all(len(row) == 13 for row in reader.rows))
+
+    def test_user_entered_name_is_escaped_as_text(self):
+        name = '<img src=x onerror="alert(1)"> & 新教师'
+        data = activity.set_rosters(sample_budget(), [9], [name])
+        html = activity.build_roster_html(data)
+        self.assertNotIn("<img", html)
+        reader = TableReader()
+        reader.feed(html)
+        self.assertEqual(name, reader.rows[3][9])
 
 
 class Response:

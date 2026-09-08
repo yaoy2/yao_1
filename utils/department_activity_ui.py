@@ -21,13 +21,19 @@ def _save(data, snapshot, state_key):
         st.error("保存未获确认，请先刷新最新数据核对；当前填写内容仍保留在表单中。")
     else:
         st.session_state.pop(state_key, None)
+        st.session_state[f"{state_key}_expanded"] = True
         st.session_state[f"{state_key}_notice"] = result.get("warning") or (
             "部门活动预算已保存到云端。" if result["source"] == "github" else "部门活动预算已保存到本机。")
         st.rerun()
 
 
 def render_department_activity_budget(year):
-    st.subheader("👥 部门活动预算详情")
+    with st.expander("👥 部门活动经费 · 点击展开详情",
+                     expanded=st.session_state.get(f"department_activity_{year}_expanded", False)):
+        _render_details(year)
+
+
+def _render_details(year):
     today = activity.today_in_shanghai()
     cutoff = activity.cutoff_month(year, today)
     st.caption(f"{year}年度 · 每人每月{activity.MONTHLY_RATE}元 · 截至{today:%Y-%m-%d}（北京时间），"
@@ -65,27 +71,56 @@ def render_department_activity_budget(year):
     paid_col.metric("已报销金额", "待确认" if summary["reimbursed"] is None else f"¥{summary['reimbursed']:,.2f}")
     paid_col.caption("已报销月份：" + (_month_text(summary["reimbursed_months"]) if summary["reimbursed_months"]
                                    else "尚未确认" if summary["reimbursed"] is None else "无"))
-    balance_col.metric("余额", "待补全 / 确认" if summary["balance"] is None else f"¥{summary['balance']:,.2f}")
+    balance_pending = "待补全名单" if summary["total"] is None else "待确认报销"
+    balance_col.metric("余额", balance_pending if summary["balance"] is None else f"¥{summary['balance']:,.2f}")
     balance_col.caption("余额 = 当前预算总额 − 已报销月份金额")
 
-    monthly = activity.monthly_rows(data, today)
-    table = pd.DataFrame({row["月份"]: {
-        "教师人数": "待补全" if row["教师人数"] is None else str(row["教师人数"]),
-        "预算（元）": "待补全" if row["预算（元）"] is None else f"{row['预算（元）']:,}",
-        "报销状态": row["报销状态"],
-        "已报销（元）": "—" if row["已报销（元）"] is None else f"{row['已报销（元）']:,}",
-    } for row in monthly})
-    st.dataframe(table, use_container_width=True)
+    selected = st.selectbox("人员变动月份", list(range(1, 13)), index=max(1, cutoff) - 1,
+                            format_func=lambda month: f"{month}月", key=f"{state_key}_month")
+    names = data["months"][str(selected)]
+    detail_tab, people_tab, paid_tab, bulk_tab = st.tabs(["月度明细", "新入职 / 离职", "报销登记", "整月名单"])
 
-    with st.expander("展开查看：1—12月教师名单"):
-        roster = pd.DataFrame(activity.roster_columns(data))
-        roster.index = pd.RangeIndex(1, len(roster) + 1, name="序号")
-        st.dataframe(roster, use_container_width=True, height=min(600, 38 * (len(roster) + 1) + 4))
+    with detail_tab:
+        st.markdown(activity.build_roster_html(data, selected), unsafe_allow_html=True)
+        st.caption(f"浅绿色为{selected}月。费用 = 当月人数 × {activity.MONTHLY_RATE}元；月份、费用和人数固定在表格顶部。")
 
-    with st.expander("维护每月名单"):
-        selected = st.selectbox("查看 / 编辑月份", list(range(1, 13)),
-                                format_func=lambda month: f"{month}月", key=f"{state_key}_month")
-        names = data["months"][str(selected)]
+    with people_tab:
+        if names is None:
+            st.info(f"{selected}月尚未录入完整名单，请在“整月名单”中录入或从已有月份复制，再增减人员。")
+        else:
+            st.caption(f"{selected}月现有{len(names)}人，预算{len(names) * activity.MONTHLY_RATE:,}元。")
+            with st.form(f"{widget_key}_people_{selected}"):
+                add_col, remove_col = st.columns(2)
+                with add_col:
+                    additions = st.text_input("新入职姓名", placeholder="可输入多人，用逗号或顿号分隔")
+                with remove_col:
+                    removals = st.multiselect("选择离职人员", list(range(len(names))),
+                                              format_func=lambda index: f"{index + 1}. {names[index]}")
+                changed = st.form_submit_button("保存人员变动并更新金额", type="primary")
+            if changed:
+                try:
+                    updated = activity.change_people(data, selected, activity.parse_names(additions), removals)
+                except ValueError as exc:
+                    st.error(str(exc))
+                else:
+                    _save(updated, snapshot, state_key)
+            duplicates = [name for name, count in Counter(names).items() if count > 1]
+            if duplicates:
+                st.caption("以下同名记录分别计人数，请核对：" + "、".join(duplicates))
+        st.caption("变动只影响所选月份。保存后，当月经费、累计预算和余额自动重算；后续月份可复制调整后的名单。")
+        st.caption("已勾选报销的月份，报销金额也按更新后的当月人数重新计算。")
+
+    with bulk_tab:
+        sources = [month for month in range(1, 13) if month != selected and data["months"][str(month)] is not None]
+        if sources:
+            earlier = [month for month in sources if month < selected]
+            source = st.selectbox("从已有月份复制完整名单", sources,
+                                  index=sources.index(max(earlier) if earlier else sources[0]),
+                                  format_func=lambda month: f"{month}月 · {len(data['months'][str(month)])}人",
+                                  key=f"{widget_key}_copy_source_{selected}")
+            if st.button(f"将{source}月名单复制到{selected}月（覆盖该月名单）", key=f"{widget_key}_copy_{selected}"):
+                updated = activity.set_rosters(data, [selected], data["months"][str(source)])
+                _save(updated, snapshot, state_key)
         with st.form(f"{widget_key}_roster_{selected}"):
             targets = st.multiselect("保存到哪些月份（名单相同可多选）", list(range(1, 13)),
                                      default=[selected], format_func=lambda month: f"{month}月")
@@ -103,12 +138,9 @@ def render_department_activity_budget(year):
                     st.error(str(exc))
                 else:
                     _save(updated, snapshot, state_key)
-        duplicates = [name for name, count in Counter(names or []).items() if count > 1]
-        if duplicates:
-            st.caption("名单有同名记录，当前按每条记录计人数，请核对：" + "、".join(duplicates))
-        st.caption("名单按月独立保存。已报销月份更改人数前，需先取消对应报销标记。")
+        st.caption("每个月保留独立名单；费用、累计金额及余额随人数自动更新。")
 
-    with st.expander("登记已报销月份"):
+    with paid_tab:
         eligible = [month for month in range(1, cutoff + 1) if data["months"][str(month)] is not None]
         st.caption("按预算所属月份勾选，可只选1月和3月；每月按整月预算登记，金额自动相加。")
         with st.form(f"{widget_key}_reimbursement"):
@@ -125,3 +157,4 @@ def render_department_activity_budget(year):
             else:
                 _save(updated, snapshot, state_key)
         st.caption("本区登记预算月份的报销情况；支出流水仍按实际费用记录，不会重复生成流水。")
+        st.dataframe(pd.DataFrame(activity.monthly_rows(data, today)), use_container_width=True, hide_index=True)
