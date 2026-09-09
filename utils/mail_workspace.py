@@ -19,7 +19,7 @@ from pathlib import Path
 from urllib.parse import unquote, urlsplit, urlunsplit
 
 from utils.mail_action_status import ACTIVE_STATUSES, ALL_STATUSES, STATUS_LABELS
-from utils.mail_filing_state import public_filing
+from utils.mail_filing_state import is_filing_requested, public_filing
 
 
 SCHEMA_VERSION = 1
@@ -639,8 +639,27 @@ def generate_report(root, kind, at):
                 lines.append("- " + action["title"] + "｜完成时间："
                              + parse_time(action["completed_at"]).strftime("%Y-%m-%d %H:%M")
                              + "｜责任：" + (action.get("owner") or "待确认"))
-        incomplete = [a for m in data["messages"] for a in m.get("attachments", []) if a["status"] != "success"]
-        lines.extend(["", "## 采集核对", "", "未完成附件：" + str(len(incomplete)) + "；最近成功游标：" + (data["coverage"].get("through") or "尚无") + "。"])
+        if data.get("collection_storage") == "on_demand":
+            # Current user choices and filing receipts are independent of the
+            # report's received-mail window and the legacy attachment index.
+            filings = [message.get("filing") or {} for message in data["messages"]
+                       if is_filing_requested(data, message["id"])
+                       and (message.get("filing") or {}).get("status") != "cancelled"]
+            waiting = sum(filing.get("status", "pending") == "pending" for filing in filings)
+            needs_filing = sum(filing.get("status") in {"partial", "error"} for filing in filings)
+            saved = sum(filing.get("saved_count", 0) for filing in filings)
+            successful = [filing for filing in filings if filing.get("status") == "success"]
+            no_attachments = sum(filing.get("total_count") == 0 for filing in successful)
+            lines.extend(["", "## 采集核对", "",
+                          f"当前存档请求：{len(filings)} 封；等待保存：{waiting} 封；"
+                          f"存档待补：{needs_filing} 封；保存完成：{len(successful)} 封。",
+                          f"当前所选存档回执已保存附件：{saved} 个（含此前保存，不代表本统计时段新增保存量）。"])
+            if no_attachments:
+                lines.append(f"其中无附件邮件：{no_attachments} 封，已完成核对，0 个附件为正常结果。")
+            lines.append("最近成功游标：" + (coverage.get("through") or "尚无") + "。")
+        else:
+            incomplete = [a for m in data["messages"] for a in m.get("attachments", []) if a["status"] != "success"]
+            lines.extend(["", "## 采集核对", "", "未完成附件：" + str(len(incomplete)) + "；最近成功游标：" + (data["coverage"].get("through") or "尚无") + "。"])
         report = {"id": kind + "-" + end.isoformat(timespec="seconds"), "kind": kind,
                   "date": end.date().isoformat(), "period_start": start.isoformat(timespec="seconds"),
                   "period_end": end.isoformat(timespec="seconds"), "generated_at": now_iso(),
