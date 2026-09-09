@@ -18,7 +18,7 @@ import requests
 
 from utils import github_backup_sync
 from utils.mail_action_status import ALL_STATUSES, STATUS_LABELS
-from utils import mail_filing_state
+from utils import mail_filing_state, mail_collection_state
 
 
 DEFAULT_REPO = "yaoy2/mail-workbench-data"
@@ -164,6 +164,11 @@ def _validate_snapshot(snapshot):
     if not snapshot.get("updated_at"):
         raise MailSyncError("invalid_snapshot", "邮件快照缺少更新时间。")
     _check_timestamp(snapshot["updated_at"])
+    if "manual_collection" in snapshot:
+        try:
+            mail_collection_state.validate_collection(snapshot["manual_collection"])
+        except (ValueError, TypeError):
+            raise MailSyncError("invalid_snapshot", "手动收信请求或结果格式不正确。") from None
     coverage = snapshot.get("coverage")
     if not isinstance(coverage, dict):
         raise MailSyncError("invalid_snapshot", "邮件快照缺少覆盖范围说明。")
@@ -438,4 +443,41 @@ def save_filing_requests(message_ids, expected_version, secrets=None, environ=No
     new_sha = content.get("sha") if isinstance(content, dict) else None
     if not isinstance(new_sha, str) or not new_sha:
         raise MailSyncError("invalid_response", "仓库未返回新版本，存档请求结果尚未确认，请刷新核对。")
+    return {"snapshot": snapshot, "version": new_sha, "source": "github"}
+
+
+def request_collection(expected_version, secrets=None, environ=None, session=None):
+    """Queue one manual collection using only the caller's observed version.
+
+    The web caller cannot supply collection ranges, paths, commands, prompts,
+    credentials or worker results. A live request cannot be replaced by a click.
+    """
+    environ = os.environ if environ is None else environ
+    if _text(environ, "MAIL_WORKBENCH_SNAPSHOT"):
+        raise MailSyncError("readonly", "本地快照为只读预览，不能请求手动收信。")
+    if not isinstance(expected_version, str) or not expected_version:
+        raise MailSyncError("conflict", "请求收信需要已读取的远端版本，请先刷新邮件工作台。")
+    config = _config(secrets, environ)
+    session = requests if session is None else session
+    current = _read_remote(config, session)
+    if current["version"] != expected_version:
+        raise MailSyncError("conflict", "邮件数据已更新，未重复请求收信；请刷新后核对。")
+    snapshot = copy.deepcopy(current["snapshot"])
+    previous = snapshot.get("manual_collection")
+    if previous and previous["status"] in {"pending", "running"}:
+        raise MailSyncError("collection_busy", "已有手动收信请求等待执行或正在处理，请刷新查看进度。")
+    at = datetime.now(_snapshot_timezone(snapshot)).isoformat(timespec="seconds")
+    snapshot["manual_collection"] = mail_collection_state.new_request(at, previous)
+    snapshot["updated_at"] = snapshot["manual_collection"]["updated_at"]
+    encoded = base64.b64encode(json.dumps(snapshot, ensure_ascii=False, indent=2).encode("utf-8")).decode("ascii")
+    response = _request(
+        session, "put", f"{API_ROOT}/repos/{config['repo']}/contents/{SNAPSHOT_PATH}", config,
+        json={"message": "mail: request manual collection", "branch": config["branch"],
+              "sha": expected_version, "content": encoded},
+    )
+    _check_status(response, {200}, "snapshot")
+    content = _response_json(response).get("content")
+    new_sha = content.get("sha") if isinstance(content, dict) else None
+    if not isinstance(new_sha, str) or not new_sha:
+        raise MailSyncError("invalid_response", "仓库未返回新版本，收信请求尚未确认，请刷新核对。")
     return {"snapshot": snapshot, "version": new_sha, "source": "github"}

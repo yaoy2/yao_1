@@ -68,6 +68,28 @@ FILING_ERROR_LABELS = {
     "MANIFEST_WRITE_FAILED": "附件清单未能保存",
     "FILING_INTERRUPTED": "存档中断，需重试",
 }
+COLLECTION_ERROR_LABELS = {
+    "COLLECTION_CONFIG_INVALID": "接收电脑的收信配置需要核对",
+    "COLLECTION_AUTH_REQUIRED": "接收电脑需重新完成邮箱认证",
+    "COLLECTION_CONNECT_FAILED": "暂时无法连接邮箱",
+    "COLLECTION_READ_FAILED": "部分邮件暂未读取成功",
+    "COLLECTION_WINDOW_INCOMPLETE": "本次收信时段尚未核对完整",
+    "REVIEW_UNAVAILABLE": "AI 整理服务暂不可用",
+    "REVIEW_TIMEOUT": "AI 整理超时",
+    "REVIEW_FAILED": "AI 整理未完成",
+    "REVIEW_OUTPUT_INVALID": "AI 整理结果未通过检查",
+    "INGEST_FAILED": "整理结果未能写入本机工作台",
+    "SYNC_FAILED": "结果尚未同步到网页",
+    "LOCAL_STATE_FAILED": "接收电脑未能保存收信进度",
+    "WORKER_INTERRUPTED": "接收电脑的收信任务中断",
+}
+COLLECTION_BUSY_MESSAGE = "已有收信请求在等待或处理中，请刷新查看进度。"
+COLLECTION_REQUEST_ERRORS = {
+    "collection_busy": COLLECTION_BUSY_MESSAGE,
+    "conflict": "数据已有更新，本次未提交收信请求。您的编辑已保留，请刷新后重试。",
+    "readonly": "当前为本机只读快照，无法提交收信请求。",
+    "invalid_snapshot": "收信进度未通过检查，本次未更新页面。请刷新核对后重试。",
+}
 KINDS = {"daily": "每日归档与简报", "morning": "早间到期提醒", "weekly": "每周汇总", "sample": "样本试跑"}
 ATTACHMENT_STATUSES = {"success": "已归档并核验", "not_requested": "未选择存档", "missing": "未取得文件",
                        "error": "归档失败", "pending": "待下载"}
@@ -433,12 +455,12 @@ def render_edit_access():
     password = budget_auth.get_budget_password(st.secrets, os.environ)
     if not password:
         st.session_state.pop("mail_authenticated", None)
-        st.caption("可直接浏览。待办编辑密码尚未配置，暂不能修改状态。")
+        st.caption("可直接浏览。编辑密码尚未配置，暂不能收信或修改状态。")
         return False
     if st.session_state.get("mail_authenticated"):
         return True
-    with st.expander("启用待办编辑", expanded=False):
-        st.caption("浏览不需要密码；修改待办状态时，使用预算台账的访问密码确认。")
+    with st.expander("启用收信与编辑", expanded=False):
+        st.caption("浏览不需要密码；立即收信或修改待办状态时，使用预算台账的访问密码确认。")
         with st.form("mail_auth_form"):
             value = st.text_input("编辑密码", type="password")
             if st.form_submit_button("启用编辑", use_container_width=True):
@@ -461,7 +483,8 @@ def get_mail_gateway():
     # The same live process may also hold the old four-status validator.
     if (not set(STATUSES).issubset(mail_private_sync.ALLOWED_STATUSES)
             or not hasattr(mail_private_sync, "save_message_updates")
-            or not hasattr(mail_private_sync, "save_filing_requests")):
+            or not hasattr(mail_private_sync, "save_filing_requests")
+            or not hasattr(mail_private_sync, "request_collection")):
         importlib.reload(mail_private_sync)
     return mail_private_sync
 
@@ -472,7 +495,82 @@ def refresh_snapshot(gateway):
     if not isinstance(loaded, dict) or not isinstance(loaded.get("snapshot"), dict):
         raise ValueError("Invalid snapshot envelope")
     st.session_state["mail_loaded"] = loaded
+    st.session_state.pop("mail_collection_error", None)
     return loaded
+
+
+def collection_busy(snapshot):
+    state = snapshot.get("manual_collection")
+    return isinstance(state, dict) and state.get("status") in {"pending", "running"}
+
+
+def collection_progress(snapshot):
+    """Only fixed phrases and checked counts cross into the public status line."""
+    state = snapshot.get("manual_collection")
+    if not isinstance(state, dict):
+        return "按需点击“立即收信”；接收电脑在线时会收信、AI 整理并同步结果。刷新只读取已同步数据。"
+    status, phase = state.get("status"), state.get("phase")
+    if status == "pending":
+        return "收信请求已排队，等待接收电脑处理；接收电脑离线时会继续等待。点击“刷新”查看进度。"
+    if status == "running":
+        return {
+            "collecting": "正在接收电脑上收信，随后进行 AI 整理和同步。点击“刷新”查看进度。",
+            "reviewing": "正在进行 AI 整理，结果尚未同步完成。点击“刷新”查看进度。",
+            "syncing": "正在同步收信与 AI 整理结果，网页尚未确认完成。点击“刷新”查看进度。",
+        }.get(phase, "收信任务处理中，完成情况待确认。点击“刷新”查看进度。")
+    if phase != "complete":
+        return "收信完成情况待确认，请刷新查看最新进度。"
+    if status == "success":
+        counts = []
+        for key, label, unit in (("message_count", "本次邮件", "封"),
+                                 ("new_message_count", "新增", "封"), ("action_count", "事项", "项")):
+            value = state.get(key)
+            if type(value) is int and value >= 0:
+                counts.append(f"{label} {value} {unit}")
+        suffix = " · " + " · ".join(counts) if counts else ""
+        return "收信、AI 整理及同步已完成" + suffix + "。"
+    reason = COLLECTION_ERROR_LABELS.get(state.get("error_code"), "具体原因待接收电脑核对")
+    if status == "partial":
+        return f"本次收信流程部分完成：{reason}。请核对当前结果后重试。"
+    if status == "error":
+        return f"本次收信未完成：{reason}。请核对后重试。"
+    return "收信进度待确认，请刷新查看最新状态。"
+
+
+def request_collection(gateway, expected_version):
+    """Submit only a fixed collection request; preserve all edits on failure."""
+    loaded = st.session_state.get("mail_loaded")
+    if (not isinstance(loaded, dict) or not isinstance(expected_version, str) or not expected_version
+            or loaded.get("version") != expected_version):
+        st.session_state["mail_collection_error"] = COLLECTION_REQUEST_ERRORS["conflict"]
+        return
+    try:
+        require_edit_access(loaded)
+        if collection_busy(loaded["snapshot"]):
+            st.session_state["mail_collection_error"] = COLLECTION_BUSY_MESSAGE
+            return
+        saved = gateway.request_collection(expected_version=expected_version, secrets=st.secrets, environ=os.environ)
+        if (not isinstance(saved, dict) or not isinstance(saved.get("snapshot"), dict)
+                or saved.get("source") != "github" or not isinstance(saved.get("version"), str)
+                or not saved["version"]):
+            raise ValueError("Invalid collection response")
+        state = saved["snapshot"].get("manual_collection")
+        if (not isinstance(state, dict) or state.get("status") != "pending" or state.get("phase") != "queued"
+                or not re.fullmatch(r"[0-9a-f]{32}", str(state.get("request_id", "")))):
+            raise ValueError("Invalid collection request state")
+        st.session_state["mail_loaded"] = saved
+        st.session_state.pop("mail_collection_error", None)
+        st.session_state["mail_save_notice"] = "收信请求已提交；等待接收电脑收信、AI 整理并同步。"
+    except PermissionError:
+        st.session_state["mail_collection_error"] = (
+            COLLECTION_REQUEST_ERRORS["readonly"] if loaded.get("source") != "github"
+            else "请先启用收信与编辑，再提交收信请求。"
+        )
+    except Exception as exc:
+        code = getattr(exc, "code", "")
+        st.session_state["mail_collection_error"] = COLLECTION_REQUEST_ERRORS.get(
+            code, ERRORS.get(code, "收信请求未能确认提交，原有邮件与编辑已保留。请刷新核对后重试。")
+        )
 
 
 def require_edit_access(loaded):
@@ -930,16 +1028,16 @@ def main():
     .mail-inbox-heading strong {font-size:1rem; line-height:1.45; overflow-wrap:anywhere;}
     </style>""", unsafe_allow_html=True)
     st.markdown("<style>" + REPORT_CSS + "</style>", unsafe_allow_html=True)
-    title_col, refresh_col, access_col = st.columns([5, 1, 1.6], vertical_alignment="center")
+    title_col, collect_col, refresh_col, access_col = st.columns([4, 1.2, 1, 1.6], vertical_alignment="center")
     with title_col:
         st.title("邮件工作台")
-    refresh = refresh_col.button("刷新", use_container_width=True, help="读取最新数据，并保留尚未保存的选择。")
+    refresh = refresh_col.button("刷新", use_container_width=True, help="只读取已同步的最新数据，不会启动收信；保留尚未保存的选择。")
     with access_col:
         editing = render_edit_access()
         logout = editing and st.button("退出编辑", use_container_width=True)
     if logout:
         for key in list(st.session_state):
-            if (key in {"mail_authenticated", "mail_action_drafts", "mail_message_drafts", "mail_save_error", "mail_filing_errors"}
+            if (key in {"mail_authenticated", "mail_action_drafts", "mail_message_drafts", "mail_save_error", "mail_filing_errors", "mail_collection_error"}
                     or str(key).startswith(("mail_status_", "mail_message_status_", "mail_group_status_", "mail_filing_retry_"))):
                 del st.session_state[key]
         st.rerun()
@@ -956,8 +1054,15 @@ def main():
             show_data_error(exc)
             st.stop()
     snapshot = loaded["snapshot"]
+    collect_col.button("立即收信", key="mail_request_collection", use_container_width=True,
+                       disabled=not editing or loaded.get("source") != "github" or collection_busy(snapshot),
+                       help="使用编辑密码启用后提交请求；接收电脑在线时收信、AI 整理并同步，完成前不能重复提交。",
+                       on_click=request_collection, args=(mail_private_sync, loaded.get("version")))
     render_pending_changes(snapshot, loaded, mail_private_sync)
     st.markdown(snapshot_status_html(snapshot), unsafe_allow_html=True)
+    st.caption(collection_progress(snapshot))
+    if st.session_state.get("mail_collection_error"):
+        st.error(st.session_state["mail_collection_error"])
     if snapshot.get("collection_storage") == "on_demand":
         st.caption(r"平时只整理摘要与待办；选择存档时，才把整封邮件附件直接保存到 E:\GoogleDrive\Ding2026。")
     if st.session_state.get("mail_save_notice"):
@@ -974,7 +1079,7 @@ def main():
     with records_tab:
         with st.expander("数据与运行记录", expanded=False):
             st.caption(plain_label(f"账户：{snapshot.get('account') or '未记录'} · 数据更新：{display_time(snapshot.get('updated_at'))} · 来源：{'私有同步' if loaded.get('source') == 'github' else '本机只读快照'}"))
-            st.caption("计划时间（北京时间）：每日 20:00 归档与简报 · 周一至五 09:00 到期提醒 · 周五 17:00 每周汇总")
+            st.caption("收信方式：点击“立即收信”，由接收电脑完成收信、AI 整理和同步；接收电脑离线时请求排队等待。")
             warning = coverage_warning(snapshot)
             if warning:
                 st.text(warning)
@@ -982,7 +1087,7 @@ def main():
             if parse_time(coverage.get("since")) and parse_time(coverage.get("through")):
                 st.caption(f"已检查时段：{display_time(coverage.get('since'))} 至 {display_time(coverage.get('through'))}")
                 st.caption("该时段之外的历史邮件不在本次完整检查范围内。")
-            st.caption("以下为实际执行结果，计划时间不等于已经执行；周一至五暂不调整节假日和调休。")
+            st.caption("以下为实际执行结果；请求已提交不代表收信、AI 整理或同步已经完成。")
             runs = snapshot.get("runs", [])
             if runs:
                 rows = [{"任务": KINDS.get(run.get("kind"), run.get("kind", "未记录")),
@@ -993,7 +1098,7 @@ def main():
                         for run in sorted(runs, key=lambda item: str(item.get("started_at", "")), reverse=True)]
                 st.dataframe(rows, hide_index=True, use_container_width=True)
             else:
-                st.info("尚无实际运行记录，不能据计划时间判断任务已执行。")
+                st.info("尚无实际运行记录；提交收信请求后，可刷新查看接收电脑的处理进度。")
         with st.expander("附件索引", expanded=False):
             render_attachments(snapshot.get("messages", []), snapshot=snapshot)
         period = st.date_input("报告日期范围", value=(now.date() - timedelta(days=6), now.date()), key="mail_report_dates")

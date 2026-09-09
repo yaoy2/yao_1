@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse
 import copy
 import json
+import re
 import sys
 import unicodedata
 from datetime import timedelta
@@ -78,7 +79,9 @@ def reconcile_existing(batch, dashboard):
     return batch
 
 
-def collect_workspace(root, *, kind="daily", at=None, since=None):
+def collect_workspace(root, *, kind="daily", at=None, since=None, manual_request_id=None):
+    if manual_request_id is not None and not re.fullmatch(r"[0-9a-f]{32}", manual_request_id):
+        raise ValueError("invalid manual request identity")
     setup = load_setup_config(root)
     root = setup["root"]
     config = json.loads(_inside(root, "config.json").read_text(encoding="utf-8"))
@@ -126,6 +129,9 @@ def collect_workspace(root, *, kind="daily", at=None, since=None):
             except Exception:
                 pass
     batch["finished_at"] = now_iso()
+    if manual_request_id is not None:
+        # Identifies only this user-requested transient batch after a crash.
+        batch["manual_request_id"] = manual_request_id
     path = _inside(root, "incoming/" + batch["id"] + ".json")
     _atomic_json(path, batch)
     summary = {"status": "staged" if batch["window"]["complete"] else "partial",
@@ -135,6 +141,8 @@ def collect_workspace(root, *, kind="daily", at=None, since=None):
                "attachment_count": sum(len(m.get("attachments", [])) for m in batch["messages"]),
                "error_count": len(batch["errors"]), "errors": batch["errors"],
                "checked_at": batch["finished_at"]}
+    if manual_request_id is not None:
+        summary["manual_request_id"] = manual_request_id
     _atomic_json(_inside(root, "state/imap_collection.json"), summary)
     return summary
 

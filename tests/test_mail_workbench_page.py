@@ -159,8 +159,8 @@ class MailWorkbenchPageTests(unittest.TestCase):
         self.assertNotIn("mail_authenticated", fake_st.session_state)
 
     def test_main_loads_public_summary_without_an_edit_session(self):
-        columns = [MagicMock(), MagicMock(), MagicMock()]
-        columns[1].button.return_value = False
+        columns = [MagicMock(), MagicMock(), MagicMock(), MagicMock()]
+        columns[2].button.return_value = False
         fake_st = SimpleNamespace(set_page_config=Mock(), title=Mock(), markdown=Mock(), caption=Mock(),
                                   columns=Mock(return_value=columns), button=Mock(), session_state={})
         with patch.object(page, "st", fake_st), patch.object(page, "render_home_link"), \
