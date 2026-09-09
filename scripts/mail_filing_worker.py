@@ -49,6 +49,26 @@ def _write_worker_state(root, result, interval=None):
     mail_workspace._atomic_json(mail_workspace._inside(root, "state/filing_worker.json"), data)
 
 
+def run_cycle(root):
+    """Poll explicit user requests; idle cycles never connect to the mailbox."""
+    from scripts.mail_manual_collect import run_once as receive_once
+    try:
+        collection = receive_once(root)
+    except sync.MailCommandError as exc:
+        collection = {"status": "busy" if exc.code == "collection_already_running" else "error",
+                      "error_code": exc.code if exc.code in {
+                          "collection_already_running", "COLLECTION_CONFIG_INVALID"} else "SYNC_FAILED"}
+    except Exception:
+        collection = {"status": "error", "error_code": "SYNC_FAILED"}
+    try:
+        filing = run_once(root)
+    except sync.MailCommandError as exc:
+        filing = {"status": "error", "error_code": exc.code}
+    except Exception:
+        filing = {"status": "error", "error_code": "filing_operation_failed"}
+    return {**filing, "manual_collection": collection}
+
+
 def run_once(root, *, client=None, exporter=export_message):
     root, config, destination = configuration(root)
     client = client or sync.GithubCLI(config["private_repo"], config["private_branch"], _hidden_runner)
@@ -163,11 +183,12 @@ def main(argv=None):
     try:
         if not 15 <= args.interval <= 3600:
             raise sync.MailCommandError("invalid_poll_interval")
-        root, _, _ = configuration(args.root)
+        # Receiving a manual request does not depend on an attachment folder.
+        root = mail_workspace._root_path(args.root)
         with receiver_lock(root):
             while True:
                 try:
-                    result = run_once(root)
+                    result = run_cycle(root)
                 except sync.MailCommandError as exc:
                     result = {"status": "error", "error_code": exc.code}
                 except Exception:

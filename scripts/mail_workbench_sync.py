@@ -22,7 +22,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from utils import mail_private_sync, mail_workspace, mail_filing_state
+from utils import mail_private_sync, mail_workspace, mail_filing_state, mail_collection_state
 
 
 DEFAULT_REPO = "yaoy2/mail-workbench-data"
@@ -234,6 +234,7 @@ def merge_remote_states(local, remote):
     """Pull status fields only; unknown remote records wait for a full push merge."""
     _check_identity(local, remote)
     result = copy.deepcopy(local)
+    mail_collection_state.apply_remote_collection(result, remote)
     if remote is None:
         return result
     actions = {row["id"]: row for row in remote["actions"]}
@@ -276,12 +277,13 @@ def _merge_latest(local, remote, keys):
 def merge_for_push(local, remote, root):
     """Preserve the union of IDs and keep all local-only source data local."""
     _check_identity(local, remote)
+    result = copy.deepcopy(local)
+    mail_collection_state.apply_remote_collection(result, remote)
     if remote is None:
-        return copy.deepcopy(local)
+        return result
     # Treat the remote index as untrusted input; neither arbitrary fields nor
     # raw bodies should be imported or forwarded to the next remote version.
     remote = mail_workspace.public_snapshot(remote, root)
-    result = copy.deepcopy(local)
     result["messages"] = _merge_messages(local["messages"], remote["messages"])
     messages = {row["id"]: row for row in result["messages"]}
     remote_actioned = {row.get("message_id") for row in remote["actions"]}

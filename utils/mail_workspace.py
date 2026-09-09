@@ -20,6 +20,7 @@ from urllib.parse import unquote, urlsplit, urlunsplit
 
 from utils.mail_action_status import ACTIVE_STATUSES, ALL_STATUSES, STATUS_LABELS
 from utils.mail_filing_state import is_filing_requested, public_filing
+from utils.mail_collection_state import public_collection
 
 
 SCHEMA_VERSION = 1
@@ -706,6 +707,8 @@ def public_snapshot(data, root):
     snapshot = {key: copy.deepcopy(data[key]) for key in ("schema_version", "timezone", "account", "updated_at")}
     if data.get("collection_storage") == "on_demand":
         snapshot["collection_storage"] = "on_demand"
+    if "manual_collection" in data:
+        snapshot["manual_collection"] = public_collection(data["manual_collection"])
     snapshot["coverage"] = {key: data["coverage"].get(key) for key in ("since", "through", "complete", "note")}
     snapshot["messages"] = []
     root_path = _root_path(root)
