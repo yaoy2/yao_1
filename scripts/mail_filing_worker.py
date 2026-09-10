@@ -9,7 +9,6 @@ import argparse
 import copy
 import json
 import os
-import subprocess
 import sys
 import time
 from contextlib import contextmanager
@@ -23,12 +22,6 @@ from scripts import mail_workbench_sync as sync
 from utils import mail_workspace
 from utils.mail_filing import export_message
 from utils.mail_filing_state import is_filing_requested, public_filing
-
-
-def _hidden_runner(*args, **kwargs):
-    if os.name == "nt":
-        kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
-    return subprocess.run(*args, **kwargs)
 
 
 def configuration(root):
@@ -71,7 +64,7 @@ def run_cycle(root):
 
 def run_once(root, *, client=None, exporter=export_message):
     root, config, destination = configuration(root)
-    client = client or sync.GithubCLI(config["private_repo"], config["private_branch"], _hidden_runner)
+    client = client or sync.GithubAPI(config["private_repo"], config["private_branch"])
     remote = client.read()
     if remote["snapshot"] is None:
         raise sync.MailCommandError("snapshot_not_found")
