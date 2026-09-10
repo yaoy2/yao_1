@@ -8,6 +8,9 @@ from urllib.parse import quote
 import streamlit as st
 
 
+_PINNED_SIDEBAR_CODES = {"M15", "M14", "M08", "M06"}
+
+
 def _load_homepage_tools():
     hello_path = Path(__file__).resolve().parents[1] / "hello.py"
     try:
@@ -32,7 +35,7 @@ def _nav_sort_key(tool):
         module_number = int(code)
     except ValueError:
         module_number = 0
-    return (not bool(tool.get("blocked")), str(tool.get("created", "")), module_number)
+    return (tool.get("code") in _PINNED_SIDEBAR_CODES, not bool(tool.get("blocked")), module_number)
 
 
 def _get_sidebar_tools(tools):
