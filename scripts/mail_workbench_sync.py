@@ -1,8 +1,8 @@
-"""Synchronize the local mail index through the already authenticated gh CLI.
+"""Synchronize the local mail index directly through the GitHub REST API.
 
 Original mail and attachment bytes stay local. Only a whitelisted dashboard is
-sent to an independently verified private repository. No credential is read by
-this script, and raw gh output is never printed.
+sent to an independently verified private repository. Credentials come from
+MAIL_WORKBENCH_TOKEN or local Streamlit secrets, never CLI login state or arguments.
 """
 
 from __future__ import annotations
@@ -11,12 +11,15 @@ import argparse
 import base64
 import copy
 import json
+import os
 import re
-import subprocess
 import sys
+import tomllib
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlencode
+
+import requests
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -51,60 +54,81 @@ def _validate_target(repo, branch):
         raise MailCommandError("invalid_branch")
 
 
-def _parse_response(completed):
-    """Parse only the HTTP status and JSON body from gh's --include output."""
+def _local_secrets(environ):
+    """Match Streamlit's global/project secrets without depending on its runtime."""
+    explicit = environ.get("MAIL_WORKBENCH_SECRETS_FILE")
+    if explicit:
+        path = Path(explicit).expanduser()
+        if not path.is_absolute():
+            raise MailCommandError("invalid_config")
+        paths = [path]
+    else:
+        paths = [Path.home() / ".streamlit/secrets.toml", PROJECT_ROOT / ".streamlit/secrets.toml"]
+    secrets = {}
     try:
-        output = completed.stdout.decode("utf-8").replace("\r\n", "\n")
-        header, separator, body = output.partition("\n\n")
-        status_line = header.splitlines()[0]
-        match = re.fullmatch(r"HTTP/\S+\s+(\d{3})(?:\s+.*)?", status_line)
-        if not separator or not match:
-            raise ValueError
-        status = int(match.group(1))
-    except (AttributeError, UnicodeError, IndexError, ValueError):
-        raise MailCommandError("gh_failed" if completed.returncode else "invalid_response") from None
-    # Failed API calls still have a useful HTTP status, but their bodies can
-    # contain private values and are deliberately neither parsed nor surfaced.
-    if status not in (200, 201):
-        return status, None
-    if completed.returncode:
-        raise MailCommandError("gh_failed")
-    try:
-        data = json.loads(body)
-        if not isinstance(data, dict):
-            raise ValueError
-    except (ValueError, TypeError):
-        raise MailCommandError("invalid_response") from None
-    return status, data
+        for path in paths:
+            if not explicit and not path.exists():
+                continue
+            secrets.update(tomllib.loads(path.read_text(encoding="utf-8-sig")))
+    except (OSError, ValueError):
+        raise MailCommandError("invalid_config") from None
+    return secrets
 
 
-class GithubCLI:
-    def __init__(self, repo=DEFAULT_REPO, branch=DEFAULT_BRANCH, runner=None):
+def _api_config(repo, branch, *, environ=None, secrets=None):
+    environ = os.environ if environ is None else environ
+    if secrets is None:
+        # Explicit process credentials also work in unattended jobs, without
+        # reading a developer's local secrets or depending on the job's cwd.
+        secrets = {} if (environ.get("MAIL_WORKBENCH_TOKEN") or environ.get("GITHUB_BACKUP_TOKEN")) else _local_secrets(environ)
+    secrets = dict(secrets)
+    section = secrets.get("mail_workbench", {})
+    if not isinstance(section, dict):
+        raise MailCommandError("invalid_config")
+    # The workspace/command selects the destination; secrets supply credentials
+    # only. Never inherit the public backup repository or a different branch.
+    secrets["mail_workbench"] = {**section, "repo": repo, "branch": branch}
+    try:
+        return mail_private_sync._config(secrets, environ)
+    except mail_private_sync.MailSyncError as exc:
+        raise MailCommandError(exc.code) from None
+
+
+class GithubAPI:
+    def __init__(self, repo=DEFAULT_REPO, branch=DEFAULT_BRANCH, session=None, *, environ=None, secrets=None):
         _validate_target(repo, branch)
         self.repo = repo
         self.branch = branch
-        self.runner = subprocess.run if runner is None else runner
+        self.config = _api_config(repo, branch, environ=environ, secrets=secrets)
+        self.session = requests if session is None else session
 
     def _api(self, method, endpoint, payload=None):
-        command = ["gh", "api", endpoint, "--hostname", "github.com", "--method", method, "--include",
-                   "--header", "Accept: application/vnd.github+json",
-                   "--header", "X-GitHub-Api-Version: 2022-11-28"]
-        raw = None
+        kwargs = {}
         if payload is not None:
-            command.extend(["--input", "-"])
-            raw = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+            kwargs["json"] = payload
         try:
-            completed = self.runner(
-                command, input=raw, capture_output=True, text=False, shell=False,
-                check=False, timeout=35,
+            response = self.session.request(
+                method, f"{mail_private_sync.API_ROOT}/{endpoint}",
+                headers=mail_private_sync._headers(self.config), timeout=35,
+                allow_redirects=False, **kwargs,
             )
-        except FileNotFoundError:
-            raise MailCommandError("gh_not_found") from None
-        except subprocess.TimeoutExpired:
-            raise MailCommandError("gh_timeout") from None
+        except requests.Timeout:
+            raise MailCommandError("network_timeout") from None
         except Exception:
-            raise MailCommandError("gh_failed") from None
-        return _parse_response(completed)
+            raise MailCommandError("network_error") from None
+        # Error bodies may contain private data. Do not parse or log them.
+        status = response.status_code
+        if 300 <= status < 400:
+            raise MailCommandError("repository_mismatch")
+        if status not in (200, 201):
+            return status, None
+        try:
+            data = response.json()
+            if not isinstance(data, dict):
+                raise ValueError
+        except (ValueError, TypeError):
+            raise MailCommandError("invalid_response") from None
+        return status, data
 
     @staticmethod
     def _require(status, accepted, stage):
@@ -125,8 +149,8 @@ class GithubCLI:
         self._require(status, {200}, "repo")
         if metadata.get("private") is not True:
             raise MailCommandError("public_repo_forbidden")
-        # gh follows server redirects; a renamed/transferred repository must
-        # not silently become the mail data destination.
+        # A renamed/transferred repository must not silently become the mail
+        # data destination, even if its contents are otherwise accessible.
         if str(metadata.get("full_name", "")).casefold() != self.repo.casefold():
             raise MailCommandError("repository_mismatch")
         query = urlencode({"ref": self.branch})
@@ -336,17 +360,17 @@ def _local_root(root):
     return path
 
 
-def synchronize(root, operation, repo=DEFAULT_REPO, branch=DEFAULT_BRANCH, runner=None):
+def synchronize(root, operation, repo=DEFAULT_REPO, branch=DEFAULT_BRANCH, session=None, *, environ=None, secrets=None):
     if operation not in {"pull", "push", "status"}:
         raise MailCommandError("invalid_operation")
     root = _local_root(root)
-    client = GithubCLI(repo, branch, runner)
+    client = GithubAPI(repo, branch, session, environ=environ, secrets=secrets)
     if operation == "status":
         remote = client.read()
         return _result(client, "ready" if remote["snapshot"] else "empty", remote["snapshot"], remote["version"])
     try:
         # Use the archive module's OS lock for the full read/merge/write cycle,
-        # so an ingestion or report cannot be overwritten while gh is running.
+        # so an ingestion or report cannot be overwritten during an API call.
         with mail_workspace._locked(root):
             local = _validate_snapshot(mail_workspace.load_dashboard(root))
             remote = client.read()
@@ -382,7 +406,11 @@ def synchronize(root, operation, repo=DEFAULT_REPO, branch=DEFAULT_BRANCH, runne
 def main(argv=None):
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
-    parser = argparse.ArgumentParser(description="Sync a mail index with a verified private GitHub repository through gh.")
+    parser = argparse.ArgumentParser(
+        description="Sync a mail index directly with a verified private GitHub repository (no gh required).",
+        epilog="Credentials: MAIL_WORKBENCH_TOKEN, or [mail_workbench] token in local Streamlit secrets. "
+               "MAIL_WORKBENCH_SECRETS_FILE selects an explicit absolute secrets file. Never pass a token as an argument.",
+    )
     parser.add_argument("--root", required=True, help="Explicit absolute local archive directory")
     parser.add_argument("--repo", default=DEFAULT_REPO)
     parser.add_argument("--branch", default=DEFAULT_BRANCH)
@@ -397,7 +425,7 @@ def main(argv=None):
         print(json.dumps(result, ensure_ascii=False))
         return 1
     except Exception:
-        # Never print arbitrary exceptions: paths, input mail and gh diagnostics
+        # Never print arbitrary exceptions: paths, input mail and HTTP diagnostics
         # are unsuitable for automation logs and can contain private material.
         print(json.dumps({"status": "error", "error_code": "operation_failed"}))
         return 1

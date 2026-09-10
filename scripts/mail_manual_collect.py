@@ -60,8 +60,7 @@ def collection_lock(root):
 
 
 def _client(config):
-    from scripts.mail_filing_worker import _hidden_runner
-    return sync.GithubCLI(config["private_repo"], config["private_branch"], _hidden_runner)
+    return sync.GithubAPI(config["private_repo"], config["private_branch"])
 
 
 def _merge_remote(root, client):

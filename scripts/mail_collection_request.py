@@ -9,8 +9,6 @@ from __future__ import annotations
 
 import copy
 import json
-import os
-import subprocess
 import sys
 from pathlib import Path
 
@@ -23,12 +21,6 @@ from utils import mail_collection_state as state
 from utils import mail_workspace
 
 
-def _hidden_runner(*args, **kwargs):
-    if os.name == "nt":
-        kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
-    return subprocess.run(*args, **kwargs)
-
-
 def _read(root, client):
     root = sync._local_root(root)
     with mail_workspace._locked(root):
@@ -36,7 +28,7 @@ def _read(root, client):
     if client is None:
         try:
             config = json.loads(mail_workspace._inside(root, "config.json").read_text(encoding="utf-8-sig"))
-            client = sync.GithubCLI(config["private_repo"], config["private_branch"], _hidden_runner)
+            client = sync.GithubAPI(config["private_repo"], config["private_branch"])
         except sync.MailCommandError:
             raise
         except (OSError, ValueError, KeyError, TypeError):
