@@ -2,11 +2,12 @@ from utils import ui_theme
 from utils.ui_theme import _get_sidebar_tools, _load_homepage_tools
 
 
-def test_sidebar_starts_with_current_showcase_tools():
+def test_sidebar_pins_frequent_tools_before_other_modules():
     tools = _get_sidebar_tools(_load_homepage_tools())
     codes = [tool["code"] for tool in tools]
-    assert codes[:5] == ["M24", "M23", "M22", "M21", "M19"]
-    assert codes[codes.index("M06") : codes.index("M06") + 4] == ["M06", "M20", "M16", "M13"]
+    assert codes[:4] == ["M15", "M14", "M08", "M06"]
+    assert codes[4:9] == ["M24", "M23", "M22", "M21", "M19"]
+    assert codes[codes.index("M07") : codes.index("M07") + 4] == ["M07", "M20", "M16", "M13"]
     assert tools[codes.index("M16")]["blocked"] is True
     assert tools[codes.index("M20")]["blocked"] is True
 
