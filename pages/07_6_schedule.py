@@ -135,7 +135,8 @@ def render_grid(grid: dict[str, dict[int, list[dict]]], teacher_category_map: di
         table.tb {border-collapse:collapse; width:100%; min-width:1200px; background:var(--colors-canvas);}
         .tb th, .tb td {border:1px solid var(--colors-hairline); vertical-align:top; padding:8px;}
         .tb th {background:var(--colors-canvas-parchment); font-weight: 600; color:var(--colors-ink);}
-        .period-col {width:78px; text-align:center; background:var(--colors-surface-pearl); font-weight: 600;}
+        .period-col {width:96px; min-width:96px; text-align:center; background:var(--colors-surface-pearl); font-weight: 600;}
+        .period-time {margin-top:4px; font-size:11px; font-weight:400; line-height:1.35; color:var(--colors-ink-muted-80); white-space:nowrap; font-variant-numeric:tabular-nums;}
         .dept-grid {display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:6px;}
         .dept-col {min-width:0;}
         .teacher-card {display:block; width:100%; margin:4px 0; border:1px solid var(--colors-primary-soft); background:var(--colors-surface-pearl); border-radius:8px; font-size:12px;}
@@ -149,9 +150,11 @@ def render_grid(grid: dict[str, dict[int, list[dict]]], teacher_category_map: di
         </style>
     """
     st.markdown(table_style, unsafe_allow_html=True)
+    period_times = (_load_cache(SCHEDULE_METADATA_PATH) or {}).get("period_times", {})
     rows = []
     for p in PERIODS:
-        row = [f"<td class='period-col'>第{p}节</td>"]
+        time_text = html.escape(period_times.get(str(p), "时间未标注"))
+        row = [f"<td class='period-col'><div>第{p}节</div><div class='period-time'>{time_text}</div></td>"]
         for d in WEEKDAYS:
             items = grid[d][p]
             if not items:
