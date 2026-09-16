@@ -3,7 +3,9 @@ from __future__ import annotations
 import os
 import sys
 from datetime import datetime
+from html import escape
 from io import BytesIO
+from pathlib import Path
 
 import pandas as pd
 import streamlit as st
@@ -41,6 +43,10 @@ from utils.ui_theme import render_home_link
 
 st.set_page_config(page_title="教学评分工作台", page_icon="📘", layout="wide")
 render_home_link()
+st.markdown(
+    "<style>" + (Path(__file__).resolve().parents[1] / "utils" / "grade_workbench_theme.css").read_text(encoding="utf-8") + "</style>",
+    unsafe_allow_html=True,
+)
 
 
 def read_roster(uploaded) -> pd.DataFrame:
@@ -137,8 +143,10 @@ def editor_config_groups() -> dict:
     }
 
 
-st.title("教学评分工作台")
-st.caption("原始小组分、个人贡献折算和最终调整分开保存；校验通过后再导出。")
+with st.container(key="grade-hero"):
+    st.markdown('<div class="grade-workbench-page grade-eyebrow">M17 · 教学 · 成绩审核</div>', unsafe_allow_html=True)
+    st.title("教学评分工作台")
+    st.caption("原始小组分、个人贡献折算和最终调整分开保存；校验通过后再导出。")
 
 tasks = list_tasks()
 if not tasks:
@@ -188,6 +196,15 @@ with st.sidebar:
     st.session_state["active_task"] = task_id
 
 meta = load_meta(task_id)
+st.markdown(
+    '<div class="grade-task-badges" aria-label="当前评分任务">'
+    + "".join(
+        f'<span>{escape(str(meta[field]))}</span>'
+        for field in ("name", "term", "course") if meta.get(field)
+    )
+    + '</div>',
+    unsafe_allow_html=True,
+)
 settings = load_settings(task_id)
 students = load_students(task_id)
 groups = sync_groups_from_students(students, load_groups(task_id))
