@@ -1,0 +1,153 @@
+/* M17 only: the marker disappears when navigating to another module.
+   Keep native Streamlit controls, data editors, and their behavior intact. */
+body:has(.grade-workbench-page) [data-testid="stMain"] {
+    background: var(--colors-canvas-parchment) !important;
+}
+
+body:has(.grade-workbench-page) [data-testid="stMainBlockContainer"] {
+    max-width: 1280px;
+    padding-top: 4.5rem;
+}
+
+body:has(.grade-workbench-page) .st-key-grade-hero {
+    gap: .2rem;
+    padding: .8rem 1rem .5rem;
+    text-align: center;
+}
+
+body:has(.grade-workbench-page) .grade-eyebrow {
+    color: var(--colors-primary);
+    font-size: .75rem;
+    font-weight: 650;
+    letter-spacing: .08em;
+}
+
+body:has(.grade-workbench-page) .st-key-grade-hero h1 {
+    padding: .2rem 0 .35rem;
+    font-size: clamp(1.9rem, 3.4vw, 2.6rem);
+    font-weight: 700;
+    letter-spacing: -.035em;
+}
+
+body:has(.grade-workbench-page) .st-key-grade-hero [data-testid="stCaptionContainer"] p {
+    margin-bottom: .25rem;
+    font-size: .95rem;
+    line-height: 1.6;
+}
+
+body:has(.grade-workbench-page) .grade-task-badges {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: .4rem;
+    margin: -.25rem 0 .4rem;
+}
+
+body:has(.grade-workbench-page) .grade-task-badges span {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    padding: .3rem .8rem;
+    border: 1px solid var(--colors-hairline);
+    border-radius: var(--rounded-pill);
+    background: var(--colors-canvas);
+    color: var(--colors-ink-muted-48);
+    font-size: .75rem;
+}
+
+body:has(.grade-workbench-page) [data-testid="stMain"] [data-testid="stMetric"] {
+    padding: .65rem 1rem;
+    border-color: transparent;
+    border-radius: var(--rounded-lg);
+    background: var(--colors-canvas);
+    box-shadow: 0 2px 12px rgba(29, 29, 31, .025);
+}
+
+body:has(.grade-workbench-page) [data-testid="stMain"] [data-testid="stMetricLabel"] {
+    color: var(--colors-ink-muted-48);
+    font-size: .8rem;
+}
+
+body:has(.grade-workbench-page) [data-testid="stMain"] [data-testid="stMetricValue"] {
+    font-size: 1.6rem;
+    font-weight: 650;
+}
+
+/* The existing five tabs serve as the compact workflow navigation. */
+body:has(.grade-workbench-page) [data-baseweb="tab-list"] {
+    gap: .3rem;
+    padding: .35rem;
+    border: 1px solid var(--colors-hairline);
+    border-radius: var(--rounded-lg);
+    background: var(--colors-canvas);
+    overflow-x: auto;
+}
+
+body:has(.grade-workbench-page) [data-baseweb="tab"] {
+    flex: 1 0 auto;
+    min-height: 2.6rem;
+    padding: .5rem .85rem;
+    border-radius: var(--rounded-pill);
+    white-space: nowrap;
+}
+
+body:has(.grade-workbench-page) [data-baseweb="tab"][aria-selected="true"] {
+    background: var(--colors-primary);
+    color: var(--colors-canvas);
+}
+
+body:has(.grade-workbench-page) :is([data-baseweb="tab-highlight"], [data-baseweb="tab-border"]) {
+    display: none;
+}
+
+body:has(.grade-workbench-page) [data-baseweb="tab-panel"] {
+    margin-top: .65rem;
+    padding: 1.2rem;
+    border: 1px solid var(--colors-hairline);
+    border-radius: var(--rounded-lg);
+    background: var(--colors-canvas);
+}
+
+body:has(.grade-workbench-page) [data-testid="stMain"] h3 {
+    padding-top: .25rem;
+    font-size: 1.15rem;
+    font-weight: 650;
+}
+
+body:has(.grade-workbench-page) [data-testid="stMain"] :is(
+    [data-testid="stForm"], [data-testid="stDataFrame"],
+    [data-testid="stFileUploaderDropzone"], [data-testid="stAlert"]
+) {
+    border-radius: 14px;
+}
+
+body:has(.grade-workbench-page) [data-testid="stFileUploaderDropzone"] {
+    background: var(--colors-surface-pearl);
+    border: 1px dashed var(--colors-hairline);
+    padding: .8rem 1rem;
+}
+
+body:has(.grade-workbench-page) [data-testid="stMain"] :is(
+    [data-testid="stButton"], [data-testid="stDownloadButton"], [data-testid="stFormSubmitButton"]
+) > button {
+    border-radius: var(--rounded-pill);
+}
+
+body:has(.grade-workbench-page) [data-testid="stMain"] button[kind="primary"]:not(:disabled):hover {
+    background: var(--colors-primary-focus);
+}
+
+@media (max-width: 720px) {
+    body:has(.grade-workbench-page) [data-testid="stMainBlockContainer"] {
+        padding: 4rem .8rem 1.5rem;
+    }
+    body:has(.grade-workbench-page) .st-key-grade-hero {
+        padding: .5rem 0 .25rem;
+    }
+    body:has(.grade-workbench-page) [data-baseweb="tab"] {
+        min-height: 44px;
+        padding-inline: .7rem;
+    }
+    body:has(.grade-workbench-page) [data-baseweb="tab-panel"] {
+        padding: .85rem;
+    }
+}
