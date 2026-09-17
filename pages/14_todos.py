@@ -67,16 +67,17 @@ def merge_remote_todos_from_github():
         )
     except Exception as exc:
         st.warning(f"待办备份从 GitHub 读取失败，将继续使用当前环境本地备份：{exc}")
-        return
+        return False
     if not result.get("ok"):
-        return
+        return result.get("reason") in {"missing_token", "missing_remote_file"}
 
     remote_records = todo_db.parse_markdown_backup(result.get("content", ""))
     if not remote_records:
-        return
+        return True
     inserted = todo_db.import_todo_records(remote_records)
     if inserted:
         st.info(f"已从 GitHub 备份合并 {inserted} 条待办。")
+    return True
 
 
 def sync_todo_backup_to_github():
@@ -109,6 +110,7 @@ def sync_todo_backup_to_github():
             "data: sync todo items backup",
             secrets=st.secrets,
             environ=os.environ,
+            expected_sha=remote_result.get("sha"),
         )
     except Exception as exc:
         st.warning(f"待办已保存在当前环境，但同步到 GitHub 失败：{exc}")
@@ -196,7 +198,7 @@ def _full_date_from_compact(value, fallback_year=None):
         parsed = datetime.strptime(normalized, "%m-%d").date()
     except ValueError:
         return ""
-    year = fallback_year or date.today().year
+    year = fallback_year or todo_db.today().year
     return date(year, parsed.month, parsed.day).isoformat()
 
 
@@ -225,7 +227,22 @@ def _escape_html(value):
     )
 
 
+def prepare_todo_edit(record_id):
+    expected = st.session_state.get(f"todo_revision_{record_id}")
+    if not merge_remote_todos_from_github():
+        st.warning("暂时无法核对最新待办，本次未修改，请稍后重试。")
+        return False
+    record = next((r for r in todo_db.get_todos(view="all") if r["id"] == record_id), None)
+    current = f"{record['uid']}:{record['updated_at']}" if record else None
+    if not expected or current != expected or record.get("status") == "deleted":
+        st.warning("这条待办已在其他入口变化，已刷新；请核对后再操作。")
+        return False
+    return True
+
+
 def save_todo_due_fields(record_id):
+    if not prepare_todo_edit(record_id):
+        return
     new_due_date = st.session_state.get(f"todo_due_date_{record_id}")
     new_due_time = st.session_state.get(f"todo_due_time_{record_id}")
     due_date_val = _full_date_from_compact(new_due_date)
@@ -235,11 +252,15 @@ def save_todo_due_fields(record_id):
 
 
 def delete_todo_record(record_id):
+    if not prepare_todo_edit(record_id):
+        return
     todo_db.delete_todo(record_id)
     sync_todo_backup_to_github()
 
 
 def toggle_todo_done(record_id, checkbox_key):
+    if not prepare_todo_edit(record_id):
+        return
     if st.session_state.get(checkbox_key):
         todo_db.complete_todo(record_id)
     else:
@@ -248,6 +269,13 @@ def toggle_todo_done(record_id, checkbox_key):
 
 
 def render_todo_record(record):
+    # Refresh saved values when another device changes this record, preserving unsaved edits otherwise.
+    revision_key = f"todo_revision_{record['id']}"
+    revision = f"{record['uid']}:{record['updated_at']}"
+    if st.session_state.get(revision_key) != revision:
+        st.session_state[f"todo_due_date_{record['id']}"] = _compact_date_label(record.get("due_date"))
+        st.session_state[f"todo_due_time_{record['id']}"] = str(record.get("due_time") or "")
+        st.session_state[revision_key] = revision
     with st.container(key=f"todo-row-{record['id']}"):
         done = record.get("status") == "done"
         stored_due_date = _compact_date_label(record.get("due_date"))
@@ -349,7 +377,7 @@ with st.container(border=True):
     st.subheader("快速新增")
     with st.form("todo_quick_add", clear_on_submit=True):
         todo_text = st.text_area("待办文本", placeholder="例如：明天下午3点前提交学院材料", height=96)
-        parsed_due_date, parsed_due_time = todo_db.extract_due_fields(todo_text, date.today())
+        parsed_due_date, parsed_due_time = todo_db.extract_due_fields(todo_text, todo_db.today())
         col_date, col_time, col_save = st.columns([1, 1, 1], vertical_alignment="bottom")
         with col_date:
             due_date = st.date_input("截止日期", value=_date_value(parsed_due_date))
@@ -366,7 +394,7 @@ with st.container(border=True):
             try:
                 todo_db.add_todos_from_text(
                     todo_text,
-                    record_date=date.today().isoformat(),
+                    record_date=todo_db.today().isoformat(),
                     due_date=due_date,
                     due_time=due_time,
                 )
