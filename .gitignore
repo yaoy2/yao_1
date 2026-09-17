@@ -3,6 +3,8 @@ __pycache__/
 *.pyc
 *.pyo
 .venv/
+.venv-m14/
+.env.m14
 node_modules/
 .next/
 .next-build/

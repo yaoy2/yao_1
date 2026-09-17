@@ -1,12 +1,21 @@
 import os
 import re
 import sqlite3
-from datetime import date, datetime, timedelta
+import uuid
+from datetime import date, datetime, timedelta, timezone
 
 
 ROOT_DIR = os.path.dirname(os.path.dirname(__file__))
 DB_PATH = os.path.join(ROOT_DIR, "data", "todos.db")
 BACKUP_MD_PATH = os.path.join(ROOT_DIR, "data", "todo_items_backup.md")
+
+
+def now_datetime():
+    return datetime.now(timezone(timedelta(hours=8))).replace(tzinfo=None)
+
+
+def today():
+    return now_datetime().date()
 
 
 def get_connection():
@@ -35,6 +44,10 @@ def init_db():
         """
     )
     conn.commit()
+    columns = {row[1] for row in conn.execute("PRAGMA table_info(todo_items)")}
+    if "uid" not in columns:
+        conn.execute("ALTER TABLE todo_items ADD COLUMN uid TEXT NOT NULL DEFAULT ''")
+        conn.commit()
     should_restore = _count_records(conn) == 0 and os.path.exists(BACKUP_MD_PATH)
     migration_version = conn.execute("PRAGMA user_version").fetchone()[0]
     conn.close()
@@ -73,26 +86,26 @@ def has_local_todos():
             conn.close()
 
 
-def add_todo(content, record_date=None, due_date=None, due_time=None):
+def add_todo(content, record_date=None, due_date=None, due_time=None, uid=None):
     content = str(content or "").strip()
     if not content:
         raise ValueError("content cannot be empty")
 
-    today = date.today()
+    today = now_datetime().date()
     extracted_date, extracted_time = extract_due_fields(content, today)
     record_date = str(record_date or today.isoformat())
     due_date = _normalize_date_text(due_date) or extracted_date
     due_time = _normalize_time_text(due_time) or extracted_time
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    now = now_datetime().isoformat(sep=" ", timespec="microseconds")
 
     conn = get_connection()
     cur = conn.execute(
         """
         INSERT INTO todo_items
-            (content, record_date, due_date, due_time, status, is_archived, completed_at, created_at, updated_at)
-        VALUES (?, ?, ?, ?, 'pending', 0, '', ?, ?)
+            (content, record_date, due_date, due_time, status, is_archived, completed_at, created_at, updated_at, uid)
+        VALUES (?, ?, ?, ?, 'pending', 0, '', ?, ?, ?)
         """,
-        (content, record_date, due_date, due_time, now, now),
+        (content, record_date, due_date, due_time, now, now, uid or str(uuid.uuid4())),
     )
     conn.commit()
     record_id = cur.lastrowid
@@ -172,7 +185,7 @@ def update_todo(record_id, content=None, due_date=None, due_time=None):
     if not fields:
         return 0
     fields.append("updated_at = ?")
-    values.append(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    values.append(now_datetime().isoformat(sep=" ", timespec="microseconds"))
     values.append(record_id)
 
     conn = get_connection()
@@ -186,7 +199,7 @@ def update_todo(record_id, content=None, due_date=None, due_time=None):
 
 
 def complete_todo(record_id):
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    now = now_datetime().isoformat(sep=" ", timespec="microseconds")
     conn = get_connection()
     cur = conn.execute(
         """
@@ -205,7 +218,7 @@ def complete_todo(record_id):
 
 
 def archive_todo(record_id):
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    now = now_datetime().isoformat(sep=" ", timespec="microseconds")
     conn = get_connection()
     cur = conn.execute(
         """
@@ -224,7 +237,7 @@ def archive_todo(record_id):
 
 
 def delete_todo(record_id):
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    now = now_datetime().isoformat(sep=" ", timespec="microseconds")
     conn = get_connection()
     cur = conn.execute(
         """
@@ -243,7 +256,7 @@ def delete_todo(record_id):
 
 
 def reopen_todo(record_id):
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    now = now_datetime().isoformat(sep=" ", timespec="microseconds")
     conn = get_connection()
     cur = conn.execute(
         """
@@ -300,11 +313,20 @@ def get_todos(keyword=None, view="active"):
 def _record_from_row(row):
     item = dict(row)
     item["is_archived"] = bool(item.get("is_archived", 0))
+    item["uid"] = record_uid(item)
     return item
 
 
+def record_uid(record):
+    """Keep legacy identities stable across machines; new records use UUID4."""
+    if record.get("uid"):
+        return str(record["uid"])
+    identity = f"m14:{record.get('id')}:{record.get('record_date')}:{record.get('created_at')}"
+    return str(uuid.uuid5(uuid.NAMESPACE_URL, identity))
+
+
 def extract_due_fields(text, base_date=None):
-    base_date = base_date or date.today()
+    base_date = base_date or now_datetime().date()
     text = str(text or "")
     due_date = _extract_due_date(text, base_date)
     due_time = _extract_due_time(text)
@@ -424,7 +446,7 @@ def _normalize_time_text(value):
 
 def build_markdown_backup(records=None):
     records = get_todos(view="all") if records is None else records
-    generated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    generated_at = now_datetime().isoformat(sep=" ", timespec="microseconds")
     lines = [
         "# 待办清单备份",
         "",
@@ -437,6 +459,7 @@ def build_markdown_backup(records=None):
             [
                 f"## TODO-{int(record.get('id') or 0)}",
                 "",
+                f"- 唯一标识：{record_uid(record)}",
                 f"- 发布日期：{record.get('record_date', '')}",
                 f"- 截止日期：{record.get('due_date', '')}",
                 f"- 截止时间：{record.get('due_time', '')}",
@@ -505,6 +528,7 @@ def parse_markdown_backup(text):
 
 def _read_backup_meta_line(meta, line):
     fields = {
+        "- 唯一标识：": "uid",
         "- 发布日期：": "record_date",
         "- 截止日期：": "due_date",
         "- 截止时间：": "due_time",
@@ -539,36 +563,56 @@ def has_markdown_backup_records(path=None):
 
 
 def import_todo_records(records, write_backup=True):
-    existing = set()
-    for record in get_todos(view="all"):
-        existing.update(_todo_identities(record))
-    inserted = 0
+    existing = get_todos(view="all")
+    changed = 0
     for record in reversed(records or []):
-        identities = _todo_identities(record)
-        if not identities or existing.intersection(identities):
+        if not str(record.get("content") or "").strip():
+            continue
+        uid = record_uid(record)
+        match = next((item for item in existing if item["uid"] == uid), None)
+        # Very old imports without identity metadata retain content/date deduplication.
+        if match is None and not record.get("uid") and not record.get("created_at"):
+            match = next((item for item in existing if
+                          item["record_date"] == record.get("record_date") and
+                          _normalize_content(item["content"]) == _normalize_content(record["content"])), None)
+        if match is not None:
+            if str(record.get("updated_at") or "") > str(match.get("updated_at") or ""):
+                fields = ("content", "record_date", "due_date", "due_time", "status", "is_archived",
+                          "completed_at", "created_at", "updated_at")
+                incoming = {key: record.get(key, match.get(key, "")) for key in fields}
+                conn = get_connection()
+                conn.execute("UPDATE todo_items SET " + ", ".join(f"{key} = ?" for key in fields) +
+                             ", uid = ? WHERE id = ?", [incoming[key] for key in fields] + [match["uid"], match["id"]])
+                conn.commit()
+                conn.close()
+                match.update(incoming)
+                changed += 1
             continue
         _insert_todo_record(record)
-        existing.update(identities)
-        inserted += 1
-    if inserted and write_backup:
+        existing = get_todos(view="all")
+        changed += 1
+    if changed and write_backup:
         sync_backup_file()
-    return inserted
+    return changed
 
 
 def _insert_todo_record(record):
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    now = now_datetime().isoformat(sep=" ", timespec="microseconds")
     status = str(record.get("status") or "pending")
     is_archived = bool(record.get("is_archived") or status == "done")
     conn = get_connection()
+    record_id = _coerce_int(record.get("id")) or None
+    if record_id and conn.execute("SELECT 1 FROM todo_items WHERE id = ?", (record_id,)).fetchone():
+        record_id = None
     conn.execute(
         """
         INSERT INTO todo_items
-            (content, record_date, due_date, due_time, status, is_archived, completed_at, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (content, record_date, due_date, due_time, status, is_archived, completed_at, created_at, updated_at, uid, id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             str(record.get("content", "")).strip(),
-            str(record.get("record_date") or date.today().isoformat()),
+            str(record.get("record_date") or now_datetime().date().isoformat()),
             _normalize_date_text(record.get("due_date")),
             _normalize_time_text(record.get("due_time")),
             status,
@@ -576,6 +620,8 @@ def _insert_todo_record(record):
             str(record.get("completed_at") or ""),
             str(record.get("created_at") or now),
             str(record.get("updated_at") or now),
+            record_uid(record) if record.get("id") or record.get("uid") else str(uuid.uuid4()),
+            record_id,
         ),
     )
     conn.commit()
