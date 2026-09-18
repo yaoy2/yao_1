@@ -22,7 +22,26 @@ codex mcp add m14 -- /absolute/path/to/python /absolute/path/to/repo/scripts/m14
 
 ## 手机、网页 ChatGPT
 
-需要一次性部署带 HTTPS 的远程 MCP 服务并在 ChatGPT 连接。仅 push/pull 或已有 Streamlit 页面，不会产生可访问的 MCP 接口。服务可与本机入口同时使用，无需保持个人电脑开机。
+可用 OpenAI 安全隧道连接本机接口，也可部署远程 HTTPS 服务。仅 push/pull 或已有 Streamlit 页面，不会自动完成 ChatGPT 连接。
+
+### 使用本机安全隧道（无需租服务器）
+
+1. 完成本机 `setup_m14.ps1`，确认 GitHub CLI 已登录或备份 token 已配置。
+2. 在 [Platform 隧道设置](https://platform.openai.com/settings/organization/tunnels) 创建私人隧道，关联自己的 Platform 组织及 ChatGPT 工作区。创建仅具有 Tunnels Read、Use 权限的运行密钥，保存在当前 Windows 用户可访问的本机文件中；不要放入仓库或聊天。
+3. 从 [OpenAI 官方发布页](https://github.com/openai/tunnel-client/releases/latest) 下载 Windows 客户端，核对发布的 SHA256 校验值。在本机执行（替换示例路径和隧道 ID）：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/connect_m14_tunnel.ps1 -TunnelId tunnel_YOUR_ID -ClientPath "C:\path\tunnel-client.exe" -RuntimeKeyFile "C:\private\runtime.key" -RegisterAutoStart
+```
+
+脚本使用官方客户端的托管后台进程，并检查 `process_running`、`healthy`、`ready`。`-RegisterAutoStart` 为当前 Windows 用户设置登录后自动启动；不加则只连接。密钥以文件引用传递，不写入命令行。不要在多台电脑上同时运行同一隧道；更换承载电脑时先停止旧实例。
+
+4. ChatGPT 设置 → Security and login → Developer mode；在插件页面创建 `M14 待办清单`，Connection 选 Tunnel，选择所建隧道，Authentication 选 No Auth。这里使用 OpenAI 私人隧道的组织/工作区访问控制，本机 M14 通过 stdio 工作，没有公开匿名 HTTP 接口。
+5. 新开 Chat，说“待办：测试事项”，再说“测试事项已完成”。确认 M14 新增并归档后再用于日常记录。首次调用可能仍受 ChatGPT 的插件权限设置影响。
+
+本机须开机、联网且已登录 Windows。关闭电脑或停止隧道后，Chat 不能调用该入口。手机使用同一个 ChatGPT 账号；手机端支持与可见性仍需在实际设备确认。其他电脑仅查看/使用 Chat 无需复制密钥；只有更换承载电脑才需要重新配置本机运行环境。
+
+### 使用远程 HTTPS 服务（不依赖个人电脑开机）
 
 1. 在可运行容器的服务器上，从仓库根目录构建：`docker build -f integrations/m14/Dockerfile -t m14-todos .`。
 2. 按 `env.example` 在服务器秘密配置中填写 GitHub 备份访问凭据及 HTTP 配置。备份 token 只需目标仓库的 Contents 读写权限。不要扩大到其他仓库。
