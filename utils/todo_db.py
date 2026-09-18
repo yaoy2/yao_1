@@ -1,4 +1,5 @@
 import os
+import json
 import re
 import sqlite3
 import uuid
@@ -8,6 +9,7 @@ from datetime import date, datetime, timedelta, timezone
 ROOT_DIR = os.path.dirname(os.path.dirname(__file__))
 DB_PATH = os.path.join(ROOT_DIR, "data", "todos.db")
 BACKUP_MD_PATH = os.path.join(ROOT_DIR, "data", "todo_items_backup.md")
+CHAT_SCHEMA_VERSION = 2
 
 
 def now_datetime():
@@ -570,6 +572,29 @@ def import_todo_records(records, write_backup=True):
             continue
         uid = record_uid(record)
         match = next((item for item in existing if item["uid"] == uid), None)
+        # Old deployments imported records with fresh numeric IDs and no UID.
+        # Reconcile only an unambiguous legacy copy with the same creation event;
+        # independently created records with explicit UIDs must remain separate.
+        legacy_copies = [item for item in existing if item["uid"] != uid
+                         and item["uid"] == record_uid({**item, "uid": ""})
+                         and record.get("created_at")
+                         and item["created_at"] == record["created_at"]
+                         and item["record_date"] == record.get("record_date")
+                         and item["content"] == record["content"]]
+        if len(legacy_copies) == 1:
+            legacy = legacy_copies[0]
+            if match is None:
+                conn = get_connection()
+                conn.execute("UPDATE todo_items SET uid = ? WHERE id = ?", (uid, legacy["id"]))
+                conn.commit()
+                conn.close()
+                legacy["uid"] = uid
+                match = legacy
+                changed += 1
+            elif _merge_legacy_copy(match, legacy):
+                existing = get_todos(view="all")
+                match = next(item for item in existing if item["uid"] == uid)
+                changed += 1
         # Very old imports without identity metadata retain content/date deduplication.
         if match is None and not record.get("uid") and not record.get("created_at"):
             match = next((item for item in existing if
@@ -594,6 +619,28 @@ def import_todo_records(records, write_backup=True):
     if changed and write_backup:
         sync_backup_file()
     return changed
+
+
+def _merge_legacy_copy(canonical, legacy):
+    fields = ("content", "record_date", "due_date", "due_time", "status", "is_archived",
+              "completed_at", "created_at", "updated_at")
+    # Equal timestamps with different state are ambiguous; retain both for review.
+    if canonical["updated_at"] == legacy["updated_at"] and any(canonical[key] != legacy[key] for key in fields):
+        return False
+    newest = max((canonical, legacy), key=lambda item: item["updated_at"])
+    conn = get_connection()
+    try:
+        with conn:
+            conn.execute("CREATE TABLE IF NOT EXISTS todo_uid_merge_history "
+                         "(id INTEGER PRIMARY KEY, merged_at TEXT NOT NULL, original_records TEXT NOT NULL)")
+            conn.execute("INSERT INTO todo_uid_merge_history (merged_at, original_records) VALUES (?, ?)",
+                         (now_datetime().isoformat(), json.dumps([canonical, legacy], ensure_ascii=False)))
+            conn.execute("UPDATE todo_items SET " + ", ".join(f"{key} = ?" for key in fields) + " WHERE id = ?",
+                         [newest[key] for key in fields] + [canonical["id"]])
+            conn.execute("DELETE FROM todo_items WHERE id = ?", (legacy["id"],))
+    finally:
+        conn.close()
+    return True
 
 
 def _insert_todo_record(record):
