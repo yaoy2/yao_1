@@ -2,6 +2,7 @@ import base64
 import ast
 import copy
 import hashlib
+import json
 import tempfile
 import unittest
 import uuid
@@ -185,6 +186,56 @@ class TodoChatTest(unittest.TestCase):
             db.delete_todo(record_id)
             db.import_todo_records(old)
             self.assertEqual([], db.get_todos())
+
+    def test_legacy_import_with_remapped_id_adopts_remote_uid(self):
+        record = {"id": 31, "content": "同一旧待办", "record_date": "2026-08-27",
+                  "created_at": "2026-08-27 09:10:42", "updated_at": "2026-08-27 09:10:42"}
+        record["uid"] = todo_db.record_uid(record)
+        with snapshot_db([]) as db:
+            db._insert_todo_record({**record, "id": 7, "uid": ""})
+            db.import_todo_records([record])
+            result = db.get_todos()
+            self.assertEqual(1, len(result))
+            self.assertEqual(7, result[0]["id"])
+            self.assertEqual(record["uid"], result[0]["uid"])
+            self.assertEqual(0, db.import_todo_records([record]))
+
+    def test_existing_legacy_duplicate_is_backed_up_and_newest_state_kept(self):
+        record = {"id": 31, "uid": str(uuid.uuid4()), "content": "旧版重复副本",
+                  "record_date": "2026-08-27", "created_at": "2026-08-27 09:10:42",
+                  "updated_at": "2026-08-27 09:10:42"}
+        with snapshot_db([record]) as db:
+            db._insert_todo_record({**record, "id": 7, "uid": "", "status": "deleted",
+                                    "updated_at": "2026-09-18 14:00:00"})
+            before = db.get_todos(view="all")
+            db.import_todo_records([record])
+            remaining = db.get_todos(view="all")
+            self.assertEqual(1, len(remaining))
+            self.assertEqual("deleted", remaining[0]["status"])
+            self.assertEqual(record["uid"], remaining[0]["uid"])
+            self.assertEqual(0, db.import_todo_records([record]))
+            conn = db.get_connection()
+            saved = conn.execute("SELECT original_records FROM todo_uid_merge_history").fetchall()
+            conn.close()
+            self.assertEqual(1, len(saved))
+            self.assertEqual({r["uid"] for r in before}, {r["uid"] for r in json.loads(saved[0][0])})
+
+    def test_distinct_explicit_uids_are_not_deduplicated_by_text_and_time(self):
+        record = {"id": 31, "uid": str(uuid.uuid4()), "content": "允许重复录入的事项",
+                  "record_date": "2026-08-27", "created_at": "2026-08-27 09:10:42",
+                  "updated_at": "2026-08-27 09:10:42"}
+        with snapshot_db([record]) as db:
+            db.import_todo_records([{**record, "id": 32, "uid": str(uuid.uuid4())}])
+            self.assertEqual(2, len(db.get_todos()))
+
+    def test_ambiguous_legacy_copy_with_equal_timestamp_is_retained(self):
+        record = {"id": 31, "uid": str(uuid.uuid4()), "content": "状态冲突的事项",
+                  "record_date": "2026-08-27", "created_at": "2026-08-27 09:10:42",
+                  "updated_at": "2026-08-27 09:10:42"}
+        with snapshot_db([record]) as db:
+            db._insert_todo_record({**record, "id": 7, "uid": "", "status": "done"})
+            db.import_todo_records([record])
+            self.assertEqual(2, len(db.get_todos(view="all")))
 
 
 if __name__ == "__main__":

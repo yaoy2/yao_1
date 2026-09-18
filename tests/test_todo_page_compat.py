@@ -32,11 +32,13 @@ class TodoPageCompatTest(unittest.TestCase):
         with patch.dict(todo_db.__dict__):
             del todo_db.today
             del todo_db.record_uid
+            del todo_db.CHAT_SCHEMA_VERSION
             with self.assertRaises(AttributeError):
                 todo_db.today()
             module = self.run_page_bootstrap()
             self.assertIsInstance(module.today(), date)
             self.assertTrue(callable(module.record_uid))
+            self.assertEqual(2, module.CHAT_SCHEMA_VERSION)
             with tempfile.TemporaryDirectory() as directory, patched_todo_storage(directory):
                 module.init_db()
                 module.add_todo("明天下午3点提交材料", record_date=module.today().isoformat())

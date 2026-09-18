@@ -14,7 +14,7 @@ from utils.ui_theme import render_home_link
 
 # A running Cloud session can retain the pre-chat module after the page updates.
 # Refresh it before init_db so the UID migration and date helpers update together.
-if not hasattr(todo_db, "today"):
+if getattr(todo_db, "CHAT_SCHEMA_VERSION", 0) < 2:
     todo_db = importlib.reload(todo_db)
 
 
