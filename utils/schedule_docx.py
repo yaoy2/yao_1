@@ -24,7 +24,10 @@ COURSE_PATTERN = re.compile(r"^(?P<course>.+?)\[(?P<code>\d+)\]\s*(?P<tail>.*)$"
 CREDITS_PATTERN = re.compile(r"^(\d+(?:\.\d+)?)学分$")
 SESSION_PATTERN = re.compile(r"^(.+?周(?:[（(][单双][）)])?)\[([^\]]+)\]\s*(.*)$")
 COUNT_PATTERN = re.compile(r"^选课人数\s*[:：]\s*(\d+)(?:\.{3}|…)?$")
-PHYSICAL_EDUCATION_PATTERN = re.compile(r"体育|\bPhysical\s+Education\b", re.I)
+PHYSICAL_EDUCATION_PATTERN = re.compile(
+    r"体育|\bPhysical\s+Education\b|啦啦操|羽毛球|篮球|排球|瑜伽|街舞|跆拳道|舞蹈文化与艺术体验",
+    re.I,
+)
 
 
 def is_truncated(text: str) -> bool:

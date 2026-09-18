@@ -106,6 +106,7 @@ def _card_html(rec: dict) -> str:
     weeks = html.escape(rec.get("week_text") or "原文未完整列出")
     teaching_type = html.escape(rec.get("teaching_type") or "未标注")
     source_note = "<div>原表信息已省略，未列出内容请核对教务课表。</div>" if rec.get("source_truncated") else ""
+    source_note += "".join(f"<div>{html.escape(note)}</div>" for note in rec.get("import_notes", []))
     return (
         "<div class='teacher-card'>"
         "<details>"
@@ -231,6 +232,8 @@ with col3:
 
 st.markdown("### 总课表（周一至周五，第1节至第14节）")
 metadata = _load_cache(SCHEDULE_METADATA_PATH) or {}
+if metadata.get("source_overlap_count"):
+    st.caption(f"最新分表有 {metadata['source_overlap_count']} 处同一教师时段重叠，已按原文保留，并在课程详情中标注。")
 if metadata.get("truncated_source_cells"):
     st.caption(
         f"原表有 {metadata['truncated_source_cells']} 个单元格的信息已被省略，相关课程已保留提示；"
@@ -257,7 +260,7 @@ if selected_filter != "全部教师":
                 "教室": rec["classroom"],
                 "班级": rec["class_group"],
                 "来源": rec["sheet"],
-                "备注": "原表信息已省略" if rec.get("source_truncated") else "",
+                "备注": "；".join((["原表信息已省略"] if rec.get("source_truncated") else []) + rec.get("import_notes", [])),
             }
         )
     if details:

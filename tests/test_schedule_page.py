@@ -34,16 +34,32 @@ class SchedulePageTest(unittest.TestCase):
 
     def test_current_cache_contains_only_this_term_without_sports_or_stale_teachers(self):
         metadata = json.loads((ROOT / "data" / "schedule_metadata.json").read_text(encoding="utf-8"))
-        self.assertEqual(253, len(self.records))
+        self.assertEqual(237, len(self.records))
         self.assertEqual({"2026-2027-1"}, {r["term"] for r in self.records})
         self.assertFalse(any(is_physical_education(r["course"]) for r in self.records))
         teachers = {teacher for r in self.records for teacher in r["teachers"]}
-        self.assertEqual(51, len(teachers))
+        self.assertEqual(53, len(teachers))
         self.assertEqual(set(metadata["teachers"]), teachers)
         self.assertEqual(set(self.page["build_teacher_category_map"](self.records)), teachers)
         categories = json.loads((ROOT / "data" / "teacher_category_cache.json").read_text(encoding="utf-8"))
         self.assertEqual(set(categories), teachers)
-        self.assertEqual(4, sum(r["source_truncated"] for r in self.records))
+        self.assertEqual(3, sum(r["source_truncated"] for r in self.records))
+        self.assertEqual("department_summary_xlsx", metadata["source_format"])
+        self.assertEqual(17, metadata["council_records_superseded"])
+        self.assertEqual(3, metadata["source_overlap_count"])
+        self.assertEqual("21:30-22:10", metadata["period_times"]["14"])
+
+    def test_latest_workbook_overrides_stale_council_assignments(self):
+        python_lessons = [r for r in self.records if r["teacher_label"] == "庞晨昕" and r["course"] == "程序设计基础（Python）"]
+        self.assertEqual(2, len(python_lessons))
+        self.assertEqual({"5-8周"}, {r["week_text"] for r in python_lessons})
+        clinical_lessons = [r for r in self.records if r["teacher_label"] == "刘冬雪" and r["course"] == "临床医学概论"]
+        self.assertEqual(4, len(clinical_lessons))
+        self.assertNotIn("F3121人体解剖学实验室", {r["classroom"] for r in clinical_lessons})
+        completed = [r for r in self.records if r.get("periods_from_previous")]
+        self.assertEqual(1, len(completed))
+        self.assertEqual(("熊亮宇", "星期三", 1, 2), (completed[0]["teacher_label"], completed[0]["weekday"], completed[0]["start_period"], completed[0]["end_period"]))
+        self.assertIn("最新表未列节次", self.page["_card_html"](completed[0]))
 
     def test_old_semester_cache_cannot_reappear(self):
         self.page["_load_cache"] = lambda path: [{"term": "2025-2026-2"}, {"course": "旧课表"}]
