@@ -1,3 +1,4 @@
+import importlib
 import os
 import sys
 from datetime import date, datetime
@@ -9,6 +10,12 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from utils import budget_auth, github_backup_sync, todo_db
 from utils.ui_theme import render_home_link
+
+
+# A running Cloud session can retain the pre-chat module after the page updates.
+# Refresh it before init_db so the UID migration and date helpers update together.
+if not hasattr(todo_db, "today"):
+    todo_db = importlib.reload(todo_db)
 
 
 st.set_page_config(page_title="待办清单", page_icon="✓", layout="wide")
