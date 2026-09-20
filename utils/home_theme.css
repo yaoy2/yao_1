@@ -40,7 +40,7 @@ body:has(.apple-home) .apple-home {
     color: var(--colors-ink);
     background: var(--colors-canvas);
     font-family: var(--font-text);
-    font-size: 21px;
+    font-size: 25px;
     line-height: 1.44;
     letter-spacing: -0.374px;
 }
@@ -67,7 +67,7 @@ body:has(.apple-home) .brand {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 16px;
+    font-size: 20px;
 }
 body:has(.apple-home) .brand-mark {
     width: 18px;
@@ -77,7 +77,7 @@ body:has(.apple-home) .brand-mark {
     color: var(--colors-canvas);
     display: grid;
     place-items: center;
-    font-size: 14px;
+    font-size: 18px;
     font-weight: 600;
 }
 body:has(.apple-home) .nav-links {
@@ -85,7 +85,7 @@ body:has(.apple-home) .nav-links {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     height: 44px;
-    font-size: 16px;
+    font-size: 20px;
 }
 body:has(.apple-home) .nav-cat {
     display: flex;
@@ -119,7 +119,7 @@ body:has(.apple-home) .nav-flyout-inner {
     margin: 0 auto;
 }
 body:has(.apple-home) .nav-flyout-kicker {
-    font-size: 16px;
+    font-size: 20px;
     color: var(--colors-ink-muted-48);
     margin-bottom: 14px;
 }
@@ -130,7 +130,7 @@ body:has(.apple-home) .nav-flyout-list {
 body:has(.apple-home) .nav-flyout-list a {
     display: block;
     font-family: var(--font-display);
-    font-size: 28px;
+    font-size: 32px;
     font-weight: 600;
     line-height: 1.25;
     padding: 6px 0;
@@ -139,7 +139,7 @@ body:has(.apple-home) .nav-flyout-list a:hover { color: var(--colors-primary); }
 body:has(.apple-home) .fly-code {
     display: block;
     font-family: var(--font-text);
-    font-size: 16px;
+    font-size: 20px;
     font-weight: 400;
     color: var(--colors-ink-muted-48);
     margin-bottom: 2px;
@@ -175,14 +175,14 @@ body:has(.apple-home) .sub-nav-inner {
 }
 body:has(.apple-home) .sub-title {
     font-family: var(--font-display);
-    font-size: 25px;
+    font-size: 29px;
     font-weight: 600;
 }
 body:has(.apple-home) .sub-actions {
     display: flex;
     align-items: center;
     gap: 18px;
-    font-size: 18px;
+    font-size: 22px;
 }
 body:has(.apple-home) .pill {
     display: inline-flex;
@@ -191,7 +191,7 @@ body:has(.apple-home) .pill {
     min-height: 44px;
     border-radius: var(--rounded-pill);
     padding: 11px 22px;
-    font-size: 21px;
+    font-size: 25px;
     border: 0;
 }
 body:has(.apple-home) .pill-primary {
@@ -203,26 +203,26 @@ body:has(.apple-home) .pill-secondary {
     color: var(--colors-primary) !important;
     border: 1px solid var(--colors-primary);
 }
-body:has(.apple-home) .pill-sm { padding: 8px 15px; font-size: 18px; min-height: 36px; }
+body:has(.apple-home) .pill-sm { padding: 8px 15px; font-size: 22px; min-height: 36px; }
 body:has(.apple-home) .product-tile {
     padding: 28px 20px 12px;
     text-align: center;
 }
 body:has(.apple-home) .product-tile-light { background: var(--colors-canvas); }
 body:has(.apple-home) .eyebrow {
-    font-size: 16px;
+    font-size: 20px;
     color: var(--colors-ink-muted-48);
 }
 body:has(.apple-home) .product-tile h1 {
     margin: 8px 0 8px;
     font-family: var(--font-display);
     font-weight: 600;
-    font-size: 42px;
+    font-size: 46px;
     line-height: 1.1;
 }
 body:has(.apple-home) .lead-playful {
     font-family: "Fredoka", "Comic Neue", "Segoe UI Rounded", sans-serif;
-    font-size: 28px;
+    font-size: 32px;
     font-weight: 500;
     line-height: 1.3;
     letter-spacing: 0.4px;
@@ -238,12 +238,12 @@ body:has(.apple-home) .store-head { margin-bottom: 14px; }
 body:has(.apple-home) .store-head h2 {
     margin: 0;
     font-family: var(--font-display);
-    font-size: 28px;
+    font-size: 32px;
     font-weight: 600;
 }
 body:has(.apple-home) .store-head p {
     margin: 4px 0 0;
-    font-size: 17px;
+    font-size: 21px;
     color: var(--colors-ink-muted-48);
 }
 body:has(.apple-home) .card-grid {
@@ -273,7 +273,7 @@ body:has(.apple-home) .store-meta {
 }
 body:has(.apple-home) .store-code {
     color: var(--colors-ink-muted-48);
-    font-size: 16px;
+    font-size: 20px;
     font-weight: 600;
     letter-spacing: 0.3px;
 }
@@ -281,14 +281,14 @@ body:has(.apple-home) .store-card h3,
 body:has(.apple-home) .store-card .tool-title {
     margin: 0;
     color: var(--colors-ink) !important;
-    font-size: 21px;
+    font-size: 25px;
     font-weight: 600;
     text-decoration: none !important;
 }
-body:has(.apple-home) .status { font-size: 16px; color: var(--colors-ink-muted-48); }
+body:has(.apple-home) .status { font-size: 20px; color: var(--colors-ink-muted-48); }
 body:has(.apple-home) .store-card p {
     margin: 0;
-    font-size: 17px;
+    font-size: 21px;
     line-height: 1.5;
     color: var(--colors-ink-muted-80);
     display: -webkit-box;
@@ -298,10 +298,10 @@ body:has(.apple-home) .store-card p {
 }
 body:has(.apple-home) .store-card .text-link {
     margin-top: auto;
-    font-size: 18px;
+    font-size: 22px;
     padding-top: 4px;
 }
-body:has(.apple-home) .fine { font-size: 16px; color: var(--colors-ink-muted-48); }
+body:has(.apple-home) .fine { font-size: 20px; color: var(--colors-ink-muted-48); }
 body:has(.apple-home) .tool-lock,
 body:has(.apple-home) .tool-blocked,
 body:has(.apple-home) .tool-lock-spacer {
@@ -310,7 +310,7 @@ body:has(.apple-home) .tool-lock-spacer {
     height: 1.1rem;
     align-items: center;
     justify-content: center;
-    font-size: 1.11rem;
+    font-size: calc(1.11rem + 4px);
 }
 body:has(.apple-home) .quote-strip.quote {
     display: block;
@@ -326,7 +326,7 @@ body:has(.apple-home) .quote-strip.quote {
 body:has(.apple-home) .quote h2 {
     margin: 0 0 8px;
     font-family: var(--font-display);
-    font-size: 28px;
+    font-size: 32px;
 }
 body:has(.apple-home) .quote .fine {
     color: var(--colors-body-muted);
@@ -347,8 +347,8 @@ body:has(.apple-home) .span-4,
 body:has(.apple-home) .span-6 { grid-column: span 2; }
 }
 @media (max-width: 640px) {
-body:has(.apple-home) .product-tile h1 { font-size: 34px; }
-body:has(.apple-home) .lead-playful { font-size: 24px; }
-body:has(.apple-home) .quote h2 { font-size: 24px; }
+body:has(.apple-home) .product-tile h1 { font-size: 38px; }
+body:has(.apple-home) .lead-playful { font-size: 28px; }
+body:has(.apple-home) .quote h2 { font-size: 28px; }
 body:has(.apple-home) .sub-actions a:not(.pill) { display: none; }
 }
