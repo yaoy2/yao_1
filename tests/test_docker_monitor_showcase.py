@@ -10,7 +10,7 @@ PAGE = ROOT / "pages" / "22_23_docker_monitor.py"
 
 
 class DockerMonitorShowcaseTest(unittest.TestCase):
-    def test_m23_page_renders_four_docker_tasks_without_controls(self):
+    def test_m23_page_renders_three_docker_tasks_without_controls(self):
         app = AppTest.from_file(str(PAGE), default_timeout=10)
         app.run()
 
@@ -21,7 +21,6 @@ class DockerMonitorShowcaseTest(unittest.TestCase):
         for text in (
             "Docker",
             "TrendRadar",
-            "GLM 促销雷达",
             "AIHOT",
             "德亚显卡报价",
             "grid-template-columns: 1fr 1fr",
@@ -35,6 +34,9 @@ class DockerMonitorShowcaseTest(unittest.TestCase):
             "21:00",
         ):
             self.assertIn(text, rendered)
+        self.assertNotIn("GLM", rendered)
+        self.assertNotIn("8092", rendered)
+        self.assertEqual(3, rendered.count('<article class="m23-task">'))
         self.assertNotIn("Windows 桌面通知", rendered)
         self.assertNotIn("每小时扫描", rendered)
         self.assertEqual(1, len(app.sidebar.markdown))

@@ -168,12 +168,11 @@ st.markdown(
         <div>
           <div class="m23-kicker">M23 · DOCKER MONITOR</div>
           <h2>本机 Docker 常驻任务合集</h2>
-          <p>四个容器共用同一条钉钉。TrendRadar 是热点主雷达；另外三个在 github.com/yaoy2/docker-monitor。本页只展示有什么、做什么。</p>
+          <p>三个容器共用同一条钉钉。TrendRadar 是热点主雷达；另外两个在 github.com/yaoy2/docker-monitor。本页只展示有什么、做什么。</p>
         </div>
         <div class="m23-ports">
           <span class="m23-port">8080</span>
           <span class="m23-port">8091</span>
-          <span class="m23-port">8092</span>
           <span class="m23-port">8093</span>
         </div>
       </section>
@@ -186,27 +185,11 @@ st.markdown(
               <p class="m23-meta">trendradar · 8080</p>
             </div>
           </div>
-          <p>热点主雷达。按关键词采集并推钉钉，配置和报告给另外三个任务只读挂载。标题带 TrendRadar 才能被机器人收下。</p>
+          <p>热点主雷达。按关键词采集并推钉钉，配置和报告给另外两个任务只读挂载。标题带 TrendRadar 才能被机器人收下。</p>
           <div class="m23-times">
             <span class="m23-time">09:30</span>
             <span class="m23-time">14:00</span>
             <span class="m23-time">17:00</span>
-          </div>
-        </article>
-        <article class="m23-task">
-          <div class="m23-task-head">
-            <div>
-              <h3>GLM 促销雷达</h3>
-              <p class="m23-meta">glm-monitor · 8092</p>
-            </div>
-          </div>
-          <p>扫描智谱官网渠道，关键词 / 价格去重后发钉钉。没有新优惠正文只发「无」。第一次扫描只建基线。</p>
-          <div class="m23-times">
-            <span class="m23-time">09:00</span>
-            <span class="m23-time">13:00</span>
-            <span class="m23-time">18:30</span>
-            <span class="m23-time">20:00</span>
-            <span class="m23-time">22:00</span>
           </div>
         </article>
         <article class="m23-task">

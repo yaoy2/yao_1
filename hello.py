@@ -29,7 +29,7 @@ TOOLS = [
     },
     {
         "title": "docker-monitor",
-        "desc": "只读展示本机四个 Docker 任务：TrendRadar、GLM 促销雷达、AIHOT 增量、德亚显卡报价，均走同一条钉钉。",
+        "desc": "只读展示本机三个 Docker 任务：TrendRadar、AIHOT 增量、德亚显卡报价，均走同一条钉钉。",
         "tag": "Docker 监控",
         "created": "2026_09_03",
         "page": "pages/22_23_docker_monitor.py",
