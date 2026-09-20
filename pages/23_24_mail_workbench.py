@@ -4,6 +4,7 @@ import os
 import re
 import sys
 import importlib
+import time as monotonic_clock
 from datetime import date, datetime, time, timedelta, timezone
 from html import escape
 from pathlib import PurePosixPath, PureWindowsPath
@@ -19,6 +20,7 @@ if "archived" not in mail_action_status.STATUS_LABELS:
     importlib.reload(mail_action_status)
 from utils.mail_action_status import STATUS_LABELS, ACTIVE_STATUSES, ARCHIVED_STATUSES
 from utils import mail_report_view
+from utils.mail_jev_review import review_label
 # Streamlit can retain imported modules while replacing the page on deployment.
 # Refresh only the pre-triage module, which cannot supply the new report API.
 if not hasattr(mail_report_view, "report_action_records"):
@@ -504,6 +506,32 @@ def collection_busy(snapshot):
     return isinstance(state, dict) and state.get("status") in {"pending", "running"}
 
 
+def poll_collection(gateway):
+    """Read progress only; never submit requests or discard a draft on failure."""
+    loaded = st.session_state.get("mail_loaded") or {}
+    if loaded.get("source") != "github" or not collection_busy(loaded.get("snapshot", {})):
+        return False
+    try:
+        updated = refresh_snapshot(gateway)
+    except Exception:
+        return False
+    return updated.get("version") != loaded.get("version")
+
+
+@st.fragment(run_every=15)
+def follow_collection_progress():
+    now = monotonic_clock.monotonic()
+    last = st.session_state.setdefault("mail_progress_polled_at", now)
+    if now - last >= 15:
+        st.session_state["mail_progress_polled_at"] = now
+        changed = poll_collection(get_mail_gateway())
+    else:
+        changed = False
+    if changed:
+        st.rerun()
+    st.caption("收信期间每 15 秒自动更新进度，无需反复刷新。")
+
+
 def collection_progress(snapshot):
     """Only fixed phrases and checked counts cross into the public status line."""
     state = snapshot.get("manual_collection")
@@ -511,12 +539,12 @@ def collection_progress(snapshot):
         return "按需点击“立即收信”；接收电脑在线时会收信、AI 整理并同步结果。刷新只读取已同步数据。"
     status, phase = state.get("status"), state.get("phase")
     if status == "pending":
-        return "收信请求已排队，等待接收电脑处理；接收电脑离线时会继续等待。点击“刷新”查看进度。"
+        return "收信请求已排队，等待接收电脑处理；接收电脑离线时会继续等待，页面自动更新进度。"
     if status == "running":
         return {
-            "collecting": "正在接收电脑上收信，随后进行 AI 整理和同步。点击“刷新”查看进度。",
-            "reviewing": "正在进行 AI 整理，结果尚未同步完成。点击“刷新”查看进度。",
-            "syncing": "正在同步收信与 AI 整理结果，网页尚未确认完成。点击“刷新”查看进度。",
+            "collecting": "正在接收电脑上收信，随后进行 AI 整理和同步，页面自动更新进度。",
+            "reviewing": "正在进行 AI 整理及自动复核，结果尚未同步完成，页面自动更新进度。",
+            "syncing": "正在同步收信与 AI 整理结果，网页尚未确认完成，页面自动更新进度。",
         }.get(phase, "收信任务处理中，完成情况待确认。点击“刷新”查看进度。")
     if phase != "complete":
         return "收信完成情况待确认，请刷新查看最新进度。"
@@ -686,6 +714,8 @@ def render_inbox_message(message, snapshot, loaded, gateway, now, *, context="in
         content_col, choice_col = st.columns([5, 1.65], vertical_alignment="center")
         with content_col:
             st.markdown(inbox_message_html(message, actions, now), unsafe_allow_html=True)
+            if label := review_label(message.get("jev_review")):
+                st.caption(label)
             if progress := filing_progress(message):
                 st.caption(progress)
         with choice_col:
@@ -725,6 +755,11 @@ def render_inbox_message(message, snapshot, loaded, gateway, now, *, context="in
 
 def render_inbox(snapshot, loaded, gateway, now):
     messages, actions = snapshot.get("messages", []), snapshot.get("actions", [])
+    reviewed = [m for m in messages if m.get("jev_review")]
+    if reviewed:
+        verified = sum(m["jev_review"].get("status") == "verified" for m in reviewed)
+        st.caption(f"自动复核：{verified} 封证据通过，{len(reviewed) - verified} 封待核对或未复核。"
+                   "明确必办事项已进入“待办”，仅供知悉的进入“无需处理”；可随时改回。")
     view = st.radio("邮件视图", INBOX_VIEWS, horizontal=True, key="mail_inbox_view", label_visibility="collapsed",
                     format_func=lambda label: f"{label} {len(filter_inbox_messages(messages, actions, label))}")
     query_col, filter_col = st.columns([4, 1])
@@ -1061,6 +1096,8 @@ def main():
     render_pending_changes(snapshot, loaded, mail_private_sync)
     st.markdown(snapshot_status_html(snapshot), unsafe_allow_html=True)
     st.caption(collection_progress(snapshot))
+    if collection_busy(snapshot):
+        follow_collection_progress()
     if st.session_state.get("mail_collection_error"):
         st.error(st.session_state["mail_collection_error"])
     if snapshot.get("collection_storage") == "on_demand":

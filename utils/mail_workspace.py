@@ -21,6 +21,7 @@ from urllib.parse import unquote, urlsplit, urlunsplit
 from utils.mail_action_status import ACTIVE_STATUSES, ALL_STATUSES, STATUS_LABELS
 from utils.mail_filing_state import is_filing_requested, public_filing
 from utils.mail_collection_state import public_collection
+from utils.mail_jev_review import public_review
 
 
 SCHEMA_VERSION = 1
@@ -435,6 +436,14 @@ def ingest(root, batch):
             stamp = parse_time(incoming["received_at"])
             directory = "archive/" + stamp.date().isoformat() + "/" + hashlib.sha256(identifier.encode()).hexdigest()[:24]
             message = {field: _text(incoming.get(field, previous.get(field))) for field in MESSAGE_FIELDS}
+            verification = public_review(previous.get("jev_review") if previous else incoming.get("jev_review"))
+            if verification:
+                message["jev_review"] = verification
+            # Only a new, fully verified informational mail can be auto-triaged.
+            if (not previous and verification.get("status") == "verified"
+                    and incoming.get("jev_triage") == "no_action"
+                    and not any(a.get("message_id") == identifier for a in batch.get("actions", []))):
+                message.update(triage_status="no_action", triage_updated_at=finished)
             # Collection refreshes evidence, never a user's mail-level decision.
             for field in MESSAGE_TRIAGE_FIELDS:
                 if field in previous:
@@ -714,6 +723,8 @@ def public_snapshot(data, root):
     root_path = _root_path(root)
     for incoming in data["messages"]:
         message = {key: incoming.get(key, "") for key in MESSAGE_FIELDS}
+        if verification := public_review(incoming.get("jev_review")):
+            message["jev_review"] = verification
         for key in MESSAGE_TRIAGE_FIELDS:
             if key in incoming:
                 message[key] = copy.deepcopy(incoming[key])

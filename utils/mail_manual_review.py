@@ -19,6 +19,8 @@ import tempfile
 import time
 import unicodedata
 
+from utils import mail_jev_review
+
 
 MAX_MESSAGES = 200
 MAX_BODY_CHARS = 16000
@@ -420,15 +422,30 @@ def review_batch(batch, dashboard, root):
     if not isinstance(reviewed, list) or len(reviewed) != len(packed):
         _fail()
     pending = {item["id"]: item for item in packed}
+    verification_inputs, verified_rows = [], []
     prior_action_ids = {item.get("id") for item in dashboard.get("actions", [])}
     for item in reviewed:
         if (not isinstance(item, dict) or not isinstance(item.get("id"), str)
                 or item["id"] not in pending):
             _fail()
         identifier = item["id"]
-        summary, category, actions = _reviewed_message(item, pending.pop(identifier), limits_by_id[identifier])
+        source = pending.pop(identifier)
+        summary, category, actions = _reviewed_message(item, source, limits_by_id[identifier])
         if any(action["id"] in prior_action_ids for action in actions):
             _fail()
         messages_by_id[identifier].update(summary=summary, category=category)
         result["actions"].extend(actions)
+        verification_inputs.append((source, item, limits_by_id[identifier]))
+        verified_rows.append((messages_by_id[identifier], actions))
+    # Run only after every draft passed the deterministic evidence/date checks.
+    for (message, actions), verification in zip(verified_rows, mail_jev_review.verify_batch(verification_inputs)):
+        message["jev_review"] = verification["review"]
+        if not actions:
+            message["jev_triage"] = verification["message_status"]
+        for action, status in zip(actions, verification["action_statuses"]):
+            # An inferred year still requires the user's date confirmation.
+            if "未明示年份待确认" not in (action.get("due_basis") or ""):
+                action["status"] = status
+            elif verification["review"].get("status") == "verified":
+                message["jev_review"] = {"status": "attention", "version": 1}
     return result
