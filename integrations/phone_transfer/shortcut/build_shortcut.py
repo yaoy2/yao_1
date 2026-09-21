@@ -2,7 +2,7 @@
 
 The caller signs the generated XML separately. Setup input is SETUP_PREFIX plus
 a JSON object with ``url`` and ``authorization``. Only that configuration is saved
-in iCloud Drive/Shortcuts; shared files go directly to a multipart file field.
+in iCloud Drive; shared files go directly to a multipart file field.
 
 Action names/parameters follow Cherri's actions/{basic,documents,web,text}.cherri
 and shortcutgen.go. The multipart file wrapper follows the exported-shortcut
@@ -47,6 +47,27 @@ def _text(value):
 def _fields(items):
     return {"Value": {"WFDictionaryFieldValueItems": items},
             "WFSerializationType": "WFDictionaryFieldValue"}
+
+
+def _icloud_drive_folder():
+    """Portable native iCloud Drive root, without another user's bookmark.
+
+    Modern Save File uses WFFolder; Get File from Folder uses WFFile. The
+    legacy WFFileStorageService string does not select either parameter.
+    This account-independent DefaultValue comes from the Apple Frames export:
+    https://gist.github.com/extratone/1c7f679b206c12344e8a405d85b07c6a
+    The special Shortcuts app-container references include account-specific
+    crossDeviceItemID values; don't invent or copy one into a generic package.
+    """
+    return {
+        "fileLocation": {
+            "WFFileLocationType": "iCloud",
+            "fileProviderDomainID": "com.apple.CloudDocs.MobileDocumentsFileProvider",
+            "relativeSubpath": "com~apple~CloudDocs",
+        },
+        "filename": "com~apple~CloudDocs",
+        "displayName": "iCloud Drive",
+    }
 
 
 class _Builder:
@@ -98,6 +119,12 @@ class _Builder:
             self.require(label + ":require:" + name, matches, "配置无效，请重新扫描办公电脑 L 的配置二维码。")
         return url, authorization
 
+    def load_config(self, label):
+        # Binding verification and Photos-share sending MUST use this same
+        # directory and path, rather than a Save File output or implicit root.
+        return self.action("documentpicker.open", label, WFFile=_icloud_drive_folder(),
+                           WFGetFilePath="/" + CONFIG_FILE, WFFileErrorIfNotFound=False)
+
 
 def build_shortcut():
     """Return a reproducible plist document containing no user-specific values."""
@@ -122,18 +149,25 @@ def build_shortcut():
                           WFReplaceTextFind=r"\A" + re.escape(SETUP_PREFIX), WFReplaceTextReplace="",
                           WFReplaceTextCaseSensitive=True, WFReplaceTextRegularExpression=True)
     b.config("setup", setup_json)
-    b.action("documentpicker.save", "save-config", WFInput=setup_json,
-             WFFileStorageService="iCloud Drive", WFFileDestinationPath=CONFIG_FILE,
+    named_config = b.action("setitemname", "name-config", WFInput=setup_json,
+                            WFName=CONFIG_FILE, WFDontIncludeFileExtension=False)
+    b.action("documentpicker.save", "save-config", WFInput=named_config,
+             WFFolder=_icloud_drive_folder(), WFFileDestinationPath="/",
              WFAskWhereToSave=False, WFSaveFileOverwrite=True)
-    b.stop_with("setup-complete", "已绑定办公电脑 L。现在可在照片或文件中点分享，选择“发送到办公电脑 L”。")
+    readback = b.load_config("verify-config-file")
+    failure = "配置保存后未能读回核对，绑定尚未完成。请允许访问 iCloud Drive，再点“自动绑定 L”。"
+    b.require("verify-config-present", readback, failure)
+    readback_text = b.action("detect.text", "verify-config-text", WFInput=readback)
+    b.begin_if("verify-config-differs", readback_text, 5, setup_json)
+    b.stop_with("verify-config-mismatch", failure)
+    b.end_if("verify-config-differs")
+    b.stop_with("setup-complete", "已绑定办公电脑 L（v3，配置已读回校验）。现在可在照片或文件中点分享，选择“发送到办公电脑 L”。")
     b.end_if("setup-input")
     b.end_if("text-input")
     b.end_if("single-input")
 
-    config_file = b.action("documentpicker.open", "load-config", WFFileStorageService="iCloud Drive",
-                           WFGetFilePath=CONFIG_FILE, WFShowFilePicker=False,
-                           WFFileErrorIfNotFound=False)
-    b.require("configured", config_file, "尚未配置，请先扫描办公电脑 L 的配置二维码。")
+    config_file = b.load_config("load-config")
+    b.require("configured", config_file, "未读到绑定配置。请返回安装网页点“自动绑定 L”，并允许访问 iCloud Drive。")
     url, authorization = b.config("stored", config_file)
     group = _uuid("files-loop")
     b.action("repeat.each", "files-loop:start", GroupingIdentifier=group,
