@@ -84,34 +84,36 @@ export async function exists(directory, name, kind = 'file') {
   try { await directory[kind === 'file' ? 'getFileHandle' : 'getDirectoryHandle'](name); return true; }
   catch (e) { if (e.name === 'NotFoundError') return false; if (e.name === 'TypeMismatchError') return true; throw e; }
 }
+export function receiverDestination(directory) {
+  const subfolder = directory.name.toLowerCase() === 'ding2026' ? '手机传输' : '';
+  return { subfolder, label: [directory.name, subfolder].filter(Boolean).join(' / ') };
+}
 export class IncomingTransfer {
   constructor(root, onSaved = () => {}) { this.root = root; this.onSaved = onSaved; this.active = null; this.batch = null; this.closed = false; }
   async begin(files) {
     if (this.batch || this.closed) throw new Error('已有传输正在进行');
     const manifest = validateFiles(files);
-    const { day, time } = dateParts();
-    const dayDir = await this.root.getDirectoryHandle(day, { create: true });
-    // A fresh random directory per batch plus one writer prevents filename races
-    // between retries, duplicate source names, and other receiving tabs.
-    let name;
-    for (let attempt = 0; attempt < 8; attempt++) {
-      name = `${time}_${randomHex(16)}`;
-      if (!await exists(dayDir, name, 'directory')) break;
-      name = null;
-    }
-    if (!name) throw new Error('无法创建独立保存目录');
-    const directory = await dayDir.getDirectoryHandle(name, { create: true });
-    this.batch = { manifest, directory, folder: `${day}/${name}`, index: 0, saved: [] };
+    // Apply to both transfer routes and existing saved directory handles without
+    // replacing the user's binding or falling back to the parent on failure.
+    const { subfolder } = receiverDestination(this.root);
+    const directory = subfolder ? await this.root.getDirectoryHandle(subfolder, { create: true }) : this.root;
+    this.batch = { manifest, directory, folder: subfolder || '.', index: 0, saved: [] };
     return this.batch.folder;
   }
   async start(index) {
     const batch = this.batch;
     if (this.closed || !batch || this.active || index !== batch.index || !batch.manifest[index]) throw new Error('文件顺序不正确');
     const source = batch.manifest[index];
-    let name = `${String(index + 1).padStart(3, '0')}_${safeFilename(source.name)}`;
-    for (let i = 0; await exists(batch.directory, name); i++) {
-      if (i >= 8) throw new Error('文件名冲突，未覆盖现有文件');
-      name = `${String(index + 1).padStart(3, '0')}_${randomHex(8)}_${safeFilename(source.name)}`;
+    const original = safeFilename(source.name);
+    const dot = original.lastIndexOf('.');
+    const stem = dot > 0 ? original.slice(0, dot) : original;
+    const extension = dot > 0 ? original.slice(dot) : '';
+    let name = original;
+    // The receiver lock serializes our writers. Skip every existing entry,
+    // including empty files left by an interrupted transfer and directories.
+    for (let suffix = 2; await exists(batch.directory, name); suffix++) {
+      if (suffix > 10000) throw new Error('文件名冲突，未覆盖现有文件');
+      name = `${stem} (${suffix})${extension}`;
     }
     const handle = await batch.directory.getFileHandle(name, { create: true });
     if ((await handle.getFile()).size !== 0) throw new Error('目标文件已存在，已停止以免覆盖');

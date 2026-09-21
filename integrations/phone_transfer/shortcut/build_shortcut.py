@@ -1,8 +1,9 @@
 """Build the public, unsigned iOS Shortcut template; never embed binding secrets.
 
-The caller signs the generated XML separately. Setup input is SETUP_PREFIX plus
-a JSON object with ``url`` and ``authorization``. Only that configuration is saved
-in iCloud Drive; shared files go directly to a multipart file field.
+The caller signs the generated XML separately. A single Apple import question
+stores the user's configuration in a Text action inside the installed shortcut.
+There are no iCloud file paths or configuration file permissions to resolve.
+Shared files go directly to a multipart file field.
 
 Action names/parameters follow Cherri's actions/{basic,documents,web,text}.cherri
 and shortcutgen.go. The multipart file wrapper follows the exported-shortcut
@@ -18,8 +19,6 @@ import uuid
 
 
 SHORTCUT_NAME = "发送到办公电脑 L"
-SETUP_PREFIX = "suishouchuan-setup-v1:"
-CONFIG_FILE = "suishouchuan-L.json"
 API_BASE = "https://whatsup.streamlit.app/~/+/phone-transfer-api/v1"
 PREPARE_PATTERN = r"\A" + re.escape(API_BASE) + r"/upload/[0-9a-f]{64}/authorize\z"
 TICKET_PATTERN = r"\A" + re.escape(API_BASE) + r"/upload/[0-9a-f]{64}/[0-9a-f]{64}\z"
@@ -47,27 +46,6 @@ def _text(value):
 def _fields(items):
     return {"Value": {"WFDictionaryFieldValueItems": items},
             "WFSerializationType": "WFDictionaryFieldValue"}
-
-
-def _icloud_drive_folder():
-    """Portable native iCloud Drive root, without another user's bookmark.
-
-    Modern Save File uses WFFolder; Get File from Folder uses WFFile. The
-    legacy WFFileStorageService string does not select either parameter.
-    This account-independent DefaultValue comes from the Apple Frames export:
-    https://gist.github.com/extratone/1c7f679b206c12344e8a405d85b07c6a
-    The special Shortcuts app-container references include account-specific
-    crossDeviceItemID values; don't invent or copy one into a generic package.
-    """
-    return {
-        "fileLocation": {
-            "WFFileLocationType": "iCloud",
-            "fileProviderDomainID": "com.apple.CloudDocs.MobileDocumentsFileProvider",
-            "relativeSubpath": "com~apple~CloudDocs",
-        },
-        "filename": "com~apple~CloudDocs",
-        "displayName": "iCloud Drive",
-    }
 
 
 class _Builder:
@@ -116,59 +94,23 @@ class _Builder:
         for name, value, pattern in (("url", url, PREPARE_PATTERN),
                                      ("authorization", authorization, AUTHORIZATION_PATTERN)):
             matches = self.match(label + ":validate:" + name, value, pattern)
-            self.require(label + ":require:" + name, matches, "配置无效，请重新扫描办公电脑 L 的配置二维码。")
+            self.require(label + ":require:" + name, matches, "绑定码无效。请从安装网页重新复制绑定码，在快捷指令的“自定义快捷指令”中完整粘贴。")
         return url, authorization
-
-    def load_config(self, label):
-        # Binding verification and Photos-share sending MUST use this same
-        # directory and path, rather than a Save File output or implicit root.
-        return self.action("documentpicker.open", label, WFFile=_icloud_drive_folder(),
-                           WFGetFilePath="/" + CONFIG_FILE, WFFileErrorIfNotFound=False)
 
 
 def build_shortcut():
     """Return a reproducible plist document containing no user-specific values."""
     b = _Builder()
     shared = _attachment({"Type": "ExtensionInput"})
-    b.require("has-input", shared, "首次使用请扫描办公电脑 L 的配置二维码；发送时从照片或文件的分享菜单运行。")
-    count = b.action("count", "input-count", Input=shared, WFCountType="Items")
-    b.begin_if("single-input", count, 4, 1)
-    first = b.action("getitemfromlist", "first-input", WFInput=shared, WFItemSpecifier="First Item")
-    input_type = b.action("getitemtype", "input-type", WFInput=first)
-    marker = b.action("gettext", "setup-marker", WFTextActionText=SETUP_PREFIX)
-    marker_type = b.action("getitemtype", "text-type", WFInput=marker)
-    # Comparing two runtime types works on Chinese and English devices alike.
-    b.begin_if("text-input", input_type, 4, marker_type)
-    # Get Item from List has a generic output type. On iPhone, using its output
-    # directly with "begins with" leaves the condition invalid even when the
-    # runtime item is text. Give the condition an explicitly typed Text output.
-    # Only this setup branch converts to text; shared photos keep their input.
-    setup_text = b.action("gettext", "setup-input-text", WFTextActionText=_text(first))
-    b.begin_if("setup-input", setup_text, 8, SETUP_PREFIX)
-    setup_json = b.action("text.replace", "setup-json", WFInput=_text(setup_text),
-                          WFReplaceTextFind=r"\A" + re.escape(SETUP_PREFIX), WFReplaceTextReplace="",
-                          WFReplaceTextCaseSensitive=True, WFReplaceTextRegularExpression=True)
-    b.config("setup", setup_json)
-    named_config = b.action("setitemname", "name-config", WFInput=setup_json,
-                            WFName=CONFIG_FILE, WFDontIncludeFileExtension=False)
-    b.action("documentpicker.save", "save-config", WFInput=named_config,
-             WFFolder=_icloud_drive_folder(), WFFileDestinationPath="/",
-             WFAskWhereToSave=False, WFSaveFileOverwrite=True)
-    readback = b.load_config("verify-config-file")
-    failure = "配置保存后未能读回核对，绑定尚未完成。请允许访问 iCloud Drive，再点“自动绑定 L”。"
-    b.require("verify-config-present", readback, failure)
-    readback_text = b.action("detect.text", "verify-config-text", WFInput=readback)
-    b.begin_if("verify-config-differs", readback_text, 5, setup_json)
-    b.stop_with("verify-config-mismatch", failure)
-    b.end_if("verify-config-differs")
-    b.stop_with("setup-complete", "已绑定办公电脑 L（v3，配置已读回校验）。现在可在照片或文件中点分享，选择“发送到办公电脑 L”。")
-    b.end_if("setup-input")
-    b.end_if("text-input")
-    b.end_if("single-input")
-
-    config_file = b.load_config("load-config")
-    b.require("configured", config_file, "未读到绑定配置。请返回安装网页点“自动绑定 L”，并允许访问 iCloud Drive。")
-    url, authorization = b.config("stored", config_file)
+    # ImportQuestions uses a zero-based action index. The blank generic Text
+    # field is populated on the user's device, never by the signing service.
+    # Native export reference: extratone/i, Generate Shortcuts Run Links List.json.
+    config_text = b.action("gettext", "installed-config", WFTextActionText="")
+    b.require("configured", config_text, "还没填写绑定码。请回到安装网页复制绑定码，在安装设置或“自定义快捷指令”中粘贴一次。")
+    url, authorization = b.config("stored", config_text)
+    b.begin_if("no-shared-files", shared, 101)
+    b.stop_with("configuration-ready", "绑定信息已配置（v4）。现在从照片 App 选择照片，点分享 → 发送到办公电脑 L。电脑接收页须保持打开；实际送达以发送结果为准。")
+    b.end_if("no-shared-files")
     group = _uuid("files-loop")
     b.action("repeat.each", "files-loop:start", GroupingIdentifier=group,
              WFControlFlowMode=0, WFInput=shared)
@@ -199,7 +141,11 @@ def build_shortcut():
         "WFWorkflowInputContentItemClasses": ["WFImageContentItem", "WFGenericFileContentItem",
                                                "WFAVAssetContentItem", "WFPDFContentItem", "WFStringContentItem"],
         "WFWorkflowOutputContentItemClasses": [],
-        "WFWorkflowImportQuestions": [],
+        "WFWorkflowImportQuestions": [{
+            "Category": "Parameter", "ParameterKey": "WFTextActionText", "ActionIndex": 0,
+            "Text": "粘贴办公电脑 L 的绑定码（先在安装网页点“复制绑定码”）。只需填写一次。",
+            "DefaultValue": "",
+        }],
         "WFQuickActionSurfaces": [],
         "WFWorkflowHasShortcutInputVariables": True,
     }

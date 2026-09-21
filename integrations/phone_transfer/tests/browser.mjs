@@ -56,7 +56,7 @@ const errors = []; const created = [];
 try {
   const receiverContext = await browser.newContext({ viewport: { width: 1100, height: 920 } });
   await receiverContext.addInitScript(() => {
-    window.showDirectoryPicker = async () => (await navigator.storage.getDirectory()).getDirectoryHandle('L-test', { create: true });
+    window.showDirectoryPicker = async () => (await navigator.storage.getDirectory()).getDirectoryHandle('Ding2026', { create: true });
     window.confirm = () => true;
   });
   const receiver = await receiverContext.newPage(); receiver.on('pageerror', e => errors.push(e.message));
@@ -64,6 +64,7 @@ try {
   const frame = receiver.frames().find(f => f.url().endsWith('/index.html'));
   await frame.locator('#setup').click();
   await frame.locator('#pairing').waitFor({ state: 'visible' });
+  assert.equal(await frame.locator('#destination').textContent(), '保存位置：Ding2026 / 手机传输');
   const binding = await frame.evaluate(async () => {
     const db = await new Promise(r => { const req = indexedDB.open('yao-suishouchuan-v1', 1); req.onsuccess = () => r(req.result); });
     return new Promise(r => { const req = db.transaction('settings').objectStore('settings').get('state'); req.onsuccess = () => r(req.result.binding); });
@@ -91,8 +92,8 @@ try {
   console.log('File saved and verified in seconds:', (Date.now() - transferStarted) / 1000);
   const expectedHash = digest.digest('hex');
   const saved = await frame.evaluate(async () => {
-    const root = await (await navigator.storage.getDirectory()).getDirectoryHandle('L-test'); const files = [];
-    for await (const day of root.values()) for await (const batch of day.values()) for await (const entry of batch.values()) {
+    const root = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('Ding2026')).getDirectoryHandle('手机传输'); const files = [];
+    for await (const entry of root.values()) {
       const f = await entry.getFile(); const hash = await crypto.subtle.digest('SHA-256', await f.arrayBuffer());
       files.push({ name: f.name, size: f.size, hash: Array.from(new Uint8Array(hash), b => b.toString(16).padStart(2, '0')).join('') });
     }
@@ -120,11 +121,23 @@ try {
   assert.ok(nativeUploadAuthorization !== `Bearer ${nativeState.receiverToken}`, 'Shortcut must never receive the L-only read token');
   const expectedUploadToken = createHash('sha256').update(`suishou-shortcut-upload-v1:${binding.room}:${binding.auth}`).digest('hex');
   assert.ok(nativeUploadAuthorization === `Bearer ${expectedUploadToken}`, 'Shortcut authorization must match the derived send-only token');
-  const bindLink = new URL(await sender.locator('#shortcut-auto-bind').getAttribute('href'));
-  assert.equal(bindLink.protocol, 'shortcuts:');
-  assert.equal(bindLink.searchParams.get('name'), '发送到办公电脑 L');
-  assert.deepEqual(JSON.parse(bindLink.searchParams.get('text').slice('suishouchuan-setup-v1:'.length)), { url: nativeUploadUrl, authorization: nativeUploadAuthorization });
-  assert.equal(await sender.locator('#shortcut-auto-bind').getAttribute('target'), '_blank', 'A user click must escape the Streamlit iframe sandbox');
+  const checkLink = new URL(await sender.locator('#shortcut-check').getAttribute('href'));
+  assert.equal(checkLink.protocol, 'shortcuts:');
+  assert.equal(checkLink.searchParams.get('name'), '发送到办公电脑 L');
+  assert.equal(checkLink.searchParams.has('input'), false, 'Configuration check must not send a synthetic file');
+  assert.deepEqual(JSON.parse(await sender.locator('#shortcut-config').inputValue()), { url: nativeUploadUrl, authorization: nativeUploadAuthorization });
+  assert.equal(await sender.locator('#shortcut-check').getAttribute('target'), '_blank', 'A user click must escape the Streamlit iframe sandbox');
+  // A Safari/iframe clipboard refusal must expose a usable manual-copy field.
+  await sender.evaluate(() => { Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async () => { throw new DOMException('Denied', 'NotAllowedError'); } } }); });
+  await sender.locator('#shortcut-copy-config').click();
+  assert.equal(await sender.locator('#shortcut-copy-fallback').isVisible(), true);
+  assert.match(await sender.locator('#shortcut-copy-status').textContent(), /全选 → 复制/);
+  // Then verify the normal copy path uses the exact configuration and reports it.
+  await sender.evaluate(() => { Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async value => { window.copiedShortcutConfiguration = value; } } }); });
+  await sender.locator('#shortcut-copy-config').click();
+  assert.deepEqual(JSON.parse(await sender.evaluate(() => window.copiedShortcutConfiguration)), { url: nativeUploadUrl, authorization: nativeUploadAuthorization });
+  assert.match(await sender.locator('#shortcut-copy-status').textContent(), /绑定码已复制/);
+  assert.equal(await sender.locator('#shortcut-copy-fallback').isVisible(), false);
   const download = await fetch(await sender.locator('#shortcut-download').getAttribute('href'));
   assert.equal(download.status, 200);
   assert.equal(download.headers.get('content-type'), 'application/octet-stream');
@@ -153,17 +166,17 @@ try {
     assert.deepEqual(pending, [], 'L must acknowledge and remove each staged native upload');
   }
   const afterNative = await frame.evaluate(async () => {
-    const root = await (await navigator.storage.getDirectory()).getDirectoryHandle('L-test'); const files = [];
-    for await (const day of root.values()) for await (const batch of day.values()) for await (const entry of batch.values()) {
+    const root = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('Ding2026')).getDirectoryHandle('手机传输'); const files = [];
+    for await (const entry of root.values()) {
       const file = await entry.getFile(), content = await file.arrayBuffer();
       const digest = await crypto.subtle.digest('SHA-256', content);
-      files.push({ path: `${day.name}/${batch.name}/${file.name}`, name: file.name, size: file.size, hash: Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join('') });
+      files.push({ path: file.name, name: file.name, size: file.size, hash: Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join('') });
     }
     return files;
   });
   assert.equal(afterNative.length, 5);
   assert.ok(afterNative.some(file => file.size === mb * 1024 * 1024 && file.hash === expectedHash), 'Earlier browser transfer must remain unchanged');
-  const nativeSaved = afterNative.filter(file => file.name.endsWith(nativeFilename));
+  const nativeSaved = afterNative.filter(file => file.name.startsWith('快捷指令同名照片'));
   assert.equal(nativeSaved.length, 2); assert.notEqual(nativeSaved[0].path, nativeSaved[1].path);
   for (let i = 0; i < nativePayloads.length; i++) assert.ok(nativeSaved.some(file => file.size === nativePayloads[i].length && file.hash === nativeDigests[i]), 'Native upload bytes must remain identical in OPFS');
   await sender.locator('#shortcut-close').click();
