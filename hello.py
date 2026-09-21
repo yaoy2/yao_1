@@ -504,6 +504,6 @@ def render_home():
 if __name__ == "__main__":
     render_home()
 else:
-    from utils.phone_transfer_api import lifespan, routes
+    from utils.phone_transfer_api import lifespan, routes, server_error
 
-    app = st.App(__file__, routes=routes, lifespan=lifespan)
+    app = st.App(__file__, routes=routes, lifespan=lifespan, exception_handlers={Exception: server_error})
