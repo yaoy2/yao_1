@@ -196,6 +196,9 @@ class PhoneTransferRegistry:
 
     async def health(self, request):
         self._expire()
+        if request.query_params.get("probe") == "headers":
+            return JSONResponse({"ok": True, "authorization_present": bool(request.headers.get("authorization")),
+                                 "transfer_header_present": bool(request.headers.get("x-transfer-authorization"))})
         return JSONResponse({"ok": True, "version": 1})
 
     async def register(self, request):
