@@ -103,8 +103,12 @@ export class StreamlitRelay {
       const result = args.relay;
       this.lastResponse = Date.now();
       if (!result?.ok) {
+        if (['receiver_offline', 'receiver_busy'].includes(result?.error)) {
+          for (const channel of [...this.channels.values()]) channel.close();
+          this.onStatus(true); // The service is reachable; wait for L to join.
+          return;
+        }
         this.onStatus(false);
-        if (['receiver_offline', 'receiver_busy'].includes(result?.error)) return;
         throw new Error('传输服务暂时无法接收，请稍后重新打开页面');
       }
       this.onStatus(true);

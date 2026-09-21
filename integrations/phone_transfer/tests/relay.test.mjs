@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { Cipher, relayKey } from '../src/relay.js';
+import { Cipher, relayKey, StreamlitRelay } from '../src/relay.js';
 import { newReceiver, randomHex, CHUNK } from '../src/core.js';
 
 test('encrypted relay keeps 512 KiB binary chunks exact and hides readable content', async () => {
@@ -27,4 +27,22 @@ test('relay rejects replay, reorder, tampering, wrong direction and wrong pairin
   await assert.rejects(new Cipher(binding, a, b).decrypt(corrupt.toString('base64url')));
   await assert.rejects(new Cipher(binding, b, a).decrypt(first));
   await assert.rejects(new Cipher((await newReceiver()).binding, a, b).decrypt(first));
+});
+
+test('a restarted server clears the old channel instead of reporting L online', async () => {
+  const state = { role: 'sender', binding: (await newReceiver()).binding };
+  const posts = [], statuses = []; let closed = 0;
+  globalThis.window = { parent: { postMessage: value => posts.push(value) } };
+  const relay = new StreamlitRelay(state, {
+    onPeer: (_id, channel) => { channel.onclose = () => closed++; },
+    onStatus: value => statuses.push(value), onError: error => { throw error; },
+  });
+  try {
+    relay.render({ request_id: posts.at(-1).value.request_id, relay: { ok: true, peers: [{ id: randomHex(16), role: 'receiver' }], accepted: [], messages: [] } });
+    await relay.receiving;
+    clearTimeout(relay.timer); relay.pump();
+    relay.render({ request_id: posts.at(-1).value.request_id, relay: { ok: false, error: 'receiver_offline' } });
+    await relay.receiving;
+    assert.equal(closed, 1); assert.equal(relay.channels.size, 0); assert.equal(statuses.at(-1), true);
+  } finally { relay.close(); delete globalThis.window; }
 });
