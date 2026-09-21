@@ -407,6 +407,11 @@ registry = PhoneTransferRegistry()
 routes = registry.routes
 
 
+async def server_error(request, exc):
+    # Do not expose exception messages, request values or credentials.
+    return JSONResponse({"ok": False, "error": "internal_error", "kind": type(exc).__name__}, status_code=500)
+
+
 @asynccontextmanager
 async def lifespan(app):
     async def cleanup():
