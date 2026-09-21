@@ -394,6 +394,7 @@ function setupShortcut() {
   $('shortcut-download').href = links.download; $('shortcut-auto-bind').href = links.setup;
   $('shortcut-url').value = config.url; $('shortcut-authorization').value = config.authorization;
   show('shortcut-instructions');
+  $('shortcut-instructions').scrollIntoView({ block: 'start' });
 }
 $('shortcut-setup').onclick = guard(setupShortcut);
 $('shortcut-close').onclick = () => show('shortcut-instructions', false);
