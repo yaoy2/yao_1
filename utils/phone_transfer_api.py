@@ -124,8 +124,7 @@ class PhoneTransferRegistry:
         self._reserved = 0
         self._lock = threading.RLock()
         self.routes = [
-            Route(PREFIX + "/health", self.health, methods=["GET", "POST"]),
-            Route(PREFIX + "/health/{probe}", self.health, methods=["POST"]),
+            Route(PREFIX + "/health", self.health, methods=["GET"]),
             Route(PREFIX + "/receivers/{room}", self.register, methods=["POST"]),
             Route(PREFIX + "/receivers/{room}/pending", self.pending, methods=["POST"]),
             Route(PREFIX + "/receivers/{room}/files/{file_id}", self.download, methods=["POST"]),
@@ -209,18 +208,7 @@ class PhoneTransferRegistry:
 
     async def health(self, request):
         self._expire()
-        if request.method == "POST":
-            try:
-                body = await self._small_json(request)
-                parsed = True
-            except Exception:
-                body = {}
-                parsed = False
-            return JSONResponse({"ok": True, "probe": "body-v1", "parsed": parsed,
-                                 "authorization_present": "authorization" in body,
-                                 "header_names": sorted(request.headers.keys()),
-                                 "parameter_names": sorted(request.path_params.keys())})
-        return JSONResponse({"ok": True, "version": 1})
+        return JSONResponse({"ok": True, "version": 2})
 
     async def register(self, request):
         self._expire()

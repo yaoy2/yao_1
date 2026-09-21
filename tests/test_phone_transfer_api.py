@@ -115,7 +115,7 @@ class PhoneTransferApiTest(unittest.TestCase):
         return status, body
 
     def test_health_and_immutable_distinct_credentials(self):
-        self.assertEqual(self.client.get(PREFIX + "/health").json(), {"ok": True, "version": 1})
+        self.assertEqual(self.client.get(PREFIX + "/health").json(), {"ok": True, "version": 2})
         self.assertEqual(self.register().status_code, 200)
         self.assertEqual(self.register(token=UPLOAD_TOKEN).status_code, 403)
         self.assertEqual(self.register(upload_hash="f" * 64).status_code, 409)
@@ -198,7 +198,7 @@ class PhoneTransferApiTest(unittest.TestCase):
 
     def test_debug_probes_and_exception_details_are_not_exposed(self):
         response = self.client.get(PREFIX + "/health?probe=headers", headers={"Authorization": "anything"})
-        self.assertEqual(response.json(), {"ok": True, "version": 1})
+        self.assertEqual(response.json(), {"ok": True, "version": 2})
         response = asyncio.run(server_error(None, ValueError(UPLOAD_TOKEN)))
         self.assertEqual(json.loads(response.body), {"ok": False, "error": "internal_error"})
 
