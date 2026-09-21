@@ -72,7 +72,7 @@ def main():
     parser.add_argument("--sign", action="store_true", help="Send the generic template to HubSign; otherwise verify the existing package")
     args = parser.parse_args()
     workflow = build_shortcut()
-    target = Path(__file__).with_name("office-L.shortcut")
+    target = Path(__file__).resolve().parents[1] / "frontend/发送到办公电脑 L.shortcut"
     if args.sign:
         xml = plistlib.dumps(workflow, fmt=plistlib.FMT_XML, sort_keys=False).decode()
         if re.search(r"Bearer [0-9a-f]{64}", xml):
