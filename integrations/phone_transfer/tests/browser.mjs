@@ -44,7 +44,7 @@ const server = http.createServer(async (req, res) => {
       res.end(`<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><iframe id="component" src="${inner}" style="border:0;width:100%;height:850px" sandbox="allow-same-origin allow-scripts allow-forms allow-modals allow-popups allow-downloads"></iframe>${bridge}</body></html>`); return;
     }
     const name = pathname === '/' ? 'index.html' : decodeURIComponent(pathname.slice(1));
-    if (!['index.html', 'app.js', 'style.css', '发送到办公电脑 L.shortcut'].includes(name)) { res.writeHead(404).end(); return; }
+    if (!['index.html', 'app.js', 'style.css', 'send-to-office-L.shortcut'].includes(name)) { res.writeHead(404).end(); return; }
     res.setHeader('Content-Type', name.endsWith('.shortcut') ? 'application/octet-stream' : name.endsWith('.js') ? 'text/javascript' : name.endsWith('.css') ? 'text/css' : 'text/html');
     res.end(await readFile(path.join(project, 'frontend', name)));
   } catch { res.writeHead(500).end(); }
