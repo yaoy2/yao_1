@@ -10,9 +10,19 @@ export function shortcutApiBase(url = location.href) {
   // to the actual app, including native Shortcut requests without a browser.
   return new URL(`${current.pathname.startsWith('/~/+/') ? '/~/+' : ''}/phone-transfer-api/v1`, current.origin).href;
 }
-export function shortcutConfig(binding) {
+export function shortcutConfig(binding, url = location.href) {
   if (!binding.nativeRoom) throw new Error('请在 L 点“绑定手机”，重新扫码以启用相册分享。');
-  return { url: `${shortcutApiBase()}/upload/${binding.nativeRoom}/authorize`, authorization: `Bearer ${shortcutUploadToken(binding)}` };
+  return { url: `${shortcutApiBase(url)}/upload/${binding.nativeRoom}/authorize`, authorization: `Bearer ${shortcutUploadToken(binding)}` };
+}
+export function shortcutInstallLinks(binding, url = location.href) {
+  const config = shortcutConfig(binding, url);
+  // Configuration goes directly to the installed Apple app. It is never sent
+  // to the signing service or embedded in the public, generic download.
+  const text = `suishouchuan-setup-v1:${JSON.stringify(config)}`;
+  return {
+    download: `${shortcutApiBase(url)}/install/office-L.shortcut`,
+    setup: `shortcuts://run-shortcut?name=${encodeURIComponent('发送到办公电脑 L')}&input=text&text=${encodeURIComponent(text)}`,
+  };
 }
 
 export class ShortcutReceiver {

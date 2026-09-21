@@ -1,6 +1,6 @@
 import QRCode from 'qrcode';
 import { StreamlitRelay } from './relay.js';
-import { ShortcutReceiver, shortcutConfig } from './shortcuts.js';
+import { ShortcutReceiver, shortcutConfig, shortcutInstallLinks } from './shortcuts.js';
 import { CHUNK, IncomingTransfer, b64, hex, newReceiver, parseToken, proofText, makeProof, verifyProof, randomHex, sha256, tokenFor, validateFiles } from './core.js';
 
 const $ = id => document.getElementById(id);
@@ -338,6 +338,7 @@ async function join(raw) {
   if (!imported) throw new Error('电脑绑定信息无效');
   disconnect(); state = { role: 'sender', binding }; await setting('state', state); show('join', false);
   message('绑定完成，正在连接办公电脑 L。'); await activate();
+  setupShortcut();
 }
 async function sendFiles() {
   const peer = readyPeer();
@@ -386,12 +387,15 @@ $('resume').onclick = guard(async () => {
 });
 $('pair').onclick = guard(pair);
 $('close-pair').onclick = () => show('pairing', false);
-$('shortcut-setup').onclick = guard(() => {
+function setupShortcut() {
   if (!state) return;
   const config = shortcutConfig(state.binding);
+  const links = shortcutInstallLinks(state.binding);
+  $('shortcut-download').href = links.download; $('shortcut-auto-bind').href = links.setup;
   $('shortcut-url').value = config.url; $('shortcut-authorization').value = config.authorization;
   show('shortcut-instructions');
-});
+}
+$('shortcut-setup').onclick = guard(setupShortcut);
 $('shortcut-close').onclick = () => show('shortcut-instructions', false);
 $('shortcut-copy-url').onclick = guard(async () => { await navigator.clipboard.writeText($('shortcut-url').value); message('已复制快捷指令的准备地址。'); });
 $('shortcut-copy-token').onclick = guard(async () => { await navigator.clipboard.writeText($('shortcut-authorization').value); message('已复制授权值，只粘贴到你自己的快捷指令中。'); });

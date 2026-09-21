@@ -13,7 +13,7 @@ from urllib.parse import urlsplit
 from starlette.applications import Starlette
 from starlette.testclient import TestClient
 
-from utils.phone_transfer_api import DEFAULT_PUBLIC_BASE, PREFIX, PhoneTransferRegistry, server_error
+from utils.phone_transfer_api import DEFAULT_PUBLIC_BASE, PREFIX, SHORTCUT_FILE, PhoneTransferRegistry, server_error
 
 
 RECEIVER_TOKEN = "2" * 64
@@ -59,6 +59,16 @@ class PhoneTransferApiTest(unittest.TestCase):
     def register(self, token=RECEIVER_TOKEN, upload_hash=UPLOAD_HASH, room=ROOM):
         return self.client.post(PREFIX + "/receivers/" + room,
                                 json={**auth(token), "upload_token_hash": upload_hash})
+
+    def test_public_install_delivers_the_signed_generic_package(self):
+        response = self.client.get(PREFIX + "/install/office-L.shortcut")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content, SHORTCUT_FILE.read_bytes())
+        self.assertTrue(response.content.startswith(b"AEA1"))
+        self.assertEqual(response.headers["content-type"], "application/x-apple-shortcut")
+        self.assertIn("filename*=utf-8''", response.headers["content-disposition"])
+        self.assertNotIn(UPLOAD_TOKEN.encode(), response.content)
+        self.assertEqual(self.client.head(PREFIX + "/install/office-L.shortcut").content, b"")
 
     def authorize(self, token=UPLOAD_TOKEN, room=ROOM):
         return self.client.post(PREFIX + "/upload/" + room + "/authorize", json=auth(token))

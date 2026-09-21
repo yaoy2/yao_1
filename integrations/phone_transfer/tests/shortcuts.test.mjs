@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { hex, sha256, newReceiver, parseToken, tokenFor } from '../src/core.js';
-import { shortcutApiBase, shortcutUploadToken, ShortcutReceiver } from '../src/shortcuts.js';
+import { shortcutApiBase, shortcutUploadToken, shortcutInstallLinks, ShortcutReceiver } from '../src/shortcuts.js';
 
 test('native binding commits to the receiver secret without sharing it with the phone', async () => {
   const state = await newReceiver();
@@ -15,6 +15,23 @@ test('native binding commits to the receiver secret without sharing it with the 
 test('API addresses target the Cloud application rather than the HTML wrapper', () => {
   assert.equal(shortcutApiBase('https://whatsup.streamlit.app/~/+/component/example/index.html'), 'https://whatsup.streamlit.app/~/+/phone-transfer-api/v1');
   assert.equal(shortcutApiBase('https://example.test/component/example/index.html'), 'https://example.test/phone-transfer-api/v1');
+});
+
+test('install download is generic while setup sends only upload credentials directly to Shortcuts', async () => {
+  const state = await newReceiver();
+  const links = shortcutInstallLinks(state.binding, 'https://whatsup.streamlit.app/~/+/component/example/index.html');
+  assert.equal(links.download, 'https://whatsup.streamlit.app/~/+/phone-transfer-api/v1/install/office-L.shortcut');
+  const setup = new URL(links.setup);
+  assert.equal(setup.protocol, 'shortcuts:');
+  assert.equal(setup.searchParams.get('name'), '发送到办公电脑 L');
+  assert.equal(setup.searchParams.get('input'), 'text');
+  const text = setup.searchParams.get('text');
+  assert.ok(text.startsWith('suishouchuan-setup-v1:'));
+  const config = JSON.parse(text.slice('suishouchuan-setup-v1:'.length));
+  assert.equal(config.url, `https://whatsup.streamlit.app/~/+/phone-transfer-api/v1/upload/${state.binding.nativeRoom}/authorize`);
+  assert.equal(config.authorization, `Bearer ${shortcutUploadToken(state.binding)}`);
+  assert.ok(!links.setup.includes(state.shortcutReceiverToken));
+  assert.ok(!links.setup.includes(state.binding.auth));
 });
 
 test('a saved local receipt retries acknowledgement without writing a duplicate file', async () => {
