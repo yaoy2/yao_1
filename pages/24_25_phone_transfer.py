@@ -1,12 +1,10 @@
 """M25: encrypted, memory-only relay; the L browser writes original files."""
 
-from pathlib import Path
-
 import streamlit as st
-import streamlit.components.v1 as components
 
 from utils.ui_theme import render_home_link
 from utils.phone_transfer_relay import RelayBroker
+from utils.phone_transfer_component import declare_transfer_component
 
 
 st.set_page_config(page_title="M25 · 随手传", page_icon="📲", layout="wide")
@@ -14,8 +12,7 @@ render_home_link()
 st.title("📲 随手传")
 st.caption("手机发送，办公电脑 L 自动保存。无需同一个 Wi-Fi。")
 
-frontend = Path(__file__).resolve().parents[1] / "integrations" / "phone_transfer" / "frontend"
-transfer = components.declare_component("suishouchuan", path=str(frontend))
+transfer = declare_transfer_component()
 
 
 @st.cache_resource

@@ -27,3 +27,14 @@ def test_component_request_is_processed_and_echoed_on_the_same_run():
     args = json.loads(app.get("component_instance")[0].proto.json_args)
     assert args["request_id"] == "component-roundtrip"
     assert args["relay"] == {"ok": True, "peers": [], "messages": [], "accepted": []}
+
+
+def test_component_registration_survives_a_page_without_an_imported_module():
+    path = str(Path(__file__).resolve().parents[1] / "pages" / "24_25_phone_transfer.py")
+    app = AppTest.from_string(
+        f"from pathlib import Path\n"
+        f"exec(compile(Path({path!r}).read_text(encoding='utf-8'), {path!r}, 'exec'), "
+        f"{{'__name__': 'detached_transfer_page', '__file__': {path!r}}})"
+    ).run()
+    assert not app.exception
+    assert app.get("component_instance")
