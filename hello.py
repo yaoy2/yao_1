@@ -17,6 +17,16 @@ apply_home_theme()
 
 TOOLS = [
     {
+        "title": "随手传",
+        "desc": "手机用蜂窝网络发送原文件，办公电脑 L 自动按日期保存，不压缩、不覆盖。",
+        "tag": "手机传文件",
+        "created": "2026_09_21",
+        "page": "pages/24_25_phone_transfer.py",
+        "code": "M25",
+        "accent": "cyan",
+        "section": "行政",
+    },
+    {
         "title": "邮件工作台",
         "desc": "查看邮件简报、报送与反馈时限、附件归档结果和每周工作汇总。",
         "tag": "邮件事务",
