@@ -70,21 +70,54 @@ class PhoneTransferShortcutTest(unittest.TestCase):
                          builder.SETUP_PREFIX)
         self.assertTrue(self.params("setup-json")["WFReplaceTextRegularExpression"])
 
-    def test_only_configuration_is_saved_and_read_from_same_shortcuts_path(self):
+    def test_configuration_has_an_exact_filename_and_one_explicit_icloud_root(self):
         saves = [a for a in self.actions if a["WFWorkflowActionIdentifier"].endswith("documentpicker.save")]
         self.assertEqual(len(saves), 1)
         save, load = self.params("save-config"), self.params("load-config")
-        self.assertEqual(save["WFFileStorageService"], "iCloud Drive")
-        self.assertEqual(load["WFFileStorageService"], "iCloud Drive")
-        self.assertEqual(save["WFFileDestinationPath"], "suishouchuan-L.json")
-        self.assertEqual(load["WFGetFilePath"], save["WFFileDestinationPath"])
+        named = self.params("name-config")
+        self.assertEqual(save["WFFolder"], load["WFFile"])
+        location = load["WFFile"]["fileLocation"]
+        self.assertEqual(location["WFFileLocationType"], "iCloud")
+        self.assertEqual(location["relativeSubpath"], "com~apple~CloudDocs")
+        self.assertNotIn("crossDeviceItemID", location)
+        self.assertNotIn("WFFileStorageService", save)
+        self.assertNotIn("WFFileStorageService", load)
+        self.assertEqual(named["WFName"], "suishouchuan-L.json")
+        self.assertFalse(named["WFDontIncludeFileExtension"])
+        self.assertEqual(save["WFFileDestinationPath"], "/")
+        self.assertEqual(load["WFGetFilePath"], save["WFFileDestinationPath"] + named["WFName"])
         self.assertFalse(save["WFAskWhereToSave"])
         self.assertTrue(save["WFSaveFileOverwrite"])
-        self.assertFalse(load["WFShowFilePicker"])
         self.assertFalse(load["WFFileErrorIfNotFound"])
-        self.assertEqual(save["WFInput"]["Value"]["OutputUUID"], builder._uuid("setup-json"))
+        self.assertEqual(save["WFInput"]["Value"]["OutputUUID"], named["UUID"])
+        self.assertEqual(named["WFInput"]["Value"]["OutputUUID"], builder._uuid("setup-json"))
         indices = {a["WFWorkflowActionParameters"]["UUID"]: i for i, a in enumerate(self.actions)}
         self.assertLess(indices[builder._uuid("setup-complete:stop")], indices[builder._uuid("prepare-upload")])
+
+    def test_binding_success_requires_independent_readback_of_the_exact_saved_configuration(self):
+        readback = dict(self.params("verify-config-file"))
+        readback.pop("UUID")
+        sending = dict(self.params("load-config"))
+        sending.pop("UUID")
+        self.assertEqual(readback, sending, "Binding and sending must read the same file with the same action parameters")
+        present = self.params("verify-config-present:start")
+        self.assertEqual(present["WFCondition"], 101)
+        self.assertEqual(present["WFInput"]["Variable"]["Value"]["OutputUUID"], builder._uuid("verify-config-file"))
+        text = self.params("verify-config-text")
+        self.assertEqual(text["WFInput"]["Value"]["OutputUUID"], builder._uuid("verify-config-file"))
+        comparison = self.params("verify-config-differs:start")
+        self.assertEqual(comparison["WFCondition"], 5)
+        self.assertEqual(comparison["WFInput"]["Variable"]["Value"]["OutputUUID"], text["UUID"])
+        expected = comparison["WFConditionalActionString"]["Value"]["attachmentsByRange"]["{0, 1}"]
+        self.assertEqual(expected["OutputUUID"], builder._uuid("setup-json"))
+        ids = [a["WFWorkflowActionParameters"]["UUID"] for a in self.actions]
+        ordered = ["save-config", "verify-config-file", "verify-config-present:start",
+                   "verify-config-present:stop", "verify-config-text", "verify-config-differs:start",
+                   "verify-config-mismatch:stop", "verify-config-differs:end", "setup-complete:message"]
+        indices = [ids.index(builder._uuid(label)) for label in ordered]
+        self.assertEqual(indices, sorted(indices))
+        for label in ("verify-config-present:stop", "verify-config-mismatch:stop"):
+            self.assertEqual(self.actions[ids.index(builder._uuid(label))]["WFWorkflowActionIdentifier"], "is.workflow.actions.exit")
 
     def test_begins_with_receives_typed_text_not_generic_list_item(self):
         # Real iPhone failure: If [Item from List] begins with [prefix] reports
