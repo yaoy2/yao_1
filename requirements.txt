@@ -1,4 +1,5 @@
 streamlit>=1.57.0,<2.0
+# Native photo sharing uses streaming multipart parsing and custom ASGI routes.
 python-multipart>=0.0.29,<0.1
 starlette>=1.1.0,<2
 playwright>=1.40.0
