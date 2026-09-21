@@ -86,6 +86,24 @@ class PhoneTransferShortcutTest(unittest.TestCase):
         indices = {a["WFWorkflowActionParameters"]["UUID"]: i for i, a in enumerate(self.actions)}
         self.assertLess(indices[builder._uuid("setup-complete:stop")], indices[builder._uuid("prepare-upload")])
 
+    def test_begins_with_receives_typed_text_not_generic_list_item(self):
+        # Real iPhone failure: If [Item from List] begins with [prefix] reports
+        # a missing parameter. Text materialization must be inside the text
+        # branch and must not change the original shared-file loop input.
+        actions = {a["WFWorkflowActionParameters"]["UUID"]: a for a in self.actions}
+        condition = self.params("setup-input:start")
+        input_uuid = condition["WFInput"]["Variable"]["Value"]["OutputUUID"]
+        text_action = actions[input_uuid]
+        self.assertEqual(text_action["WFWorkflowActionIdentifier"], "is.workflow.actions.gettext")
+        reference = text_action["WFWorkflowActionParameters"]["WFTextActionText"]["Value"]["attachmentsByRange"]["{0, 1}"]
+        self.assertEqual(reference["OutputUUID"], builder._uuid("first-input"))
+        replacement_input = self.params("setup-json")["WFInput"]["Value"]["attachmentsByRange"]["{0, 1}"]
+        self.assertEqual(replacement_input["OutputUUID"], input_uuid)
+        indices = {a["WFWorkflowActionParameters"]["UUID"]: i for i, a in enumerate(self.actions)}
+        self.assertLess(indices[builder._uuid("text-input:start")], indices[input_uuid])
+        self.assertLess(indices[input_uuid], indices[builder._uuid("setup-input:start")])
+        self.assertEqual(self.params("files-loop:start")["WFInput"]["Value"], {"Type": "ExtensionInput"})
+
     def test_setup_and_stored_configuration_validate_origin_and_authorization(self):
         # ICU uses \z for the exact end anchor; Python's equivalent is \Z.
         prepare = re.compile(builder.PREPARE_PATTERN.replace(r"\z", r"\Z"))

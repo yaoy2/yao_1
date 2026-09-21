@@ -112,8 +112,13 @@ def build_shortcut():
     marker_type = b.action("getitemtype", "text-type", WFInput=marker)
     # Comparing two runtime types works on Chinese and English devices alike.
     b.begin_if("text-input", input_type, 4, marker_type)
-    b.begin_if("setup-input", first, 8, SETUP_PREFIX)
-    setup_json = b.action("text.replace", "setup-json", WFInput=_text(first),
+    # Get Item from List has a generic output type. On iPhone, using its output
+    # directly with "begins with" leaves the condition invalid even when the
+    # runtime item is text. Give the condition an explicitly typed Text output.
+    # Only this setup branch converts to text; shared photos keep their input.
+    setup_text = b.action("gettext", "setup-input-text", WFTextActionText=_text(first))
+    b.begin_if("setup-input", setup_text, 8, SETUP_PREFIX)
+    setup_json = b.action("text.replace", "setup-json", WFInput=_text(setup_text),
                           WFReplaceTextFind=r"\A" + re.escape(SETUP_PREFIX), WFReplaceTextReplace="",
                           WFReplaceTextCaseSensitive=True, WFReplaceTextRegularExpression=True)
     b.config("setup", setup_json)
