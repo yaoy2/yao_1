@@ -120,7 +120,17 @@ try {
   assert.ok(nativeUploadAuthorization !== `Bearer ${nativeState.receiverToken}`, 'Shortcut must never receive the L-only read token');
   const expectedUploadToken = createHash('sha256').update(`suishou-shortcut-upload-v1:${binding.room}:${binding.auth}`).digest('hex');
   assert.ok(nativeUploadAuthorization === `Bearer ${expectedUploadToken}`, 'Shortcut authorization must match the derived send-only token');
+  const bindLink = new URL(await sender.locator('#shortcut-auto-bind').getAttribute('href'));
+  assert.equal(bindLink.protocol, 'shortcuts:');
+  assert.equal(bindLink.searchParams.get('name'), '发送到办公电脑 L');
+  assert.deepEqual(JSON.parse(bindLink.searchParams.get('text').slice('suishouchuan-setup-v1:'.length)), { url: nativeUploadUrl, authorization: nativeUploadAuthorization });
+  assert.equal(await sender.locator('#shortcut-auto-bind').getAttribute('target'), '_blank', 'A user click must escape the Streamlit iframe sandbox');
+  const download = await fetch(await sender.locator('#shortcut-download').getAttribute('href'));
+  assert.equal(download.status, 200);
+  assert.equal(download.headers.get('content-type'), 'application/x-apple-shortcut');
+  assert.equal(Buffer.from(await download.arrayBuffer()).subarray(0, 4).toString(), 'AEA1');
   assert.ok(await sender.evaluate(() => innerWidth <= 390 && document.documentElement.scrollWidth <= innerWidth), 'Shortcut setup should fit the phone width even with its long address and authorization fields');
+  await senderPage.screenshot({ path: path.join(output, 'shortcut-install.png'), fullPage: true });
   const nativePayloads = [Buffer.alloc(700 * 1024 + 17), Buffer.from([0, 0, 0, 24, 102, 116, 121, 112, 104, 101, 105, 99, 9, 8, 7, 0, 255])];
   for (let i = 0; i < nativePayloads[0].length; i++) nativePayloads[0][i] = i % 239;
   nativePayloads[0].set(Buffer.from([0, 0, 0, 24, 102, 116, 121, 112, 104, 101, 105, 99]), 0);
