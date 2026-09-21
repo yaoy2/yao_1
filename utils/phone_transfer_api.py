@@ -14,7 +14,6 @@ from dataclasses import dataclass, field
 import hashlib
 import hmac
 import json
-from pathlib import Path
 import re
 import secrets
 import threading
@@ -24,7 +23,7 @@ from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import UploadFile
 from starlette.formparsers import MultiPartException, MultiPartParser
 from starlette.requests import ClientDisconnect
-from starlette.responses import FileResponse, JSONResponse, PlainTextResponse, StreamingResponse
+from starlette.responses import JSONResponse, PlainTextResponse, StreamingResponse
 from starlette.routing import Route
 
 
@@ -33,14 +32,6 @@ DEFAULT_PUBLIC_BASE = "https://whatsup.streamlit.app/~/+/phone-transfer-api/v1"
 MIB = 1024 * 1024
 _HEX64 = re.compile(r"[0-9a-f]{64}\Z")
 _HEX32 = re.compile(r"[0-9a-f]{32}\Z")
-SHORTCUT_FILE = Path(__file__).resolve().parents[1] / "integrations/phone_transfer/shortcut/office-L.shortcut"
-
-
-async def install_shortcut(request):
-    """Public generic template only; never interpolate a receiver credential."""
-    return FileResponse(SHORTCUT_FILE, media_type="application/x-apple-shortcut",
-                        filename="发送到办公电脑 L.shortcut",
-                        headers={"Cache-Control": "no-cache", "X-Content-Type-Options": "nosniff"})
 
 
 def _hex(value, pattern=_HEX64):
@@ -134,7 +125,6 @@ class PhoneTransferRegistry:
         self._lock = threading.RLock()
         self.routes = [
             Route(PREFIX + "/health", self.health, methods=["GET"]),
-            Route(PREFIX + "/install/office-L.shortcut", install_shortcut, methods=["GET", "HEAD"]),
             Route(PREFIX + "/receivers/{room}", self.register, methods=["POST"]),
             Route(PREFIX + "/receivers/{room}/pending", self.pending, methods=["POST"]),
             Route(PREFIX + "/receivers/{room}/files/{file_id}", self.download, methods=["POST"]),

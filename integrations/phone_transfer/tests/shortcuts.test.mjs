@@ -20,7 +20,7 @@ test('API addresses target the Cloud application rather than the HTML wrapper', 
 test('install download is generic while setup sends only upload credentials directly to Shortcuts', async () => {
   const state = await newReceiver();
   const links = shortcutInstallLinks(state.binding, 'https://whatsup.streamlit.app/~/+/component/example/index.html');
-  assert.equal(links.download, 'https://whatsup.streamlit.app/~/+/phone-transfer-api/v1/install/office-L.shortcut');
+  assert.equal(links.download, `https://whatsup.streamlit.app/~/+/component/example/${encodeURIComponent('发送到办公电脑 L.shortcut')}`);
   const setup = new URL(links.setup);
   assert.equal(setup.protocol, 'shortcuts:');
   assert.equal(setup.searchParams.get('name'), '发送到办公电脑 L');

@@ -20,7 +20,7 @@ export function shortcutInstallLinks(binding, url = location.href) {
   // to the signing service or embedded in the public, generic download.
   const text = `suishouchuan-setup-v1:${JSON.stringify(config)}`;
   return {
-    download: `${shortcutApiBase(url)}/install/office-L.shortcut`,
+    download: new URL(encodeURIComponent('发送到办公电脑 L.shortcut'), url).href,
     setup: `shortcuts://run-shortcut?name=${encodeURIComponent('发送到办公电脑 L')}&input=text&text=${encodeURIComponent(text)}`,
   };
 }
