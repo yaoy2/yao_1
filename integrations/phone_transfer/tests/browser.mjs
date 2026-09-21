@@ -36,7 +36,7 @@ const server = http.createServer(async (req, res) => {
         const args=await(await fetch('/exchange',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(e.data.value)})).json();
         e.source.postMessage({type:'streamlit:render',args},'*');
       });</script>` : '';
-      res.end(`<!doctype html><html><body><iframe id="component" src="${inner}" style="border:0;width:100%;height:850px" sandbox="allow-same-origin allow-scripts allow-forms allow-modals allow-popups allow-downloads"></iframe>${bridge}</body></html>`); return;
+      res.end(`<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><iframe id="component" src="${inner}" style="border:0;width:100%;height:850px" sandbox="allow-same-origin allow-scripts allow-forms allow-modals allow-popups allow-downloads"></iframe>${bridge}</body></html>`); return;
     }
     const name = pathname === '/' ? 'index.html' : pathname.slice(1);
     if (!['index.html', 'app.js', 'style.css'].includes(name)) { res.writeHead(404).end(); return; }
@@ -98,6 +98,7 @@ try {
   await sender.locator('#send').click();
   await sender.waitForFunction(() => document.getElementById('progress-text').textContent.includes('已送达办公电脑 L · 2 个文件'), null, { timeout: 60000 });
   assert.equal(await frame.locator('#history li').count(), 3);
+  assert.ok(await sender.evaluate(() => innerWidth <= 390 && document.documentElement.scrollWidth <= innerWidth), 'Mobile receiver page should fit the phone width');
   await receiver.screenshot({ path: path.join(output, 'receiver.png'), fullPage: true });
   await senderPage.screenshot({ path: path.join(output, 'sender.png'), fullPage: true });
   // Refresh preserves the phone identity and reconnects without re-pairing.
