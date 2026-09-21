@@ -16,12 +16,12 @@ export function shortcutConfig(binding, url = location.href) {
 }
 export function shortcutInstallLinks(binding, url = location.href) {
   const config = shortcutConfig(binding, url);
-  // Configuration goes directly to the installed Apple app. It is never sent
-  // to the signing service or embedded in the public, generic download.
-  const text = `suishouchuan-setup-v1:${JSON.stringify(config)}`;
+  // Pasted once into Apple's import question on the phone; never sent to the
+  // signing service or embedded in the public, generic download.
   return {
-    download: new URL('send-to-office-L.shortcut?v=3', url).href,
-    setup: `shortcuts://run-shortcut?name=${encodeURIComponent('发送到办公电脑 L')}&input=text&text=${encodeURIComponent(text)}`,
+    download: new URL('send-to-office-L.shortcut?v=4', url).href,
+    configuration: JSON.stringify(config),
+    check: `shortcuts://run-shortcut?name=${encodeURIComponent('发送到办公电脑 L')}`,
   };
 }
 

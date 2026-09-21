@@ -1,15 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { IncomingTransfer, MAX_FILE, CHUNK, safeFilename, validateFiles, fileDigest, newReceiver, parseToken, tokenFor, proofText, makeProof, verifyProof } from '../src/core.js';
+import { IncomingTransfer, MAX_FILE, CHUNK, safeFilename, validateFiles, fileDigest, newReceiver, parseToken, tokenFor, proofText, makeProof, verifyProof, receiverDestination } from '../src/core.js';
 
 const missing = () => Object.assign(new Error('Missing'), { name: 'NotFoundError' });
+const wrongKind = () => Object.assign(new Error('Wrong entry type'), { name: 'TypeMismatchError' });
 class MemoryDirectory {
   constructor(name = 'L') { this.name = name; this.dirs = new Map(); this.files = new Map(); }
   async getDirectoryHandle(name, options = {}) {
+    if (this.files.has(name)) throw wrongKind();
     if (!this.dirs.has(name)) { if (!options.create) throw missing(); this.dirs.set(name, new MemoryDirectory(name)); }
     return this.dirs.get(name);
   }
   async getFileHandle(name, options = {}) {
+    if (this.dirs.has(name)) throw wrongKind();
     if (!this.files.has(name)) {
       if (!options.create) throw missing();
       const entry = { content: new Uint8Array(), closed: 0, aborts: 0 };
@@ -44,27 +47,86 @@ test('files stay byte-identical, including HEIC-like bytes, Unicode, zero bytes 
   const files = [new File([payload], '会议照片.heic'), new File(['different'], '会议照片.heic'), new File([], '空文件.txt')];
   const received = await deliver(new IncomingTransfer(root, r => events.push(r)), files);
   assert.equal(events.length, 3); assert.equal(new Set(received.map(r => r.name)).size, 3);
+  assert.deepEqual(received.map(r => r.name), ['会议照片.heic', '会议照片 (2).heic', '空文件.txt']);
+  assert.equal(root.dirs.size, 0);
   for (let i = 0; i < received.length; i++) {
-    const [day, batch] = received[i].folder.split('/');
-    const handle = await (await (await root.getDirectoryHandle(day)).getDirectoryHandle(batch)).getFileHandle(received[i].name);
+    assert.equal(received[i].folder, '.');
+    const handle = await root.getFileHandle(received[i].name);
     assert.deepEqual(await (await handle.getFile()).arrayBuffer(), await files[i].arrayBuffer());
   }
 });
-test('re-sending an identical filename allocates a different batch and never alters the original', async () => {
+test('re-sending an identical filename adds a suffix in the same folder and never alters the original', async () => {
   const root = new MemoryDirectory();
   const first = await deliver(new IncomingTransfer(root), [new File(['original'], 'IMG_0001.JPG')]);
   const second = await deliver(new IncomingTransfer(root), [new File(['new'], 'IMG_0001.JPG')]);
-  assert.notEqual(first[0].folder, second[0].folder);
-  const [day, batch] = first[0].folder.split('/');
-  assert.equal(await (await (await root.dirs.get(day).dirs.get(batch).getFileHandle(first[0].name)).getFile()).text(), 'original');
+  assert.equal(first[0].folder, '.'); assert.equal(second[0].folder, '.');
+  assert.equal(first[0].name, 'IMG_0001.JPG'); assert.equal(second[0].name, 'IMG_0001 (2).JPG');
+  assert.equal(root.dirs.size, 0);
+  assert.equal(await (await (await root.getFileHandle(first[0].name)).getFile()).text(), 'original');
 });
-test('same-batch collisions use a fresh name and leave preexisting files alone', async () => {
-  const receiver = new IncomingTransfer(new MemoryDirectory()); const file = new File(['new'], 'IMG.JPG');
+test('Ding2026 selections use 手机传输 with matching receipts and preserve earlier files across batches', async () => {
+  for (const name of ['Ding2026', 'ding2026', 'DING2026']) {
+    const root = new MemoryDirectory(name);
+    const legacy = await root.getFileHandle('existing.txt', { create: true });
+    legacy.content = new TextEncoder().encode('keep');
+    assert.deepEqual(receiverDestination(root), { subfolder: '手机传输', label: `${name} / 手机传输` });
+    const first = await deliver(new IncomingTransfer(root), [new File(['original'], '照片.HEIC')]);
+    const second = await deliver(new IncomingTransfer(root), [new File(['different'], '照片.HEIC')]);
+    assert.deepEqual([...root.dirs.keys()], ['手机传输']);
+    assert.equal(root.dirs.get('手机传输').dirs.size, 0);
+    assert.equal(first[0].name, '照片.HEIC'); assert.equal(second[0].name, '照片 (2).HEIC');
+    for (const [result, expected] of [[first[0], 'original'], [second[0], 'different']]) {
+      assert.equal(result.folder, '手机传输');
+      assert.equal(await (await (await root.dirs.get('手机传输').getFileHandle(result.name)).getFile()).text(), expected);
+    }
+    assert.equal(await (await legacy.getFile()).text(), 'keep');
+  }
+});
+test('selecting 手机传输 or another folder does not create an extra nested folder', async () => {
+  for (const name of ['手机传输', '照片备份', 'Ding2026-backup']) {
+    const root = new MemoryDirectory(name);
+    assert.deepEqual(receiverDestination(root), { subfolder: '', label: name });
+    const [result] = await deliver(new IncomingTransfer(root), [new File(['exact'], 'a.txt')]);
+    assert.equal(result.folder, '.'); assert.equal(result.name, 'a.txt');
+    assert.equal(root.dirs.size, 0);
+    assert.equal(await (await (await root.getFileHandle(result.name)).getFile()).text(), 'exact');
+  }
+});
+test('an unavailable 手机传输 subdirectory fails without writing to Ding2026 itself', async () => {
+  const root = new MemoryDirectory('Ding2026'); let receipts = 0;
+  root.getDirectoryHandle = async name => { assert.equal(name, '手机传输'); throw new Error('Permission denied'); };
+  const receiver = new IncomingTransfer(root, () => receipts++);
+  await assert.rejects(receiver.begin([new File(['x'], 'a.txt')]), /Permission denied/);
+  assert.equal(root.dirs.size, 0); assert.equal(root.files.size, 0);
+  assert.equal(receiver.batch, null); assert.equal(receipts, 0);
+});
+test('nonempty files, zero-byte files and same-name directories are all preserved', async () => {
+  const root = new MemoryDirectory(); const receiver = new IncomingTransfer(root); const file = new File(['new'], 'IMG.JPG');
   await receiver.begin([file]);
-  const old = await receiver.batch.directory.getFileHandle('001_IMG.JPG', { create: true }); old.content = new TextEncoder().encode('old');
+  const old = await root.getFileHandle('IMG.JPG', { create: true }); old.content = new TextEncoder().encode('old');
+  const empty = await root.getFileHandle('IMG (2).JPG', { create: true });
+  const directory = await root.getDirectoryHandle('IMG (3).JPG', { create: true });
   await receiver.start(0); await receiver.write(await file.arrayBuffer());
   const result = await receiver.finish(0, await fileDigest(file));
-  assert.notEqual(result.name, '001_IMG.JPG'); assert.equal(await (await old.getFile()).text(), 'old');
+  assert.equal(result.name, 'IMG (4).JPG'); assert.equal(await (await old.getFile()).text(), 'old');
+  assert.equal((await empty.getFile()).size, 0); assert.equal(old.closed, 0); assert.equal(empty.closed, 0);
+  assert.equal(root.dirs.get('IMG (3).JPG'), directory);
+});
+test('retrying after interruption leaves its zero-byte placeholder untouched', async () => {
+  const root = new MemoryDirectory(); const first = new IncomingTransfer(root);
+  const file = new File(['content'], 'photo.heic');
+  await first.begin([file]); await first.start(0); await first.write(await file.arrayBuffer());
+  const placeholder = first.active.handle; await first.abort();
+  const [result] = await deliver(new IncomingTransfer(root), [file]);
+  assert.equal(result.name, 'photo (2).heic'); assert.equal(result.folder, '.');
+  assert.equal((await placeholder.getFile()).size, 0); assert.equal(placeholder.closed, 0);
+  assert.equal(placeholder.aborts, 1);
+});
+test('name suffixes preserve final extensions and also support extensionless files', async () => {
+  const root = new MemoryDirectory();
+  const files = ['README', 'README', '.env', '.env', 'archive.tar.gz', 'archive.tar.gz'].map(name => new File(['x'], name));
+  const results = await deliver(new IncomingTransfer(root), files);
+  assert.deepEqual(results.map(r => r.name), ['README', 'README (2)', '.env', '.env (2)', 'archive.tar.gz', 'archive.tar (2).gz']);
 });
 test('rejects oversize, negative, malformed and excessive manifests before any file is created', async () => {
   assert.equal(validateFiles([{ name: 'max', size: MAX_FILE }])[0].size, MAX_FILE);

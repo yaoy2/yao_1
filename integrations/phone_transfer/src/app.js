@@ -1,7 +1,7 @@
 import QRCode from 'qrcode';
 import { StreamlitRelay } from './relay.js';
 import { ShortcutReceiver, shortcutConfig, shortcutInstallLinks } from './shortcuts.js';
-import { CHUNK, IncomingTransfer, b64, hex, newReceiver, parseToken, proofText, makeProof, verifyProof, randomHex, sha256, tokenFor, validateFiles } from './core.js';
+import { CHUNK, IncomingTransfer, b64, hex, newReceiver, parseToken, proofText, makeProof, verifyProof, randomHex, receiverDestination, sha256, tokenFor, validateFiles } from './core.js';
 
 const $ = id => document.getElementById(id);
 const show = (id, visible = true) => { $(id).hidden = !visible; resize(); };
@@ -157,7 +157,7 @@ class Peer {
       if (!this.incoming) throw new Error('没有正在接收的文件');
       const results = this.incoming.complete(); this.incoming = null; activeReceiver = null;
       this.json({ type: 'complete', count: results.length });
-      progressDone(`已保存 ${results.length} 个文件`); message(`已保存到 ${directory.name}/${results[0].folder}，全部通过内容校验。`);
+      progressDone(`已保存 ${results.length} 个文件`); message(`已保存到 ${receiverDestination(directory).label}，全部通过内容校验。`);
     } else throw new Error('无法识别的传输消息');
   }
   async authenticate(msg) {
@@ -257,7 +257,7 @@ async function activate() {
   show('welcome', !state); show('receiver', state?.role === 'receiver'); show('sender', state?.role === 'sender'); show('reset', !!state);
   if (!state) { status('等待首次绑定'); return; }
   if (state.role === 'receiver') {
-    $('destination').textContent = directory ? `保存位置：${directory.name} / 日期 / 本批文件夹` : '尚未选择保存文件夹';
+    $('destination').textContent = directory ? `保存位置：${receiverDestination(directory).label}` : '尚未选择保存文件夹';
     if (!directory || await directory.queryPermission({ mode: 'readwrite' }) !== 'granted') {
       status('等待文件夹授权'); show('resume'); message('点“恢复文件夹授权”，允许网页将文件保存到办公电脑 L。'); return;
     }
@@ -303,7 +303,7 @@ async function receiveShortcutFile(file, getStream) {
       progress(`正在接收 ${file.name}`, received, file.size);
     }
     const result = await incoming.finish(0, file.sha256); incoming.complete();
-    progressDone('相册文件已保存并校验'); message(`已保存到 ${directory.name}/${result.folder}。`);
+    progressDone('相册文件已保存并校验'); message(`已保存到 ${receiverDestination(directory).label}。`);
     return result;
   } catch (error) { await incoming.abort(); throw error; }
   finally { await reader?.cancel().catch(() => {}); reader?.releaseLock(); if (activeReceiver === incoming) activeReceiver = null; }
@@ -391,13 +391,26 @@ function setupShortcut() {
   if (!state) return;
   const config = shortcutConfig(state.binding);
   const links = shortcutInstallLinks(state.binding);
-  $('shortcut-download').href = links.download; $('shortcut-auto-bind').href = links.setup;
+  $('shortcut-download').href = links.download; $('shortcut-check').href = links.check;
+  $('shortcut-config').value = links.configuration;
   $('shortcut-url').value = config.url; $('shortcut-authorization').value = config.authorization;
   show('shortcut-instructions');
   $('shortcut-instructions').scrollIntoView({ block: 'start' });
 }
 $('shortcut-setup').onclick = guard(setupShortcut);
 $('shortcut-close').onclick = () => show('shortcut-instructions', false);
+$('shortcut-copy-config').onclick = guard(async () => {
+  try {
+    await navigator.clipboard.writeText($('shortcut-config').value);
+    show('shortcut-copy-fallback', false);
+    $('shortcut-copy-status').textContent = '绑定码已复制。下载 v4，在安装设置的输入框中长按 → 粘贴。';
+  } catch {
+    show('shortcut-copy-fallback');
+    $('shortcut-config').focus(); $('shortcut-config').select();
+    $('shortcut-copy-status').textContent = '浏览器未允许自动复制。请长按下面的绑定码，选“全选 → 复制”，再下载 v4。';
+  }
+  resize();
+});
 $('shortcut-copy-url').onclick = guard(async () => { await navigator.clipboard.writeText($('shortcut-url').value); message('已复制快捷指令的准备地址。'); });
 $('shortcut-copy-token').onclick = guard(async () => { await navigator.clipboard.writeText($('shortcut-authorization').value); message('已复制授权值，只粘贴到你自己的快捷指令中。'); });
 $('copy').onclick = guard(async () => { await navigator.clipboard.writeText(pairingUrl); message('绑定链接已复制，请仅交给自己的手机。'); });
