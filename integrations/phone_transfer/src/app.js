@@ -1,5 +1,6 @@
 import QRCode from 'qrcode';
 import { StreamlitRelay } from './relay.js';
+import { ShortcutReceiver, shortcutConfig } from './shortcuts.js';
 import { CHUNK, IncomingTransfer, b64, hex, newReceiver, parseToken, proofText, makeProof, verifyProof, randomHex, sha256, tokenFor, validateFiles } from './core.js';
 
 const $ = id => document.getElementById(id);
@@ -10,6 +11,7 @@ const size = n => n >= 1048576 ? `${(n / 1048576).toFixed(1)} MiB` : `${(n / 102
 let state, directory, db, relay, reconnectTimer, connected = false, stopped = false, hasLock = false, releaseLock;
 let selected = [], sending = false, activeReceiver = null, progressBase = 0, totalBytes = 0, totalSaved = 0, wakeLock;
 let pairingUrl = ''; let latestRender = null;
+let shortcutReceiver = null;
 const peers = new Map();
 
 function resize() {
@@ -79,12 +81,13 @@ function updatePeerStatus() {
   const ready = readyPeer();
   if (ready) {
     status(state.role === 'receiver' ? '手机已连接' : '办公电脑 L 在线', true);
-    if (!sending && !activeReceiver && !$('message').classList.contains('error')) message(state.role === 'receiver' ? '已准备接收，文件会自动保存到所选文件夹。' : '选择原文件后发送，电脑会自动保存。');
+    if (!sending && !activeReceiver && !$('message').classList.contains('error')) message(state.role === 'receiver' ? '已准备接收，文件会自动保存到所选文件夹。' : '从相册选择照片后发送，电脑会自动保存。');
   } else {
     status(connected ? state.role === 'receiver' ? '等待手机连接' : '等待办公电脑 L' : '连接中');
     if (state.role === 'sender' && !sending && !$('message').classList.contains('error')) message('请在办公电脑 L 保持接收页打开，并确认文件夹已授权。');
   }
   $('pick').disabled = !ready || sending;
+  $('pick-photos').disabled = !ready || sending;
   $('send').disabled = !ready || sending || !selected.length;
 }
 async function keepAwake() {
@@ -133,6 +136,7 @@ class Peer {
     if (msg.type === 'begin') {
       if (activeReceiver) { this.json({ type: 'error', message: '电脑正在接收另一批文件，请稍后重试' }); return; }
       if (!hasLock || await directory.queryPermission({ mode: 'readwrite' }) !== 'granted') throw new Error('请在 L 恢复保存文件夹授权');
+      if (activeReceiver) { this.json({ type: 'error', message: '电脑正在接收另一批文件，请稍后重试' }); return; }
       this.incoming = new IncomingTransfer(directory, saved); activeReceiver = this;
       await this.incoming.begin(msg.files); totalBytes = this.incoming.batch.manifest.reduce((n, f) => n + f.size, 0); progressBase = 0; totalSaved = 0;
       this.json({ type: 'accepted' }); progress('正在接收', 0, totalBytes); message('正在接收；写入并校验完成后才会向手机报告送达。');
@@ -153,7 +157,7 @@ class Peer {
       if (!this.incoming) throw new Error('没有正在接收的文件');
       const results = this.incoming.complete(); this.incoming = null; activeReceiver = null;
       this.json({ type: 'complete', count: results.length });
-      progressDone(`已保存 ${results.length} 个原文件`); message(`已保存到 ${directory.name}/${results[0].folder}，全部通过内容校验。`);
+      progressDone(`已保存 ${results.length} 个文件`); message(`已保存到 ${directory.name}/${results[0].folder}，全部通过内容校验。`);
     } else throw new Error('无法识别的传输消息');
   }
   async authenticate(msg) {
@@ -230,6 +234,7 @@ function connect() {
 }
 function disconnect() {
   stopped = true; clearTimeout(reconnectTimer);
+  shortcutReceiver?.stop(); shortcutReceiver = null;
   const old = relay; relay = null; old?.close();
   for (const peer of [...peers.values()]) peer.close();
   connected = false;
@@ -258,8 +263,50 @@ async function activate() {
     }
     if (!await acquireReceiverLock()) return;
     show('resume', false);
+    if (!state.shortcutReceiverToken || !state.binding.nativeRoom) {
+      state.shortcutReceiverToken ||= randomHex(32);
+      state.binding.nativeRoom = hex(sha256(new TextEncoder().encode(state.shortcutReceiverToken)));
+      await setting('state', state);
+    }
+    if (!shortcutReceiver) shortcutReceiver = new ShortcutReceiver(state, {
+      canReceive: () => hasLock && !activeReceiver && !sending,
+      onStatus: text => { $('shortcut-status').textContent = text; resize(); },
+      onError: error => { message(`${error.message}；处理后点“恢复文件夹授权”重试。`, true); show('resume'); },
+      receipt: async (id, result) => {
+        const receipts = await setting('shortcut-receipts') || {};
+        if (!result) return receipts[id];
+        receipts[id] = result;
+        for (const key of Object.keys(receipts).slice(0, -1000)) delete receipts[key];
+        await setting('shortcut-receipts', receipts);
+      },
+      receive: receiveShortcutFile,
+    });
+    shortcutReceiver.start();
   }
   connect();
+}
+async function receiveShortcutFile(file, getStream) {
+  if (activeReceiver || !hasLock) throw new Error('电脑正在接收另一批文件');
+  if (await directory.queryPermission({ mode: 'readwrite' }) !== 'granted') throw new Error('请恢复保存文件夹授权');
+  if (activeReceiver || !hasLock) throw new Error('电脑正在接收另一批文件');
+  const incoming = new IncomingTransfer(directory, saved); activeReceiver = incoming;
+  let reader;
+  try {
+    await incoming.begin([{ name: file.name, size: file.size }]); await incoming.start(0);
+    progress(`正在接收相册照片 ${file.name}`, 0, file.size);
+    reader = (await getStream()).getReader(); let received = 0;
+    for (;;) {
+      const { done, value } = await reader.read(); if (done) break;
+      for (let offset = 0; offset < value.length; offset += CHUNK) {
+        const chunk = value.subarray(offset, offset + CHUNK); await incoming.write(chunk); received += chunk.length;
+      }
+      progress(`正在接收 ${file.name}`, received, file.size);
+    }
+    const result = await incoming.finish(0, file.sha256); incoming.complete();
+    progressDone('相册文件已保存并校验'); message(`已保存到 ${directory.name}/${result.folder}。`);
+    return result;
+  } catch (error) { await incoming.abort(); throw error; }
+  finally { await reader?.cancel().catch(() => {}); reader?.releaseLock(); if (activeReceiver === incoming) activeReceiver = null; }
 }
 async function pair() {
   if (state?.role !== 'receiver') return;
@@ -322,11 +369,11 @@ async function sendFiles() {
     }
     const done = await peer.exchange({ type: 'batch-end' }, 'complete');
     if (done.count !== selected.length) throw new Error('部分文件未收到保存回执');
-    progressDone(`已送达办公电脑 L · ${count} 个文件`); message(`电脑已保存 ${count} 个原文件，内容校验全部通过。`);
-    selected = []; $('files').value = ''; $('selection').replaceChildren(); show('send', false);
+    progressDone(`已送达办公电脑 L · ${count} 个文件`); message(`电脑已保存 ${count} 个文件，内容校验全部通过。`);
+    selected = []; $('files').value = ''; $('photos').value = ''; $('selection').replaceChildren(); show('send', false);
   } catch (e) {
     peer.close(e); message(`${e.message}。本批已确认保存 ${count}/${manifest.length} 个文件；重新发送会另存，不会覆盖。`, true);
-  } finally { sending = false; await releaseAwake(); $('pick').disabled = !readyPeer(); $('send').disabled = !readyPeer(); }
+  } finally { sending = false; await releaseAwake(); $('pick').disabled = !readyPeer(); $('pick-photos').disabled = !readyPeer(); $('send').disabled = !readyPeer(); }
 }
 
 $('setup').onclick = guard(chooseFolder);
@@ -339,25 +386,38 @@ $('resume').onclick = guard(async () => {
 });
 $('pair').onclick = guard(pair);
 $('close-pair').onclick = () => show('pairing', false);
+$('shortcut-setup').onclick = guard(() => {
+  if (!state) return;
+  const config = shortcutConfig(state.binding);
+  $('shortcut-url').value = config.url; $('shortcut-authorization').value = config.authorization;
+  show('shortcut-instructions');
+});
+$('shortcut-close').onclick = () => show('shortcut-instructions', false);
+$('shortcut-copy-url').onclick = guard(async () => { await navigator.clipboard.writeText($('shortcut-url').value); message('已复制快捷指令的接收地址。'); });
+$('shortcut-copy-token').onclick = guard(async () => { await navigator.clipboard.writeText($('shortcut-authorization').value); message('已复制授权值，只粘贴到你自己的快捷指令中。'); });
 $('copy').onclick = guard(async () => { await navigator.clipboard.writeText(pairingUrl); message('绑定链接已复制，请仅交给自己的手机。'); });
 $('enter-code').onclick = () => show('join');
 $('cancel-join').onclick = () => show('join', false);
 $('bind').onclick = guard(() => join($('token').value));
-$('pick').onclick = () => $('files').click();
-$('files').onchange = guard(() => {
-  const files = Array.from($('files').files); selected = []; $('selection').replaceChildren(); show('send', false);
+$('pick').onclick = () => { $('files').value = ''; $('files').click(); };
+$('pick-photos').onclick = () => { $('photos').value = ''; $('photos').click(); };
+const selectFiles = guard(event => {
+  const files = Array.from(event.target.files);
   if (!files.length) return;
+  selected = []; $('selection').replaceChildren(); show('send', false);
   validateFiles(files); selected = files;
   for (const file of files) { const row = document.createElement('li'); const label = document.createElement('span'); const amount = document.createElement('small'); label.textContent = file.name; amount.textContent = size(file.size); row.append(label, amount); $('selection').append(row); }
   show('send'); $('send').disabled = !readyPeer(); message(`已选择 ${files.length} 个文件，${size(files.reduce((n, f) => n + f.size, 0))}。`);
 });
+$('files').onchange = selectFiles;
+$('photos').onchange = selectFiles;
 $('send').onclick = guard(sendFiles);
 $('reset').onclick = guard(async () => {
   if (sending || activeReceiver) throw new Error('请先完成当前传输');
   if (!confirm(state.role === 'receiver' ? '解除 L 的绑定后，手机必须重新扫码。已保存文件保留。继续？' : '解除此浏览器与 L 的绑定？')) return;
   disconnect(); releaseLock?.(); await setting('state', null); await setting('directory', null); state = null; directory = null;
   message('已解除此浏览器绑定，可重新设置。');
-  show('pairing', false); show('progress-box', false); $('history').replaceChildren(); show('history-box', false); await activate();
+  show('pairing', false); show('shortcut-instructions', false); show('progress-box', false); $('history').replaceChildren(); show('history-box', false); await activate();
 });
 $('standalone').href = pageUrl();
 $('standalone').onclick = event => {

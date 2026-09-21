@@ -11,7 +11,16 @@ def test_phone_transfer_page_renders_without_starting_a_server():
     assert not app.exception
     assert app.title[0].value == "📲 随手传"
     assert (root / "integrations" / "phone_transfer" / "frontend" / "app.js").is_file()
-    assert not app.get("file_uploader")  # Only bounded encrypted chunks reach the relay.
+    assert not app.get("file_uploader")  # Native uploads have a bounded streaming API.
+
+
+def test_server_discovers_native_routes_from_existing_cloud_entrypoint():
+    from streamlit.web.server.app_discovery import discover_asgi_app
+
+    root = Path(__file__).resolve().parents[1]
+    discovered = discover_asgi_app(root / "hello.py")
+    assert discovered.is_asgi_app
+    assert discovered.import_string == "hello:app"
 
 
 def test_component_request_is_processed_and_echoed_on_the_same_run():

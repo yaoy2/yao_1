@@ -1,0 +1,37 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { hex, sha256, newReceiver, parseToken, tokenFor } from '../src/core.js';
+import { shortcutApiBase, shortcutUploadToken, ShortcutReceiver } from '../src/shortcuts.js';
+
+test('native binding commits to the receiver secret without sharing it with the phone', async () => {
+  const state = await newReceiver();
+  const phone = parseToken(tokenFor(state.binding));
+  assert.equal(phone.nativeRoom, hex(sha256(new TextEncoder().encode(state.shortcutReceiverToken))));
+  assert.ok(!JSON.stringify(phone).includes(state.shortcutReceiverToken));
+  assert.notEqual(shortcutUploadToken(phone), state.shortcutReceiverToken);
+  assert.equal(shortcutUploadToken(phone), shortcutUploadToken(state.binding));
+});
+
+test('API addresses target the Cloud application rather than the HTML wrapper', () => {
+  assert.equal(shortcutApiBase('https://whatsup.streamlit.app/~/+/component/example/index.html'), 'https://whatsup.streamlit.app/~/+/phone-transfer-api/v1');
+  assert.equal(shortcutApiBase('https://example.test/component/example/index.html'), 'https://example.test/phone-transfer-api/v1');
+});
+
+test('a saved local receipt retries acknowledgement without writing a duplicate file', async () => {
+  const oldLocation = globalThis.location;
+  const oldFetch = globalThis.fetch;
+  globalThis.location = { href: 'https://example.test/component/example/index.html' };
+  const state = await newReceiver(); let writes = 0; let acknowledgements = 0;
+  const receipt = { name: '001_photo.HEIC', folder: 'day/batch', size: 3, sha256: 'a'.repeat(64) };
+  globalThis.fetch = async (url, options) => {
+    assert.equal(options.headers.Authorization, `Bearer ${state.shortcutReceiverToken}`);
+    if (url.endsWith('/pending')) return Response.json({ files: [{ id: 'test-file', name: 'photo.HEIC', size: 3, sha256: receipt.sha256 }] });
+    if (url.endsWith('/ack')) { acknowledgements++; assert.deepEqual(JSON.parse(options.body), receipt); }
+    return Response.json({ ok: true });
+  };
+  const receiver = new ShortcutReceiver(state, { canReceive: () => true, onStatus() {}, onError(e) { throw e; }, receipt: async () => receipt, receive: async () => { writes++; } });
+  try {
+    await receiver.poll();
+    assert.equal(writes, 0); assert.equal(acknowledgements, 1);
+  } finally { receiver.stop(); globalThis.fetch = oldFetch; globalThis.location = oldLocation; }
+});
