@@ -116,7 +116,7 @@ try {
     const db = await new Promise(resolve => { const req = indexedDB.open('yao-suishouchuan-v1', 1); req.onsuccess = () => resolve(req.result); });
     return new Promise(resolve => { const req = db.transaction('settings').objectStore('settings').get('state'); req.onsuccess = () => resolve({ room: req.result.binding.nativeRoom, receiverToken: req.result.shortcutReceiverToken }); });
   });
-  assert.ok(new URL(nativeUploadUrl).pathname === `/phone-transfer-api/v1/upload/${nativeState.room}`, 'Shortcut URL must address the bound native receiver room');
+  assert.ok(new URL(nativeUploadUrl).pathname === `/phone-transfer-api/v1/upload/${nativeState.room}/authorize`, 'Shortcut URL must address the bound native receiver room');
   assert.ok(nativeUploadAuthorization !== `Bearer ${nativeState.receiverToken}`, 'Shortcut must never receive the L-only read token');
   const expectedUploadToken = createHash('sha256').update(`suishou-shortcut-upload-v1:${binding.room}:${binding.auth}`).digest('hex');
   assert.ok(nativeUploadAuthorization === `Bearer ${expectedUploadToken}`, 'Shortcut authorization must match the derived send-only token');
@@ -128,12 +128,15 @@ try {
   const nativeFilename = '快捷指令同名照片.HEIC';
   for (let i = 0; i < nativePayloads.length; i++) {
     const form = new FormData(); form.append('file', new Blob([nativePayloads[i]], { type: 'image/heic' }), nativeFilename);
-    const response = await fetch(nativeUploadUrl, { method: 'POST', headers: { Authorization: nativeUploadAuthorization }, body: form });
+    const authorization = await fetch(nativeUploadUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ authorization: nativeUploadAuthorization }) });
+    assert.equal(authorization.status, 200);
+    const ticketUrl = (await authorization.text()).replace('http://fixture.invalid', url);
+    const response = await fetch(ticketUrl, { method: 'POST', body: form });
     assert.equal(response.status, 202); assert.match(await response.text(), /等待办公电脑 L 保存/);
     await frame.waitForFunction(count => document.querySelectorAll('#history li').length === count, 4 + i, { timeout: 30000 });
     const deadline = Date.now() + 15000; let pending;
     do {
-      const response = await fetch(`${url}/phone-transfer-api/v1/receivers/${nativeState.room}/pending`, { headers: { Authorization: `Bearer ${nativeState.receiverToken}` } });
+      const response = await fetch(`${url}/phone-transfer-api/v1/receivers/${nativeState.room}/pending`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ authorization: `Bearer ${nativeState.receiverToken}` }) });
       assert.equal(response.status, 200); pending = (await response.json()).files;
       if (pending.length) await new Promise(resolve => setTimeout(resolve, 100));
     } while (pending.length && Date.now() < deadline);

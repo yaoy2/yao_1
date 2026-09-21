@@ -393,7 +393,7 @@ $('shortcut-setup').onclick = guard(() => {
   show('shortcut-instructions');
 });
 $('shortcut-close').onclick = () => show('shortcut-instructions', false);
-$('shortcut-copy-url').onclick = guard(async () => { await navigator.clipboard.writeText($('shortcut-url').value); message('已复制快捷指令的接收地址。'); });
+$('shortcut-copy-url').onclick = guard(async () => { await navigator.clipboard.writeText($('shortcut-url').value); message('已复制快捷指令的准备地址。'); });
 $('shortcut-copy-token').onclick = guard(async () => { await navigator.clipboard.writeText($('shortcut-authorization').value); message('已复制授权值，只粘贴到你自己的快捷指令中。'); });
 $('copy').onclick = guard(async () => { await navigator.clipboard.writeText(pairingUrl); message('绑定链接已复制，请仅交给自己的手机。'); });
 $('enter-code').onclick = () => show('join');

@@ -14,8 +14,9 @@ Streamlit 自定义组件，iPhone 发送，办公电脑 L 的 Edge/Chrome 接�
 
 手机扫码后点“设置相册分享目标”，按页面说明在 iPhone 上一次性创建
 “发送到办公电脑 L”快捷指令，并开启共享表单。
-指令对每个输入执行“获取 URL 内容”：POST、Authorization 标头、multipart 表单中的 `file` 文件字段，
-然后显示重复结果。发送地址和专用授权值均由页面生成、单独复制，无需手写密钥。
+指令对每个输入执行两次“获取 URL 内容”：先 POST JSON 中的 `authorization` 获取一次性上传地址，
+再向该地址 POST multipart 表单中的 `file` 文件字段，然后显示重复结果。
+准备地址和专用授权值均由页面生成、单独复制，无需手写密钥。
 之后直接从 **照片 App → 选择 → 分享 → 发送到办公电脑 L** 发起，无需打开手机网页。
 当前提供逐步配置说明，没有声称提供已签名的 `.shortcut` 或 iCloud 安装链接。
 
@@ -40,7 +41,9 @@ Streamlit 自定义组件，iPhone 发送，办公电脑 L 的 Edge/Chrome 接�
   直接继续以 `hello.py` 为 Cloud 入口，服务启动时自动发现 ASGI；修改路由需要进程重启。
 - Community Cloud 外层是页面壳，组件生成 `/~/+/phone-transfer-api/v1/` 直达应用的地址。
 - 专用发送 token 仅能上传；接收 token 只保存在 L，能列出、下载、确认。房间 ID 是接收 token 的 SHA-256，
-  服务重启后也不能用手机端权限冒领 L。凭据通过 Authorization 标头传递。
+  服务重启后也不能用手机端权限冒领 L。Cloud 会剥离 Authorization 和自定义标头，
+  因此长期凭据通过 HTTPS JSON 请求体传递。相册上传先换取 90 秒有效、用后作废的单文件地址；
+  长期凭据不进入 URL。列表、下载、确认同样使用带 JSON 授权的 POST。
 - HTTPS 保护传输，**此通道不是端到端加密**。服务保留 multipart 解析器创建的临时文件至落盘回执或过期。
   单文件 200 MiB、单房间 256 MiB、全局 512 MiB 的容量包含正在上传的预留量。
   只接受一个上传中的文件/房间，限制房间和条目数；拒绝无权限、超限、离线请求。

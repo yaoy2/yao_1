@@ -28,6 +28,7 @@ from starlette.routing import Route
 
 
 PREFIX = "/phone-transfer-api/v1"
+DEFAULT_PUBLIC_BASE = "https://whatsup.streamlit.app/~/+/phone-transfer-api/v1"
 MIB = 1024 * 1024
 _HEX64 = re.compile(r"[0-9a-f]{64}\Z")
 _HEX32 = re.compile(r"[0-9a-f]{32}\Z")
@@ -90,6 +91,8 @@ class _Receiver:
     receipts: OrderedDict = field(default_factory=OrderedDict)
     reserved: int = 0
     uploading: bool = False
+    ticket: str | None = None
+    ticket_expires: float = 0
 
 
 class PhoneTransferRegistry:
@@ -100,6 +103,7 @@ class PhoneTransferRegistry:
         max_room_bytes=256 * MIB, max_rooms=128, max_room_files=128,
         max_global_files=1024,
         upload_idle_timeout=120,
+        ticket_ttl=90, public_base=DEFAULT_PUBLIC_BASE,
     ):
         self.clock = clock
         self.ack_timeout = ack_timeout
@@ -114,16 +118,19 @@ class PhoneTransferRegistry:
         self.max_room_files = max_room_files
         self.max_global_files = max_global_files
         self.upload_idle_timeout = upload_idle_timeout
+        self.ticket_ttl = ticket_ttl
+        self.public_base = public_base.rstrip("/")
         self._receivers = {}
         self._reserved = 0
         self._lock = threading.RLock()
         self.routes = [
             Route(PREFIX + "/health", self.health, methods=["GET"]),
             Route(PREFIX + "/receivers/{room}", self.register, methods=["POST"]),
-            Route(PREFIX + "/receivers/{room}/pending", self.pending, methods=["GET"]),
-            Route(PREFIX + "/receivers/{room}/files/{file_id}", self.download, methods=["GET"]),
+            Route(PREFIX + "/receivers/{room}/pending", self.pending, methods=["POST"]),
+            Route(PREFIX + "/receivers/{room}/files/{file_id}", self.download, methods=["POST"]),
             Route(PREFIX + "/receivers/{room}/files/{file_id}/ack", self.acknowledge, methods=["POST"]),
-            Route(PREFIX + "/upload/{room}", self.upload, methods=["POST"]),
+            Route(PREFIX + "/upload/{room}/authorize", self.authorize_upload, methods=["POST"]),
+            Route(PREFIX + "/upload/{room}/{ticket}", self.upload, methods=["POST"]),
         ]
 
     def _discard(self, receiver, item):
@@ -139,6 +146,9 @@ class PhoneTransferRegistry:
         now = self.clock()
         with self._lock:
             for room, receiver in list(self._receivers.items()):
+                if receiver.ticket is not None and now >= receiver.ticket_expires:
+                    receiver.ticket = None
+                    receiver.ticket_expires = 0
                 for item in list(receiver.files.values()):
                     if now - item.created >= self.file_ttl:
                         self._discard(receiver, item)
@@ -162,17 +172,19 @@ class PhoneTransferRegistry:
             self._reserved = 0
 
     @staticmethod
-    def _token_hash(request):
-        authorization = request.headers.get("authorization", "")
+    def _token_hash(body):
+        authorization = body.get("authorization", "")
+        if type(authorization) is not str:
+            return None
         scheme, _, token = authorization.partition(" ")
         if scheme.lower() != "bearer" or not _hex(token):
             return None
         return hashlib.sha256(token.encode("ascii")).hexdigest()
 
-    def _receiver(self, request):
+    def _receiver(self, request, body):
         self._expire()
         room = request.path_params["room"]
-        token_hash = self._token_hash(request)
+        token_hash = self._token_hash(body)
         if not _hex(room) or token_hash is None:
             return None
         with self._lock:
@@ -196,35 +208,28 @@ class PhoneTransferRegistry:
 
     async def health(self, request):
         self._expire()
-        if request.query_params.get("probe") == "headers":
-            return JSONResponse({"ok": True, "authorization_present": bool(request.headers.get("authorization")),
-                                 "transfer_header_present": bool(request.headers.get("x-transfer-authorization"))})
         return JSONResponse({"ok": True, "version": 1})
 
     async def register(self, request):
         self._expire()
         room = request.path_params["room"]
-        token_hash = self._token_hash(request)
-        # The public room is a commitment to L's private receiver token. A
-        # sender cannot claim the same room after restart or expiry.
-        if not _hex(room) or token_hash is None or not hmac.compare_digest(room, token_hash):
-            return _error("unauthorized", 401)
-        with self._lock:
-            existing = self._receivers.get(room)
-            if existing and not hmac.compare_digest(existing.receiver_hash, token_hash):
-                return _error("unauthorized", 401)
         try:
             body = await self._small_json(request)
         except (ValueError, ClientDisconnect):
             return _error("invalid_request")
+        token_hash = self._token_hash(body)
+        # The public room is a commitment to L's private receiver token. A
+        # sender cannot claim the same room after restart or expiry.
+        if not _hex(room) or token_hash is None or not hmac.compare_digest(room, token_hash):
+            return _error("unauthorized", 403)
         upload_hash = body.get("upload_token_hash")
-        if set(body) != {"upload_token_hash"} or not _hex(upload_hash) or hmac.compare_digest(upload_hash, token_hash):
+        if set(body) != {"authorization", "upload_token_hash"} or not _hex(upload_hash) or hmac.compare_digest(upload_hash, token_hash):
             return _error("invalid_request")
         with self._lock:
             existing = self._receivers.get(room)
             if existing:
                 if not hmac.compare_digest(existing.receiver_hash, token_hash):
-                    return _error("unauthorized", 401)
+                    return _error("unauthorized", 403)
                 if not hmac.compare_digest(existing.upload_hash, upload_hash):
                     return _error("token_conflict", 409)
                 existing.seen = self.clock()
@@ -235,17 +240,29 @@ class PhoneTransferRegistry:
         return JSONResponse({"ok": True})
 
     async def pending(self, request):
-        receiver = self._receiver(request)
+        try:
+            body = await self._small_json(request)
+        except (ValueError, ClientDisconnect):
+            return _error("invalid_request")
+        receiver = self._receiver(request, body)
         if receiver is None:
-            return _error("unauthorized", 401)
+            return _error("unauthorized", 403)
+        if set(body) != {"authorization"}:
+            return _error("invalid_request")
         with self._lock:
             files = [item.public() for item in receiver.files.values()]
         return JSONResponse({"ok": True, "files": files}, headers={"Cache-Control": "no-store"})
 
     async def download(self, request):
-        receiver = self._receiver(request)
+        try:
+            body = await self._small_json(request)
+        except (ValueError, ClientDisconnect):
+            return _error("invalid_request")
+        receiver = self._receiver(request, body)
         if receiver is None:
-            return _error("unauthorized", 401)
+            return _error("unauthorized", 403)
+        if set(body) != {"authorization"}:
+            return _error("invalid_request")
         file_id = request.path_params["file_id"]
         with self._lock:
             item = receiver.files.get(file_id) if _hex(file_id, _HEX32) else None
@@ -272,14 +289,14 @@ class PhoneTransferRegistry:
                                  headers={"Content-Length": str(item.size), "Cache-Control": "no-store"})
 
     async def acknowledge(self, request):
-        receiver = self._receiver(request)
-        if receiver is None:
-            return _error("unauthorized", 401)
         try:
             body = await self._small_json(request)
         except (ValueError, ClientDisconnect):
             return _error("invalid_request")
-        if (set(body) != {"sha256", "size", "name", "folder"} or not _hex(body["sha256"])
+        receiver = self._receiver(request, body)
+        if receiver is None:
+            return _error("unauthorized", 403)
+        if (set(body) != {"authorization", "sha256", "size", "name", "folder"} or not _hex(body["sha256"])
                 or type(body["size"]) is not int or body["size"] < 0
                 or any(type(body[key]) is not str or not 0 < len(body[key]) <= 1024 for key in ("name", "folder"))):
             return _error("invalid_request")
@@ -293,7 +310,8 @@ class PhoneTransferRegistry:
             if body["size"] != expected["size"] or not hmac.compare_digest(body["sha256"], expected["sha256"]):
                 return _error("content_mismatch", 409)
             if item:
-                receipt = {**body, "created": self.clock()}
+                receipt = {key: body[key] for key in ("sha256", "size", "name", "folder")}
+                receipt["created"] = self.clock()
                 receiver.receipts[file_id] = receipt
                 while len(receiver.receipts) > 128:
                     receiver.receipts.popitem(last=False)
@@ -301,23 +319,54 @@ class PhoneTransferRegistry:
                 self._discard(receiver, item)
         return JSONResponse({"ok": True})
 
-    async def upload(self, request):
+    def _upload_status(self, receiver):
+        if self.clock() - receiver.seen >= self.heartbeat_ttl:
+            return _error("receiver_offline", 409)
+        if receiver.uploading:
+            return _error("upload_busy", 429)
+        if (receiver.reserved + self.max_file_bytes > self.max_room_bytes
+                or self._reserved + self.max_file_bytes > self.max_global_bytes
+                or len(receiver.files) >= self.max_room_files
+                or sum(len(r.files) + int(r.uploading) for r in self._receivers.values()) >= self.max_global_files):
+            return _error("capacity", 503)
+        return None
+
+    async def authorize_upload(self, request):
         self._expire()
+        try:
+            body = await self._small_json(request)
+        except (ValueError, ClientDisconnect):
+            return _error("invalid_request")
+        token_hash = self._token_hash(body)
         room = request.path_params["room"]
-        token_hash = self._token_hash(request)
         with self._lock:
             receiver = self._receivers.get(room) if _hex(room) else None
             if receiver is None or token_hash is None or not hmac.compare_digest(receiver.upload_hash, token_hash):
-                return _error("unauthorized", 401)
-            if self.clock() - receiver.seen >= self.heartbeat_ttl:
-                return _error("receiver_offline", 409)
-            if receiver.uploading:
-                return _error("upload_busy", 429)
-            if (receiver.reserved + self.max_file_bytes > self.max_room_bytes
-                    or self._reserved + self.max_file_bytes > self.max_global_bytes
-                    or len(receiver.files) >= self.max_room_files
-                    or sum(len(r.files) + int(r.uploading) for r in self._receivers.values()) >= self.max_global_files):
-                return _error("capacity", 503)
+                return _error("unauthorized", 403)
+            if set(body) != {"authorization"}:
+                return _error("invalid_request")
+            if error := self._upload_status(receiver):
+                return error
+            # A room owns just one outstanding ticket. Issuing another revokes
+            # the old URL without retaining an unbounded revocation list.
+            receiver.ticket = secrets.token_hex(32)
+            receiver.ticket_expires = self.clock() + self.ticket_ttl
+            url = f"{self.public_base}/upload/{room}/{receiver.ticket}"
+        return PlainTextResponse(url, headers={"Cache-Control": "no-store"})
+
+    async def upload(self, request):
+        self._expire()
+        room = request.path_params["room"]
+        ticket = request.path_params["ticket"]
+        with self._lock:
+            receiver = self._receivers.get(room) if _hex(room) else None
+            if (receiver is None or not _hex(ticket) or receiver.ticket is None
+                    or not hmac.compare_digest(receiver.ticket, ticket)):
+                return _error("unauthorized", 403)
+            receiver.ticket = None
+            receiver.ticket_expires = 0
+            if error := self._upload_status(receiver):
+                return error
             receiver.uploading = True
             receiver.reserved += self.max_file_bytes
             self._reserved += self.max_file_bytes
@@ -412,7 +461,7 @@ routes = registry.routes
 
 async def server_error(request, exc):
     # Do not expose exception messages, request values or credentials.
-    return JSONResponse({"ok": False, "error": "internal_error", "kind": type(exc).__name__}, status_code=500)
+    return JSONResponse({"ok": False, "error": "internal_error"}, status_code=500)
 
 
 @asynccontextmanager

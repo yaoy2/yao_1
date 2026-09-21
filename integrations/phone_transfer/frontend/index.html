@@ -41,12 +41,13 @@
     <p class="hint">在 iPhone「快捷指令」中新建同名指令，开启详情中的“在共享表单中显示”，接收“图像”和“文件”（需要视频时也选“媒体”）。按下面顺序添加操作；只设置一次。</p>
     <ol class="hint">
       <li>添加“重复每一项”，输入选“快捷指令输入”。</li>
-      <li>在重复内添加“获取 URL 内容”：使用下面的接收地址，方法选 POST；在“标头”添加 Authorization，值粘贴下面的授权值；请求体选“表单”，添加类型为“文件”的字段，键名填 file，值选“重复项目”。</li>
+      <li>在重复内添加第一个“获取 URL 内容”：使用下面的准备地址，方法选 POST；请求体选 JSON，添加“文本”字段，键名填 authorization，值粘贴下面的授权值。</li>
+      <li>紧接着添加第二个“获取 URL 内容”：地址选上一步的“URL 的内容”变量，方法选 POST；请求体选“表单”，添加类型为“文件”的字段，键名填 file，值选“重复项目”。它会把这一张照片送给 L。</li>
       <li>在“结束重复”后添加“显示结果”，内容选“重复结果”。保存即可。</li>
     </ol>
-    <label for="shortcut-url">接收地址</label><input id="shortcut-url" type="text" readonly>
-    <button id="shortcut-copy-url" class="secondary">复制接收地址</button>
-    <label for="shortcut-authorization">Authorization 授权值</label><input id="shortcut-authorization" type="password" readonly autocomplete="off">
+    <label for="shortcut-url">准备地址（第一个“获取 URL 内容”）</label><input id="shortcut-url" type="text" readonly>
+    <button id="shortcut-copy-url" class="secondary">复制准备地址</button>
+    <label for="shortcut-authorization">authorization 授权值</label><input id="shortcut-authorization" type="password" readonly autocomplete="off">
     <button id="shortcut-copy-token" class="secondary">复制授权值</button>
     <p class="hint">从照片 App 分享时，在“选项”中选“当前”以避免格式转换；指令里不添加“转换图像”或“调整大小”。大批照片运行时若提示限制，可在快捷指令的高级设置中允许共享大量数据。手机显示“已保存到 L”才代表电脑已保存；“等待保存”需到接收页确认。</p>
     <p class="hint">此发送方式通过 HTTPS 把文件临时交给工具箱，再自动保存到 L。确认保存后清理临时副本，未完成的副本约 10 分钟后过期清理；不会写入 GitHub。授权值仅交给自己的手机。</p>

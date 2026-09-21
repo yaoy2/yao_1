@@ -24,9 +24,11 @@ test('a saved local receipt retries acknowledgement without writing a duplicate 
   const state = await newReceiver(); let writes = 0; let acknowledgements = 0;
   const receipt = { name: '001_photo.HEIC', folder: 'day/batch', size: 3, sha256: 'a'.repeat(64) };
   globalThis.fetch = async (url, options) => {
-    assert.equal(options.headers.Authorization, `Bearer ${state.shortcutReceiverToken}`);
+    assert.equal(JSON.parse(options.body).authorization, `Bearer ${state.shortcutReceiverToken}`);
+    assert.equal(options.method, 'POST');
+    assert.equal(options.headers.Authorization, undefined);
     if (url.endsWith('/pending')) return Response.json({ files: [{ id: 'test-file', name: 'photo.HEIC', size: 3, sha256: receipt.sha256 }] });
-    if (url.endsWith('/ack')) { acknowledgements++; assert.deepEqual(JSON.parse(options.body), receipt); }
+    if (url.endsWith('/ack')) { acknowledgements++; assert.deepEqual(JSON.parse(options.body), { ...receipt, authorization: `Bearer ${state.shortcutReceiverToken}` }); }
     return Response.json({ ok: true });
   };
   const receiver = new ShortcutReceiver(state, { canReceive: () => true, onStatus() {}, onError(e) { throw e; }, receipt: async () => receipt, receive: async () => { writes++; } });

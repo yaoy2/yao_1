@@ -8,11 +8,12 @@ import tempfile
 import time
 import unittest
 from unittest.mock import patch
+from urllib.parse import urlsplit
 
 from starlette.applications import Starlette
 from starlette.testclient import TestClient
 
-from utils.phone_transfer_api import PREFIX, PhoneTransferRegistry
+from utils.phone_transfer_api import DEFAULT_PUBLIC_BASE, PREFIX, PhoneTransferRegistry, server_error
 
 
 RECEIVER_TOKEN = "2" * 64
@@ -22,7 +23,7 @@ UPLOAD_HASH = hashlib.sha256(UPLOAD_TOKEN.encode()).hexdigest()
 
 
 def auth(token):
-    return {"Authorization": "Bearer " + token}
+    return {"authorization": "Bearer " + token}
 
 
 class Clock:
@@ -42,7 +43,8 @@ class PhoneTransferApiTest(unittest.TestCase):
         self.clock = Clock()
         self.registry = PhoneTransferRegistry(clock=self.clock, ack_timeout=0.001,
                                              max_file_bytes=1024, max_body_bytes=4096,
-                                             max_room_bytes=4096, max_global_bytes=8192)
+                                             max_room_bytes=4096, max_global_bytes=8192,
+                                             public_base="https://fixture.invalid" + PREFIX)
         self.app = Starlette(routes=self.registry.routes)
         self.client = TestClient(self.app)
         self.addCleanup(self.client.close)
@@ -55,15 +57,26 @@ class PhoneTransferApiTest(unittest.TestCase):
         self.registry._expire()
 
     def register(self, token=RECEIVER_TOKEN, upload_hash=UPLOAD_HASH, room=ROOM):
-        return self.client.post(PREFIX + "/receivers/" + room, headers=auth(token),
-                                json={"upload_token_hash": upload_hash})
+        return self.client.post(PREFIX + "/receivers/" + room,
+                                json={**auth(token), "upload_token_hash": upload_hash})
+
+    def authorize(self, token=UPLOAD_TOKEN, room=ROOM):
+        return self.client.post(PREFIX + "/upload/" + room + "/authorize", json=auth(token))
+
+    def ticket(self):
+        response = self.authorize()
+        self.assertEqual(response.status_code, 200)
+        return response.text.rsplit("/", 1)[-1]
 
     def upload(self, payload=b"original\x00\xff", name="相册照片.HEIC", token=UPLOAD_TOKEN, **kwargs):
-        return self.client.post(PREFIX + "/upload/" + ROOM, headers=auth(token),
+        authorized = self.authorize(token)
+        if authorized.status_code != 200:
+            return authorized
+        return self.client.post(authorized.text,
                                 files={"file": (name, payload, "application/octet-stream")}, **kwargs)
 
     def pending(self):
-        return self.client.get(self.base + "/pending", headers=auth(RECEIVER_TOKEN)).json()["files"]
+        return self.client.post(self.base + "/pending", json=auth(RECEIVER_TOKEN)).json()["files"]
 
     def test_shutdown_closes_remaining_temporary_files(self):
         self.upload()
@@ -74,18 +87,19 @@ class PhoneTransferApiTest(unittest.TestCase):
         self.assertEqual(self.registry._receivers, {})
 
     def ack(self, item, **changes):
-        body = {"sha256": item["sha256"], "size": item["size"],
+        body = {**auth(RECEIVER_TOKEN), "sha256": item["sha256"], "size": item["size"],
                 "name": "001_" + item["name"], "folder": "2026-09-21/batch"}
         body.update(changes)
         return self.client.post(self.base + "/files/" + item["id"] + "/ack",
-                                headers=auth(RECEIVER_TOKEN), json=body)
+                                json=body)
 
-    async def raw_upload(self, receive, token=UPLOAD_TOKEN, content_length=None):
-        headers = [(b"authorization", ("Bearer " + token).encode()),
-                   (b"content-type", b"multipart/form-data; boundary=test-boundary")]
+    async def raw_upload(self, receive, ticket=None, room=ROOM, content_length=None):
+        if ticket is None:
+            ticket = self.ticket()
+        headers = [(b"content-type", b"multipart/form-data; boundary=test-boundary")]
         if content_length is not None:
             headers.append((b"content-length", str(content_length).encode()))
-        path = PREFIX + "/upload/" + ROOM
+        path = PREFIX + "/upload/" + room + "/" + ticket
         scope = {"type": "http", "asgi": {"version": "3.0", "spec_version": "2.4"},
                  "http_version": "1.1", "method": "POST", "scheme": "https", "path": path,
                  "raw_path": path.encode(), "query_string": b"", "root_path": "", "headers": headers,
@@ -103,36 +117,103 @@ class PhoneTransferApiTest(unittest.TestCase):
     def test_health_and_immutable_distinct_credentials(self):
         self.assertEqual(self.client.get(PREFIX + "/health").json(), {"ok": True, "version": 1})
         self.assertEqual(self.register().status_code, 200)
-        self.assertEqual(self.register(token=UPLOAD_TOKEN).status_code, 401)
+        self.assertEqual(self.register(token=UPLOAD_TOKEN).status_code, 403)
         self.assertEqual(self.register(upload_hash="f" * 64).status_code, 409)
         receiver_hash = hashlib.sha256(RECEIVER_TOKEN.encode()).hexdigest()
         self.assertEqual(self.register(upload_hash=receiver_hash).status_code, 400)
         # A fresh registry must reject a known room claimed with a send token.
         fresh = TestClient(Starlette(routes=PhoneTransferRegistry().routes))
         self.addCleanup(fresh.close)
-        self.assertEqual(fresh.post(self.base, headers=auth(UPLOAD_TOKEN),
-                                    json={"upload_token_hash": "f" * 64}).status_code, 401)
+        self.assertEqual(fresh.post(self.base,
+                                    json={**auth(UPLOAD_TOKEN), "upload_token_hash": "f" * 64}).status_code, 403)
 
     def test_send_token_cannot_claim_list_download_or_ack(self):
-        self.assertEqual(self.upload(token=RECEIVER_TOKEN).status_code, 401)
+        self.assertEqual(self.upload(token=RECEIVER_TOKEN).status_code, 403)
         self.assertEqual(self.upload().status_code, 202)
         item = self.pending()[0]
         for suffix in ("/pending", "/files/" + item["id"]):
-            self.assertEqual(self.client.get(self.base + suffix, headers=auth(UPLOAD_TOKEN)).status_code, 401)
+            self.assertEqual(self.client.post(self.base + suffix, json=auth(UPLOAD_TOKEN)).status_code, 403)
         self.assertEqual(self.client.post(self.base + "/files/" + item["id"] + "/ack",
-                                         headers=auth(UPLOAD_TOKEN), json={}).status_code, 401)
+                                         json=auth(UPLOAD_TOKEN)).status_code, 403)
         self.assertEqual(len(self.pending()), 1)
+
+    def test_body_authorization_is_required_and_headers_are_not_a_fallback(self):
+        self.assertEqual(self.client.post(self.base + "/pending", json={},
+                                         headers={"Authorization": "Bearer " + RECEIVER_TOKEN}).status_code, 403)
+        self.assertEqual(self.client.get(self.base + "/pending").status_code, 405)
+        self.assertEqual(self.client.post(PREFIX + "/upload/" + ROOM + "/authorize", json={},
+                                         headers={"Authorization": "Bearer " + UPLOAD_TOKEN}).status_code, 403)
+        self.assertEqual(self.client.post(self.base + "/pending", json={"authorization": 123}).status_code, 403)
+
+    def test_ticket_urls_use_fixed_configured_origin_and_never_long_term_tokens(self):
+        self.registry.public_base = DEFAULT_PUBLIC_BASE
+        response = self.client.post(PREFIX + "/upload/" + ROOM + "/authorize", json=auth(UPLOAD_TOKEN),
+                                    headers={"Host": "attacker.invalid", "X-Forwarded-Host": "attacker.invalid"})
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.headers["content-type"].startswith("text/plain"))
+        self.assertEqual(response.headers["cache-control"], "no-store")
+        self.assertTrue(response.text.startswith(DEFAULT_PUBLIC_BASE + "/upload/" + ROOM + "/"))
+        ticket = response.text.rsplit("/", 1)[-1]
+        self.assertRegex(ticket, r"^[0-9a-f]{64}$")
+        self.assertNotIn(UPLOAD_TOKEN, response.text)
+        self.assertNotIn(RECEIVER_TOKEN, response.text)
+        self.assertEqual(urlsplit(response.text).query, "")
+        self.assertEqual(self.registry._reserved, 0)
+
+    def test_replacement_expiration_and_reuse_reject_before_multipart_body(self):
+        first = self.ticket()
+        replacement = self.ticket()
+        self.assertNotEqual(first, replacement)
+
+        async def no_read():
+            raise AssertionError("Rejected tickets must not read multipart bodies")
+
+        self.assertEqual(asyncio.run(self.raw_upload(no_read, ticket=first))[0], 403)
+        response = self.client.post(PREFIX + "/upload/" + ROOM + "/" + replacement,
+                                    files={"file": ("a.HEIC", b"untouched")})
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(asyncio.run(self.raw_upload(no_read, ticket=replacement))[0], 403)
+        expiring = self.ticket()
+        self.clock.now += 90
+        self.registry.expire()
+        self.assertIsNone(self.registry._receivers[ROOM].ticket)
+        self.assertEqual(asyncio.run(self.raw_upload(no_read, ticket=expiring))[0], 403)
+        self.register()
+        self.assertEqual(len(self.pending()), 1)
+
+    def test_ticket_is_room_bound_and_bad_cross_room_attempt_does_not_consume_it(self):
+        token = "a" * 64
+        other_room = hashlib.sha256(token.encode()).hexdigest()
+        self.assertEqual(self.register(token=token, room=other_room).status_code, 200)
+        ticket = self.ticket()
+
+        async def no_read():
+            raise AssertionError("Cross-room tickets must not read multipart bodies")
+
+        self.assertEqual(asyncio.run(self.raw_upload(no_read, room=other_room, ticket=ticket))[0], 403)
+        response = self.client.post(PREFIX + "/upload/" + ROOM + "/" + ticket,
+                                    files={"file": ("a.HEIC", b"original")})
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(len(self.pending()), 1)
+
+    def test_debug_probes_and_exception_details_are_not_exposed(self):
+        response = self.client.get(PREFIX + "/health?probe=headers", headers={"Authorization": "anything"})
+        self.assertEqual(response.json(), {"ok": True, "version": 1})
+        response = asyncio.run(server_error(None, ValueError(UPLOAD_TOKEN)))
+        self.assertEqual(json.loads(response.body), {"ok": False, "error": "internal_error"})
 
     def test_unauthorized_offline_and_capacity_stop_before_body_reads(self):
         async def no_read():
             raise AssertionError("Unauthorized/offline/full uploads must not consume body")
 
-        self.assertEqual(asyncio.run(self.raw_upload(no_read, token="f" * 64))[0], 401)
+        self.assertEqual(asyncio.run(self.raw_upload(no_read, ticket="f" * 64))[0], 403)
+        ticket = self.ticket()
         self.clock.now = 31
-        self.assertEqual(asyncio.run(self.raw_upload(no_read))[0], 409)
+        self.assertEqual(asyncio.run(self.raw_upload(no_read, ticket=ticket))[0], 409)
         self.register()
+        ticket = self.ticket()
         self.registry.max_global_bytes = 100
-        self.assertEqual(asyncio.run(self.raw_upload(no_read))[0], 503)
+        self.assertEqual(asyncio.run(self.raw_upload(no_read, ticket=ticket))[0], 503)
         self.assertEqual(self.registry._reserved, 0)
 
     def test_original_bytes_names_order_hash_and_explicit_name_are_preserved(self):
@@ -148,7 +229,7 @@ class PhoneTransferApiTest(unittest.TestCase):
         for item, data in zip(files, payloads):
             self.assertEqual(item["size"], len(data))
             self.assertEqual(item["sha256"], hashlib.sha256(data).hexdigest())
-            response = self.client.get(self.base + "/files/" + item["id"], headers=auth(RECEIVER_TOKEN))
+            response = self.client.post(self.base + "/files/" + item["id"], json=auth(RECEIVER_TOKEN))
             self.assertEqual(response.content, data)
             self.assertEqual(response.headers["cache-control"], "no-store")
         self.upload(b"named", "blob", data={"name": "真实原名.PNG"})
@@ -164,6 +245,8 @@ class PhoneTransferApiTest(unittest.TestCase):
         self.assertFalse(staged.stream.closed)
         self.assertEqual(len(self.pending()), 1)
         self.assertEqual(self.ack(item).status_code, 200)
+        self.assertNotIn("authorization", self.registry._receivers[ROOM].receipts[item["id"]])
+        self.assertNotIn(RECEIVER_TOKEN, json.dumps(self.registry._receivers[ROOM].receipts))
         self.assertTrue(staged.stream.closed)
         self.assertEqual(self.pending(), [])
         self.assertEqual(self.registry._reserved, 0)
@@ -281,12 +364,13 @@ class PhoneTransferApiTest(unittest.TestCase):
             {"files": {"file": ("a", b"a")}, "data": {"name": "x" * 5000}},
         ]
         for index, args in enumerate(cases):
-            response = self.client.post(PREFIX + "/upload/" + ROOM, headers=auth(UPLOAD_TOKEN), **args)
+            response = self.client.post(self.authorize().text, **args)
             self.assertEqual(response.status_code, 413 if index == 3 else 400)
             self.assertEqual(self.registry._reserved, 0)
         self.assertEqual(self.pending(), [])
 
     def test_one_active_upload_per_room_and_reservation_before_parse(self):
+        ticket = self.ticket()
         async def exercise():
             began = asyncio.Event()
             release = asyncio.Event()
@@ -299,17 +383,18 @@ class PhoneTransferApiTest(unittest.TestCase):
             async def no_read():
                 raise AssertionError("Second request body must not be consumed")
 
-            pending = asyncio.create_task(self.raw_upload(slow_receive))
+            pending = asyncio.create_task(self.raw_upload(slow_receive, ticket=ticket))
             await began.wait()
             self.assertEqual(self.registry._reserved, self.registry.max_file_bytes)
-            second = await self.raw_upload(no_read)
+            self.assertEqual(self.authorize().status_code, 429)
+            second = await self.raw_upload(no_read, ticket=ticket)
             release.set()
             first = await pending
             return first, second
 
         first, second = asyncio.run(exercise())
         self.assertEqual(first[0], 400)
-        self.assertEqual(second[0], 429)
+        self.assertEqual(second[0], 403)
         self.assertEqual(self.registry._reserved, 0)
 
     def test_room_global_and_metadata_capacity_are_bounded(self):

@@ -14,7 +14,7 @@ from utils.phone_transfer_api import PhoneTransferRegistry  # noqa: E402
 from utils.phone_transfer_relay import RelayBroker  # noqa: E402
 
 broker = RelayBroker()
-native = PhoneTransferRegistry(ack_timeout=0)
+native = PhoneTransferRegistry(ack_timeout=0, public_base="http://fixture.invalid/phone-transfer-api/v1")
 application = Starlette(routes=native.routes)
 
 
