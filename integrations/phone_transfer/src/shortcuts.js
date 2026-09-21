@@ -12,7 +12,7 @@ export function shortcutApiBase(url = location.href) {
 }
 export function shortcutConfig(binding) {
   if (!binding.nativeRoom) throw new Error('请在 L 点“绑定手机”，重新扫码以启用相册分享。');
-  return { url: `${shortcutApiBase()}/upload/${binding.nativeRoom}`, authorization: `Bearer ${shortcutUploadToken(binding)}` };
+  return { url: `${shortcutApiBase()}/upload/${binding.nativeRoom}/authorize`, authorization: `Bearer ${shortcutUploadToken(binding)}` };
 }
 
 export class ShortcutReceiver {
@@ -21,7 +21,10 @@ export class ShortcutReceiver {
     this.base = `${shortcutApiBase()}/receivers/${state.binding.nativeRoom}`;
   }
   async request(path, options = {}) {
-    const response = await fetch(this.base + path, { cache: 'no-store', signal: this.controller.signal, ...options, headers: { Authorization: `Bearer ${this.state.shortcutReceiverToken}`, ...options.headers } });
+    // Community Cloud strips custom headers and Authorization. Keep credentials
+    // in the HTTPS request body, never in persistent URLs or query strings.
+    const body = { ...JSON.parse(options.body || '{}'), authorization: `Bearer ${this.state.shortcutReceiverToken}` };
+    const response = await fetch(this.base + path, { cache: 'no-store', signal: this.controller.signal, ...options, method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     if (!response.ok || !(response.headers.get('content-type') || '').includes('application/json')) {
       throw new Error(response.status === 404 ? '相册分享服务正在更新，请稍后重新打开接收页' : '相册分享服务暂不可用，请保持接收页打开');
     }
@@ -52,7 +55,7 @@ export class ShortcutReceiver {
         try {
           const previous = await this.callbacks.receipt(file.id);
           const result = previous || await this.callbacks.receive(file, async () => {
-            const response = await fetch(`${this.base}/files/${file.id}`, { headers: { Authorization: `Bearer ${this.state.shortcutReceiverToken}` }, cache: 'no-store', signal: this.controller.signal });
+            const response = await fetch(`${this.base}/files/${file.id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ authorization: `Bearer ${this.state.shortcutReceiverToken}` }), cache: 'no-store', signal: this.controller.signal });
             if (!response.ok || !response.body) throw new Error('照片下载中断，尚未确认保存');
             return response.body;
           });
