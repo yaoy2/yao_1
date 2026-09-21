@@ -216,6 +216,7 @@ function reconnect() {
 function connect() {
   if (!state || stopped || relay || state.role === 'receiver' && !hasLock) return;
   if (window.parent === window) { message('请通过工具箱的“随手传”页面打开。', true); return; }
+  status('连接中');
   relay = new StreamlitRelay(state, {
     onPeer: (id, channel, localId) => { if (!peers.has(id)) peers.set(id, new Peer(id, channel, localId)); },
     onStatus: online => { connected = online; updatePeerStatus(); },
@@ -280,7 +281,7 @@ async function chooseFolder() {
   // Keep the previous binding and directory if the user cancels or storage fails.
   const next = state?.role === 'receiver' ? state : await newReceiver();
   await setting('directory', picked); await setting('state', next);
-  directory = picked; state = next; await activate(); await pair();
+  directory = picked; state = next; message('已记住所选文件夹，正在准备接收。'); await activate(); await pair();
 }
 async function join(raw) {
   if (state?.role === 'receiver') throw new Error('此浏览器已是办公电脑 L，无需扫描自己的二维码');
@@ -288,7 +289,8 @@ async function join(raw) {
   const binding = parseToken(raw);
   const imported = await crypto.subtle.importKey('raw', Uint8Array.from(atob(binding.publicKey.replaceAll('-', '+').replaceAll('_', '/')), c => c.charCodeAt(0)), { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']);
   if (!imported) throw new Error('电脑绑定信息无效');
-  disconnect(); state = { role: 'sender', binding }; await setting('state', state); show('join', false); await activate();
+  disconnect(); state = { role: 'sender', binding }; await setting('state', state); show('join', false);
+  message('绑定完成，正在连接办公电脑 L。'); await activate();
 }
 async function sendFiles() {
   const peer = readyPeer();
@@ -332,6 +334,7 @@ $('folder').onclick = guard(chooseFolder);
 $('resume').onclick = guard(async () => {
   if (!directory) return chooseFolder();
   if (await directory.requestPermission({ mode: 'readwrite' }) !== 'granted') throw new Error('未获得文件夹写入权限');
+  message('文件夹已授权，正在准备接收。');
   await activate();
 });
 $('pair').onclick = guard(pair);
@@ -353,6 +356,7 @@ $('reset').onclick = guard(async () => {
   if (sending || activeReceiver) throw new Error('请先完成当前传输');
   if (!confirm(state.role === 'receiver' ? '解除 L 的绑定后，手机必须重新扫码。已保存文件保留。继续？' : '解除此浏览器与 L 的绑定？')) return;
   disconnect(); releaseLock?.(); await setting('state', null); await setting('directory', null); state = null; directory = null;
+  message('已解除此浏览器绑定，可重新设置。');
   show('pairing', false); show('progress-box', false); $('history').replaceChildren(); show('history-box', false); await activate();
 });
 $('standalone').href = pageUrl();
@@ -377,5 +381,7 @@ guard(async () => {
   if (!window.isSecureContext || !crypto.subtle) throw new Error('请通过 HTTPS 打开工具箱');
   db = await storage(); state = await setting('state'); directory = await setting('directory');
   const fragment = readBindingFragment();
-  if (fragment) await join(fragment); else await activate();
+  if (fragment) {
+    try { await join(fragment); } catch (error) { await activate(); throw error; }
+  } else await activate();
 })();
