@@ -11,7 +11,7 @@
 </head>
 <body>
 <main>
-  <div class="topline"><strong>办公电脑 L <span class="badge">原文件传输</span></strong><span id="connection" role="status">正在准备</span></div>
+  <div class="topline"><strong>办公电脑 L <span class="badge">照片与文件</span></strong><span id="connection" role="status">正在准备</span></div>
   <p id="message" class="message" aria-live="polite">首次绑定后，记住发送目标与保存位置。</p>
   <section id="welcome" hidden>
     <div class="actions"><button id="setup">设为办公电脑 L</button><button id="enter-code" class="secondary">手机输入绑定信息</button></div>
@@ -20,13 +20,37 @@
   <section id="receiver" hidden>
     <div class="actions"><button id="resume" hidden>恢复文件夹授权</button><button id="pair" class="secondary">绑定手机</button><button id="folder" class="secondary">更换保存文件夹</button><a id="standalone" class="button secondary" target="_blank" rel="noopener">独立接收窗口 ↗</a></div>
     <p id="destination" class="hint"></p>
+    <p id="shortcut-status" class="hint" role="status">正在准备相册分享接收</p>
     <p class="hint">保持此页打开。另开标签页使用其他模块，接收可继续。</p>
   </section>
   <section id="sender" hidden>
-    <div class="actions"><button id="pick" disabled>选择原文件</button><button id="send" hidden>发送到办公电脑 L</button></div>
+    <div class="actions"><button id="shortcut-setup">设置相册分享目标</button></div>
+    <p class="hint">首次设置后：照片 App → 选择照片 → 分享 →「发送到办公电脑 L」。日常发送无需先打开这个网页。</p>
+    <div class="actions"><button id="pick-photos" disabled>从相册选照片</button><button id="pick" class="secondary" disabled>选择其他文件</button><button id="send" hidden>发送到办公电脑 L</button></div>
+    <!-- Explicit common formats avoid older Safari wildcard transcoding bugs.
+         The iOS picker can still choose a compatible representation.
+         Do not add capture: it can force the camera instead of the library. -->
+    <input id="photos" type="file" accept="image/jpeg,image/png,image/heic,image/heif,image/heic-sequence,image/heif-sequence,image/gif,image/webp,image/avif,image/tiff,image/bmp,image/x-adobe-dng,image/dng,image/*" multiple hidden>
     <input id="files" type="file" multiple hidden>
-    <p class="hint">每个文件最多 200 MiB。iPhone 请从“文件”选取原件；相册原件可先“导出未修改的原片”。发送完成前保持页面打开。</p>
+    <p class="hint">直接从相册多选，无需先导出。若系统弹出菜单，选“照片图库”；选图时若有格式或大小选项，选“当前”和“实际大小／原始大小”。每个文件最多 200 MiB，发送完成前保持页面打开。</p>
+    <details class="hint"><summary>照片画质与格式说明</summary><p>本站不缩放、不压缩、不转换收到的照片。iPhone 可能在交给网页前转换格式，网页无法强制关闭这一系统行为；照片以系统实际提供的格式发送。实况照片可能只提供静态图。</p></details>
     <ul id="selection" class="files"></ul>
+  </section>
+  <section id="shortcut-instructions" class="panel" hidden>
+    <strong>首次配置「发送到办公电脑 L」</strong>
+    <p class="hint">在 iPhone「快捷指令」中新建同名指令，开启详情中的“在共享表单中显示”，接收“图像”和“文件”（需要视频时也选“媒体”）。按下面顺序添加操作；只设置一次。</p>
+    <ol class="hint">
+      <li>添加“重复每一项”，输入选“快捷指令输入”。</li>
+      <li>在重复内添加“获取 URL 内容”：使用下面的接收地址，方法选 POST；在“标头”添加 Authorization，值粘贴下面的授权值；请求体选“表单”，添加类型为“文件”的字段，键名填 file，值选“重复项目”。</li>
+      <li>在“结束重复”后添加“显示结果”，内容选“重复结果”。保存即可。</li>
+    </ol>
+    <label for="shortcut-url">接收地址</label><input id="shortcut-url" type="text" readonly>
+    <button id="shortcut-copy-url" class="secondary">复制接收地址</button>
+    <label for="shortcut-authorization">Authorization 授权值</label><input id="shortcut-authorization" type="password" readonly autocomplete="off">
+    <button id="shortcut-copy-token" class="secondary">复制授权值</button>
+    <p class="hint">从照片 App 分享时，在“选项”中选“当前”以避免格式转换；指令里不添加“转换图像”或“调整大小”。大批照片运行时若提示限制，可在快捷指令的高级设置中允许共享大量数据。手机显示“已保存到 L”才代表电脑已保存；“等待保存”需到接收页确认。</p>
+    <p class="hint">此发送方式通过 HTTPS 把文件临时交给工具箱，再自动保存到 L。确认保存后清理临时副本，未完成的副本约 10 分钟后过期清理；不会写入 GitHub。授权值仅交给自己的手机。</p>
+    <button id="shortcut-close" class="quiet">收起设置</button>
   </section>
   <section id="pairing" class="panel" hidden>
     <div class="pair-layout"><canvas id="qr" aria-label="手机绑定二维码"></canvas><div><strong>用手机相机扫码绑定</strong><p class="hint">绑定信息仅交给自己的手机。之后在手机收藏本页。</p><button id="copy" class="secondary">复制绑定链接</button><button id="close-pair" class="quiet">收起</button></div></div>
@@ -37,7 +61,7 @@
   </section>
   <section id="progress-box" hidden><div class="progress-label"><span id="progress-text"></span><span id="percentage"></span></div><progress id="progress" max="1" value="0"></progress></section>
   <section id="history-box" hidden><h2>本次已保存</h2><ul id="history" class="files"></ul></section>
-  <footer><span>不压缩 · 按日期保存 · 不覆盖同名文件</span><button id="reset" class="quiet" hidden>解除此浏览器绑定</button></footer>
+  <footer><span>本站不压缩 · 按日期保存 · 不覆盖同名文件</span><button id="reset" class="quiet" hidden>解除此浏览器绑定</button></footer>
 </main>
 </body>
 </html>

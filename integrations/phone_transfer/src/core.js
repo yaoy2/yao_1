@@ -16,12 +16,14 @@ export function parseToken(value) {
   let data;
   try { data = JSON.parse(new TextDecoder().decode(unb64(raw.trim()))); } catch { throw new Error('绑定信息不完整，请重新扫码或粘贴完整链接'); }
   if (data.v !== 1 || !/^[a-f0-9]{64}$/.test(data.room) || unb64(data.auth).length !== 32 || unb64(data.publicKey).length !== 65) throw new Error('绑定信息无效');
-  return { v: 1, room: data.room, auth: data.auth, publicKey: data.publicKey };
+  if (data.nativeRoom !== undefined && !/^[a-f0-9]{64}$/.test(data.nativeRoom)) throw new Error('绑定信息无效');
+  return { v: 1, room: data.room, auth: data.auth, publicKey: data.publicKey, ...(data.nativeRoom ? { nativeRoom: data.nativeRoom } : {}) };
 }
 export const tokenFor = binding => b64(encoder.encode(JSON.stringify(binding)));
 export async function newReceiver() {
   const keys = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign', 'verify']);
-  return { role: 'receiver', privateKey: keys.privateKey, binding: { v: 1, room: randomHex(32), auth: b64(crypto.getRandomValues(new Uint8Array(32))), publicKey: b64(await crypto.subtle.exportKey('raw', keys.publicKey)) } };
+  const shortcutReceiverToken = randomHex(32);
+  return { role: 'receiver', shortcutReceiverToken, privateKey: keys.privateKey, binding: { v: 1, room: randomHex(32), nativeRoom: hex(sha256(encoder.encode(shortcutReceiverToken))), auth: b64(crypto.getRandomValues(new Uint8Array(32))), publicKey: b64(await crypto.subtle.exportKey('raw', keys.publicKey)) } };
 }
 export function proofText(room, receiverNonce, senderNonce, connectionIds) {
   return encoder.encode(JSON.stringify([room, receiverNonce, senderNonce, [...connectionIds].sort()]));

@@ -18,6 +18,11 @@ function exchange(request) { return new Promise(resolve => { const id = ++callId
 const server = http.createServer(async (req, res) => {
   try {
     const pathname = new URL(req.url, 'http://localhost').pathname;
+    if (pathname.startsWith('/phone-transfer-api/v1/')) {
+      const chunks = []; for await (const chunk of req) chunks.push(chunk);
+      const response = await exchange({ kind: 'native', method: req.method, path: req.url, headers: req.headers, bodyBase64: Buffer.concat(chunks).toString('base64') });
+      res.writeHead(response.status, response.headers); res.end(Buffer.from(response.bodyBase64, 'base64')); return;
+    }
     if (pathname === '/exchange') {
       const chunks = []; for await (const chunk of req) chunks.push(chunk);
       const request = JSON.parse(Buffer.concat(chunks).toString());
@@ -94,10 +99,62 @@ try {
     return files;
   });
   assert.equal(saved.length, 1); assert.equal(saved[0].size, mb * 1024 * 1024); assert.equal(saved[0].hash, expectedHash);
-  await sender.locator('#files').setInputFiles([{ name: '同名照片.HEIC', mimeType: 'image/heic', buffer: Buffer.from([0, 1, 2, 255]) }, { name: '同名照片.HEIC', mimeType: 'image/heic', buffer: Buffer.from([9, 8, 7, 0]) }]);
+  const photoChooser = senderPage.waitForEvent('filechooser');
+  await sender.locator('#pick-photos').click();
+  await (await photoChooser).setFiles([{ name: '同名照片.HEIC', mimeType: 'image/heic', buffer: Buffer.from([0, 1, 2, 255]) }, { name: '同名照片.HEIC', mimeType: 'image/heic', buffer: Buffer.from([9, 8, 7, 0]) }]);
   await sender.locator('#send').click();
   await sender.waitForFunction(() => document.getElementById('progress-text').textContent.includes('已送达办公电脑 L · 2 个文件'), null, { timeout: 60000 });
   assert.equal(await frame.locator('#history li').count(), 3);
+  // Exercise the actual ShortcutReceiver against the production ASGI routes.
+  // Only the iPhone HTTP upload is simulated; L downloads, verifies, saves and
+  // acknowledges through its real frontend and OPFS directory handle.
+  await frame.waitForFunction(() => document.getElementById('shortcut-status').textContent === '相册分享已就绪', null, { timeout: 30000 });
+  await sender.locator('#shortcut-setup').click();
+  const nativeUploadUrl = await sender.locator('#shortcut-url').inputValue();
+  const nativeUploadAuthorization = await sender.locator('#shortcut-authorization').inputValue();
+  const nativeState = await frame.evaluate(async () => {
+    const db = await new Promise(resolve => { const req = indexedDB.open('yao-suishouchuan-v1', 1); req.onsuccess = () => resolve(req.result); });
+    return new Promise(resolve => { const req = db.transaction('settings').objectStore('settings').get('state'); req.onsuccess = () => resolve({ room: req.result.binding.nativeRoom, receiverToken: req.result.shortcutReceiverToken }); });
+  });
+  assert.ok(new URL(nativeUploadUrl).pathname === `/phone-transfer-api/v1/upload/${nativeState.room}`, 'Shortcut URL must address the bound native receiver room');
+  assert.ok(nativeUploadAuthorization !== `Bearer ${nativeState.receiverToken}`, 'Shortcut must never receive the L-only read token');
+  const expectedUploadToken = createHash('sha256').update(`suishou-shortcut-upload-v1:${binding.room}:${binding.auth}`).digest('hex');
+  assert.ok(nativeUploadAuthorization === `Bearer ${expectedUploadToken}`, 'Shortcut authorization must match the derived send-only token');
+  assert.ok(await sender.evaluate(() => innerWidth <= 390 && document.documentElement.scrollWidth <= innerWidth), 'Shortcut setup should fit the phone width even with its long address and authorization fields');
+  const nativePayloads = [Buffer.alloc(700 * 1024 + 17), Buffer.from([0, 0, 0, 24, 102, 116, 121, 112, 104, 101, 105, 99, 9, 8, 7, 0, 255])];
+  for (let i = 0; i < nativePayloads[0].length; i++) nativePayloads[0][i] = i % 239;
+  nativePayloads[0].set(Buffer.from([0, 0, 0, 24, 102, 116, 121, 112, 104, 101, 105, 99]), 0);
+  const nativeDigests = nativePayloads.map(data => createHash('sha256').update(data).digest('hex'));
+  const nativeFilename = '快捷指令同名照片.HEIC';
+  for (let i = 0; i < nativePayloads.length; i++) {
+    const form = new FormData(); form.append('file', new Blob([nativePayloads[i]], { type: 'image/heic' }), nativeFilename);
+    const response = await fetch(nativeUploadUrl, { method: 'POST', headers: { Authorization: nativeUploadAuthorization }, body: form });
+    assert.equal(response.status, 202); assert.match(await response.text(), /等待办公电脑 L 保存/);
+    await frame.waitForFunction(count => document.querySelectorAll('#history li').length === count, 4 + i, { timeout: 30000 });
+    const deadline = Date.now() + 15000; let pending;
+    do {
+      const response = await fetch(`${url}/phone-transfer-api/v1/receivers/${nativeState.room}/pending`, { headers: { Authorization: `Bearer ${nativeState.receiverToken}` } });
+      assert.equal(response.status, 200); pending = (await response.json()).files;
+      if (pending.length) await new Promise(resolve => setTimeout(resolve, 100));
+    } while (pending.length && Date.now() < deadline);
+    assert.deepEqual(pending, [], 'L must acknowledge and remove each staged native upload');
+  }
+  const afterNative = await frame.evaluate(async () => {
+    const root = await (await navigator.storage.getDirectory()).getDirectoryHandle('L-test'); const files = [];
+    for await (const day of root.values()) for await (const batch of day.values()) for await (const entry of batch.values()) {
+      const file = await entry.getFile(), content = await file.arrayBuffer();
+      const digest = await crypto.subtle.digest('SHA-256', content);
+      files.push({ path: `${day.name}/${batch.name}/${file.name}`, name: file.name, size: file.size, hash: Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join('') });
+    }
+    return files;
+  });
+  assert.equal(afterNative.length, 5);
+  assert.ok(afterNative.some(file => file.size === mb * 1024 * 1024 && file.hash === expectedHash), 'Earlier browser transfer must remain unchanged');
+  const nativeSaved = afterNative.filter(file => file.name.endsWith(nativeFilename));
+  assert.equal(nativeSaved.length, 2); assert.notEqual(nativeSaved[0].path, nativeSaved[1].path);
+  for (let i = 0; i < nativePayloads.length; i++) assert.ok(nativeSaved.some(file => file.size === nativePayloads[i].length && file.hash === nativeDigests[i]), 'Native upload bytes must remain identical in OPFS');
+  await sender.locator('#shortcut-close').click();
+  console.log('Native Shortcut API: real L frontend saved both same-name originals, SHA-256 matched, queues acknowledged and cleared.');
   assert.ok(await sender.evaluate(() => innerWidth <= 390 && document.documentElement.scrollWidth <= innerWidth), 'Mobile receiver page should fit the phone width');
   await receiver.screenshot({ path: path.join(output, 'receiver.png'), fullPage: true });
   await senderPage.screenshot({ path: path.join(output, 'sender.png'), fullPage: true });
@@ -112,7 +169,7 @@ try {
   const second = await receiverContext.newPage(); await second.goto(`${url}/frame`);
   await second.frames().find(f => f.url().endsWith('/index.html')).waitForFunction(() => document.getElementById('message').textContent.includes('另一个标签页正在接收'));
   assert.deepEqual(errors, []);
-  console.log(JSON.stringify({ result: 'PASS', testFileMiB: mb, sha256Matches: true, duplicateFilesSavedSeparately: true, persistedPairing: true, singleReceiverLock: true, encryptedStreamlitRelay: true, simulatedRoundTripMs: Number(process.env.TRANSFER_LATENCY_MS || 100), screenshots: ['test-output-可删/receiver.png', 'test-output-可删/sender.png'] }));
+  console.log(JSON.stringify({ result: 'PASS', testFileMiB: mb, sha256Matches: true, duplicateFilesSavedSeparately: true, persistedPairing: true, singleReceiverLock: true, encryptedStreamlitRelay: true, nativeShortcutApi: true, nativeExactBytes: true, nativeDuplicateNamesSeparate: true, nativePendingCleared: true, simulatedRoundTripMs: Number(process.env.TRANSFER_LATENCY_MS || 100), screenshots: ['test-output-可删/receiver.png', 'test-output-可删/sender.png'] }));
 } catch (error) {
   const pages = browser.contexts().flatMap(c => c.pages());
   for (let i = 0; i < pages.length; i++) {

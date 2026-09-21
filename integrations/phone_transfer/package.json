@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "esbuild src/app.js --bundle --format=esm --target=es2022 --minify --legal-comments=linked --outfile=frontend/app.js",
-    "test": "node --test tests/core.test.mjs tests/relay.test.mjs"
+    "test": "node --test tests/core.test.mjs tests/relay.test.mjs tests/shortcuts.test.mjs"
   },
   "dependencies": {
     "@noble/hashes": "2.4.0",

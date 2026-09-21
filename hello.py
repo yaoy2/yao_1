@@ -7,14 +7,6 @@ import streamlit as st
 
 from utils.home_theme import apply_home_theme
 
-st.set_page_config(
-    page_title="YaoYao's Space",
-    page_icon="⚡",
-    layout="wide",
-)
-
-apply_home_theme()
-
 TOOLS = [
     {
         "title": "随手传",
@@ -459,40 +451,59 @@ def resolve_home_section(raw_value):
     return section
 
 
-current_section = resolve_home_section(st.query_params.get("section", "行政"))
-display_title = SECTION_DISPLAY.get(current_section, current_section)
+def render_home():
+    st.set_page_config(
+        page_title="YaoYao's Space",
+        page_icon="⚡",
+        layout="wide",
+    )
 
-st.markdown(
-    f"""
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Inter:wght@300;400;600&display=swap" rel="stylesheet" />
-<div class="apple-home">
-  {build_nav_html(current_section, TOOLS)}
-  <div class="sub-nav">
-    <div class="sub-nav-inner store-lock">
-      <div class="sub-title">{escape(display_title)}</div>
-      <div class="sub-actions">
-        <a href="#modules" target="_self">浏览模块</a>
-        <a class="pill pill-primary pill-sm" href="#modules" target="_self">进入工作台</a>
+    apply_home_theme()
+
+    current_section = resolve_home_section(st.query_params.get("section", "行政"))
+    display_title = SECTION_DISPLAY.get(current_section, current_section)
+
+    st.markdown(
+        f"""
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Inter:wght@300;400;600&display=swap" rel="stylesheet" />
+    <div class="apple-home">
+      {build_nav_html(current_section, TOOLS)}
+      <div class="sub-nav">
+        <div class="sub-nav-inner store-lock">
+          <div class="sub-title">{escape(display_title)}</div>
+          <div class="sub-actions">
+            <a href="#modules" target="_self">浏览模块</a>
+            <a class="pill pill-primary pill-sm" href="#modules" target="_self">进入工作台</a>
+          </div>
+        </div>
       </div>
+      <main>
+        <section class="product-tile product-tile-light">
+          <div class="text-lock">
+            <div class="eyebrow">Yao · Campus · AI Operations</div>
+            <h1>学院行政智能中枢</h1>
+            <p class="lead lead-playful">Don't worry. Be happy.</p>
+          </div>
+        </section>
+        {build_store_html(current_section, TOOLS)}
+        <section class="quote quote-strip">
+          <h2>前方没有胜利，挺住意味一切</h2>
+          <span class="fine">YaoYao Command Center</span>
+        </section>
+      </main>
     </div>
-  </div>
-  <main>
-    <section class="product-tile product-tile-light">
-      <div class="text-lock">
-        <div class="eyebrow">Yao · Campus · AI Operations</div>
-        <h1>学院行政智能中枢</h1>
-        <p class="lead lead-playful">Don't worry. Be happy.</p>
-      </div>
-    </section>
-    {build_store_html(current_section, TOOLS)}
-    <section class="quote quote-strip">
-      <h2>前方没有胜利，挺住意味一切</h2>
-      <span class="fine">YaoYao Command Center</span>
-    </section>
-  </main>
-</div>
-    """,
-    unsafe_allow_html=True,
-)
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+# CLI imports this module to host the official ASGI app. The Streamlit script
+# runner executes it as __main__, rendering the same homepage and pages.
+if __name__ == "__main__":
+    render_home()
+else:
+    from utils.phone_transfer_api import lifespan, routes
+
+    app = st.App(__file__, routes=routes, lifespan=lifespan)
