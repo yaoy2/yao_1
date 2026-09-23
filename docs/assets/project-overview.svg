@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="340" viewBox="0 0 1200 340" role="img" aria-labelledby="title desc">
+  <title id="title">YaoYao: tools for academic work</title>
+  <desc id="desc">Project overview. Prepare notices, review assessments, and preserve knowledge with inspectable outputs.</desc>
+  <rect width="1200" height="340" rx="18" fill="#f2f5f1"/>
+  <path d="M0 290H1200" stroke="#dbe3da"/>
+  <rect x="44" y="40" width="8" height="26" rx="4" fill="#1d624d"/>
+  <text x="67" y="60" font-family="Segoe UI,Arial,sans-serif" font-size="16" font-weight="700" letter-spacing="3" fill="#1d624d">YAOYAO / ACADEMIC WORK</text>
+  <text x="44" y="139" font-family="Segoe UI,Arial,sans-serif" font-size="52" font-weight="700" letter-spacing="-1.6" fill="#172e25">Tools for the work</text>
+  <text x="44" y="201" font-family="Segoe UI,Arial,sans-serif" font-size="52" font-weight="700" letter-spacing="-1.6" fill="#172e25">around teaching.</text>
+  <text x="46" y="250" font-family="Segoe UI,Arial,sans-serif" font-size="18" fill="#526259">Practical workflows. Inspectable results.</text>
+  <text x="46" y="320" font-family="Segoe UI,Arial,sans-serif" font-size="14" letter-spacing="1" fill="#526259">PYTHON + STREAMLIT</text>
+  <g font-family="Segoe UI,Arial,sans-serif">
+    <rect x="749" y="40" width="407" height="66" rx="10" fill="#fff" stroke="#dbe3da"/>
+    <circle cx="780" cy="73" r="14" fill="#e2eee5"/>
+    <text x="775" y="78" font-size="14" font-weight="700" fill="#1d624d">1</text>
+    <text x="808" y="69" font-size="17" font-weight="600" fill="#172e25">Prepare</text>
+    <text x="808" y="90" font-size="14" fill="#526259">Turn notice text into structured output</text>
+    <path d="M780 107v16" stroke="#a9bdae" stroke-width="2"/>
+    <rect x="749" y="124" width="407" height="66" rx="10" fill="#fff" stroke="#dbe3da"/>
+    <circle cx="780" cy="157" r="14" fill="#f7e8d4"/>
+    <text x="775" y="162" font-size="14" font-weight="700" fill="#80511b">2</text>
+    <text x="808" y="153" font-size="17" font-weight="600" fill="#172e25">Review</text>
+    <text x="808" y="174" font-size="14" fill="#526259">Keep source scores and changes visible</text>
+    <path d="M780 191v16" stroke="#a9bdae" stroke-width="2"/>
+    <rect x="749" y="208" width="407" height="66" rx="10" fill="#fff" stroke="#dbe3da"/>
+    <circle cx="780" cy="241" r="14" fill="#e2e9ef"/>
+    <text x="775" y="246" font-size="14" font-weight="700" fill="#38546b">3</text>
+    <text x="808" y="237" font-size="17" font-weight="600" fill="#172e25">Reuse</text>
+    <text x="808" y="258" font-size="14" fill="#526259">Export records and preserve knowledge</text>
+  </g>
+  <text x="1156" y="320" text-anchor="end" font-family="Segoe UI,Arial,sans-serif" font-size="14" fill="#526259">yaoy2 / yao_1</text>
+</svg>

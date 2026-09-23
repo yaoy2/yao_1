@@ -1,0 +1,29 @@
+name: Workflow improvement / 工作流改进
+description: Propose a concrete improvement and a way to verify it.
+title: "[Idea] "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Who needs this and what is difficult? / 对象与问题
+      description: Describe the current workflow and a specific example.
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Desired result / 希望得到的结果
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: How would we verify it? / 如何验收
+      description: Prefer a small example with fictional data and a checkable output.
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Accounts, services, or affected data / 依赖与数据影响
+      description: Name the type of dependency only; do not include credentials or actual business records.

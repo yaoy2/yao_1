@@ -1,0 +1,41 @@
+name: Bug report / 问题反馈
+description: Report a reproducible problem using fictional or sanitized data.
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe a concrete failure. Use fictional examples; do not upload student records, mail contents, credentials, real backups, or private screenshots.
+        请提供最小复现，移除个人信息与业务材料。
+  - type: input
+    id: area
+    attributes:
+      label: Module or command / 模块或命令
+      placeholder: "M17, M15, scripts/demo_grade_workbench.py, or a file path"
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps and minimal example / 复现步骤与示例
+      description: Include only fictional input needed to reproduce the issue.
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Expected and actual result / 预期与实际结果
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment / 运行环境
+      placeholder: "OS, Python version, browser if relevant, commit or branch"
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Error or relevant test result / 错误或相关测试结果
+      description: Redact tokens, account identifiers, personal paths, and private records.

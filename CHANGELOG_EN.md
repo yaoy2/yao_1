@@ -5,6 +5,14 @@
 
 This English change log mirrors the project history maintained in `CHANGELOG_ZH-CN.md`. It keeps the same dated structure and preserves the operational notes that matter for later troubleshooting: what changed, why it changed, what failed or detoured, and how the work was verified.
 
+## 2026-09-23
+
+- Rebuilt the English and Chinese project overview around assessment review, notice preparation, and persistent work records. Added a local project illustration, first-use guides, contribution guidance, issue/PR templates, a concrete roadmap, and an explicit licensing-status note.
+- Added an offline grading demo with entirely fictional records. It exports and reopens a review workbook, verifies scores and adjustment layers, refuses to overwrite an existing result, and rejects the application's data directory as an output destination.
+- Corrected the catalog to 24 entries: Administration 7, Teaching 2, Personal 7, archived 8. Documented M24 and M25, M20 retirement, and the current three-task M23 showcase.
+- Replaced stale hardcoded documentation checks with comparison against the actual homepage registry, including module IDs, sections, status, and page paths.
+- Validation: 27 focused checks passed across documentation/setup, grading/export/demo, and notice parsing/rendering/standalone HTML. No live accounts or business records were needed. Repository licensing and broader environment compatibility remain pending; application behavior and service configuration were not changed.
+
 ## 2026-09-06
 
 - **Rename and restyle M22**: The public page, browser title, homepage and sidebar now use Planner-Executor. White panels, dark text and restrained purple/blue/green accents replace the dark backgrounds; the existing URL and evidence remain available.

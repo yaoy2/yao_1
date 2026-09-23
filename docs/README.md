@@ -8,9 +8,17 @@
 
 | 文档 | 内容 |
 |---|---|
+| [快速开始](guides/getting-started.md) | 单文件通知体验、Python 环境、虚构评分演示和首次验证。 |
+| [第一份通知](guides/first-notice.md) | 可复制的虚构通知、机构字段限制和导出检查。 |
+| [完整模块目录](guides/module-catalog.md) | 与 hello.py 比对的 24 个入口、实际状态及运行边界。 |
+| [贡献指南](../CONTRIBUTING.md) | 代码落点、虚构复现材料和改动验收。 |
+| [迭代路线图](guides/roadmap.md) | 有具体验收目标的后续工作。 |
+| [项目状态与许可](guides/project-status.md) | 当前限制、证据入口和待决定的开源授权。 |
+| [存储与外部服务](guides/storage-and-services.md) | 本地/云端、恢复备份、账号和外部数据传输边界。 |
 | [库结构与目录边界](repository-structure.md) | 主应用、独立子项目、静态资产、动态数据和本机生成文件分别放在哪里。 |
 | [微信与本地文件归档指南](guides/wechat-archiver.md) | 本机 8502 入口、四条归档路线、实际保存位置和 IMA 边界。 |
 | [Recorder：L 电脑迁移与运行](guides/ding_minutes_L_setup.md) | 数据迁移、凭据来源、真实扫描副作用和任务计划设置。 |
+| [邮件工作台 Jev 复核](guides/mail-jev.md) | 显式收信、可选外部复核、失败降级与数据去向。 |
 
 ## 历史设计与实施
 
@@ -34,6 +42,7 @@
 ## 存放约定
 
 - `guides/`：仍适用的操作和迁移指南；代码行为变化时同步校正。
+- `assets/`：文档专用静态示意图，区别于应用截图和正式运行资产。
 - `history/`：按日期保留设计、实施计划和事件记录；不把旧计划当作新任务自动执行。
 - `previews/`：静态设计稿和对应说明；正式运行资产继续放主库 `assets/`。
 - 本目录不放密钥、真实业务备份、运行日志或依赖缓存。独立子项目的专属说明留在各自目录，由主 README 导航。
