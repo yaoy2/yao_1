@@ -1,144 +1,113 @@
-# yao_1 | 学院行政智能中枢
+# YaoYao · 服务教学与行政工作的工具箱
 
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_svg.svg)](https://whatsup.streamlit.app/)
+![YaoYao 项目概览：准备材料、复核结果、沉淀复用](docs/assets/project-overview.svg)
 
-**语言**：简体中文 | [English](README_EN.md)
-**更新日志**：[中文](CHANGELOG_ZH-CN.md) | [English](CHANGELOG_EN.md)
+[English](README_EN.md) · **简体中文**
 
-> 前方没有胜利，挺住意味一切。
+[快速开始](docs/guides/getting-started.md) · [模块目录](docs/guides/module-catalog.md) · [参与贡献](CONTRIBUTING.md) · [迭代路线图](docs/guides/roadmap.md) · [更新日志](CHANGELOG_ZH-CN.md)
 
-面向高校二级学院日常工作的 Streamlit 工具箱，集中提供行政事务、教学评分、知识记录和项目展示入口。本仓库同时保留五个独立子项目，它们的运行方式与数据边界分别由各自文档说明。
+一个源于高校日常工作的 Python / Streamlit 工具箱：整理通知、复核教学成绩、管理待办、沉淀知识，让结果便于检查，让数据去向有据可查。
 
-## 从哪里开始
+由 [yaoy2](https://github.com/yaoy2) 持续维护。仓库名仍为 `yao_1`，已有启动器和模块编号保持不变。
 
-- **使用工具箱**：[线上入口](https://whatsup.streamlit.app/)；首页按“行政 / 教学 / 个人 / archived”切换。
-- **第一次处理成绩**：先看 M18 使用说明，再到 M17 建立正式任务。
-- **归档微信文章或本地文件**：使用本机的 `启动微信归档窗口.bat`，先读[微信归档指南](docs/guides/wechat-archiver.md)。
-- **配置 Recorder 扫描**：先读[本机配置与迁移指南](docs/guides/ding_minutes_L_setup.md)，确认路径后再运行。
-- **了解目录与维护边界**：看[文档索引](docs/README.md)和[仓库结构](docs/repository-structure.md)。
-- **查看源码**：[GitHub 仓库](https://github.com/yaoy2/yao_1)。
+## 从三个具体场景认识项目
 
-## 本地安装、启动与检查
+| 场景 | 可以检查的实际能力 | 从这里开始 |
+| --- | --- | --- |
+| **教学成绩复核** | 分开保留小组原始分、个人系数和各层调整，校验输入后导出 Excel 审核工作簿。 | [离线演示](docs/guides/getting-started.md#run-the-offline-grading-demo) · [计算与导出测试](tests/test_grade_workbench.py) |
+| **通知整理与排版** | 从中文通知识别字段，检查排版，用一个浏览器文件导出 HTML。 | [第一份通知](docs/guides/first-notice.md) · [单文件编辑器](assets/email_notice_editor.html) |
+| **持续跟进日常工作** | 记录截止时间与笔记，软归档已完成事项，按配置合并 GitHub 备份。 | [M14 / M10 目录](docs/guides/module-catalog.md) · [冲突与重试测试](tests/test_todo_chat.py) |
 
-需要 Windows、可运行的 Python 3，以及首次安装时的网络连接。依赖以 [requirements.txt](requirements.txt) 为准；主应用使用 Streamlit，Excel/Word/PDF 处理库负责材料转换，Playwright 负责本机微信文章抓取。
+评分工作台服务于人工复核；结果仍需负责人确认。通知编辑器目前带有特定学院的默认值。涉及账号和远端备份的功能需另行配置。
 
-1. 获取仓库：
-   ```powershell
-   git clone https://github.com/yaoy2/yao_1.git
-   cd yao_1
-   ```
-2. 双击 `首次安装.bat`，在仓库内创建 `.venv` 并安装运行和测试依赖。
-3. 双击 `启动YaoYao工具箱.bat`，启动主应用。
-4. 双击 `运行测试.bat`，检查主应用。若失败，保留错误信息，先判断是依赖缺失还是具体功能检查失败。
+## 先体验一个小场景
 
-主应用也可在仓库根目录单独检查：
+**直接使用单文件工具。** 下载 [`email_notice_editor.html`](assets/email_notice_editor.html)，在桌面浏览器打开即可，无需 Python 服务、API Key 或外部 JavaScript 库。先用[虚构通知示例](docs/guides/first-notice.md)试用，导出前核对机构字段。
+
+**运行 Python 演示。** 项目提供 Windows 启动器。当前代码需要 Python 3.11 或以上版本；尚未建立覆盖多操作系统、多 Python 版本的完整验证矩阵。
+
+```powershell
+git clone https://github.com/yaoy2/yao_1.git
+cd yao_1
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+.\.venv\Scripts\python.exe scripts/demo_grade_workbench.py --output-dir outputs/demo-grade
+```
+
+演示只使用虚构数据，生成审核工作簿后重新读取并检查计算结果；无需凭据，不读取应用业务记录。再次运行时请选择新的输出目录。
+
+使用完整工具箱时，先运行 `首次安装.bat`，再运行 `启动YaoYao工具箱.bat`。[快速开始](docs/guides/getting-started.md)说明依赖、演示与功能配置。[在线工具箱](https://whatsup.streamlit.app/)是维护者的部署实例，其中需要账号或本地配合的功能并非公共共享沙箱。
+
+## 仓库包含什么
+
+当前共有 **24 个入口：行政 7、教学 2、个人 7、archived 8**，其中 16 个位于当前分区。部分入口是只读指南或展示页，这个数字不代表独立应用数量。
+
+| 分区 | 代表内容 | 使用边界 |
+| --- | --- | --- |
+| 行政 | 通知编辑器、课表、邮件工作台、随手传 | 部分功能依赖本地接收程序、凭据或已配对的收件端。 |
+| 教学 | 评分工作台及使用说明 | 原始分数和调整层可以分别复核。 |
+| 个人 | 笔记、配色、概念寓言、开发工具展示 | 各功能有自己的存储、备份规则。 |
+| archived | M20 Ding2026、旧评分流程等退役工具 | 保留历史，不作为推荐使用入口。 |
+
+[完整模块目录](docs/guides/module-catalog.md)列出每个编号、入口和状态；[`hello.py`](hello.py)是注册来源，文档检查会将目录与它比对。
+
+```text
+hello.py / pages/    Streamlit 页面入口
+utils/              计算、解析、存储与导出逻辑
+assets/             浏览器工具和有来源记录的静态资源
+tests/              主应用回归检查
+scripts/            演示及维护入口
+docs/               安装、结构、路线图与历史记录
+```
+
+完整布局、独立项目与数据目录边界见[库结构](docs/repository-structure.md)。
+
+<details>
+<summary>独立项目与可复用技能</summary>
+
+以下项目各有安装和数据边界；克隆主库不会自动启动它们。
+
+| 项目 | 用途与状态 | 说明 |
+| --- | --- | --- |
+| Deepself | 个人表达研究和回复工具；原始朋友圈及私密报告仅留本机。 | [README](Deepself/README.md) |
+| Zhongshengshi | 已暂停的 Next.js 多模型圆桌概念验证。 | [README](zhongshengshi/README.md) |
+| Codex → Grok Builder | 按任务范围交接编码工作，保留具体执行边界。 | [说明](codex-grok-builder/README_EN.md) |
+| GPT Planner · Luna Executor | 按任务需要选择规划与执行路线。 | [说明](gpt-planner-luna-executor/README_EN.md) |
+| 115 AI Organizer | 云盘盘点与人工审核后的整理，执行需满足其专用授权要求。 | [README](115-ai-organizer/README.md) |
+
+[个人技能集合](personal-skills/README_EN.md)收录 PPT 制作、评论真人图片筛选和存储分析。技能需独立安装，拉取仓库不会自动更新已安装副本。
+
+</details>
+
+## 工程与数据边界
+
+- **结果可检查：** 成绩导出保留原始值和调整层。缺少调整原因会发出警告，并非所有警告都会阻止导出。
+- **运行环境分开：** Streamlit Cloud、本地工作进程、独立项目不会共享本机文件系统。
+- **外部服务按需配置：** AI 整理、邮件复核、GitHub 备份和文件传输各有配置及数据去向，详见[存储与服务说明](docs/guides/storage-and-services.md)。
+- **保留工作记录：** 数据库和备份属于业务材料；离线演示使用独立的虚构数据，拒绝覆盖已有演示结果。
+
+## 验证与参与
+
+主应用的标准测试入口：
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest -q tests
 ```
 
-主应用检查范围是 `tests/`；独立子项目应按自身文档运行测试，不在根目录用无范围的 pytest 混合收集。开发验证采用测试、语法和纯函数检查，按仓库规则不为预览启动本地 Streamlit 服务。
+首次贡献可先运行：
 
-微信归档窗口固定使用 `http://localhost:8502`，与主工具箱分开。抓取使用本机 Microsoft Edge，不需要额外安装 Playwright Chromium。这个窗口实际执行归档；工具箱中的 M07 是功能说明入口。
+```powershell
+.\.venv\Scripts\python.exe -m pytest -q tests/test_project_docs_and_setup.py tests/test_grade_workbench.py tests/test_grade_workbench_demo.py tests/test_email_notice_standalone_html.py
+```
 
-## 二十二个现存工具模块
+独立子项目使用自己的测试入口。通知编辑器的 JavaScript 执行检查需要 Node.js，未安装时会明确跳过。维护验证采用单元测试、纯函数检查及现有 Streamlit AppTest；项目规则不允许仅为预览启动本地 Streamlit 服务。
 
-编号记录上线顺序，因此不连续。当前共 **22 个入口：行政 6、教学 2、个人 7、archived 7**；其中 15 个在当前业务分区，7 个仅作历史对照。分区和页面入口以 [hello.py](hello.py) 的元数据为准，没有“固定第二页”或精选区规则。
+[贡献指南](CONTRIBUTING.md)说明代码放在哪里、如何提供可复现问题、改动后需要验证什么。[路线图](docs/guides/roadmap.md)聚焦可运行示例、机构默认值配置、输入诊断和可复现安装。
 
-### 行政
+## 项目阶段与许可
 
-| 编号 | 模块 | 主要用途与边界 |
-| --- | --- | --- |
-| M20 | Ding2026 文件中转发放系统 | 只读展示脱敏聚合状态、人工分发、中转裁决和五条归档时间轴；不连接真实材料目录。 |
-| M15 | 邮件通知编辑器 | 识别通知结构、排版预览和导出；[独立 HTML 编辑器](assets/email_notice_editor.html)可下载后离线使用。 |
-| M14 | 待办清单 | 自动识别中文截止日期与时间、搜索、软归档，以及本地备份与 GitHub 同步；需要访问密码。 |
-| M11 | Recorder_笔记 | 登记 Word 转写、保留原文、调用 DeepSeek 整理和记录备注；需要访问密码，定时扫描由本机任务负责。 |
-| M08 | 预算速记台账 | 记录支出与报销状态、查看分类余额、导出流水和保存恢复备份；需要访问密码。 |
-| M06 | 课表查询 | 基于课表 Excel 与 JSON 缓存，按教师、系部、星期等查询教学安排。 |
+这是一个持续迭代的独立维护项目。[状态说明](docs/guides/project-status.md)区分已有能力、当前限制和待决定的许可事项，不宣称未经核实的用户规模或资助计划资格。
 
-### 教学
+**源码公开，但尚未选定覆盖整个仓库的开源许可证。** 将整个仓库视为可自由复用的开源项目之前，需要明确授权。第三方资产保留自己的[来源说明](assets/awesome-design-md/SOURCE.md)与 [MIT 许可证](assets/awesome-design-md/LICENSE)。业务记录和私密材料不属于拟提供复用授权的代码范围。
 
-| 编号 | 模块 | 主要用途与边界 |
-| --- | --- | --- |
-| M18 | 评分工作台使用说明 | 解释操作顺序、评分口径、数据位置、跨电脑状态和常见问题。 |
-| M17 | 教学评分工作台 | 管理花名册、小组路演与报告原始分、个人系数和各层调整，校验后导出审核工作簿；调整不会改写原始小组分。 |
-
-### 个人
-
-| 编号 | 模块 | 主要用途与边界 |
-| --- | --- | --- |
-| M23 | docker-monitor | 以 2×2 布局只读展示四个 Docker 任务：TrendRadar、GLM 促销雷达、AIHOT 增量、德亚显卡报价。 |
-| M22 | Planner-Executor | 按任务说明当前 Agent、GPT / Luna 与 Codex / Grok 两条路线的选用、优化前后对照和实测边界；页面只读，不调用模型或执行任务。 |
-| M21 | Awesome Design MD | 搜索、选择和浏览 74 组品牌设计规范；本地与线上使用同一份固定来源资产。 |
-| M19 | 概念寓言馆 | 检索和重读中文寓言、概念定义与故事映射；条目保存在 `data/concept_fables.json`，页面只读。 |
-| M10 | 灵感便签盒 | 保存灵感、摘录与素材，支持标签、色卡、排序、隐藏、Markdown/PDF 导出及 GitHub 备份合并。 |
-| M09 | 配色方案预览 | 浏览 `data/color_palettes.md` 中的配色和应用示例；该文件也是便签配色来源。 |
-| M07 | 微信归档 | 展示 raw / 学院 / 课题 / 竞赛四类路线；实际抓取和本地复制走专用窗口，IMA 上传由独立流程完成。 |
-
-M20、M22、M23 是说明或展示页，打开页面不会启动对应外部项目。M23 对应的 TrendRadar 仍是独立本机容器，其余三个任务位于独立私有 [docker-monitor 仓库](https://github.com/yaoy2/docker-monitor)，共用同一条钉钉。德亚报价说明采用“欧元标价 + 人民币估算”，公式为 `EUR × 1.13 × 7.79 + 150`；页面不联网、不启容器、不读取本机状态或实时价格，也不发钉钉。
-
-### archived：历史入口
-
-| 编号 | 模块 | 状态 |
-| --- | --- | --- |
-| M16 | 旧版报告评分与成绩联动 | 已由 M17 替代，不再建立正式评分任务。 |
-| M13 | LLM 余额管理 | 已归入历史区，保留余额与账号管理实现供对照。 |
-| M05 | 万能合并机 | 已停用，保留旧实现。 |
-| M04 | Word 收割机 | 已停用，保留旧实现。 |
-| M03 | 名单核对 | 已停用，保留旧实现。 |
-| M02 | 文件比对 | 已停用，保留旧实现。 |
-| M01 | 报告评分 | 旧提示词评分流程已弃用。 |
-
-历史入口保留源代码和红叉状态，不因代码仍在就视为当前推荐流程。M12 已移除；早期股票功能的 M19 历史日志与现在的“概念寓言馆”不是同一项目。
-
-## 五个独立子项目
-
-| 子项目 | 当前用途与状态 | 详细入口 |
-| --- | --- | --- |
-| Deepself | 已实现个人表达研究、写作 Skill 和独立回复工具；朋友圈原文、截图与私密报告留在本机。 | [项目说明](Deepself/README.md)；`Deepself/启动Deepself对话框.bat` |
-| 众声室 | Next.js 多模型圆桌概念验证，2026-08-11 起暂停开发；保留源码和验证记录。 | [项目说明](zhongshengshi/README.md) |
-| Codex → Grok Builder | 按任务规模交接的 Grok Build 实施技能；具体方案、范围和测试审批保留。 | [中文说明](codex-grok-builder/README_ZH-CN.md) |
-| GPT Planner · Luna Executor | 按任务需要组织 GPT 规划与 Luna 执行；尊重明确模型、网页和只规划要求。 | [中文说明](gpt-planner-luna-executor/README_ZH-CN.md) |
-| 115 AI Organizer | 只读扫描、分类报告、人工审核；批准并核对操作清单与确认码后，才执行建目录、改名和移动。没有删除接口。 | [项目说明与最新交接](115-ai-organizer/README.md) |
-
-这些子项目有自己的启动、依赖和权限要求。克隆本仓库不会自动启动它们，也不会启用监控、归档或网盘整理。
-
-[个人技能集合](personal-skills/README_ZH-CN.md)另保存 PPT 制作、小红书评论真人图片和存储分析技能，不是新增独立运行项目。跨电脑使用时，将所需完整技能复制或安装到各自实际的 `CODEX_HOME/skills/`；仓库拉取不会自动更新安装副本，不依赖固定盘符或 Junction。
-
-技能协作以合格任务总成本为依据：开放选型的小改直接完成，执行量大且边界明确时才委派，强模型聚焦关键不确定性。总 token、高价模型用量、额度和费用分别记录，缺少对照不宣称降本。参见[9 月 5 日评估与 9 月 6 日发布记录](docs/history/2026-09-05-skill-cost-optimization.md)。
-
-## 数据保存、恢复与跨电脑使用
-
-线上 Streamlit 与本机是两个运行环境。线上页面不能读取这台电脑的路径或环境变量；`git pull` 只能取得已提交文件，不会恢复被忽略的数据库、密钥或私密资料。
-
-| 功能 | 主要保存位置 | 恢复与迁移要点 |
-| --- | --- | --- |
-| M08 预算 | `data/budget.db`；`budget_ledger_backup.md/.xlsx` | 空数据库可从本地 Markdown 备份恢复；配置 GitHub 同步后可把 Markdown 写回远端。 |
-| M10 便签 | `data/web_memos.db`；`web_memos_backup.md` | 可从备份恢复；配置同步后会合并远端记录，并保护远端已有内容。 |
-| M14 待办 | `data/todos.db`；`todo_items_backup.md` | 可从备份恢复；配置同步后合并远端记录，完成项以软归档保留。 |
-| M11 Recorder | `data/ding_minutes.db`；`ding_minutes_cloud.json` | 本机扫描保存原文和整理稿；线上读取云端导出，备注可同步；迁移前看专项指南。 |
-| M17 评分 | `data/grade_workbench/tasks/<任务ID>/task.db` 及任务附件 | 不自动同步到 GitHub；迁移需保留完整任务目录，审核工作簿另行导出。 |
-
-`data/` 是业务资料，不是缓存目录。GitHub 远端备份是动态数据的汇合点，本地修改这些备份前须先同步远端；遇到冲突先合并，不以旧文件或空文件覆盖。重要材料仍应定期导出，并另做受控备份。
-
-## 密钥、外部服务与本地边界
-
-- **访问密码**：M08、M11、M14 复用 Streamlit Secrets 中的 `budget_password` / `[budget].password`，本机也支持 `BUDGET_PASSWORD` 环境变量。
-- **AI 整理**：Recorder 支持 Secrets 或本机 `DEEPSEEK_API_KEY`；调用时转写内容会交给所配置的 API 服务商处理。没有密钥时可登记原文，不生成 AI 整理稿。
-- **GitHub 备份**：通过 Secrets 或本机 `GITHUB_BACKUP_TOKEN` 启用后，相关备份内容会写入所配置的远端仓库。未配置时不能把“本机已保存”当作“已跨电脑备份”。
-- **本地归档**：微信抓取会联网访问文章，结果写入已确认的目录；GoogleDrive 等同步目录可能继续由其客户端上传。先核对目标，不自动回填敏感路径。
-- **Deepself**：发送的消息与抽象风格画像经过所选模型服务商；应用不读取或上传私密朋友圈原料。
-- **凭据保护**：真实密钥只放 Secrets、环境变量或子项目规定的本机凭据位置，不写入源码、提交或日志。
-
-## 文档与维护
-
-- [文档索引](docs/README.md)：当前指南、历史设计与视觉预演。
-- [仓库结构](docs/repository-structure.md)：主应用、子项目、资产、动态数据和生成目录的职责。
-- [微信归档指南](docs/guides/wechat-archiver.md) / [Recorder 配置与迁移](docs/guides/ding_minutes_L_setup.md)。
-- [中文更新日志](CHANGELOG_ZH-CN.md) / [English Change Log](CHANGELOG_EN.md)：保留真实改动、失败与修正记录。
-
-`README.md` 镜像 `README_EN.md`；`CHANGELOG.md` 镜像 `CHANGELOG_EN.md`。修改当前行为说明时同步中英文，历史设计不覆盖当前代码与规则。
-
-## 使用许可
-
-仓库尚未提供独立的根 `LICENSE`；对外复用前需另行明确许可。第三方设计资产保留自己的[来源记录](assets/awesome-design-md/SOURCE.md)与许可证，不受本仓库是否设置根许可证的影响。
+[文档导航](docs/README.md) · [中文更新日志](CHANGELOG_ZH-CN.md) · [English change log](CHANGELOG_EN.md)
