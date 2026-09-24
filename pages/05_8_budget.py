@@ -275,12 +275,12 @@ if records:
             "日期": st.column_config.DateColumn("日期", format="YYYY-MM-DD", required=True, width="small"),
             "费用类别": st.column_config.SelectboxColumn("费用类别", options=list(BUDGET_CATEGORIES.keys()), required=True, width="medium"),
             "使用单位": st.column_config.SelectboxColumn("使用单位", options=UNITS, width="medium"),
-            "金额": st.column_config.NumberColumn("金额", min_value=0.01, step=100.0, format="%.2f", width="small"),
+            "金额": st.column_config.NumberColumn("金额", min_value=0.01, step=0.01, format="%.2f", width="small"),
             "支出人": st.column_config.TextColumn("支出人", width="small"),
             "支出明细": st.column_config.TextColumn("支出明细", width="large"),
             "报销状态": st.column_config.SelectboxColumn("报销状态", options=REIMBURSEMENT_STATUSES, required=True, width="small"),
         },
-        key="budget_records_editor",
+        key="budget_records_editor_cents",
     )
 
     if st.button("💾 保存表格修改", type="primary"):
