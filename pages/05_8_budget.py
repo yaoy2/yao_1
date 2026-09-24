@@ -158,11 +158,11 @@ cat_summary = get_category_summary()
 cat_rows = []
 for cat, budget in BUDGET_CATEGORIES.items():
     info = cat_summary.get(cat, {"reimbursed": 0, "unreimbursed": 0})
-    reimbursed = info["reimbursed"]
-    unreimbursed = info["unreimbursed"]
-    used = reimbursed + unreimbursed
+    reimbursed = round(info["reimbursed"], 2)
+    unreimbursed = round(info["unreimbursed"], 2)
+    used = round(reimbursed + unreimbursed, 2)
     is_uncapped = cat in UNCAPPED_BUDGET_CATEGORIES
-    cat_remaining = "不涉及" if is_uncapped else budget - used
+    cat_remaining = "不涉及" if is_uncapped else round(budget - used, 2)
     pct = "不涉及" if is_uncapped else f"{used / budget:.1%}" if budget > 0 else "0.0%"
     cat_rows.append({
         "费用类别": cat,
@@ -187,15 +187,15 @@ unit_data = get_unit_summary_by_category(pick_cat)
 cat_budget = BUDGET_CATEGORIES.get(pick_cat, 0)
 
 if unit_data:
-    cat_total_used = sum(d["reimbursed"] + d["unreimbursed"] for d in unit_data)
+    cat_total_used = round(sum(d["reimbursed"] + d["unreimbursed"] for d in unit_data), 2)
     unit_rows = []
     for d in unit_data:
-        used = d["reimbursed"] + d["unreimbursed"]
+        used = round(d["reimbursed"] + d["unreimbursed"], 2)
         pct = used / cat_total_used if cat_total_used > 0 else 0
         unit_rows.append({
             "使用单位": d["unit"] or "(未填写)",
-            "已报销金额": d["reimbursed"],
-            "未报销金额": d["unreimbursed"],
+            "已报销金额": round(d["reimbursed"], 2),
+            "未报销金额": round(d["unreimbursed"], 2),
             "合计占用金额": used,
             "占该类别支出比例": f"{pct:.1%}",
         })
@@ -211,19 +211,19 @@ with st.expander("展开查看：类别 × 单位交叉表"):
         row = {"费用类别": cat}
         row_total = 0
         for u in UNITS:
-            val = pivot_data.get((cat, u), 0)
+            val = round(pivot_data.get((cat, u), 0), 2)
             row[u] = val
             row_total += val
-        row["类别合计"] = row_total
+        row["类别合计"] = round(row_total, 2)
         pivot_rows.append(row)
     # 单位合计行
     total_row = {"费用类别": "合计"}
     grand = 0
     for u in UNITS:
-        col_total = sum(r.get(u, 0) for r in pivot_rows)
+        col_total = round(sum(r.get(u, 0) for r in pivot_rows), 2)
         total_row[u] = col_total
         grand += col_total
-    total_row["类别合计"] = grand
+    total_row["类别合计"] = round(grand, 2)
     pivot_rows.append(total_row)
     df_pivot = pd.DataFrame(pivot_rows)
     st.dataframe(df_pivot, use_container_width=True, hide_index=True)
