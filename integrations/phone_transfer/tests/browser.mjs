@@ -102,10 +102,15 @@ try {
   assert.equal(saved.length, 1); assert.equal(saved[0].size, mb * 1024 * 1024); assert.equal(saved[0].hash, expectedHash);
   const photoChooser = senderPage.waitForEvent('filechooser');
   await sender.locator('#pick-photos').click();
-  await (await photoChooser).setFiles([{ name: '同名照片.HEIC', mimeType: 'image/heic', buffer: Buffer.from([0, 1, 2, 255]) }, { name: '同名照片.HEIC', mimeType: 'image/heic', buffer: Buffer.from([9, 8, 7, 0]) }]);
+  await (await photoChooser).setFiles(Array.from({ length: 10 }, (_, i) => ({ name: '同名照片.HEIC', mimeType: 'image/heic', buffer: Buffer.from([0, 1, 2, i]) })));
   await sender.locator('#send').click();
-  await sender.waitForFunction(() => document.getElementById('progress-text').textContent.includes('已送达办公电脑 L · 2 个文件'), null, { timeout: 60000 });
-  assert.equal(await frame.locator('#history li').count(), 3);
+  await sender.waitForFunction(() => document.getElementById('progress-text').textContent.includes('已送达办公电脑 L · 10 个文件'), null, { timeout: 120000 });
+  assert.equal(await frame.locator('#history li').count(), 11);
+  const oversizedChooser = senderPage.waitForEvent('filechooser');
+  await sender.locator('#pick-photos').click();
+  await (await oversizedChooser).setFiles(Array.from({ length: 11 }, (_, i) => ({ name: `照片${i}.HEIC`, mimeType: 'image/heic', buffer: Buffer.from([i]) })));
+  assert.match(await sender.locator('#message').textContent(), /1–10/);
+  assert.equal(await sender.locator('#send').isVisible(), false);
   // Exercise the actual ShortcutReceiver against the production ASGI routes.
   // Only the iPhone HTTP upload is simulated; L downloads, verifies, saves and
   // acknowledges through its real frontend and OPFS directory handle.
@@ -156,7 +161,7 @@ try {
     const ticketUrl = (await authorization.text()).replace('http://fixture.invalid', url);
     const response = await fetch(ticketUrl, { method: 'POST', body: form });
     assert.equal(response.status, 202); assert.match(await response.text(), /等待办公电脑 L 保存/);
-    await frame.waitForFunction(count => document.querySelectorAll('#history li').length === count, 4 + i, { timeout: 30000 });
+    await frame.waitForFunction(count => document.querySelectorAll('#history li').length === count, 12 + i, { timeout: 30000 });
     const deadline = Date.now() + 15000; let pending;
     do {
       const response = await fetch(`${url}/phone-transfer-api/v1/receivers/${nativeState.room}/pending`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ authorization: `Bearer ${nativeState.receiverToken}` }) });
@@ -174,7 +179,7 @@ try {
     }
     return files;
   });
-  assert.equal(afterNative.length, 5);
+  assert.equal(afterNative.length, 13);
   assert.ok(afterNative.some(file => file.size === mb * 1024 * 1024 && file.hash === expectedHash), 'Earlier browser transfer must remain unchanged');
   const nativeSaved = afterNative.filter(file => file.name.startsWith('快捷指令同名照片'));
   assert.equal(nativeSaved.length, 2); assert.notEqual(nativeSaved[0].path, nativeSaved[1].path);

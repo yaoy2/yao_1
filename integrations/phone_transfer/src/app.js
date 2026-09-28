@@ -423,7 +423,7 @@ const selectFiles = guard(event => {
   const files = Array.from(event.target.files);
   if (!files.length) return;
   selected = []; $('selection').replaceChildren(); show('send', false);
-  validateFiles(files); selected = files;
+  validateFiles(files, event.target === $('photos') ? 10 : 500); selected = files;
   for (const file of files) { const row = document.createElement('li'); const label = document.createElement('span'); const amount = document.createElement('small'); label.textContent = file.name; amount.textContent = size(file.size); row.append(label, amount); $('selection').append(row); }
   show('send'); $('send').disabled = !readyPeer(); message(`已选择 ${files.length} 个文件，${size(files.reduce((n, f) => n + f.size, 0))}。`);
 });

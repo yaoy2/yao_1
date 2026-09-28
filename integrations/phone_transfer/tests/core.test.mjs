@@ -130,6 +130,10 @@ test('name suffixes preserve final extensions and also support extensionless fil
 });
 test('rejects oversize, negative, malformed and excessive manifests before any file is created', async () => {
   assert.equal(validateFiles([{ name: 'max', size: MAX_FILE }])[0].size, MAX_FILE);
+  const tenPhotos = Array.from({ length: 10 }, (_, i) => new File([String(i)], `照片${i + 1}.HEIC`));
+  assert.equal((await deliver(new IncomingTransfer(new MemoryDirectory()), tenPhotos)).length, 10);
+  assert.throws(() => validateFiles(Array(11).fill({ name: 'a', size: 1 }), 10), /1–10/);
+  assert.equal(validateFiles(Array(11).fill({ name: 'a', size: 1 })).length, 11);
   for (const files of [[{ name: 'x', size: MAX_FILE + 1 }], [{ name: 'x', size: -1 }], [{ name: '', size: 1 }], [], Array(501).fill({ name: 'a', size: 1 })]) {
     const root = new MemoryDirectory(); await assert.rejects(new IncomingTransfer(root).begin(files)); assert.equal(root.dirs.size, 0);
   }

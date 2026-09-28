@@ -67,8 +67,8 @@ export function safeFilename(name) {
   if (/^(con|prn|aux|nul|com[0-9]|lpt[0-9])(?:\.|$)/i.test(clean)) clean = `_${clean}`;
   return clean;
 }
-export function validateFiles(files) {
-  if (!Array.isArray(files) || !files.length || files.length > 500) throw new Error('每次请选择 1–500 个文件');
+export function validateFiles(files, limit = 500) {
+  if (!Array.isArray(files) || !files.length || files.length > limit) throw new Error(`每次请选择 1–${limit} 个文件`);
   return files.map(f => {
     if (typeof f.name !== 'string' || !f.name.length || f.name.length > 1024 || !Number.isSafeInteger(f.size) || f.size < 0 || f.size > MAX_FILE) throw new Error('单个文件不能超过 200 MiB，文件信息必须完整');
     return { name: f.name, size: f.size, lastModified: Number.isFinite(f.lastModified) ? f.lastModified : 0 };
