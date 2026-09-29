@@ -9,6 +9,17 @@ from html import escape
 
 CALENDAR_CSS = """
 <style>
+.st-key-todo-calendar-navigation { max-width: 360px; margin-inline: auto; }
+.st-key-todo-calendar-navigation [data-testid="stHorizontalBlock"] { flex-wrap: nowrap; gap: .25rem; }
+.st-key-todo-calendar-navigation [data-testid="stColumn"] { min-width: 0; }
+.st-key-todo-calendar-navigation [data-testid="stButton"] button { padding: .2rem .25rem; }
+.todo-calendar-month-label {
+    text-align: center;
+    white-space: nowrap;
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 2.4rem;
+}
 .todo-calendar { color: var(--colors-ink, #1d1d1f); font-size: .82rem; }
 .todo-calendar-scroll { overflow-x: auto; }
 .todo-calendar-grid {

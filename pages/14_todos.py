@@ -245,18 +245,29 @@ def render_todo_calendar(records):
     today = todo_db.today()
     month = st.session_state.get("todo_calendar_month", today.replace(day=1))
     with st.container(border=True):
-        title_col, previous_col, current_col, next_col = st.columns([5, 1, 1, 1], vertical_alignment="center")
-        with title_col:
-            st.subheader(f"任务日历 · {month.year} 年 {month.month} 月")
-        with previous_col:
-            st.button("‹ 上月", key="todo_calendar_previous", on_click=change_calendar_month, args=(-1,),
-                      disabled=month == date.min, use_container_width=True)
-        with current_col:
-            st.button("本月", key="todo_calendar_current", on_click=change_calendar_month, args=(0,),
-                      use_container_width=True)
-        with next_col:
-            st.button("下月 ›", key="todo_calendar_next", on_click=change_calendar_month, args=(1,),
-                      disabled=month == date(9999, 12, 1), use_container_width=True)
+        with st.container(key="todo-calendar-navigation"):
+            previous_year_col, previous_month_col, month_col, next_month_col, next_year_col = st.columns(
+                [1, 1, 4, 1, 1], gap="small", vertical_alignment="center"
+            )
+            with previous_year_col:
+                st.button("«", help="上一年", key="todo_calendar_previous_year",
+                          on_click=change_calendar_month, args=(-12,),
+                          disabled=month.year == 1, use_container_width=True)
+            with previous_month_col:
+                st.button("‹", help="上一月", key="todo_calendar_previous", on_click=change_calendar_month,
+                          args=(-1,), disabled=month == date.min, use_container_width=True)
+            with month_col:
+                st.markdown(
+                    f'<div class="todo-calendar-month-label" role="heading" aria-level="3">{month.year} 年 {month.month} 月</div>',
+                    unsafe_allow_html=True,
+                )
+            with next_month_col:
+                st.button("›", help="下一月", key="todo_calendar_next", on_click=change_calendar_month,
+                          args=(1,), disabled=month == date(9999, 12, 1), use_container_width=True)
+            with next_year_col:
+                st.button("»", help="下一年", key="todo_calendar_next_year",
+                          on_click=change_calendar_month, args=(12,),
+                          disabled=month.year == 9999, use_container_width=True)
         st.caption("按截止日期排列，点击简称展开详情；已完成任务显示中划线。")
         st.html(render_calendar_html(records, month, today=today))
 

@@ -64,6 +64,8 @@ class TodoCalendarTest(unittest.TestCase):
         self.assertEqual("2024-02-01", document.select(".todo-calendar-day")[3]["data-date"])
         self.assertEqual(date(2027, 1, 1), shift_month(date(2026, 12, 1), 1))
         self.assertEqual(date(2025, 12, 1), shift_month(date(2026, 1, 1), -1))
+        self.assertEqual(date(2025, 2, 1), shift_month(date(2024, 2, 1), 12))
+        self.assertEqual(date(2023, 2, 1), shift_month(date(2024, 2, 1), -12))
 
     def test_missing_or_invalid_dates_stay_accessible_without_being_assigned_a_day(self):
         records = [record("日期未定", ""), record("需确认旧日期", "2026-02-30"), record("没有日期", None)]
