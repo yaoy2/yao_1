@@ -1,5 +1,7 @@
 import sqlite3
 import os
+import math
+import re
 from datetime import datetime
 from openpyxl import Workbook
 
@@ -55,7 +57,11 @@ def init_db():
     conn.close()
     if should_restore:
         restore_from_markdown_backup()
-    sync_backup_files()
+    # Reruns only read the ledger; rebuild exports after writes or missing/stale files.
+    database_mtime = os.stat(DB_PATH).st_mtime_ns
+    if any(not os.path.exists(path) or os.stat(path).st_mtime_ns < database_mtime
+           for path in (BACKUP_MD_PATH, BACKUP_XLSX_PATH)):
+        sync_backup_files()
 
 
 def add_record(record_date, category, unit, spender, description, amount, status="未报销"):
@@ -128,8 +134,8 @@ def replace_all_records(records):
         conn.execute("DELETE FROM expense_records")
         for record in records:
             amount = float(record["amount"])
-            if amount <= 0:
-                raise ValueError("amount must be greater than 0")
+            if not math.isfinite(amount) or amount <= 0:
+                raise ValueError("amount must be finite and greater than 0")
             created_at = record.get("created_at") or now
             updated_at = record.get("updated_at") or now
             conn.execute(
@@ -211,20 +217,19 @@ def _split_markdown_table_row(line):
         text = text[:-1]
     cells = []
     current = []
-    escaped = False
-    for char in text:
-        if escaped:
-            current.append(char)
-            escaped = False
-        elif char == "\\":
-            escaped = True
-        elif char == "|":
+    index = 0
+    while index < len(text):
+        char = text[index]
+        if char == "\\" and index + 1 < len(text) and text[index + 1] == "|":
+            current.append("|")
+            index += 2
+            continue
+        if char == "|":
             cells.append("".join(current).strip())
             current = []
         else:
             current.append(char)
-    if escaped:
-        current.append("\\")
+        index += 1
     cells.append("".join(current).strip())
     return cells
 
@@ -235,9 +240,11 @@ def parse_markdown_backup(text):
     headers = []
     for line in text.splitlines():
         stripped = line.strip()
-        if not stripped.startswith("|") or "---" in stripped:
+        if not stripped.startswith("|"):
             continue
         cells = _split_markdown_table_row(stripped)
+        if all(re.fullmatch(r":?-{3,}:?", cell) for cell in cells):
+            continue
         if not headers:
             headers = cells
             continue
@@ -253,7 +260,7 @@ def parse_markdown_backup(text):
             record["amount"] = float(record.get("amount", 0))
         except (TypeError, ValueError):
             continue
-        if record["amount"] <= 0:
+        if not math.isfinite(record["amount"]) or record["amount"] <= 0:
             continue
         records.append(record)
     return records

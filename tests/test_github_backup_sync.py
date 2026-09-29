@@ -45,6 +45,21 @@ class FakeDownloadSession:
 
 
 class GithubBackupSyncTest(unittest.TestCase):
+    def test_nested_config_takes_precedence_over_flat_and_environment_values(self):
+        config = github_backup_sync.get_backup_sync_config(
+            secrets={"github_backup": {"token": "nested-token", "repo": "owner/backup", "branch": "ledger"},
+                     "github_backup_token": "flat-token"},
+            environ={"GITHUB_BACKUP_TOKEN": "env-token", "GITHUB_BACKUP_REPO": "env/repo"},
+        )
+        self.assertEqual(config, {"enabled": True, "token": "nested-token", "repo": "owner/backup", "branch": "ledger"})
+
+    def test_blank_nested_values_fall_back_to_flat_and_environment_values(self):
+        config = github_backup_sync.get_backup_sync_config(
+            secrets={"github_backup": {"token": " ", "repo": None}, "github_backup_token": "flat-token"},
+            environ={"GITHUB_BACKUP_REPO": "owner/backup", "GITHUB_BACKUP_BRANCH": "ledger"},
+        )
+        self.assertEqual(config, {"enabled": True, "token": "flat-token", "repo": "owner/backup", "branch": "ledger"})
+
     def test_missing_token_skips_without_error(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             local_path = Path(tmpdir) / "backup.md"

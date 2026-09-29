@@ -22,10 +22,11 @@
 
 ## 历史设计与实施
 
-以下 8 份 Markdown 平铺保存在 `history/`；日期和文件名保留以便追溯。旧路径、模块数量、模型选择和未勾选步骤只表示当时状态。
+以下 9 份 Markdown 平铺保存在 `history/`；日期和文件名保留以便追溯。旧路径、模块数量、模型选择和未勾选步骤只表示当时状态。
 
 | 日期 | 主题 | 记录 |
 |---|---|---|
+| 2026-09-30 | 全库检查与优化 | [修复清单、性能对比与验证范围](history/2026-09-30-repository-optimization.md) |
 | 2026-05-23 | 网络备忘录 | [设计规格](history/2026-05-23-web-memo-design.md) · [实施计划](history/2026-05-23-web-memo.md) |
 | 2026-05-24 | Recorder 文件纪要 | [设计规格](history/2026-05-24-ding-minutes-design.md) · [实施计划](history/2026-05-24-ding-minutes.md) |
 | 2026-07-01 | 邮件通知页面 | [实施计划](history/2026-07-01-email-notice-streamlit-page.md) |

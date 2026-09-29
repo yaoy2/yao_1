@@ -441,7 +441,14 @@ class MarkdownBuilder:
 
         if tag == "a":
             href = node.get("href", "").strip()
-            text = normalize_text(node.get_text(" ", strip=True))
+            if node.find("img"):
+                start = len(self.lines)
+                for child in node.children:
+                    self.walk(child)
+                text = "".join(self.lines[start:])
+                del self.lines[start:]
+            else:
+                text = normalize_text(node.get_text(" ", strip=True))
             if href and text:
                 self.lines.append(f"[{text}]({href})")
             elif text:
@@ -578,9 +585,9 @@ def archive_one(page, url: str, archive_type: str, timeout: int = 30, dry_run: b
         date_part = meta.get("published") or meta.get("archived") or now_date()
 
         filename_base = clean_filename(f"{date_part}_{account_clean}_{title_clean}") if account_clean else clean_filename(f"{date_part}_{title_clean}")
-        article_dir_name = filename_base
-        assets_dir = target_root / "assets" / article_dir_name
         md_path = unique_file_path(target_root / f"{filename_base}.md")
+        article_dir_name = md_path.stem
+        assets_dir = target_root / "assets" / article_dir_name
 
         if dry_run:
             msg = f"DRY-RUN | {url} | {meta['title']} | {meta.get('account','')} | {meta.get('published','')}"

@@ -237,7 +237,17 @@ def upsert_plan(conn: sqlite3.Connection, record: dict[str, Any]) -> int:
             suggested_path = excluded.suggested_path,
             reason = excluded.reason,
             confidence = excluded.confidence,
+            approved = 0,
+            execute_status = 'not_executed',
             updated_at = excluded.updated_at
+        WHERE (organize_plans.file_id, organize_plans.original_path,
+               organize_plans.original_name, organize_plans.category,
+               organize_plans.suggested_name, organize_plans.suggested_path,
+               organize_plans.reason, organize_plans.confidence)
+           IS NOT (excluded.file_id, excluded.original_path,
+                   excluded.original_name, excluded.category,
+                   excluded.suggested_name, excluded.suggested_path,
+                   excluded.reason, excluded.confidence)
         """,
         payload,
     )

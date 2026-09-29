@@ -20,6 +20,28 @@ class EmailNoticeStandaloneHtmlTest(unittest.TestCase):
         self.assertNotRegex(self.html, r"<link[^>]+href=['\"]https?://")
         self.assertNotIn("cdn.", self.html.lower())
 
+    def test_preview_coalesces_a_burst_of_typing(self):
+        node = _find_node()
+        if not node:
+            self.skipTest("本机没有 node，跳过 JavaScript 预览调度检查")
+        scheduler = self.html[self.html.index("var previewTimer = null;"):self.html.index("function refreshPreview()")]
+        script = """
+const assert = require('assert');
+const pending = new Map();
+let sequence = 0, renders = 0;
+function setTimeout(callback, delay) { assert.strictEqual(delay, 120); pending.set(++sequence, callback); return sequence; }
+function clearTimeout(id) { pending.delete(id); }
+function refreshPreview() { renders++; }
+""" + scheduler + """
+for (let i = 0; i < 100; i++) schedulePreview();
+assert.strictEqual(pending.size, 1);
+assert.strictEqual(renders, 0);
+pending.values().next().value();
+assert.strictEqual(renders, 1);
+"""
+        result = subprocess.run([node, "-e", script], capture_output=True, text=True, encoding="utf-8")
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_shareable_file_includes_editor_and_college_defaults(self):
         self.assertIn("function parseNoticeText", self.html)
         self.assertIn("function saveHtmlFile", self.html)

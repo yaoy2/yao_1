@@ -1,6 +1,7 @@
 import importlib
 import os
 import sys
+from time import monotonic
 from datetime import date, datetime
 
 import streamlit as st
@@ -86,6 +87,14 @@ def merge_remote_todos_from_github():
     if inserted:
         st.info(f"已从 GitHub 备份合并 {inserted} 条待办。")
     return True
+
+
+def refresh_todos_if_needed():
+    """Throttle passive refreshes; edit callbacks still check the remote every time."""
+    last_refresh = st.session_state.get("todo_remote_refreshed_at")
+    if last_refresh is None or monotonic() - last_refresh >= 30:
+        if merge_remote_todos_from_github():
+            st.session_state["todo_remote_refreshed_at"] = monotonic()
 
 
 def sync_todo_backup_to_github():
@@ -191,7 +200,7 @@ def _date_value(value):
 def _compact_date_label(value):
     date_value = _date_value(value)
     if date_value:
-        return date_value.strftime("%m-%d")
+        return date_value.strftime("%m-%d") if date_value.year == todo_db.today().year else date_value.isoformat()
     return str(value or "")
 
 
@@ -202,12 +211,11 @@ def _full_date_from_compact(value, fallback_year=None):
     if _date_value(text):
         return text
     normalized = text.replace("/", "-").replace(".", "-")
+    year = fallback_year or todo_db.today().year
     try:
-        parsed = datetime.strptime(normalized, "%m-%d").date()
+        return datetime.strptime(f"{year}-{normalized}", "%Y-%m-%d").date().isoformat()
     except ValueError:
         return ""
-    year = fallback_year or todo_db.today().year
-    return date(year, parsed.month, parsed.day).isoformat()
 
 
 def _due_time_options(value=""):
@@ -282,15 +290,20 @@ def prepare_todo_edit(record_id):
     if not expected or current != expected or record.get("status") == "deleted":
         st.warning("这条待办已在其他入口变化，已刷新；请核对后再操作。")
         return False
-    return True
+    return record
 
 
 def save_todo_due_fields(record_id):
-    if not prepare_todo_edit(record_id):
+    record = prepare_todo_edit(record_id)
+    if not record:
         return
     new_due_date = st.session_state.get(f"todo_due_date_{record_id}")
     new_due_time = st.session_state.get(f"todo_due_time_{record_id}")
-    due_date_val = _full_date_from_compact(new_due_date)
+    original_date = _date_value(record.get("due_date"))
+    due_date_val = _full_date_from_compact(new_due_date, original_date.year if original_date else None)
+    if str(new_due_date or "").strip() and not due_date_val:
+        st.warning("截止日期无效，请填写 MM-DD 或 YYYY-MM-DD。")
+        return
     due_time_val = str(new_due_time or "")
     todo_db.update_todo(record_id, due_date=due_date_val, due_time=due_time_val)
     sync_todo_backup_to_github()
@@ -395,7 +408,7 @@ require_todo_auth()
 apply_style()
 restore_todo_backup_from_github()
 todo_db.init_db()
-merge_remote_todos_from_github()
+refresh_todos_if_needed()
 
 records_all = todo_db.get_todos(view="all")
 active_count = len([record for record in records_all if not record.get("is_archived")])

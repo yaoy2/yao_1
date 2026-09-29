@@ -92,13 +92,14 @@ def round_score(value: float, mode: str) -> float:
 
 def normalize_students(frame: pd.DataFrame) -> pd.DataFrame:
     result = frame.copy()
+    numeric_defaults = {"other_score": 0.0, "coefficient": 1.0, "individual_adjustment": 0.0}
     for column in STUDENT_COLUMNS:
         if column not in result.columns:
-            result[column] = "" if column in {"student_no", "name", "class_name", "group_code", "adjustment_reason"} else 0.0
+            result[column] = numeric_defaults.get(column, "")
     result = result[STUDENT_COLUMNS]
     for column in ("student_no", "name", "class_name", "group_code", "adjustment_reason"):
         result[column] = result[column].fillna("").astype(str).str.strip()
-    for column, default in (("other_score", 0.0), ("coefficient", 1.0), ("individual_adjustment", 0.0)):
+    for column, default in numeric_defaults.items():
         result[column] = pd.to_numeric(result[column], errors="coerce").fillna(default)
     return result
 
@@ -120,11 +121,11 @@ def sync_groups_from_students(students: pd.DataFrame, groups: pd.DataFrame) -> p
     students = normalize_students(students)
     groups = normalize_groups(groups)
     codes = sorted(code for code in students["group_code"].unique() if code)
-    existing = {row["group_code"]: row for _, row in groups.iterrows()}
+    existing = {row["group_code"]: row for row in groups.to_dict("records")}
     rows = []
     for code in codes:
         if code in existing:
-            rows.append(existing[code].to_dict())
+            rows.append(existing[code])
         else:
             rows.append({
                 "group_code": code,
@@ -147,7 +148,7 @@ def calculate_results(
     groups = normalize_groups(groups)
     group_lookup = groups.set_index("group_code").to_dict("index") if not groups.empty else {}
     rows: list[dict[str, Any]] = []
-    for _, student in students.iterrows():
+    for student in students.to_dict("records"):
         group = group_lookup.get(student["group_code"], {})
         pitch_raw = _number(group.get("pitch_score"), 0.0)
         report_raw = _number(group.get("report_score"), 0.0)
@@ -232,7 +233,7 @@ def validate_all(
     if not duplicate_groups.empty:
         add("错误", "分组", f"发现重复小组记录：{', '.join(sorted(duplicate_groups['group_code'].unique()))}")
 
-    for _, row in groups.iterrows():
+    for row in groups.to_dict("records"):
         code = row["group_code"] or "未命名小组"
         for column, label in (("pitch_score", "路演"), ("report_score", "报告")):
             value = row[column]

@@ -270,11 +270,11 @@ hr { border-color: var(--colors-hairline); margin: 1.25rem 0; }
 }
 [data-testid="stSidebar"] .custom-nav-item {
     display: grid;
-    grid-template-columns: 2.75rem minmax(0, 1fr);
-    gap: .55rem;
+    grid-template-columns: 2.3rem minmax(0, 1fr);
+    gap: .4rem;
     align-items: center;
     margin: .18rem .35rem;
-    padding: .54rem .58rem;
+    padding: .42rem .5rem;
     border: 1px solid var(--colors-hairline) !important;
     border-radius: 12px !important;
     background: var(--colors-canvas) !important;
@@ -282,9 +282,10 @@ hr { border-color: var(--colors-hairline); margin: 1.25rem 0; }
     text-decoration: none !important;
     transition: border-color .16s ease, background-color .16s ease;
 }
-[data-testid="stSidebar"] .custom-nav-item:hover {
+[data-testid="stSidebar"] .custom-nav-item:hover,
+[data-testid="stSidebar"] .custom-nav-item:focus-visible {
     border-color: rgba(0, 102, 204, .38) !important;
-    background: var(--colors-canvas) !important;
+    background: var(--colors-primary-soft) !important;
     box-shadow: none;
 }
 [data-testid="stSidebar"] .custom-nav-code {

@@ -63,6 +63,14 @@ def test_adjustments_do_not_change_group_scores():
     pd.testing.assert_frame_equal(original, groups[["pitch_score", "report_score"]])
 
 
+def test_missing_coefficient_column_defaults_to_one_without_zeroing_group_scores():
+    students = sample_students().drop(columns=["coefficient"])
+    results = calculate_results(students, sample_groups(), ScoreSettings())
+    assert list(results["coefficient"]) == [1.0, 1.0]
+    assert list(results["pitch_personal"]) == [88, 88]
+    assert list(results["report_personal"]) == [90, 90]
+
+
 def test_half_up_rounding():
     assert round_score(80.5, "四舍五入为整数") == 81
     assert round_score(80.44, "保留一位小数") == 80.4

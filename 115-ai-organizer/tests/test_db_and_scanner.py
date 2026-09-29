@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 
 from app.config import load_settings
-from app.db import connect, file_stats, init_db, list_plans, set_plan_approved
+from app.db import connect, file_stats, init_db, list_plans, set_plan_approved, upsert_plan, set_plan_execute_status
 from app.openlist_client import extract_native_id
 from app.scanner import scan
 
@@ -133,6 +133,22 @@ class DbAndScannerTest(unittest.TestCase):
     def test_extract_native_id_does_not_use_filename(self):
         self.assertEqual("fid-1", extract_native_id({"name": "movie.mkv", "id": "fid-1"}))
         self.assertEqual("", extract_native_id({"name": "movie.mkv", "size": 10}))
+
+    def test_approval_survives_identical_plan_but_not_changed_recommendation(self):
+        scan(self.settings, scan_dir="/云下载", max_depth=3, max_files=50, list_fn=fake_tree)
+        conn = connect(self.db_path)
+        try:
+            plan = dict(list_plans(conn)[0])
+            set_plan_approved(conn, [plan["id"]], True)
+            set_plan_execute_status(conn, plan["id"], "success")
+            upsert_plan(conn, plan)
+            unchanged = conn.execute("SELECT * FROM organize_plans WHERE id = ?", (plan["id"],)).fetchone()
+            self.assertEqual((unchanged["approved"], unchanged["execute_status"]), (1, "success"))
+            upsert_plan(conn, {**plan, "suggested_path": "/different-target"})
+            changed = conn.execute("SELECT * FROM organize_plans WHERE id = ?", (plan["id"],)).fetchone()
+            self.assertEqual((changed["approved"], changed["execute_status"]), (0, "not_executed"))
+        finally:
+            conn.close()
 
     def test_native_id_tracks_rename_without_duplicate_row(self):
         def first_tree(path: str):

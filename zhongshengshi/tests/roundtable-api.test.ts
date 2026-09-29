@@ -20,6 +20,19 @@ const seats: Seat[] = Array.from({ length: 4 }, (_, index) => ({
 }));
 
 describe("POST /api/roundtable/run", () => {
+  it.each([
+    { rounds: 0 }, { rounds: 4 }, { rounds: 1.5 }, { rounds: "2" }, { rounds: null },
+    { messageBudget: 0 }, { messageBudget: 1000000 }, { messageBudget: 2.5 },
+    { messageBudget: "14" }, { messageBudget: null }, { mode: "unknown" }
+  ])("rejects invalid execution limits before calling providers: %j", async (limits) => {
+    const response = await POST(new Request("http://localhost/api/roundtable/run", {
+      method: "POST",
+      body: JSON.stringify({ topic: "测试话题", selectedSeats: seats, ...limits })
+    }));
+    expect(response.status).toBe(400);
+    expect(await response.json()).toHaveProperty("error");
+  });
+
   it("returns transcript and provider status without api keys when mock mode is used", async () => {
     const request = new Request("http://localhost/api/roundtable/run", {
       method: "POST",

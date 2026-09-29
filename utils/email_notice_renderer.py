@@ -89,45 +89,45 @@ def build_notice_html(
         <table border="1" cellspacing="0" style="width:{width_pt:g}pt;border-collapse:collapse">
             <tbody>
                 <tr>
-                    <td colspan="2" style="border:1pt double double solid #4472c4;background:#2f5496;padding:3.75pt;width:{width_pt:g}pt;height:{header_height}px">
+                    <td colspan="2" style="border:1pt solid #4472c4;background:#2f5496;padding:3.75pt;width:{width_pt:g}pt;height:{header_height}px">
                         <p style="text-align:center;line-height:15.75pt;margin:0;">
                             <span style="font-family:华文中宋;font-size:22pt;color:#fff"><b>{header_text}</b></span>
                         </p>
                     </td>
                 </tr>
                 <tr>
-                    <td style="border:1pt solid solid solid double #4472c4;padding:3.75pt;width:74pt;height:37px">
+                    <td style="border:1pt solid #4472c4;padding:3.75pt;width:74pt;height:37px">
                         <p style="text-align:center;margin:0;">
                             <span style="font-family:宋体;font-size:14pt;color:#004898"><b>通知主题</b></span>
                         </p>
                     </td>
-                    <td style="border:1pt solid double solid #4472c4;padding:3.75pt;width:{detail_width_pt:.1f}pt;height:37px">
+                    <td style="border:1pt solid #4472c4;padding:3.75pt;width:{detail_width_pt:.1f}pt;height:37px">
                         <p style="text-align:justify;line-height:15.75pt;margin:0 0 0 6.6pt">
                             <b><span style="font-family:宋体;color:#333;font-size:14pt">{subject_text}</span></b>
                         </p>
                     </td>
                 </tr>
                 <tr>
-                    <td style="border:1pt solid solid solid double #4472c4;padding:3.75pt;width:74pt;height:37px">
+                    <td style="border:1pt solid #4472c4;padding:3.75pt;width:74pt;height:37px">
                         <p style="text-align:center;margin:0;">
                             <span style="font-family:宋体;font-size:14pt;color:#004898"><b>通知编号</b></span>
                         </p>
                     </td>
-                    <td style="border:1pt solid double solid #4472c4;padding:3.75pt;width:{detail_width_pt:.1f}pt;height:37px">
+                    <td style="border:1pt solid #4472c4;padding:3.75pt;width:{detail_width_pt:.1f}pt;height:37px">
                         <p style="text-align:justify;line-height:15.75pt;margin:0 0 0 6.6pt;">
                             <span style="font-family:宋体;font-size:14pt;color:#333"><b>{number_text}</b></span>
                         </p>
                     </td>
                 </tr>
                 <tr>
-                    <td colspan="2" style="border:1pt solid double #4472c4;padding:3.75pt;vertical-align:top;width:{width_pt:g}pt;height:20px">
+                    <td colspan="2" style="border:1pt solid #4472c4;padding:3.75pt;vertical-align:top;width:{width_pt:g}pt;height:20px">
                         <p style="text-align:center;margin:0;">
                             <span style="font-family:华文中宋;font-size:14pt;color:#004898"><b>通 知 内 容</b></span>
                         </p>
                     </td>
                 </tr>
                 <tr>
-                    <td colspan="2" style="border:1pt solid double #4472c4;padding:3.75pt 30px;vertical-align:top;width:{width_pt:g}pt;min-height:95px">
+                    <td colspan="2" style="border:1pt solid #4472c4;padding:3.75pt 30px;vertical-align:top;width:{width_pt:g}pt;min-height:95px">
                         <div style="font-family:{escape(font_family)}; font-size:{escape(font_size)}; line-height:{line_height_value:g}; text-align:justify; text-indent:{escape(indent)}; color:#000000; overflow:hidden;">
                             {body_html or ""}
                         </div>

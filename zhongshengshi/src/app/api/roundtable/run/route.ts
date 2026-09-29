@@ -19,8 +19,21 @@ interface RoundtableRunBody {
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as RoundtableRunBody;
-    const topic = body.topic?.trim() ?? "";
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
+      return NextResponse.json({ error: "请求内容必须是对象。" }, { status: 400 });
+    }
+    const topic = typeof body.topic === "string" ? body.topic.trim() : "";
     const selectedSeats = Array.isArray(body.selectedSeats) ? body.selectedSeats : [];
+    const rounds = body.rounds === undefined ? 1 : body.rounds;
+    const messageBudget = body.messageBudget === undefined ? 14 : body.messageBudget;
+
+    if (!Number.isInteger(rounds) || rounds < 1 || rounds > 3 ||
+        !Number.isInteger(messageBudget) || messageBudget < 1 || messageBudget > 24) {
+      return NextResponse.json({ error: "轮数须为 1–3 的整数，消息预算须为 1–24 的整数。" }, { status: 400 });
+    }
+    if (body.mode !== undefined && body.mode !== "structured" && body.mode !== "freechat") {
+      return NextResponse.json({ error: "讨论模式无效。" }, { status: 400 });
+    }
 
     if (!topic) {
       return NextResponse.json({ error: "请先输入讨论话题。" }, { status: 400 });
@@ -38,8 +51,8 @@ export async function POST(request: Request) {
       providerAssignments,
       providers,
       mode: body.mode ?? "structured",
-      messageBudget: body.messageBudget,
-      rounds: body.rounds ?? 1,
+      messageBudget,
+      rounds,
       providerClientFactory: (provider) => (body.useMock ? createMockProviderClient() : createProviderClient(provider, process.env))
     });
 

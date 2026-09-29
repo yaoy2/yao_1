@@ -643,13 +643,13 @@
         syncNoticeNumber();
         refreshPreview();
 
-        document.getElementById("editorContent").addEventListener("input", refreshPreview);
+        document.getElementById("editorContent").addEventListener("input", schedulePreview);
         ["inputSubject", "inputUnit", "inputDate", "inputHeader"].forEach(function(id) {
-            document.getElementById(id).addEventListener("input", refreshPreview);
+            document.getElementById(id).addEventListener("input", schedulePreview);
         });
         document.getElementById("inputNumberDigits").addEventListener("input", function() {
             syncNoticeNumber();
-            refreshPreview();
+            schedulePreview();
         });
 
         document.querySelectorAll(".settings-grid select, .settings-grid input").forEach(function(el) {
@@ -817,7 +817,16 @@
         };
     }
 
+    var previewTimer = null;
+
+    function schedulePreview() {
+        clearTimeout(previewTimer);
+        previewTimer = setTimeout(refreshPreview, 120);
+    }
+
     function refreshPreview() {
+        clearTimeout(previewTimer);
+        previewTimer = null;
         var subject = escapeHtml(document.getElementById("inputSubject").value);
         var number = escapeHtml(document.getElementById("inputNumber").value);
         var unit = escapeHtml(document.getElementById("inputUnit").value);
@@ -833,28 +842,28 @@
 
         document.getElementById("previewArea").innerHTML = [
             '<div align="center" style="line-height:1.43; width:100%; overflow:auto;">',
-            '<table border="1" cellspacing="0" style="width:' + dims.tableWidth + "; max-width:100%; border-collapse:collapse; border:1pt double double solid #4472c4;\">",
+            '<table border="1" cellspacing="0" style="width:' + dims.tableWidth + "; max-width:100%; border-collapse:collapse; border:1pt solid #4472c4;\">",
             "<tbody>",
             "<tr>",
-            '<td colspan="2" style="border:1pt double double solid #4472c4; background:#2f5496; padding:3.75pt; width:' + dims.tableWidth + "; height:" + dims.headerHeight + '">',
+            '<td colspan="2" style="border:1pt solid #4472c4; background:#2f5496; padding:3.75pt; width:' + dims.tableWidth + "; height:" + dims.headerHeight + '">',
             '<p style="text-align:center; line-height:15.75pt; margin:0;">',
             '<span style="font-family:华文中宋; font-size:22pt; color:#fff;"><b>' + header + "</b></span>",
             "</p></td></tr>",
             "<tr>",
-            '<td style="border:1pt solid solid solid double #4472c4; padding:3.75pt; width:74pt; height:37px">',
+            '<td style="border:1pt solid #4472c4; padding:3.75pt; width:74pt; height:37px">',
             '<p style="text-align:center; margin:0;"><span style="font-family:宋体; font-size:14pt; color:#004898;"><b>通知主题</b></span></p></td>',
-            '<td style="border:1pt solid double solid #4472c4; padding:3.75pt; width:' + dims.detailWidth + '; height:37px">',
+            '<td style="border:1pt solid #4472c4; padding:3.75pt; width:' + dims.detailWidth + '; height:37px">',
             '<p style="text-align:justify; line-height:15.75pt; margin:0 0 0 6.6pt"><b><span style="font-family:宋体; color:#333; font-size:14pt;">' + subject + "</span></b></p></td></tr>",
             "<tr>",
-            '<td style="border:1pt solid solid solid double #4472c4; padding:3.75pt; width:74pt; height:37px">',
+            '<td style="border:1pt solid #4472c4; padding:3.75pt; width:74pt; height:37px">',
             '<p style="text-align:center; margin:0;"><span style="font-family:宋体; font-size:14pt; color:#004898;"><b>通知编号</b></span></p></td>',
-            '<td style="border:1pt solid double solid #4472c4; padding:3.75pt; width:' + dims.detailWidth + '; height:37px">',
+            '<td style="border:1pt solid #4472c4; padding:3.75pt; width:' + dims.detailWidth + '; height:37px">',
             '<p style="text-align:justify; line-height:15.75pt; margin:0 0 0 6.6pt;"><span style="font-family:宋体; font-size:14pt; color:#333;"><b>' + number + "</b></span></p></td></tr>",
             "<tr>",
-            '<td colspan="2" style="border:1pt solid double #4472c4; padding:3.75pt; vertical-align:top; width:' + dims.tableWidth + '; height:20px">',
+            '<td colspan="2" style="border:1pt solid #4472c4; padding:3.75pt; vertical-align:top; width:' + dims.tableWidth + '; height:20px">',
             '<p style="text-align:center; margin:0;"><span style="font-family:华文中宋; font-size:14pt; color:#004898;"><b>通 知 内 容</b></span></p></td></tr>',
             "<tr>",
-            '<td colspan="2" style="border:1pt solid double #4472c4; padding:3.75pt 30px; vertical-align:top; width:' + dims.tableWidth + '; min-height:95px">',
+            '<td colspan="2" style="border:1pt solid #4472c4; padding:3.75pt 30px; vertical-align:top; width:' + dims.tableWidth + '; min-height:95px">',
             '<div style="font-family:' + fontFamily + "; font-size:" + fontSize + "; line-height:" + lineHeight + "; text-align:justify; text-indent:" + indent + '; color:#000000; overflow:hidden;">',
             contentHtml,
             "</div>",
@@ -896,45 +905,45 @@
             '        <table border="1" cellspacing="0" style="width:' + dims.tableWidth + ';border-collapse:collapse">',
             "            <tbody>",
             "                <tr>",
-            '                    <td colspan="2" style="border:1pt double double solid #4472c4;background:#2f5496;padding:3.75pt;width:' + dims.tableWidth + ";height:" + dims.headerHeight + '">',
+            '                    <td colspan="2" style="border:1pt solid #4472c4;background:#2f5496;padding:3.75pt;width:' + dims.tableWidth + ";height:" + dims.headerHeight + '">',
             '                        <p style="text-align:center;line-height:15.75pt;margin:0;">',
             '                            <span style="font-family:华文中宋;font-size:22pt;color:#fff"><b>' + header + "</b></span>",
             "                        </p>",
             "                    </td>",
             "                </tr>",
             "                <tr>",
-            '                    <td style="border:1pt solid solid solid double #4472c4;padding:3.75pt;width:74pt;height:37px">',
+            '                    <td style="border:1pt solid #4472c4;padding:3.75pt;width:74pt;height:37px">',
             '                        <p style="text-align:center;margin:0;">',
             '                            <span style="font-family:宋体;font-size:14pt;color:#004898"><b>通知主题</b></span>',
             "                        </p>",
             "                    </td>",
-            '                    <td style="border:1pt solid double solid #4472c4;padding:3.75pt;width:' + dims.detailWidth + ';height:37px">',
+            '                    <td style="border:1pt solid #4472c4;padding:3.75pt;width:' + dims.detailWidth + ';height:37px">',
             '                        <p style="text-align:justify;line-height:15.75pt;margin:0 0 0 6.6pt">',
             '                            <b><span style="font-family:宋体;color:#333;font-size:14pt">' + subject + "</span></b>",
             "                        </p>",
             "                    </td>",
             "                </tr>",
             "                <tr>",
-            '                    <td style="border:1pt solid solid solid double #4472c4;padding:3.75pt;width:74pt;height:37px">',
+            '                    <td style="border:1pt solid #4472c4;padding:3.75pt;width:74pt;height:37px">',
             '                        <p style="text-align:center;margin:0;">',
             '                            <span style="font-family:宋体;font-size:14pt;color:#004898"><b>通知编号</b></span>',
             "                        </p>",
             "                    </td>",
-            '                    <td style="border:1pt solid double solid #4472c4;padding:3.75pt;width:' + dims.detailWidth + ';height:37px">',
+            '                    <td style="border:1pt solid #4472c4;padding:3.75pt;width:' + dims.detailWidth + ';height:37px">',
             '                        <p style="text-align:justify;line-height:15.75pt;margin:0 0 0 6.6pt;">',
             '                            <span style="font-family:宋体;font-size:14pt;color:#333"><b>' + number + "</b></span>",
             "                        </p>",
             "                    </td>",
             "                </tr>",
             "                <tr>",
-            '                    <td colspan="2" style="border:1pt solid double #4472c4;padding:3.75pt;vertical-align:top;width:' + dims.tableWidth + ';height:20px">',
+            '                    <td colspan="2" style="border:1pt solid #4472c4;padding:3.75pt;vertical-align:top;width:' + dims.tableWidth + ';height:20px">',
             '                        <p style="text-align:center;margin:0;">',
             '                            <span style="font-family:华文中宋;font-size:14pt;color:#004898"><b>通 知 内 容</b></span>',
             "                        </p>",
             "                    </td>",
             "                </tr>",
             "                <tr>",
-            '                    <td colspan="2" id="content-cell" style="border:1pt solid double #4472c4;padding:3.75pt 30px;vertical-align:top;width:' + dims.tableWidth + ';min-height:95px">',
+            '                    <td colspan="2" id="content-cell" style="border:1pt solid #4472c4;padding:3.75pt 30px;vertical-align:top;width:' + dims.tableWidth + ';min-height:95px">',
             '                        <div style="font-family:' + fontFamily + "; font-size:" + fontSize + "; line-height:" + lineHeight + "; text-align:justify; text-indent:" + indent + '; color:#000000; overflow:hidden;">',
             "                            " + contentHtml,
             "                        </div>",

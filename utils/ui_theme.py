@@ -14,6 +14,18 @@ _PINNED_SIDEBAR_CODES = {"M15", "M14", "M08", "M06"}
 def _load_homepage_tools():
     hello_path = Path(__file__).resolve().parents[1] / "hello.py"
     try:
+        version = hello_path.stat()
+        tools = _parse_homepage_tools(hello_path, version.st_mtime_ns, version.st_size)
+    except (OSError, SyntaxError, ValueError):
+        return []
+    # Callers may sort or annotate their own copy without changing the cache.
+    return [dict(tool) for tool in tools]
+
+
+@lru_cache(maxsize=1)
+def _parse_homepage_tools(hello_path, modified_ns, size):
+    """Refresh the navigation only when its source file changes."""
+    try:
         module = ast.parse(hello_path.read_text(encoding="utf-8"))
     except Exception:
         return []
@@ -66,7 +78,7 @@ def render_sidebar_nav() -> None:
         lock = " 🔒" if tool.get("locked") else ""
         blocked_mark = "❌ " if tool.get("blocked") else ""
         return (
-            f'<a class="custom-nav-item" href="{href}" target="_self">'
+            f'<a class="custom-nav-item" href="{href}" target="_self" title="{code} · {title}">'
             f'<span class="custom-nav-code">{code}</span>'
             f'<span class="custom-nav-main"><strong><span class="custom-nav-marks">{blocked_mark}</span>'
             f'<span class="custom-nav-label">{title}</span>'

@@ -1,4 +1,5 @@
 import tempfile
+import os
 import unittest
 from contextlib import contextmanager
 from pathlib import Path
@@ -21,6 +22,38 @@ def patched_budget_storage(tmpdir):
 
 
 class BudgetDbReplaceAllRecordsTest(unittest.TestCase):
+    def test_backup_round_trip_preserves_paths_pipes_and_dashes(self):
+        for description in (r"C:\材料\预算", r"\\server\材料", "耗材---补充", r"路径\|备注"):
+            with self.subTest(description=description):
+                records = [{"record_date": "2026-09-30", "category": "学生实践费",
+                            "description": description, "amount": 12.5}]
+                restored = budget_db.parse_markdown_backup(budget_db.build_markdown_backup(records))
+                self.assertEqual(len(restored), 1)
+                self.assertEqual(restored[0]["description"], description)
+                self.assertEqual(restored[0]["amount"], 12.5)
+
+    def test_nonfinite_amount_import_keeps_existing_records(self):
+        with tempfile.TemporaryDirectory() as tmpdir, patched_budget_storage(tmpdir):
+            budget_db.init_db()
+            budget_db.add_record("2026-09-30", "学生实践费", "", "", "保留", 10)
+            for amount in (float("inf"), float("-inf"), float("nan")):
+                with self.subTest(amount=amount), self.assertRaises(ValueError):
+                    budget_db.replace_all_records([{"record_date": "2026-09-30", "category": "学生实践费", "amount": amount}])
+            self.assertEqual(budget_db.get_all_records()[0]["description"], "保留")
+
+    def test_repeated_init_preserves_current_backups_and_rebuilds_stale_exports(self):
+        with tempfile.TemporaryDirectory() as tmpdir, patched_budget_storage(tmpdir) as tmp_path:
+            budget_db.init_db()
+            budget_db.add_record("2026-09-30", "学生实践费", "", "", "耗材", 10)
+            with patch.object(budget_db, "sync_backup_files", wraps=budget_db.sync_backup_files) as sync:
+                budget_db.init_db()
+                sync.assert_not_called()
+                excel = tmp_path / "budget_ledger_backup.xlsx"
+                os.utime(excel, (1, 1))
+                budget_db.init_db()
+                sync.assert_called_once()
+            self.assertEqual(load_workbook(excel)["预算流水"]["G2"].value, 10)
+
     def test_budget_page_syncs_backup_to_github_after_writes(self):
         page_path = Path(__file__).resolve().parents[1] / "pages" / "05_8_budget.py"
         page_source = page_path.read_text(encoding="utf-8")

@@ -1,5 +1,21 @@
 from utils import ui_theme
 from utils.ui_theme import _get_sidebar_tools, _load_homepage_tools
+from unittest.mock import patch
+
+
+def test_navigation_cache_refreshes_when_homepage_changes(tmp_path, monkeypatch):
+    monkeypatch.setattr(ui_theme, "__file__", str(tmp_path / "utils" / "ui_theme.py"))
+    homepage = tmp_path / "hello.py"
+    homepage.write_text('TOOLS = [{"title": "First", "code": "M01"}]', encoding="utf-8")
+    ui_theme._parse_homepage_tools.cache_clear()
+    with patch.object(ui_theme.ast, "parse", wraps=ui_theme.ast.parse) as parse:
+        first = _load_homepage_tools()
+        first[0]["title"] = "Local edit"
+        assert _load_homepage_tools()[0]["title"] == "First"
+        assert parse.call_count == 1
+        homepage.write_text('TOOLS = [{"title": "Second title", "code": "M02"}]', encoding="utf-8")
+        assert _load_homepage_tools()[0]["code"] == "M02"
+        assert parse.call_count == 2
 
 
 def test_sidebar_pins_frequent_tools_before_other_modules():

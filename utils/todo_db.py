@@ -356,7 +356,7 @@ def _extract_due_date(text, base_date):
         "后天": 2,
         "大后天": 3,
     }
-    for word, offset in relative_days.items():
+    for word, offset in sorted(relative_days.items(), key=lambda item: len(item[0]), reverse=True):
         if word in text:
             return (base_date + timedelta(days=offset)).isoformat()
 
@@ -565,72 +565,116 @@ def has_markdown_backup_records(path=None):
 
 
 def import_todo_records(records, write_backup=True):
-    existing = get_todos(view="all")
-    changed = 0
-    for record in reversed(records or []):
-        if not str(record.get("content") or "").strip():
-            continue
-        uid = record_uid(record)
-        match = next((item for item in existing if item["uid"] == uid), None)
-        # Old deployments imported records with fresh numeric IDs and no UID.
-        # Reconcile only an unambiguous legacy copy with the same creation event;
-        # independently created records with explicit UIDs must remain separate.
-        legacy_copies = [item for item in existing if item["uid"] != uid
-                         and item["uid"] == record_uid({**item, "uid": ""})
-                         and record.get("created_at")
-                         and item["created_at"] == record["created_at"]
-                         and item["record_date"] == record.get("record_date")
-                         and item["content"] == record["content"]]
-        if len(legacy_copies) == 1:
-            legacy = legacy_copies[0]
-            if match is None:
-                conn = get_connection()
-                conn.execute("UPDATE todo_items SET uid = ? WHERE id = ?", (uid, legacy["id"]))
-                conn.commit()
-                conn.close()
-                legacy["uid"] = uid
-                match = legacy
-                changed += 1
-            elif _merge_legacy_copy(match, legacy):
-                existing = get_todos(view="all")
-                match = next(item for item in existing if item["uid"] == uid)
-                changed += 1
-        # Very old imports without identity metadata retain content/date deduplication.
-        if match is None and not record.get("uid") and not record.get("created_at"):
-            match = next((item for item in existing if
-                          item["record_date"] == record.get("record_date") and
-                          _normalize_content(item["content"]) == _normalize_content(record["content"])), None)
-        if match is not None:
-            if str(record.get("updated_at") or "") > str(match.get("updated_at") or ""):
-                fields = ("content", "record_date", "due_date", "due_time", "status", "is_archived",
-                          "completed_at", "created_at", "updated_at")
-                incoming = {key: record.get(key, match.get(key, "")) for key in fields}
-                conn = get_connection()
-                conn.execute("UPDATE todo_items SET " + ", ".join(f"{key} = ?" for key in fields) +
-                             ", uid = ? WHERE id = ?", [incoming[key] for key in fields] + [match["uid"], match["id"]])
-                conn.commit()
-                conn.close()
-                match.update(incoming)
-                changed += 1
-            continue
-        _insert_todo_record(record)
-        existing = get_todos(view="all")
-        changed += 1
+    fields = ("content", "record_date", "due_date", "due_time", "status", "is_archived",
+              "completed_at", "created_at", "updated_at")
+    conn = get_connection()
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        rows = conn.execute("SELECT * FROM todo_items ORDER BY is_archived ASC, datetime(created_at) DESC, id DESC").fetchall()
+        by_uid = {}
+        by_legacy = {}
+        by_content = {}
+
+        def legacy_key(item):
+            return (item.get("created_at"), item.get("record_date"), item.get("content"))
+
+        def content_key(item):
+            return (item.get("record_date"), _normalize_content(item.get("content", "")))
+
+        def import_order_key(item):
+            # Match SQLite datetime() ordering, including seconds, offsets and NULLs.
+            seconds = conn.execute("SELECT strftime('%s', ?)", (item.get("created_at"),)).fetchone()[0]
+            created_value = int(seconds) if seconds is not None else float("-inf")
+            return (int(bool(item.get("is_archived"))), -created_value, -item["id"])
+
+        def add_indexes(item):
+            by_uid.setdefault(item["uid"], item)
+            if item["uid"] == record_uid({**item, "uid": ""}):
+                by_legacy.setdefault(legacy_key(item), []).append(item)
+            by_content.setdefault(content_key(item), []).append(item)
+
+        def remove_indexes(item):
+            if by_uid.get(item["uid"]) is item:
+                by_uid.pop(item["uid"], None)
+            for index, key in ((by_legacy, legacy_key(item)), (by_content, content_key(item))):
+                values = index.get(key, [])
+                if item in values:
+                    values.remove(item)
+                if not values:
+                    index.pop(key, None)
+
+        for row in rows:
+            item = _record_from_row(row)
+            add_indexes(item)
+
+        changed = 0
+        for record in reversed(records or []):
+            if not str(record.get("content") or "").strip():
+                continue
+            uid = record_uid(record)
+            match = by_uid.get(uid)
+            # Old deployments imported records with fresh numeric IDs and no UID.
+            # Reconcile only an unambiguous legacy copy with the same creation event;
+            # independently created records with explicit UIDs must remain separate.
+            legacy_copies = [item for item in by_legacy.get(
+                (record.get("created_at"), record.get("record_date"), record.get("content")), [])
+                if item["uid"] != uid and record.get("created_at")]
+            if len(legacy_copies) == 1:
+                legacy = legacy_copies[0]
+                if match is None:
+                    conn.execute("UPDATE todo_items SET uid = ? WHERE id = ?", (uid, legacy["id"]))
+                    remove_indexes(legacy)
+                    legacy["uid"] = uid
+                    add_indexes(legacy)
+                    match = legacy
+                    changed += 1
+                else:
+                    newest = max((match, legacy), key=lambda item: item["updated_at"])
+                    if _merge_legacy_copy(match, legacy, conn=conn):
+                        remove_indexes(match)
+                        remove_indexes(legacy)
+                        match.update({key: newest[key] for key in fields})
+                        add_indexes(match)
+                        changed += 1
+            # Very old imports without identity metadata retain content/date deduplication.
+            if match is None and not record.get("uid") and not record.get("created_at"):
+                candidates = by_content.get(content_key(record), [])
+                match = min(candidates, key=import_order_key) if candidates else None
+            if match is not None:
+                if str(record.get("updated_at") or "") > str(match.get("updated_at") or ""):
+                    incoming = {key: record.get(key, match.get(key, "")) for key in fields}
+                    remove_indexes(match)
+                    conn.execute("UPDATE todo_items SET " + ", ".join(f"{key} = ?" for key in fields) +
+                                 ", uid = ? WHERE id = ?", [incoming[key] for key in fields] + [match["uid"], match["id"]])
+                    match.update(incoming)
+                    add_indexes(match)
+                    changed += 1
+                continue
+            inserted = _insert_todo_record(record, conn=conn)
+            add_indexes(inserted)
+            changed += 1
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
     if changed and write_backup:
         sync_backup_file()
     return changed
 
 
-def _merge_legacy_copy(canonical, legacy):
+def _merge_legacy_copy(canonical, legacy, conn=None):
     fields = ("content", "record_date", "due_date", "due_time", "status", "is_archived",
               "completed_at", "created_at", "updated_at")
     # Equal timestamps with different state are ambiguous; retain both for review.
     if canonical["updated_at"] == legacy["updated_at"] and any(canonical[key] != legacy[key] for key in fields):
         return False
     newest = max((canonical, legacy), key=lambda item: item["updated_at"])
-    conn = get_connection()
+    owns_connection = conn is None
+    conn = conn or get_connection()
     try:
-        with conn:
+        def merge():
             conn.execute("CREATE TABLE IF NOT EXISTS todo_uid_merge_history "
                          "(id INTEGER PRIMARY KEY, merged_at TEXT NOT NULL, original_records TEXT NOT NULL)")
             conn.execute("INSERT INTO todo_uid_merge_history (merged_at, original_records) VALUES (?, ?)",
@@ -638,41 +682,54 @@ def _merge_legacy_copy(canonical, legacy):
             conn.execute("UPDATE todo_items SET " + ", ".join(f"{key} = ?" for key in fields) + " WHERE id = ?",
                          [newest[key] for key in fields] + [canonical["id"]])
             conn.execute("DELETE FROM todo_items WHERE id = ?", (legacy["id"],))
+        if owns_connection:
+            with conn:
+                merge()
+        else:
+            merge()
     finally:
-        conn.close()
+        if owns_connection:
+            conn.close()
     return True
 
 
-def _insert_todo_record(record):
+def _insert_todo_record(record, conn=None):
     now = now_datetime().isoformat(sep=" ", timespec="microseconds")
     status = str(record.get("status") or "pending")
     is_archived = bool(record.get("is_archived") or status == "done")
-    conn = get_connection()
-    record_id = _coerce_int(record.get("id")) or None
-    if record_id and conn.execute("SELECT 1 FROM todo_items WHERE id = ?", (record_id,)).fetchone():
-        record_id = None
-    conn.execute(
-        """
-        INSERT INTO todo_items
-            (content, record_date, due_date, due_time, status, is_archived, completed_at, created_at, updated_at, uid, id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """,
-        (
-            str(record.get("content", "")).strip(),
-            str(record.get("record_date") or now_datetime().date().isoformat()),
-            _normalize_date_text(record.get("due_date")),
-            _normalize_time_text(record.get("due_time")),
-            status,
-            1 if is_archived else 0,
-            str(record.get("completed_at") or ""),
-            str(record.get("created_at") or now),
-            str(record.get("updated_at") or now),
-            record_uid(record) if record.get("id") or record.get("uid") else str(uuid.uuid4()),
-            record_id,
-        ),
-    )
-    conn.commit()
-    conn.close()
+    owns_connection = conn is None
+    conn = conn or get_connection()
+    try:
+        record_id = _coerce_int(record.get("id")) or None
+        if record_id and conn.execute("SELECT 1 FROM todo_items WHERE id = ?", (record_id,)).fetchone():
+            record_id = None
+        cursor = conn.execute(
+            """
+            INSERT INTO todo_items
+                (content, record_date, due_date, due_time, status, is_archived, completed_at, created_at, updated_at, uid, id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                str(record.get("content", "")).strip(),
+                str(record.get("record_date") or now_datetime().date().isoformat()),
+                _normalize_date_text(record.get("due_date")),
+                _normalize_time_text(record.get("due_time")),
+                status,
+                1 if is_archived else 0,
+                str(record.get("completed_at") or ""),
+                str(record.get("created_at") or now),
+                str(record.get("updated_at") or now),
+                record_uid(record) if record.get("id") or record.get("uid") else str(uuid.uuid4()),
+                record_id,
+            ),
+        )
+        if owns_connection:
+            conn.commit()
+        row = conn.execute("SELECT * FROM todo_items WHERE id = ?", (cursor.lastrowid,)).fetchone()
+        return _record_from_row(row)
+    finally:
+        if owns_connection:
+            conn.close()
 
 
 def _todo_identities(record):

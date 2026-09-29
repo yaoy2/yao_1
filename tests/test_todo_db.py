@@ -38,8 +38,10 @@ class TodoDbTest(unittest.TestCase):
 
         self.assertEqual(("2026-07-01", "14:30"), todo_db.extract_due_fields("2026-07-01 14:30 交表", base_date))
         self.assertEqual(("2026-07-01", "15:00"), todo_db.extract_due_fields("7月1日下午3点交材料", base_date))
+        self.assertEqual(("2026-06-29", ""), todo_db.extract_due_fields("今天处理材料", base_date))
         self.assertEqual(("2026-06-30", "10:30"), todo_db.extract_due_fields("明天上午10点半提醒", base_date))
         self.assertEqual(("2026-07-01", ""), todo_db.extract_due_fields("后天联系学生", base_date))
+        self.assertEqual(("2026-07-02", ""), todo_db.extract_due_fields("大后天提交汇总", base_date))
         self.assertEqual(("2026-07-06", ""), todo_db.extract_due_fields("下周一开协调会", base_date))
 
     def test_search_matches_content_record_date_due_date_and_due_time(self):
@@ -249,6 +251,89 @@ class TodoDbTest(unittest.TestCase):
         self.assertEqual(1, inserted)
         self.assertEqual(2, len(records))
         self.assertIn("远端待办", [record["content"] for record in records])
+
+    def test_large_import_reuses_one_snapshot_read_and_preserves_all_records(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patched_todo_storage(tmpdir):
+                todo_db.init_db()
+                records = [
+                    {"uid": f"batch-{index}", "record_date": "2026-09-30",
+                     "content": f"批量待办 {index}", "status": "pending",
+                     "created_at": f"2026-09-30 09:{index // 60:02d}:{index % 60:02d}",
+                     "updated_at": f"2026-09-30 09:{index // 60:02d}:{index % 60:02d}"}
+                    for index in range(1000)
+                ]
+                with patch.object(todo_db, "get_todos", wraps=todo_db.get_todos) as read_all:
+                    changed = todo_db.import_todo_records(records)
+                self.assertEqual(1000, changed)
+                self.assertEqual(1000, len(todo_db.get_todos(view="all")))
+                # The import itself does not refresh the complete table per row;
+                # the single read is the backup write after a successful import.
+                self.assertLessEqual(read_all.call_count, 1)
+
+    def test_identityless_import_updates_latest_matching_candidate(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patched_todo_storage(tmpdir):
+                todo_db.init_db()
+                todo_db._insert_todo_record({
+                    "uid": "explicit-old", "record_date": "2026-09-30", "content": "同日同内容",
+                    "status": "pending", "created_at": "2026-09-30 09:00:00",
+                    "updated_at": "2026-09-30 09:00:00",
+                })
+                todo_db._insert_todo_record({
+                    "uid": "explicit-new", "record_date": "2026-09-30", "content": "同日同内容",
+                    "status": "pending", "created_at": "2026-09-30 10:00:00",
+                    "updated_at": "2026-09-30 10:00:00",
+                })
+                changed = todo_db.import_todo_records([{
+                    "record_date": "2026-09-30", "content": "同日同内容", "status": "done",
+                    "updated_at": "2026-10-01 09:00:00",
+                }])
+                records = {record["uid"]: record for record in todo_db.get_todos(view="all")}
+                self.assertEqual(1, changed)
+                self.assertEqual("pending", records["explicit-old"]["status"])
+                self.assertEqual("done", records["explicit-new"]["status"])
+
+    def test_failed_batch_import_rolls_back_all_rows_and_backup(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patched_todo_storage(tmpdir) as tmp_path:
+                todo_db.init_db()
+                before_backup = (tmp_path / "todo_items_backup.md").read_bytes()
+                records = [
+                    {"uid": f"rollback-{index}", "record_date": "2026-09-30",
+                     "content": f"回滚待办 {index}", "status": "pending"}
+                    for index in range(3)
+                ]
+                original_insert = todo_db._insert_todo_record
+                calls = {"count": 0}
+
+                def fail_on_second(record, conn=None):
+                    calls["count"] += 1
+                    if calls["count"] == 2:
+                        raise RuntimeError("synthetic import failure")
+                    return original_insert(record, conn=conn)
+
+                with patch.object(todo_db, "_insert_todo_record", side_effect=fail_on_second):
+                    with self.assertRaisesRegex(RuntimeError, "synthetic import failure"):
+                        todo_db.import_todo_records(records)
+                self.assertEqual([], todo_db.get_todos(view="all"))
+                self.assertEqual(before_backup, (tmp_path / "todo_items_backup.md").read_bytes())
+
+    def test_identityless_import_uses_the_same_order_as_the_visible_list(self):
+        for timestamps in (("2026-09-30 09:00:00.900", "2026-09-30 09:00:00.100"),
+                           ("2026-09-30 09:00:00", "2026-09-30 10:00:00+02:00")):
+            with self.subTest(timestamps=timestamps), tempfile.TemporaryDirectory() as directory:
+                with patched_todo_storage(directory):
+                    todo_db.init_db()
+                    for index, created in enumerate(timestamps):
+                        todo_db._insert_todo_record({"uid": f"explicit-{index}", "content": "同内容",
+                                                    "record_date": "2026-09-30", "created_at": created,
+                                                    "updated_at": "2026-09-30 09:00:00"})
+                    expected_uid = todo_db.get_todos(view="all")[0]["uid"]
+                    todo_db.import_todo_records([{"content": "同内容", "record_date": "2026-09-30",
+                                                 "status": "done", "updated_at": "2026-10-01 09:00:00"}])
+                    completed = [record for record in todo_db.get_todos(view="all") if record["status"] == "done"]
+                    self.assertEqual([record["uid"] for record in completed], [expected_uid])
 
     def test_page_uses_auth_search_dates_completion_archive_and_github_sync(self):
         page_path = Path(__file__).resolve().parents[1] / "pages" / "14_todos.py"

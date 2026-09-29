@@ -11,13 +11,17 @@ API_ROOT = "https://api.github.com"
 _ANY_VERSION = object()
 
 
-def _read_mapping_value(mapping, key):
+def _read_mapping_item(mapping, key):
     if mapping is None:
         return None
     try:
-        value = mapping[key]
+        return mapping[key]
     except Exception:
         return None
+
+
+def _read_mapping_value(mapping, key):
+    value = _read_mapping_item(mapping, key)
     if value is None:
         return None
     value = str(value).strip()
@@ -26,7 +30,7 @@ def _read_mapping_value(mapping, key):
 
 def get_backup_sync_config(secrets=None, environ=None):
     environ = os.environ if environ is None else environ
-    section = _read_mapping_value(secrets, "github_backup")
+    section = _read_mapping_item(secrets, "github_backup")
     token = (
         _read_mapping_value(section, "token")
         or _read_mapping_value(secrets, "github_backup_token")
@@ -114,12 +118,13 @@ def read_file_from_github(repo_path, secrets=None, environ=None, session=None):
     if response.status_code == 404:
         return {"ok": False, "skipped": True, "reason": "missing_remote_file"}
     if response.status_code != 200:
-        raise RuntimeError(f"GitHub 璇诲彇澶囦唤鏂囦欢澶辫触锛欻TTP {response.status_code}")
+        raise RuntimeError(f"GitHub 读取备份文件失败：HTTP {response.status_code}")
 
-    encoded_content = str(response.json().get("content", ""))
+    payload = response.json()
+    encoded_content = str(payload.get("content", ""))
     content = base64.b64decode("".join(encoded_content.split())).decode("utf-8")
     return {"ok": True, "skipped": False, "path": repo_path, "content": content,
-            "sha": response.json().get("sha")}
+            "sha": payload.get("sha")}
 
 
 def download_file_from_github(local_path, repo_path, secrets=None, environ=None, session=None):
