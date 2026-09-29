@@ -99,6 +99,10 @@ class CredentialTests(unittest.TestCase):
 
 class SetupTests(unittest.TestCase):
     def setUp(self):
+        # Historical setup internals use fake clients only; live setup is off.
+        guard = patch.object(setup, "reject_legacy_mail_io", return_value=None)
+        guard.start()
+        self.addCleanup(guard.stop)
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)

@@ -81,6 +81,11 @@ class FakeIMAP:
 
 class MailFilingSourceTests(unittest.TestCase):
     def setUp(self):
+        # Legacy internals stay covered with synthetic mail only; the live
+        # source entrypoint is independently tested to block all local/IMAP IO.
+        guard = patch.object(source, "reject_legacy_mail_io", return_value=None)
+        guard.start()
+        self.addCleanup(guard.stop)
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name).resolve() / "workspace"

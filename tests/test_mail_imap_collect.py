@@ -175,6 +175,11 @@ class AttachmentReconciliationTests(unittest.TestCase):
 
 class CollectWorkspaceTests(unittest.TestCase):
     def setUp(self):
+        # Exercise historical internals offline; public entrypoint is separately
+        # tested to reject every real IMAP call under the Edge-only policy.
+        guard = patch.object(cli, "reject_legacy_mail_io", return_value=None)
+        guard.start()
+        self.addCleanup(guard.stop)
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)

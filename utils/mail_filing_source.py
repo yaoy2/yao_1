@@ -1,8 +1,7 @@
-"""Read one known mail source, without file writes or mailbox mutations.
+"""Retired local/IMAP filing-source path, blocked by the Edge-only policy.
 
-The caller must pass the message from its local dashboard, never an arbitrary
-cloud-supplied path. Local originals are verified before use. An optional fallback
-retrieves only an exact Message-ID through the user's dedicated IMAP credential.
+The public reader returns EDGE_ONLINE_ONLY before touching files or credentials.
+Private legacy helpers are retained solely for compatibility and offline tests.
 """
 
 from __future__ import annotations
@@ -20,6 +19,7 @@ from pathlib import Path
 
 from scripts.mail_imap_setup import load_setup_config
 from utils import mail_imap, mail_mime
+from utils.mail_notice_policy import EdgeOnlineOnlyError, reject_legacy_mail_io
 from utils.mail_imap_credentials import CredentialError, read_credential
 
 
@@ -27,6 +27,7 @@ MAX_SOURCE_BYTES = 50 * 1024 * 1024
 MAX_ID_HEADER_BYTES = 16 * 1024
 MAX_MATCHES_PER_FOLDER = 100
 ERROR_CODES = frozenset({
+    "EDGE_ONLINE_ONLY",
     "SOURCE_MISSING", "SOURCE_CORRUPT", "SOURCE_NOT_FOUND", "SOURCE_AUTH_REQUIRED",
     "SOURCE_FETCH_FAILED", "SENSITIVE_SOURCE_SKIPPED", "SOURCE_ID_MISMATCH",
     "SOURCE_PATH_REJECTED", "SOURCE_ID_UNSEARCHABLE",
@@ -302,6 +303,10 @@ def read_source(root: Path, message: dict, *, allow_imap=True) -> dict:
     flag, so the worker can retain valid parts without claiming filing is complete.
     No old attachment index is accepted as evidence that an email had no files.
     """
+    try:
+        reject_legacy_mail_io()
+    except EdgeOnlineOnlyError:
+        return _result(errors=("EDGE_ONLINE_ONLY",))
     if not isinstance(message, dict) or not isinstance(message.get("id"), str) or not message["id"]:
         return _result(errors=("SOURCE_ID_UNSEARCHABLE",))
     if message.get("skip_sensitive") or message.get("authentication_notice"):

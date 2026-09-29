@@ -1,7 +1,7 @@
-"""Stage a read-only IMAP batch using the user's dedicated local credential.
+"""Retired IMAP batch entrypoint, blocked by the Edge-only notice policy.
 
-No ingest or remote upload occurs here. The task reviews mail evidence and adds
-grounded summaries/actions before passing this batch to mail_workbench.py.
+Legacy internals remain for offline regression coverage. The public entrypoint
+rejects the request before reading configuration, credentials or any mail.
 """
 from __future__ import annotations
 
@@ -21,6 +21,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from scripts.mail_imap_setup import load_setup_config
 from utils import mail_imap
+from utils.mail_notice_policy import EdgeOnlineOnlyError, reject_legacy_mail_io
 from utils.mail_imap_credentials import CredentialError, read_credential
 from utils.mail_workspace import _atomic_json, _inside, load_dashboard, now_iso, parse_time
 
@@ -80,6 +81,7 @@ def reconcile_existing(batch, dashboard):
 
 
 def collect_workspace(root, *, kind="daily", at=None, since=None, manual_request_id=None):
+    reject_legacy_mail_io()
     if manual_request_id is not None and not re.fullmatch(r"[0-9a-f]{32}", manual_request_id):
         raise ValueError("invalid manual request identity")
     setup = load_setup_config(root)
@@ -158,6 +160,9 @@ def main(argv=None):
     args = parser.parse_args(argv)
     try:
         result = collect_workspace(args.root, kind=args.kind, at=args.at, since=args.since)
+    except EdgeOnlineOnlyError as exc:
+        print(json.dumps({"status": "disabled", "error": exc.code, "message": str(exc)}, ensure_ascii=False))
+        return 2
     except Exception:
         print(json.dumps({"status": "error", "error": "IMAP_COLLECTION_SETUP_OR_STAGING_FAILED"}))
         return 1

@@ -1,4 +1,4 @@
-"""User-operated local IMAP authentication window. Never accepts CLI passwords."""
+"""Retired IMAP setup: Edge-only policy blocks login UI and network access."""
 
 from __future__ import annotations
 
@@ -22,6 +22,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from utils.mail_imap_credentials import CredentialError, TARGET_PREFIX, save_credential
 from utils.mail_workspace import _atomic_json, _inside
+from utils.mail_notice_policy import EdgeOnlineOnlyError, reject_legacy_mail_io
 
 TIMEOUT_SECONDS = 20
 FRIENDLY_ERRORS = {
@@ -77,6 +78,7 @@ def load_setup_config(root):
 
 def verify_connection(config, password, client_factory=None):
     """Authenticate and EXAMINE INBOX only; no mail content or flags are read."""
+    reject_legacy_mail_io()
     client = None
     started = time.monotonic()
     factory = imaplib.IMAP4_SSL if client_factory is None else client_factory
@@ -140,6 +142,7 @@ def save_success(config, folder_count, saved_credential):
 
 
 def run_window(config):
+    reject_legacy_mail_io()
     import tkinter as tk
     from tkinter import ttk
 
@@ -256,6 +259,11 @@ def run_window(config):
 
 
 def main(argv=None):
+    try:
+        reject_legacy_mail_io()
+    except EdgeOnlineOnlyError as exc:
+        print(str(exc))
+        return 2
     parser = argparse.ArgumentParser(description="本机用户操作的 IMAP 认证窗口；不接收命令行密码。")
     parser.add_argument("--root", required=True, help="含 config.json 的邮箱工作区绝对路径")
     args = parser.parse_args(argv)

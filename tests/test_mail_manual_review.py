@@ -15,6 +15,8 @@ BODY = "请学院在2026年9月20日17:00前提交申报表，发送教务处，
 
 def message(identifier="new-mail", body=BODY):
     return {"id": identifier, "subject": "教学项目申报", "received_at": "2026-09-09T09:00:00+08:00",
+            "sent_at": "2026-09-09T09:00:00+08:00", "folder": "已发送",
+            "source_transport": "edge", "source_url": "https://mail.nsu.edu.cn/owa/",
             "body_text": body, "summary": "待整理", "category": "待整理", "attachments": [],
             "attachment_reviews": [], "sender": "private@example.test", "secret": "never-share"}
 
@@ -42,6 +44,9 @@ class MailManualReviewTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         self.dashboard = {"messages": [], "actions": []}
         self.batch = {"messages": [message()], "actions": [], "errors": []}
+        settings = patch.object(review.mail_jev_review, "local_settings", return_value={})
+        settings.start()
+        self.addCleanup(settings.stop)
 
     def run_review(self, output=None):
         with patch.object(review, "_invoke", return_value=output if output is not None else [response()]) as invoke:
@@ -70,7 +75,7 @@ class MailManualReviewTests(unittest.TestCase):
         again, _ = self.run_review([same])
         self.assertEqual(task["id"], again["actions"][0]["id"])
         packed = invoke.call_args.args[0][0]
-        self.assertEqual({"id", "title", "date", "body_text", "attachment_reviews"}, set(packed))
+        self.assertEqual({"id", "title", "folder", "source_transport", "source_url", "date", "body_text", "attachment_reviews"}, set(packed))
         self.assertNotIn("private@example.test", json.dumps(packed))
         self.assertNotIn("never-share", json.dumps(packed))
 
@@ -96,7 +101,7 @@ class MailManualReviewTests(unittest.TestCase):
         self.assertEqual(2, len(result["messages"]))
 
     def test_unread_attachment_content_is_not_sent_and_limit_is_added(self):
-        self.batch["messages"][0]["attachments"] = [{"id": "a", "data": b"not-sent"}]
+        self.batch["messages"][0]["attachments"] = [{"id": "a", "name": "扫描件.pdf"}]
         self.batch["messages"][0]["attachment_reviews"] = [
             {"id": "a", "name": "扫描件.pdf", "status": "unavailable", "text": "UNREAD-INJECTION", "reason": "扫描件"}]
         result, invoke = self.run_review()
@@ -146,7 +151,21 @@ class MailManualReviewTests(unittest.TestCase):
         result, _ = self.run_review([value])
         self.assertEqual("2026-09-20T17:00:00+08:00", result["actions"][0]["due_at"])
 
-    def test_explicit_month_day_reuses_receive_year_with_confirmation_basis(self):
+    def test_completed_template_can_contain_real_dated_tasks_but_examples_cannot(self):
+        self.batch["messages"][0]["body_text"] = "请按已填写的附件落实。"
+        value = response()
+        value["evidence"] = evidence(source="attachment:a")
+        value["actions"][0]["evidence"] = evidence(source="attachment:a")
+        value["actions"][0]["due_basis"] = "attachment:a"
+        for name, expected in (("工作安排模板-已填写.docx", 1), ("工作安排示例.docx", 0),
+                               ("工作安排样例.docx", 0), ("工作安排范例.docx", 0)):
+            with self.subTest(name=name):
+                self.batch["messages"][0]["attachment_reviews"] = [
+                    {"id": "a", "name": name, "status": "read", "text": BODY}]
+                result, _ = self.run_review([value])
+                self.assertEqual(expected, len(result["actions"]))
+
+    def test_explicit_month_day_reuses_sent_year_with_confirmation_basis(self):
         body = "请于9月23日前提交材料。"
         self.batch["messages"][0]["body_text"] = body
         value = response()
@@ -156,7 +175,7 @@ class MailManualReviewTests(unittest.TestCase):
                     due_text="9月23日前", due_basis="body", evidence=evidence(body))
         result, _ = self.run_review([value])
         self.assertEqual("2026-09-23", result["actions"][0]["due_at"])
-        self.assertEqual("body；原文日期 + 邮件接收年份；未明示年份待确认", result["actions"][0]["due_basis"])
+        self.assertEqual("body；原文日期 + 邮件发信日期；未明示年份待确认", result["actions"][0]["due_basis"])
         self.assertEqual("needs_confirmation", result["actions"][0]["status"])
 
     def test_explicit_month_day_and_clock_keep_precise_shanghai_time(self):
@@ -169,15 +188,15 @@ class MailManualReviewTests(unittest.TestCase):
         result, _ = self.run_review([value])
         self.assertEqual("2026-09-11T16:00:00+08:00", result["actions"][0]["due_at"])
 
-    def test_cross_year_and_ambiguous_slash_dates_stay_null(self):
+    def test_cross_year_and_ambiguous_slash_dates_do_not_create_actions(self):
         for body, due_text in (("请于12/1前提交材料。", "12/1前"), ("请于1月5日前提交材料。", "1月5日前")):
-            self.batch["messages"][0].update(body_text=body, received_at="2026-12-20T09:00:00+08:00")
+            self.batch["messages"][0].update(body_text=body, sent_at="2026-12-20T09:00:00+08:00")
             value = response()
             value["evidence"] = evidence(body)
             value["actions"][0].update(owner=None, recipient=None, submission_method=None,
                 due_at=None, due_text=due_text, due_basis="body", evidence=evidence(body))
             result, _ = self.run_review([value])
-            self.assertIsNone(result["actions"][0]["due_at"])
+            self.assertEqual([], result["actions"])
 
     def test_date_only_does_not_get_an_invented_clock(self):
         body = "请于2026年9月20日前提交材料。"
@@ -198,13 +217,178 @@ class MailManualReviewTests(unittest.TestCase):
             with self.subTest(deadline=deadline):
                 self.assert_invalid([value])
 
-    def test_unknown_deadline_and_people_remain_null(self):
+    def test_unknown_deadline_is_not_a_task(self):
         value = response()
         value["actions"][0].update(owner=None, recipient=None, submission_method=None,
                                     due_at=None, due_text=None, due_basis=None)
         result, _ = self.run_review([value])
-        self.assertIsNone(result["actions"][0]["due_at"])
-        self.assertIsNone(result["actions"][0]["owner"])
+        self.assertEqual([], result["actions"])
+
+    def dated_response(self, body, due_text, due_at, requirement="提交工作材料"):
+        self.batch["messages"][0]["body_text"] = body
+        value = response()
+        value.update(summary=body, evidence=evidence(body))
+        value["actions"][0].update(requirement=requirement, owner=None, recipient=None,
+            submission_method=None, due_at=due_at, due_text=due_text, due_basis="body", evidence=evidence(body))
+        return value
+
+    def test_relative_deadlines_are_anchored_to_sent_date_not_received_date(self):
+        self.batch["messages"][0].update(sent_at="2026-09-21T09:00:00+08:00",
+                                         received_at="2030-03-05T09:00:00+08:00")
+        cases = [("今天", "2026-09-21"), ("明天", "2026-09-22"),
+                 ("本周五", "2026-09-25"), ("下周三", "2026-09-30"),
+                 ("本月底", "2026-09-30"), ("9月底", "2026-09-30")]
+        for due_text, deadline in cases:
+            with self.subTest(due_text=due_text):
+                value = self.dated_response("请在" + due_text + "前提交工作材料。", due_text, deadline)
+                result, _ = self.run_review([value])
+                self.assertEqual(deadline, result["actions"][0]["due_at"])
+
+    def test_february_end_and_sent_timezone_are_reliable(self):
+        self.batch["messages"][0]["sent_at"] = "2028-02-28T20:00:00Z"
+        value = self.dated_response("请于本月底提交材料。", "本月底", "2028-02-29")
+        result, _ = self.run_review([value])
+        self.assertEqual("2028-02-29", result["actions"][0]["due_at"])
+
+    def test_without_valid_sent_date_never_uses_internaldate_for_inference(self):
+        for sent_at in (None, "invalid", "2026-09-09T09:00:00"):
+            self.batch["messages"][0]["sent_at"] = sent_at
+            value = self.dated_response("请于10月9日前提交材料。", "10月9日前", "2026-10-09")
+            result, _ = self.run_review([value])
+            self.assertEqual([], result["actions"])
+        value = self.dated_response("请于2026年10月9日前提交材料。", "2026年10月9日前", "2026-10-09")
+        result, _ = self.run_review([value])
+        self.assertEqual("2026-10-09", result["actions"][0]["due_at"])
+
+    def test_specific_date_plan_is_kept_and_condition_cannot_disappear(self):
+        body = "如拟申报，请于10月9日16:00前提交计划。"
+        value = self.dated_response(body, "10月9日16:00前", "2026-10-09T16:00:00+08:00",
+                                    requirement="如拟申报，提交计划。")
+        result, _ = self.run_review([value])
+        self.assertEqual("2026-10-09T16:00:00+08:00", result["actions"][0]["due_at"])
+        value["actions"][0]["requirement"] = "提交计划。"
+        self.assert_invalid([value])
+
+    def test_renewal_conditions_must_remain_in_the_task(self):
+        for condition in ("如继续聘用", "如续聘"):
+            with self.subTest(condition=condition):
+                body = condition + "，请于10月9日前提交工作计划。"
+                value = self.dated_response(body, "10月9日前", "2026-10-09",
+                                            requirement=condition + "，提交工作计划。")
+                result, _ = self.run_review([value])
+                self.assertIn(condition, result["actions"][0]["requirement"])
+                value["actions"][0]["requirement"] = "提交工作计划。"
+                self.assert_invalid([value])
+
+    def test_ambiguous_conflicting_template_and_past_period_tasks_are_dropped(self):
+        cases = [
+            ("示例：请于10月9日前提交材料。", "10月9日前", "2026-10-09"),
+            ("截止为9月30日或10月9日，日期待核对。", "9月30日或10月9日", "2026-09-30"),
+            ("日期待核对：请于10月9日前提交材料。", "10月9日前", "2026-10-09"),
+            ("请于10月9日16:00或17:00前提交材料。", "10月9日16:00或17:00前", "2026-10-09T16:00:00+08:00"),
+            ("请每月5日前提交材料。", "每月5日前", "2026-09-05"),
+            ("请每月27日前提交材料。", "每月27日前", "2026-09-27"),
+            ("请每月27前提交材料。", "每月27前", "2026-09-27"),
+            ("请每周五提交材料。", "每周五", "2026-09-11"),
+            ("请于1月5日前提交材料。", "1月5日前", "2027-01-05"),
+        ]
+        for body, due_text, due_at in cases:
+            with self.subTest(body=body):
+                value = self.dated_response(body, due_text, due_at)
+                result, _ = self.run_review([value])
+                self.assertEqual([], result["actions"])
+
+    def test_undated_actions_are_removed_before_jev(self):
+        value = response()
+        value["actions"][0].update(due_at=None, due_text=None, due_basis=None)
+        with patch.object(review.mail_jev_review, "verify_batch", return_value=[{
+                "review": {"status": "verified", "version": 1}, "message_status": "no_action",
+                "action_statuses": []}]) as verify:
+            result, _ = self.run_review([value])
+        self.assertEqual([], verify.call_args.args[0][0][1]["actions"])
+        self.assertEqual([], result["actions"])
+
+    def test_online_window_excludes_expired_actions_before_jev(self):
+        self.batch["window"] = {"through": "2026-09-30T09:00:00+08:00"}
+        with patch.object(review.mail_jev_review, "verify_batch", return_value=[{
+                "review": {"status": "verified", "version": 1}, "message_status": "no_action",
+                "action_statuses": []}]) as verify:
+            result, invoke = self.run_review()
+        self.assertEqual([], result["actions"])
+        self.assertEqual([], verify.call_args.args[0][0][1]["actions"])
+        self.assertEqual("2026-09-30", invoke.call_args.args[0][0]["review_date"])
+        self.assertEqual("2026-09-30", verify.call_args.args[0][0][0]["review_date"])
+
+    def test_invalid_window_does_not_invent_a_current_date(self):
+        self.batch["window"] = {"through": "invalid"}
+        result, invoke = self.run_review()
+        self.assertEqual("2026-09-20T17:00:00+08:00", result["actions"][0]["due_at"])
+        self.assertNotIn("review_date", invoke.call_args.args[0][0])
+
+    def test_explicit_date_window_keeps_today_but_removes_older_deadline(self):
+        self.batch["window"] = {"through": "2026-09-20"}
+        result, _ = self.run_review()
+        self.assertEqual(1, len(result["actions"]))
+        self.batch["window"] = {"through": "2026-09-30"}
+        result, _ = self.run_review()
+        self.assertEqual([], result["actions"])
+
+    def test_forbidden_sources_are_skipped_before_reading_body_or_attachment_text(self):
+        class Guarded(dict):
+            def get(self, key, default=None):
+                if key in {"body_text", "text"}:
+                    raise AssertionError("excluded content was accessed")
+                return super().get(key, default)
+            def __deepcopy__(self, memo):
+                raise AssertionError("excluded content was copied")
+        edge = {"source_transport": "edge", "source_url": "https://mail.nsu.edu.cn/owa/"}
+        inbox = Guarded(id="inbox", folder="INBOX", subject="项目通知", **edge)
+        minutes = Guarded(id="minutes", folder="已发送", subject="党政联席会议纪要", **edge)
+        old_imap = Guarded(id="imap", folder="已发送", subject="项目通知")
+        wrong_site = Guarded(id="site", folder="已发送", subject="项目通知",
+                             source_transport="edge", source_url="https://example.test/owa/")
+        for excluded in (inbox, minutes, old_imap, wrong_site):
+            self.assertEqual((None, []), review._pack(excluded))
+        self.batch["messages"].extend([inbox, minutes, old_imap, wrong_site])
+        excluded_attachment = Guarded(id="minutes-attachment", name="会议纪要.pdf", status="read")
+        self.batch["messages"][0]["attachment_reviews"] = [excluded_attachment]
+        self.batch["messages"][0]["attachments"] = [excluded_attachment]
+        result, invoke = self.run_review()
+        self.assertEqual(["new-mail"], [m["id"] for m in result["messages"]])
+        self.assertEqual([], invoke.call_args.args[0][0]["attachment_reviews"])
+        self.assertNotIn("未取得可读取文字", result["messages"][0]["summary"])
+
+    def test_edge_label_cannot_make_downloaded_or_binary_sources_eligible(self):
+        class Guarded(dict):
+            def get(self, key, default=None):
+                if key in {"body_text", "text"}:
+                    raise AssertionError("local source content was accessed")
+                return super().get(key, default)
+            def __deepcopy__(self, memo):
+                raise AssertionError("local source content was copied")
+        cases = [
+            {"download_path": "C:/fixture/mail.html"},
+            {"raw_eml_download_path": "C:/fixture/mail.eml"},
+            {"local_path": "C:/fixture/mail.html"},
+            {"attachments": [{"id": "a", "name": "计划.pdf", "data": b"fixture"}]},
+            {"attachment_reviews": [Guarded(id="a", name="计划.pdf", status="read", download_path="C:/fixture/a.pdf")]},
+        ]
+        for metadata in cases:
+            with self.subTest(metadata=list(metadata)):
+                local = Guarded({**message(), **metadata})
+                self.assertEqual((None, []), review._pack(local))
+                self.batch["messages"] = [local]
+                result, invoke = self.run_review([])
+                self.assertEqual([], result["messages"])
+                invoke.assert_not_called()
+
+    def test_edge_result_copies_only_allowlisted_metadata(self):
+        self.batch["messages"][0]["unrelated_metadata"] = {"something": "not-needed"}
+        self.batch["messages"][0]["attachments"] = [{"id": "a", "name": "计划.pdf", "extra": "not-needed"}]
+        result, _ = self.run_review()
+        self.assertNotIn("unrelated_metadata", result["messages"][0])
+        self.assertNotIn("secret", result["messages"][0])
+        self.assertNotIn("extra", result["messages"][0]["attachments"][0])
 
     def test_unsupported_owner_or_extra_fields_or_duplicate_tasks_are_rejected(self):
         values = []
@@ -221,15 +405,16 @@ class MailManualReviewTests(unittest.TestCase):
             self.assert_invalid([value])
 
     def test_same_title_with_distinct_material_requirements_has_distinct_ids(self):
-        body = "请各单位提交竞赛报名表；入围后提交决赛展示材料。"
+        body = "请各单位在2026年9月20日前提交竞赛报名表；入围后于2026年9月20日前提交决赛展示材料。"
         self.batch["messages"][0]["body_text"] = body
         value = response()
         value["evidence"] = evidence(body)
         value["actions"] = []
-        for requirement in ("请各单位提交竞赛报名表", "入围后提交决赛展示材料"):
+        for requirement in ("请各单位在2026年9月20日前提交竞赛报名表", "入围后于2026年9月20日前提交决赛展示材料"):
             task = action()
             task.update(title="提交材料", requirement=requirement, owner=None, recipient=None,
-                submission_method=None, due_at=None, due_text=None, due_basis=None, evidence=evidence(requirement))
+                submission_method=None, due_at="2026-09-20", due_text="2026年9月20日前",
+                due_basis="body", evidence=evidence(requirement))
             value["actions"].append(task)
         result, _ = self.run_review([value])
         self.assertEqual(2, len({item["id"] for item in result["actions"]}))

@@ -138,6 +138,11 @@ class OnDemandCollectionTests(unittest.TestCase):
 
 class OnDemandWrapperTests(unittest.TestCase):
     def setUp(self):
+        # Test the retired staging internals with fakes only; the public
+        # entrypoint's Edge-only rejection is covered by test_mail_notice_policy.
+        guard = patch.object(cli, "reject_legacy_mail_io", return_value=None)
+        guard.start()
+        self.addCleanup(guard.stop)
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)

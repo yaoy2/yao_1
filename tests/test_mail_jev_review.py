@@ -64,6 +64,59 @@ class JevTests(unittest.TestCase):
         result, _ = self.run_one(draft=draft)
         self.assertEqual("no_action", result["message_status"])
 
+    def test_omission_scope_requires_both_calendar_date_and_actual_action(self):
+        payload = jev._payload(self.source, self.draft)
+        instructions = payload["questions"]["omitted"]["instructions"]
+        self.assertIn("可靠截止日期", instructions)
+        self.assertIn("无可靠日期", instructions)
+        self.assertIn("模板示例", instructions)
+        self.assertIn("条件性任务应保留条件", instructions)
+        self.assertIn("具体日期的工作计划不能漏掉", instructions)
+
+    def test_undated_draft_never_reaches_service(self):
+        self.draft["actions"][0]["due_at"] = None
+        result, calls = self.run_one()
+        self.assertEqual("attention", result["review"]["status"])
+        self.assertEqual([], calls)
+
+    def test_direct_sources_cannot_read_minutes_or_inbox_content(self):
+        class Guarded(dict):
+            def get(self, key, default=None):
+                if key in {"body_text", "text"}:
+                    raise AssertionError("excluded content was accessed")
+                return super().get(key, default)
+        edge = {"source_transport": "edge", "source_url": "https://mail.nsu.edu.cn/owa/"}
+        for source in (Guarded(folder="INBOX", title="通知", **edge),
+                       Guarded(folder="已发送", title="党政联席会议纪要", **edge),
+                       Guarded(folder="已发送", title="通知"),
+                       Guarded(folder="已发送", title="通知", source_transport="edge",
+                               source_url="https://example.test/owa/")):
+            self.assertIsNone(jev._payload(source, self.draft))
+            post = Mock(side_effect=AssertionError("no network"))
+            result = jev.verify_one(source, self.draft, [], api_key="fixture", deadline=0, post=post)
+            self.assertEqual("incomplete", result["review"]["status"])
+            post.assert_not_called()
+        self.source["attachment_reviews"] = [Guarded(id="a", name="会议纪要.pdf")]
+        result, calls = self.run_one()
+        self.assertEqual("verified", result["review"]["status"])
+        self.assertEqual([], calls[0][1]["json"]["state"]["source"]["attachment_reviews"])
+
+    def test_download_provenance_is_rejected_even_when_labeled_edge(self):
+        class Guarded(dict):
+            def get(self, key, default=None):
+                if key in {"body_text", "text"}:
+                    raise AssertionError("local source content was accessed")
+                return super().get(key, default)
+        for metadata in ({"download_path": "C:/fixture/mail.html"},
+                         {"raw_eml_download_path": "C:/fixture/mail.eml"},
+                         {"attachment_reviews": [{"id": "a", "name": "计划.pdf", "data": b"fixture"}]}):
+            source = Guarded({**self.source, **metadata})
+            post = Mock(side_effect=AssertionError("no network"))
+            self.assertIsNone(jev._payload(source, self.draft))
+            result = jev.verify_one(source, self.draft, [], api_key="fixture", deadline=0, post=post)
+            self.assertEqual("incomplete", result["review"]["status"])
+            post.assert_not_called()
+
     def test_contradiction_omission_voluntary_and_low_confidence_require_review(self):
         changes = [
             lambda a: a["summary"].update(choice="contradicts", probabilities={
