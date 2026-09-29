@@ -9,6 +9,7 @@ import streamlit as st
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from utils import budget_auth, github_backup_sync, todo_db
+from utils.todo_calendar import render_calendar_html, shift_month
 from utils.ui_theme import render_home_link
 
 
@@ -234,6 +235,32 @@ def _escape_html(value):
     )
 
 
+def change_calendar_month(offset):
+    today = todo_db.today()
+    current = st.session_state.get("todo_calendar_month", today.replace(day=1))
+    st.session_state["todo_calendar_month"] = shift_month(current, offset) if offset else today.replace(day=1)
+
+
+def render_todo_calendar(records):
+    today = todo_db.today()
+    month = st.session_state.get("todo_calendar_month", today.replace(day=1))
+    with st.container(border=True):
+        title_col, previous_col, current_col, next_col = st.columns([5, 1, 1, 1], vertical_alignment="center")
+        with title_col:
+            st.subheader(f"任务日历 · {month.year} 年 {month.month} 月")
+        with previous_col:
+            st.button("‹ 上月", key="todo_calendar_previous", on_click=change_calendar_month, args=(-1,),
+                      disabled=month == date.min, use_container_width=True)
+        with current_col:
+            st.button("本月", key="todo_calendar_current", on_click=change_calendar_month, args=(0,),
+                      use_container_width=True)
+        with next_col:
+            st.button("下月 ›", key="todo_calendar_next", on_click=change_calendar_month, args=(1,),
+                      disabled=month == date(9999, 12, 1), use_container_width=True)
+        st.caption("按截止日期排列，点击简称展开详情；已完成任务显示中划线。")
+        st.html(render_calendar_html(records, month, today=today))
+
+
 def prepare_todo_edit(record_id):
     expected = st.session_state.get(f"todo_revision_{record_id}")
     if not merge_remote_todos_from_github():
@@ -379,6 +406,8 @@ metric_a, metric_b, metric_c = st.columns(3)
 metric_a.metric("未完成", active_count)
 metric_b.metric("已归档", archived_count)
 metric_c.metric("全部记录", len(records_all))
+
+render_todo_calendar(records_all)
 
 with st.container(border=True):
     st.subheader("快速新增")
