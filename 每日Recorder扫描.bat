@@ -18,12 +18,7 @@ if errorlevel 2 (
     exit /b 2
 )
 
-git fetch origin >> logs\recorder_scan.log 2>&1
-set fetch_exit=%ERRORLEVEL%
-echo fetch_exit_code=%fetch_exit% >> logs\recorder_scan.log
-if not "%fetch_exit%"=="0" exit /b %fetch_exit%
-
-git pull --rebase origin main >> logs\recorder_scan.log 2>&1
+"C:\Users\Yao\AppData\Local\Programs\Python\Python314\python.exe" scripts\data_repo_sync.py pull data/ding_minutes_cloud.json >> logs\recorder_scan.log 2>&1
 set pull_exit=%ERRORLEVEL%
 echo pull_exit_code=%pull_exit% >> logs\recorder_scan.log
 if not "%pull_exit%"=="0" exit /b %pull_exit%
@@ -36,14 +31,7 @@ echo scan_exit_code=%scan_exit% >> logs\recorder_scan.log
 set export_exit=%ERRORLEVEL%
 echo export_exit_code=%export_exit% >> logs\recorder_scan.log
 
-git add data\ding_minutes_cloud.json >> logs\recorder_scan.log 2>&1
-git diff --cached --quiet -- data\ding_minutes_cloud.json
-if errorlevel 1 (
-    git commit -m "data: sync recorder notes" -- data\ding_minutes_cloud.json >> logs\recorder_scan.log 2>&1
-    git push origin main >> logs\recorder_scan.log 2>&1
-) else (
-    echo no recorder cloud changes to commit >> logs\recorder_scan.log
-)
+"C:\Users\Yao\AppData\Local\Programs\Python\Python314\python.exe" scripts\data_repo_sync.py push data/ding_minutes_cloud.json >> logs\recorder_scan.log 2>&1
 
 if not "%scan_exit%"=="0" exit /b %scan_exit%
 exit /b %export_exit%

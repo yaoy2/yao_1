@@ -163,6 +163,14 @@ def require_llm_budget_auth():
 
 
 require_llm_budget_auth()
+try:
+    for local_path in (llm_budget_accounts.ACCOUNTS_PATH, RECORDS_PATH):
+        github_backup_sync.ensure_local_file(
+            local_path, f"data/{local_path.name}", secrets=st.secrets, environ=os.environ)
+except Exception as exc:
+    # Continuing with empty accounts could later overwrite the remote backup.
+    st.error(f"无法从私有数据仓库读取 LLM 预算数据，已停止加载：{exc}")
+    st.stop()
 
 apply_llm_budget_style()
 

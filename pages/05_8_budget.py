@@ -68,6 +68,13 @@ def require_budget_auth():
 
 
 require_budget_auth()
+try:
+    github_backup_sync.ensure_local_file(
+        budget_db.BACKUP_MD_PATH, "data/budget_ledger_backup.md", secrets=st.secrets, environ=os.environ)
+except Exception as exc:
+    # Continuing with an empty ledger could later overwrite the remote backup.
+    st.error(f"无法从私有数据仓库读取预算备份，已停止加载：{exc}")
+    st.stop()
 init_db()
 
 st.title(f"💰 {BUDGET_YEAR}年度预算速记台账")

@@ -38,6 +38,17 @@ outputs/
 
 # Data
 *.db
+# Private dynamic data lives in yaoy2/yao_1-data (see AGENTS.md); never commit it here.
+data/budget_ledger_backup.md
+data/department_activity_budget_*.json
+data/ding_minutes_cloud.json
+data/llm_budget_accounts.json
+data/llm_budget_records.json
+data/schedule_cache.json
+data/schedule_metadata.json
+data/teacher_category_cache.json
+data/todo_items_backup.md
+data/web_memos_backup.md
 data/grade_workbench/
 115-ai-organizer/.env
 115-ai-organizer/data/*.sqlite

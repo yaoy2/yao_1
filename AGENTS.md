@@ -49,9 +49,9 @@
 
 ## 线上线下数据同步规则
 
-- GitHub 远端仓库视为动态数据的最新账本；线上 Streamlit 通过 GitHub token 写入的数据，和本地任务生成的数据，必须先在远端汇合后再继续写入。
-- 修改 `data/` 动态文件前先 `git fetch origin` 并比较分歧。远端仅领先且工作区干净时使用 `git pull --ff-only origin main`；存在本地未推送提交时，先检查差异，必要时在干净工作区用 `git pull --rebase origin main` 整合。不得自动 stash、覆盖未提交修改或改写已发布历史。推送前再检查远端变化并处理真实冲突。
-- 动态数据文件重点包括：`data/budget_ledger_backup.md`、`data/web_memos_backup.md`、`data/ding_minutes_cloud.json`，以及后续新增的线上可写备份文件。
+- 本仓库 `yaoy2/yao_1` 公开，只放代码；敏感动态数据只放私有仓库 `yaoy2/yao_1-data`（路径同为 `data/...`），它是动态数据的最新账本。线上 Streamlit 和本地任务的数据都必须先在私有仓库汇合后再继续写入。
+- 私有数据文件：`data/budget_ledger_backup.md`、`data/department_activity_budget_2026.json`、`data/ding_minutes_cloud.json`、`data/llm_budget_accounts.json`、`data/llm_budget_records.json`、`data/schedule_cache.json`、`data/schedule_metadata.json`、`data/teacher_category_cache.json`、`data/todo_items_backup.md`、`data/web_memos_backup.md`。它们已在 `.gitignore` 中，禁止再提交到本公开仓库；后续新增的线上可写备份文件同样只进私有仓库。
+- 本地读写私有数据用 `python scripts/data_repo_sync.py pull|push data/<文件>`：修改前先 pull，改完再 push；远端版本已变化时不静默覆盖。
 - 禁止跳过远端同步直接覆盖动态数据文件；禁止为了推送成功而使用强制推送。强制推送、重置历史、丢弃远端数据都必须先单独询问用户。
 - 如果 GitHub Contents API 写入遇到 409 冲突或远端文件已更新，默认保留远端优先，不静默覆盖；应提示先同步远端，再合并本地数据后重试。
 - 本地自动任务的推荐顺序是：先拉取远端最新数据，再扫描/生成本地数据，再检查差异，再提交，再推送。

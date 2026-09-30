@@ -152,6 +152,35 @@ class GithubBackupSyncTest(unittest.TestCase):
         self.assertEqual("data/web_memos_backup.md", result["path"])
         self.assertEqual(1, len(session.get_calls))
 
+    def test_default_repo_is_private_data_repo(self):
+        config = github_backup_sync.get_backup_sync_config(secrets={"github_backup_token": "t"}, environ={})
+        self.assertEqual("yaoy2/yao_1-data", config["repo"])
+
+    def test_public_app_repo_is_refused_for_read_and_write(self):
+        secrets = {"github_backup_token": "t", "github_backup_repo": "YAOY2/yao_1"}
+        session = FakeSession()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            local_path = Path(tmpdir) / "backup.md"
+            local_path.write_text("x", encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "公开代码仓库"):
+                github_backup_sync.sync_file_to_github(local_path, "data/a.md", "m", secrets, {}, session)
+        with self.assertRaisesRegex(RuntimeError, "公开代码仓库"):
+            github_backup_sync.read_file_from_github("data/a.md", secrets, {}, session)
+        self.assertEqual([], session.get_calls + session.put_calls)
+
+    def test_ensure_local_file_downloads_only_when_missing_or_refreshing(self):
+        secrets = {"github_backup_token": "t"}
+        with tempfile.TemporaryDirectory() as tmpdir:
+            local_path = Path(tmpdir) / "data" / "cache.json"
+            session = FakeDownloadSession(content="remote")
+            self.assertTrue(github_backup_sync.ensure_local_file(local_path, "data/cache.json", secrets, {}, session)["ok"])
+            local_path.write_text("local", encoding="utf-8")
+            github_backup_sync.ensure_local_file(local_path, "data/cache.json", secrets, {}, session)
+            self.assertEqual("local", local_path.read_text(encoding="utf-8"))
+            self.assertEqual(1, len(session.get_calls))
+            github_backup_sync.ensure_local_file(local_path, "data/cache.json", secrets, {}, session, refresh=True)
+            self.assertEqual("remote", local_path.read_text(encoding="utf-8"))
+
 
 if __name__ == "__main__":
     unittest.main()

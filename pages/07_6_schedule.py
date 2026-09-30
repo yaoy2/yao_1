@@ -1,10 +1,12 @@
 import html
 import json
+import os
 from pathlib import Path
 from collections import defaultdict
 
 import pandas as pd
 import streamlit as st
+from utils import github_backup_sync
 from utils.ui_theme import render_home_link
 
 
@@ -57,6 +59,16 @@ def _load_cache(path: Path):
         return json.loads(path.read_text(encoding="utf-8"))
     except Exception:
         return None
+
+
+def fetch_schedule_data(refresh=False):
+    """课表数据存于私有数据仓库：本地缺失时下载，点“刷新数据”时重新下载。"""
+    try:
+        for path in (SCHEDULE_CACHE_PATH, CATEGORY_CACHE_PATH, SCHEDULE_METADATA_PATH):
+            github_backup_sync.ensure_local_file(
+                path, f"data/{path.name}", secrets=st.secrets, environ=os.environ, refresh=refresh)
+    except Exception as exc:
+        st.warning(f"读取私有数据仓库失败，当前显示本环境已有课表：{exc}")
 
 
 # ── 本学期课表数据 ────────────────────────────────────────
@@ -210,7 +222,9 @@ def render_grid(grid: dict[str, dict[int, list[dict]]], teacher_category_map: di
 # ── 主页面 ────────────────────────────────────────────────
 st.title("📚 课表查询-2026-2027-1")
 st.caption("健康医疗科技学院 · 2026—2027 学年第一学期，支持全院总课表与按教师查询。")
+st.button("刷新数据", on_click=fetch_schedule_data, kwargs={"refresh": True})
 
+fetch_schedule_data()
 records = load_schedule_records()
 
 if not records:

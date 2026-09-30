@@ -5,8 +5,10 @@ from pathlib import Path
 import requests
 
 
-DEFAULT_REPO = "yaoy2/yao_1"
+DEFAULT_REPO = "yaoy2/yao_1-data"
 DEFAULT_BRANCH = "main"
+# The app code repo is public; dynamic data must never be read from or written to it.
+PUBLIC_APP_REPO = "yaoy2/yao_1"
 API_ROOT = "https://api.github.com"
 _ANY_VERSION = object()
 
@@ -52,11 +54,17 @@ def get_backup_sync_config(secrets=None, environ=None):
     return {"enabled": bool(token), "token": token, "repo": repo, "branch": branch}
 
 
+def _require_private_repo(config):
+    if config["repo"].casefold() == PUBLIC_APP_REPO.casefold():
+        raise RuntimeError(f"数据仓库仍指向公开代码仓库 {PUBLIC_APP_REPO}，已停止读写；请把 github_backup_repo 改为私有数据仓库。")
+
+
 def sync_file_to_github(local_path, repo_path, message, secrets=None, environ=None, session=None,
                         expected_sha=_ANY_VERSION):
     config = get_backup_sync_config(secrets, environ)
     if not config["enabled"]:
         return {"ok": False, "skipped": True, "reason": "missing_token"}
+    _require_private_repo(config)
 
     local_path = Path(local_path)
     if not local_path.exists():
@@ -104,6 +112,7 @@ def read_file_from_github(repo_path, secrets=None, environ=None, session=None):
     config = get_backup_sync_config(secrets, environ)
     if not config["enabled"]:
         return {"ok": False, "skipped": True, "reason": "missing_token"}
+    _require_private_repo(config)
 
     session = requests if session is None else session
     repo_path = str(repo_path).replace("\\", "/")
@@ -136,6 +145,13 @@ def download_file_from_github(local_path, repo_path, secrets=None, environ=None,
     local_path.parent.mkdir(parents=True, exist_ok=True)
     local_path.write_text(str(result.get("content", "")), encoding="utf-8")
     return {"ok": True, "skipped": False, "path": repo_path}
+
+
+def ensure_local_file(local_path, repo_path, secrets=None, environ=None, session=None, refresh=False):
+    """Data files are not deployed with the code; fetch one when missing or on explicit refresh."""
+    if Path(local_path).exists() and not refresh:
+        return {"ok": True, "skipped": True, "reason": "local_exists"}
+    return download_file_from_github(local_path, repo_path, secrets=secrets, environ=environ, session=session)
 
 
 def sync_many_to_github(files, message, secrets=None, environ=None, session=None):

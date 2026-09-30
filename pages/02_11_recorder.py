@@ -145,12 +145,22 @@ def sync_recorder_cloud_to_github():
         st.info("Recorder 备注已保存在当前环境；如需跨部署保留，请在 Streamlit secrets 配置 GITHUB_BACKUP_TOKEN。")
 
 
+def fetch_cloud_export(refresh=False):
+    try:
+        github_backup_sync.ensure_local_file(
+            ding_minutes.CLOUD_EXPORT_PATH, "data/ding_minutes_cloud.json",
+            secrets=st.secrets, environ=os.environ, refresh=refresh)
+    except Exception as exc:
+        st.warning(f"读取私有数据仓库失败，当前显示本环境已有记录：{exc}")
+
+
 require_recorder_auth()
 apply_style()
 ding_minutes.init_db()
 config = ding_minutes.load_config()
 runtime_config = config | {"api_key": ding_minutes.get_deepseek_api_key(st.secrets, os.environ)}
 local_scan_available = Path(config.get("watch_dir", "")).exists()
+fetch_cloud_export()
 local_records = ding_minutes.get_records(limit=1000)
 cloud_payload = ding_minutes.load_cloud_export()
 cloud_records = cloud_payload.get("records", [])
@@ -191,6 +201,8 @@ with st.container(border=True):
             st.warning("尚未配置 DEEPSEEK_API_KEY。可以登记原文，但不会生成 AI 整理稿。")
     with col_action:
         st.caption("手动补扫")
+        if not local_scan_available:
+            st.button("刷新数据", use_container_width=True, on_click=fetch_cloud_export, kwargs={"refresh": True})
         if st.button("扫描当前时间窗", use_container_width=True, disabled=not local_scan_available):
             result = ding_minutes.scan_once(config=runtime_config)
             if result.get("error"):

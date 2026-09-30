@@ -27,6 +27,7 @@ def load_schedule_functions():
     return namespace
 
 
+@unittest.skipUnless((ROOT / "data" / "schedule_cache.json").exists(), "课表数据在私有数据仓库，本地未同步")
 class SchedulePageTest(unittest.TestCase):
     def setUp(self):
         self.page = load_schedule_functions()
