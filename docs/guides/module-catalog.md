@@ -2,19 +2,19 @@
 
 [Project home](../../README.md) · [Repository map](../repository-structure.md) · [Getting started](getting-started.md)
 
-The registry in [hello.py](../../hello.py) is authoritative. There are **24 entries: 16 in current sections and 8 archived**. Some current entries are documentation or read-only showcases; each row states its actual boundary.
+The registry in [hello.py](../../hello.py) is authoritative. There are **24 entries: 15 in current sections and 9 archived**. Some current entries are documentation or read-only showcases; each row states its actual boundary.
 
 | Section | Entries |
 | --- | --- |
-| Administration | 7 |
+| Administration | 6 |
 | Teaching | 2 |
 | Personal | 7 |
-| Archived | 8 |
+| Archived | 9 |
 
 | ID | Section | Status | Entry point | Behavior and requirements |
 | --- | --- | --- | --- | --- |
 | M25 | Administration | Current | [随手传](../../pages/24_25_phone_transfer.py) | Paired phone-to-desktop transfer; the receiving desktop page must remain open. Requires configured transfer services. |
-| M24 | Administration | Current | [邮件工作台](../../pages/23_24_mail_workbench.py) | Reviews collected mail, actions, deadlines, and filing results. Collection is explicitly requested; credentials and local processing are separate. |
+| M24 | Archived | Archived | [邮件工作台](../../pages/23_24_mail_workbench.py) | Retired from navigation; retained for historical reference. Current mail todos follow the Edge-based workflow. |
 | M23 | Personal | Current | [docker-monitor](../../pages/22_23_docker_monitor.py) | Read-only showcase of three independent tasks: TrendRadar, AIHOT, and Amazon.de GPU quotes. Does not run containers or fetch live prices. |
 | M22 | Personal | Current | [Planner-Executor](../../pages/21_22_gpt_planner_luna_executor.py) | Explains development-assistant routes and recorded evaluations; does not create agents or call models. |
 | M21 | Personal | Current | [Awesome Design MD](../../pages/20_21_awesome_design_md.py) | Browses 74 pinned design references with retained source attribution and third-party licensing. |
@@ -40,4 +40,4 @@ The registry in [hello.py](../../hello.py) is authoritative. There are **24 entr
 
 M12 was removed. Module numbers preserve introduction order and are intentionally discontinuous. Independent subprojects are described separately in the [project overview](../../README.md).
 
-中文：行政 7、教学 2、个人 7、归档 8；M20 已停用，M24 / M25 需要各自的本地组件，M23 当前只介绍三项任务。展示页不代表主库已经运行对应的外部系统。
+中文：行政 6、教学 2、个人 7、归档 9；M20、M24 已停用，M25 需要本地组件，M23 当前只介绍三项任务。展示页不代表主库已经运行对应的外部系统。
