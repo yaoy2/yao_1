@@ -2,14 +2,14 @@
 
 [Project home](../../README.md) · [Repository map](../repository-structure.md) · [Getting started](getting-started.md)
 
-The registry in [hello.py](../../hello.py) is authoritative. There are **24 entries: 15 in current sections and 9 archived**. Some current entries are documentation or read-only showcases; each row states its actual boundary.
+The registry in [hello.py](../../hello.py) is authoritative. There are **24 entries: 14 in current sections and 10 archived**. Some current entries are documentation or read-only showcases; each row states its actual boundary.
 
 | Section | Entries |
 | --- | --- |
-| Administration | 6 |
+| Administration | 5 |
 | Teaching | 2 |
 | Personal | 7 |
-| Archived | 9 |
+| Archived | 10 |
 
 | ID | Section | Status | Entry point | Behavior and requirements |
 | --- | --- | --- | --- | --- |
@@ -26,7 +26,7 @@ The registry in [hello.py](../../hello.py) is authoritative. There are **24 entr
 | M15 | Administration | Current | [邮件通知编辑器](../../pages/15_0_email_notice.py) | Parses, previews, and exports notices. The [single-file editor](../../assets/email_notice_editor.html) works offline. Institution defaults still require review. |
 | M14 | Administration | Current | [待办清单](../../pages/14_todos.py) | Chinese deadline recognition, search, soft archiving, backups, and configured GitHub synchronization. Shared access required; chat operations use conflict/retry checks. |
 | M13 | Archived | Archived | [LLM 余额管理](../../pages/00_13_llm_budget.py) | Retained historical balance/account implementation. |
-| M11 | Administration | Current | [Recorder_笔记](../../pages/02_11_recorder.py) | Registers Word transcripts, retains source text, and optionally calls DeepSeek for rewriting. Shared access required; scanning runs locally. |
+| M11 | Archived | Archived | [Recorder_笔记](../../pages/02_11_recorder.py) | Retired. The page only shows retirement information; scan, export, and synchronization entry points are disabled. Existing records and backups are retained. |
 | M10 | Personal | Current | [灵感便签盒](../../pages/03_10_memos.py) | Notes, tags, colors, ordering, Markdown/PDF export, and configured GitHub backup merging. |
 | M09 | Personal | Current | [配色方案预览](../../pages/04_9_palette.py) | Reads reusable palettes and examples. |
 | M08 | Administration | Current | [预算速记台账](../../pages/05_8_budget.py) | Tracks expenses, reimbursements, category balances, export, and recovery backups. Shared access required. |
@@ -40,4 +40,4 @@ The registry in [hello.py](../../hello.py) is authoritative. There are **24 entr
 
 M12 was removed. Module numbers preserve introduction order and are intentionally discontinuous. Independent subprojects are described separately in the [project overview](../../README.md).
 
-中文：行政 6、教学 2、个人 7、归档 9；M20、M24 已停用，M25 需要本地组件，M23 当前只介绍三项任务。展示页不代表主库已经运行对应的外部系统。
+中文：行政 5、教学 2、个人 7、归档 10；M11、M20、M24 已停用，M25 需要本地组件，M23 当前只介绍三项任务。展示页不代表主库已经运行对应的外部系统。

@@ -1,3 +1,5 @@
+import re
+
 from utils import ui_theme
 from utils.ui_theme import _get_sidebar_tools, _load_homepage_tools
 from unittest.mock import patch
@@ -27,6 +29,8 @@ def test_sidebar_pins_frequent_tools_before_other_modules():
     assert tools[codes.index("M24")]["blocked"] is True
     assert tools[codes.index("M16")]["blocked"] is True
     assert tools[codes.index("M20")]["blocked"] is True
+    assert tools[codes.index("M11")]["blocked"] is True
+    assert codes[codes.index("M13") + 1] == "M11"
 
 
 class _FakeSidebar:
@@ -66,6 +70,26 @@ class _FakeStreamlit:
 
     def switch_page(self, page):
         self.switch_page_calls.append(page)
+
+
+def test_retired_recorder_shows_cross_to_right_of_title_without_lock(monkeypatch):
+    fake_st = _FakeStreamlit()
+    monkeypatch.setattr(ui_theme, "st", fake_st)
+
+    ui_theme.render_sidebar_nav()
+
+    nav_body, _kwargs = fake_st.sidebar.markdown_calls[0]
+    recorder_link = re.search(
+        r'<a class="custom-nav-item"[^>]*title="M11 · Recorder_笔记">.*?</a>',
+        nav_body,
+        re.DOTALL,
+    ).group(0)
+    assert '<span class="custom-nav-label">Recorder_笔记</span>' in recorder_link
+    assert '<span class="custom-nav-marks"> ❌</span>' in recorder_link
+    assert recorder_link.index("Recorder_笔记</span>") < recorder_link.index("❌")
+    assert recorder_link.count("❌") == 1
+    assert "🔒" not in recorder_link
+    assert "已停用" in recorder_link
 
 
 def test_home_link_uses_streamlit_homepage_route(monkeypatch):

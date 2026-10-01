@@ -95,7 +95,7 @@ def test_navigation_keeps_one_sidebar_and_no_legacy_dark_skin():
         assert len(app.sidebar.markdown) == (0 if target == "hello.py" else 1)
 
 
-@pytest.mark.parametrize("page", ["00_13_llm_budget.py", "02_11_recorder.py", "05_8_budget.py", "14_todos.py"])
+@pytest.mark.parametrize("page", ["00_13_llm_budget.py", "05_8_budget.py", "14_todos.py"])
 def test_locked_pages_render_theme_even_when_auth_stops_execution(page, monkeypatch):
     # No credential lookup, database initialization, or remote sync past the gate.
     from utils import budget_auth

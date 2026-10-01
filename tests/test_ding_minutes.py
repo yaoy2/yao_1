@@ -1,13 +1,18 @@
+import importlib
+import io
 import os
+import subprocess
 import tempfile
 import unittest
+from contextlib import ExitStack, redirect_stdout
 from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch
 
 from docx import Document
+from streamlit.testing.v1 import AppTest
 
-from utils import ding_minutes
+from utils import ding_minutes, github_backup_sync
 
 
 def make_docx(path, paragraphs):
@@ -188,29 +193,51 @@ class DingMinutesTest(unittest.TestCase):
 
         self.assertEqual("分类：学生座谈", payload["records"][0]["remark"])
 
-    def test_recorder_page_uses_budget_password_gate_and_new_name(self):
+    def test_recorder_page_is_retired_without_data_access_or_operational_controls(self):
         page_path = Path(__file__).resolve().parents[1] / "pages" / "02_11_recorder.py"
-        page_source = page_path.read_text(encoding="utf-8")
 
-        self.assertIn("Recorder_笔记", page_source)
-        self.assertIn("from utils import budget_auth, ding_minutes", page_source)
-        self.assertIn("get_budget_password(st.secrets, os.environ)", page_source)
-        self.assertIn("recorder_authenticated", page_source)
-        self.assertIn("备注 / 分类标记", page_source)
-        self.assertIn("info_col, remark_col = st.columns([1.55, 1]", page_source)
-        self.assertIn("remark_input_col, save_col = st.columns([4, 1]", page_source)
-        self.assertIn("label_visibility=\"collapsed\"", page_source)
-        self.assertIn("height=34", page_source)
-        self.assertIn('st.form_submit_button("保存"', page_source)
-        self.assertIn("record-title-row", page_source)
-        self.assertIn("update_cloud_remark", page_source)
-        self.assertIn("github_backup_sync", page_source)
-        self.assertIn("sync_recorder_cloud_to_github()", page_source)
-        self.assertIn("data/ding_minutes_cloud.json", page_source)
-        self.assertIn('with st.expander("展开查看整理稿和原文")', page_source)
-        self.assertNotIn("title_col, status_col", page_source)
-        self.assertNotIn('st.columns([3, 1]', page_source)
-        self.assertNotIn("钉钉纪要登记", page_source)
+        with ExitStack() as stack:
+            for function in ("init_db", "load_config", "get_records", "load_cloud_export", "scan_once"):
+                stack.enter_context(patch.object(ding_minutes, function, side_effect=AssertionError("no data access")))
+            for function in ("download_file_from_github", "sync_file_to_github"):
+                stack.enter_context(patch.object(github_backup_sync, function, side_effect=AssertionError("no remote sync")))
+            app = AppTest.from_file(str(page_path), default_timeout=10).run()
+            app.run()
+
+        self.assertFalse(app.exception)
+        self.assertEqual("M11 · Recorder_笔记 ❌", app.title[0].value)
+        self.assertIn("已停用", app.warning[0].value)
+        self.assertIn("archived", app.caption[-1].value)
+        self.assertEqual(["回到主页"], [button.label for button in app.button])
+        self.assertEqual(0, len(app.text_input))
+        self.assertEqual(0, len(app.text_area))
+        self.assertEqual(0, len(app.metric))
+
+    def test_retired_recorder_cli_entrypoints_do_not_scan_export_or_sync(self):
+        with ExitStack() as stack:
+            for function in ("init_db", "scan_once", "sync_cloud_export", "get_records"):
+                stack.enter_context(patch.object(ding_minutes, function, side_effect=AssertionError("no scan or export")))
+            stack.enter_context(patch.object(github_backup_sync, "sync_file_to_github", side_effect=AssertionError("no remote sync")))
+            for module_name in ("scripts.scan_ding_minutes", "scripts.sync_recorder_cloud"):
+                with self.subTest(entrypoint=module_name):
+                    output = io.StringIO()
+                    with redirect_stdout(output):
+                        module = importlib.import_module(module_name)
+                        result = module.main()
+                    self.assertEqual(0, result)
+                    self.assertIn("Recorder 已停用", output.getvalue())
+
+    @unittest.skipUnless(os.name == "nt", "Windows batch entry point")
+    def test_daily_recorder_launcher_exits_without_creating_files(self):
+        batch_path = Path(__file__).resolve().parents[1] / "每日Recorder扫描.bat"
+        with tempfile.TemporaryDirectory() as tmpdir:
+            result = subprocess.run(
+                ["cmd.exe", "/d", "/c", str(batch_path)],
+                cwd=tmpdir, capture_output=True, text=True, timeout=10,
+            )
+            self.assertEqual(0, result.returncode, result.stderr)
+            self.assertIn("Recorder is retired", result.stdout)
+            self.assertEqual([], list(Path(tmpdir).iterdir()))
 
 
 if __name__ == "__main__":

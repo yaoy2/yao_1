@@ -88,7 +88,7 @@ class HomePageTest(unittest.TestCase):
         self.assertTrue(by_code["M16"]["blocked"])
         self.assertTrue(by_code["M13"]["blocked"])
         blocked_codes = {tool["code"] for tool in tools if tool.get("blocked")}
-        self.assertEqual({"M01", "M02", "M03", "M04", "M05", "M13", "M16", "M20", "M24"}, blocked_codes)
+        self.assertEqual({"M01", "M02", "M03", "M04", "M05", "M11", "M13", "M16", "M20", "M24"}, blocked_codes)
         self.assertEqual("M01", tools[-1]["code"])
         self.assertEqual(24, len(tools))
 
@@ -99,7 +99,7 @@ class HomePageTest(unittest.TestCase):
         self.assertEqual(["行政", "教学", "个人", "archived"], list(namespace["HOME_SECTIONS"]))
         self.assertEqual("行政", by_code["M15"]["section"])
         self.assertEqual("行政", by_code["M14"]["section"])
-        self.assertEqual("行政", by_code["M11"]["section"])
+        self.assertEqual("archived", by_code["M11"]["section"])
         self.assertEqual("行政", by_code["M08"]["section"])
         self.assertEqual("行政", by_code["M06"]["section"])
         self.assertEqual("archived", by_code["M20"]["section"])
@@ -117,11 +117,13 @@ class HomePageTest(unittest.TestCase):
         admin_codes = [tool["code"] for tool in namespace["tools_for_section"](tools, "行政")]
         teaching_codes = [tool["code"] for tool in namespace["tools_for_section"](tools, "教学")]
         archived_codes = [tool["code"] for tool in namespace["tools_for_section"](tools, "archived")]
-        self.assertEqual(["M25", "M15", "M14", "M11", "M08", "M06"], admin_codes)
+        self.assertEqual(["M25", "M15", "M14", "M08", "M06"], admin_codes)
         self.assertEqual(["M18", "M17"], teaching_codes)
         self.assertIn("M13", archived_codes)
         self.assertIn("M20", archived_codes)
         self.assertIn("M24", archived_codes)
+        self.assertIn("M11", archived_codes)
+        self.assertNotIn("M11", admin_codes)
         self.assertNotIn("M20", admin_codes)
         self.assertNotIn("M13", admin_codes)
         self.assertNotIn("M13", [tool["code"] for tool in namespace["tools_for_section"](tools, "个人")])
@@ -161,8 +163,8 @@ class HomePageTest(unittest.TestCase):
         self.assertNotIn("M13", page1_codes)
         self.assertIn("M16", page2_codes)
         self.assertEqual(["M25", "M23", "M22", "M21", "M19", "M18", "M17", "M15", "M14"], page1_codes)
-        self.assertEqual(["M11", "M10", "M09", "M08", "M07", "M06", "M24", "M20", "M16"], page2_codes)
-        self.assertEqual(["M13", "M05", "M04", "M03", "M02", "M01"], [tool["code"] for tool in homepage_pages[2]])
+        self.assertEqual(["M10", "M09", "M08", "M07", "M06", "M24", "M20", "M16", "M13"], page2_codes)
+        self.assertEqual(["M11", "M05", "M04", "M03", "M02", "M01"], [tool["code"] for tool in homepage_pages[2]])
 
 
 if __name__ == "__main__":

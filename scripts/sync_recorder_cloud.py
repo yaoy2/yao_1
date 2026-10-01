@@ -1,16 +1,8 @@
-import os
-import sys
-
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-
-from utils import ding_minutes
+"""Retired Recorder export entry point; retained for existing callers."""
 
 
 def main():
-    path = ding_minutes.sync_cloud_export()
-    records = ding_minutes.get_records(limit=1000)
-    print(f"Recorder cloud export synced: path={path}, records={len(records)}")
+    print("Recorder 已停用：云端导出与同步已关闭，原有记录与备份保留。")
     return 0
 
 
