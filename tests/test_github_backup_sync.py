@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from utils import github_backup_sync
+from utils import github_backup_sync, budget_db, web_memo_db
 
 
 class FakeResponse:
@@ -26,7 +26,7 @@ class FakeSession:
 
     def put(self, url, headers=None, json=None, timeout=None):
         self.put_calls.append({"url": url, "headers": headers, "json": json, "timeout": timeout})
-        return FakeResponse(200, {"content": {"path": "data/budget_ledger_backup.md"}})
+        return FakeResponse(200, {"content": {"path": "data/budget_ledger_backup.md", "sha": "new-sha"}})
 
 
 class FakeDownloadSession:
@@ -38,7 +38,7 @@ class FakeDownloadSession:
     def get(self, url, headers=None, params=None, timeout=None):
         self.get_calls.append({"url": url, "headers": headers, "params": params, "timeout": timeout})
         if self.status_code == 200:
-            payload = {"content": base64.b64encode(self.content.encode("utf-8")).decode("ascii")}
+            payload = {"sha": "remote-sha", "content": base64.b64encode(self.content.encode("utf-8")).decode("ascii")}
         else:
             payload = {}
         return FakeResponse(self.status_code, payload)
@@ -80,7 +80,8 @@ class GithubBackupSyncTest(unittest.TestCase):
     def test_sync_file_updates_github_contents_api(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             local_path = Path(tmpdir) / "backup.md"
-            local_path.write_text("预算备份", encoding="utf-8")
+            content = budget_db.build_markdown_backup([])
+            local_path.write_text(content, encoding="utf-8")
             session = FakeSession()
 
             result = github_backup_sync.sync_file_to_github(
@@ -90,6 +91,7 @@ class GithubBackupSyncTest(unittest.TestCase):
                 secrets={"github_backup_token": "token-1"},
                 environ={},
                 session=session,
+                expected_sha="old-sha",
             )
 
         self.assertTrue(result["ok"])
@@ -99,7 +101,7 @@ class GithubBackupSyncTest(unittest.TestCase):
         self.assertEqual("data: sync backup", payload["message"])
         self.assertEqual("main", payload["branch"])
         self.assertEqual("old-sha", payload["sha"])
-        self.assertEqual("预算备份", base64.b64decode(payload["content"]).decode("utf-8"))
+        self.assertEqual(content, base64.b64decode(payload["content"]).decode("utf-8"))
 
     def test_download_file_skips_when_token_missing(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -119,7 +121,8 @@ class GithubBackupSyncTest(unittest.TestCase):
     def test_download_file_writes_github_content_to_local_path(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             local_path = Path(tmpdir) / "backup.md"
-            session = FakeDownloadSession(content="# 灵感便签盒备份\n\ncontent")
+            content = web_memo_db.build_markdown_backup([])
+            session = FakeDownloadSession(content=content)
 
             result = github_backup_sync.download_file_from_github(
                 local_path,
@@ -132,7 +135,7 @@ class GithubBackupSyncTest(unittest.TestCase):
             restored_text = local_path.read_text(encoding="utf-8")
 
         self.assertTrue(result["ok"])
-        self.assertEqual("# 灵感便签盒备份\n\ncontent", restored_text)
+        self.assertEqual(content, restored_text)
         self.assertEqual(1, len(session.get_calls))
         self.assertEqual({"ref": "main"}, session.get_calls[0]["params"])
 
@@ -178,8 +181,9 @@ class GithubBackupSyncTest(unittest.TestCase):
             github_backup_sync.ensure_local_file(local_path, "data/cache.json", secrets, {}, session)
             self.assertEqual("local", local_path.read_text(encoding="utf-8"))
             self.assertEqual(1, len(session.get_calls))
-            github_backup_sync.ensure_local_file(local_path, "data/cache.json", secrets, {}, session, refresh=True)
-            self.assertEqual("remote", local_path.read_text(encoding="utf-8"))
+            with self.assertRaisesRegex(RuntimeError, "本机文件"):
+                github_backup_sync.ensure_local_file(local_path, "data/cache.json", secrets, {}, session, refresh=True)
+            self.assertEqual("local", local_path.read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

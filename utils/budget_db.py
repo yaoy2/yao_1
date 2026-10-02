@@ -119,6 +119,36 @@ def set_status(record_id, status):
     update_record(record_id, status=status)
 
 
+def update_records(updates):
+    """Apply an already validated table edit in one local transaction."""
+    conn = get_connection()
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    allowed = {"record_date", "category", "unit", "spender", "description", "amount", "reimbursement_status"}
+    try:
+        conn.execute("BEGIN")
+        for update in updates:
+            record_id = int(update["id"])
+            values = {key: value for key, value in update.items() if key in allowed}
+            if "amount" in values:
+                amount = float(values["amount"])
+                if not math.isfinite(amount) or amount <= 0:
+                    raise ValueError("amount must be finite and greater than 0")
+                values["amount"] = amount
+            values["updated_at"] = now
+            fields = ", ".join(f"{key} = ?" for key in values)
+            cursor = conn.execute(f"UPDATE expense_records SET {fields} WHERE id = ?", [*values.values(), record_id])
+            if cursor.rowcount != 1:
+                raise ValueError(f"budget record {record_id} is missing")
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+    if updates:
+        sync_backup_files()
+
+
 def get_all_records():
     conn = get_connection()
     rows = conn.execute("SELECT * FROM expense_records ORDER BY record_date DESC, id DESC").fetchall()
@@ -126,7 +156,7 @@ def get_all_records():
     return [dict(r) for r in rows]
 
 
-def replace_all_records(records):
+def replace_all_records(records, preserve_ids=False):
     conn = get_connection()
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     try:
@@ -138,13 +168,19 @@ def replace_all_records(records):
                 raise ValueError("amount must be finite and greater than 0")
             created_at = record.get("created_at") or now
             updated_at = record.get("updated_at") or now
+            record_id = None
+            if preserve_ids:
+                record_id = int(record.get("id") or 0)
+                if record_id <= 0:
+                    raise ValueError("synced budget records must have positive IDs")
             conn.execute(
                 """
                 INSERT INTO expense_records
-                    (record_date, category, unit, spender, description, amount, reimbursement_status, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    (id, record_date, category, unit, spender, description, amount, reimbursement_status, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
+                    record_id,
                     str(record["record_date"]),
                     str(record["category"]),
                     str(record.get("unit", "")),
@@ -163,6 +199,11 @@ def replace_all_records(records):
     finally:
         conn.close()
     sync_backup_files()
+
+
+def restore_synced_records(records):
+    """Restore the checked private ledger without renumbering its record IDs."""
+    replace_all_records(records, preserve_ids=True)
 
 
 def _count_records(conn):
@@ -274,7 +315,11 @@ def restore_from_markdown_backup(path=None):
         records = parse_markdown_backup(backup_file.read())
     if not records:
         return 0
-    replace_all_records(records)
+    if all(str(record.get("id", "")).isdigit() and int(record["id"]) > 0 for record in records):
+        restore_synced_records(records)
+    else:
+        # Legacy user imports did not always include system IDs.
+        replace_all_records(records)
     return len(records)
 
 

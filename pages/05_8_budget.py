@@ -3,11 +3,14 @@ import pandas as pd
 import sys
 import os
 import io
+import re
+import math
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from config.budget_config import BUDGET_YEAR, BUDGET_CATEGORIES, REIMBURSEMENT_STATUSES, UNITS, UNCAPPED_BUDGET_CATEGORIES
 from utils import budget_auth, budget_db, github_backup_sync
+from utils.data_sync_validation import validate_backup
 from utils.ui_theme import render_home_link
 from utils.department_activity_ui import render_department_activity_budget
 
@@ -25,20 +28,86 @@ st.set_page_config(page_title="预算速记台账", page_icon="💰", layout="wi
 render_home_link()
 
 
+def read_budget_remote_snapshot():
+    result = github_backup_sync.read_file_from_github(
+        "data/budget_ledger_backup.md", secrets=st.secrets, environ=os.environ,
+    )
+    if result.get("reason") == "missing_remote_file":
+        return {"sha": None, "records": [], "content": ""}
+    if not result.get("ok") or not result.get("sha"):
+        raise RuntimeError("无法核实私有数据仓库的预算版本，请先恢复 GitHub 备份连接。")
+    content = result.get("content", "")
+    records = validate_backup("data/budget_ledger_backup.md", content)
+    count = re.search(r"^- 记录数量：\s*(\d+)\s*$", content, re.MULTILINE)
+    if not count or int(count.group(1)) != len(records):
+        raise RuntimeError("远端预算备份未通过完整性检查，已停止写入。")
+    return {"sha": result["sha"], "records": records, "content": content}
+
+
+def budget_record_values(records):
+    # Restoring a backup may allocate new local IDs; compare the financial data.
+    fields = [key for key, _ in budget_db.BACKUP_COLUMNS if key != "id"]
+    return sorted(tuple(
+        f"{float(record.get(key, 0)):.2f}" if key == "amount"
+        else str(record.get(key, ""))
+        for key in fields
+    ) for record in records)
+
+
+def require_budget_remote_unchanged():
+    try:
+        current = read_budget_remote_snapshot()
+        displayed = budget_displayed_snapshot or budget_remote_snapshot
+        if current["sha"] != displayed["sha"] or current["sha"] != budget_remote_snapshot["sha"]:
+            raise RuntimeError("其他环境已更新预算，请刷新最新账本后再保存；本次未修改本地记录。")
+    except Exception as exc:
+        st.error(f"预算保存已停止：{exc}")
+        st.stop()
+
+
+def align_budget_with_remote(snapshot, baseline=False):
+    local_values = budget_record_values(get_all_records())
+    remote_values = budget_record_values(snapshot["records"])
+    if baseline is False:
+        baseline = github_backup_sync.get_local_sync_baseline(
+            budget_db.BACKUP_MD_PATH, "data/budget_ledger_backup.md",
+            secrets=st.secrets, environ=os.environ,
+        )
+    if local_values != remote_values:
+        if baseline is None:
+            raise RuntimeError("本地与远端预算记录不同，且缺少上次同步基线，已保留两边数据并停止写入。")
+        baseline_values = budget_record_values(budget_db.parse_markdown_backup(baseline["content"]))
+        if local_values == baseline_values:
+            budget_db.restore_synced_records(snapshot["records"])
+        elif remote_values != baseline_values:
+            raise RuntimeError("本地和远端预算都发生了修改，已保留两边数据并停止写入；请先核对账本差异。")
+        else:
+            # An earlier failed upload left local edits; the remote is still unchanged.
+            return
+    github_backup_sync.remember_local_sync_baseline(
+        budget_db.BACKUP_MD_PATH, "data/budget_ledger_backup.md",
+        snapshot["content"], snapshot["sha"], secrets=st.secrets, environ=os.environ,
+    )
+
+
 def sync_budget_backup_to_github():
     try:
+        current = read_budget_remote_snapshot()
+        if current["sha"] != budget_remote_snapshot["sha"]:
+            raise RuntimeError("远端预算已更新，本次本地改动已保留，但没有覆盖远端。")
         result = github_backup_sync.sync_file_to_github(
             budget_db.BACKUP_MD_PATH,
             "data/budget_ledger_backup.md",
             "data: sync budget ledger backup",
             secrets=st.secrets,
             environ=os.environ,
+            expected_sha=budget_remote_snapshot["sha"],
         )
+        if not result.get("ok"):
+            raise RuntimeError("私有数据仓库未确认保存，请先恢复 GITHUB_BACKUP_TOKEN 连接。")
     except Exception as exc:
-        st.warning(f"预算备份已保存在当前环境，但同步到 GitHub 失败：{exc}")
-        return
-    if result.get("skipped") and result.get("reason") == "missing_token":
-        st.info("预算已保存在当前环境；如需跨部署保留，请在 Streamlit secrets 配置 GITHUB_BACKUP_TOKEN。")
+        st.error(f"预算备份已保存在当前环境，但同步到 GitHub 失败：{exc}")
+        st.stop()
 
 
 def require_budget_auth():
@@ -69,13 +138,21 @@ def require_budget_auth():
 
 require_budget_auth()
 try:
+    budget_displayed_snapshot = st.session_state.get("budget_remote_snapshot")
+    budget_remote_snapshot = read_budget_remote_snapshot()
+    budget_previous_baseline = github_backup_sync.get_local_sync_baseline(
+        budget_db.BACKUP_MD_PATH, "data/budget_ledger_backup.md", secrets=st.secrets, environ=os.environ,
+    )
     github_backup_sync.ensure_local_file(
         budget_db.BACKUP_MD_PATH, "data/budget_ledger_backup.md", secrets=st.secrets, environ=os.environ)
+    init_db()
+    # Fetching a missing MD must not make an unrelated existing DB look synced.
+    align_budget_with_remote(budget_remote_snapshot, budget_previous_baseline)
+    st.session_state["budget_remote_snapshot"] = budget_remote_snapshot
 except Exception as exc:
     # Continuing with an empty ledger could later overwrite the remote backup.
     st.error(f"无法从私有数据仓库读取预算备份，已停止加载：{exc}")
     st.stop()
-init_db()
 
 st.title(f"💰 {BUDGET_YEAR}年度预算速记台账")
 
@@ -149,9 +226,10 @@ with st.form("quick_add", clear_on_submit=True):
             amount = float(amount_str)
         except (ValueError, TypeError):
             amount = 0
-        if amount <= 0:
-            st.error("金额必须大于 0")
+        if not math.isfinite(amount) or amount <= 0:
+            st.error("金额必须是大于 0 的有限数值")
         else:
+            require_budget_remote_unchanged()
             add_record(str(record_date), category, unit, spender.strip(), description, amount, status)
             sync_budget_backup_to_github()
             st.success(f"已保存：{category} · {unit} · {spender.strip()} · {amount} 元")
@@ -291,8 +369,10 @@ if records:
     )
 
     if st.button("💾 保存表格修改", type="primary"):
+        require_budget_remote_unchanged()
         original_records = {rec["id"]: rec for rec in records}
         changed_count = 0
+        pending_updates = []
         try:
             for _, row in edited_records.iterrows():
                 rid = int(row["ID"])
@@ -309,8 +389,8 @@ if records:
                     raise ValueError(f"ID {rid} 的费用类别无效：{category}")
                 if status not in REIMBURSEMENT_STATUSES:
                     raise ValueError(f"ID {rid} 的报销状态无效：{status}")
-                if amount <= 0:
-                    raise ValueError(f"ID {rid} 的金额必须大于 0")
+                if not math.isfinite(amount) or amount <= 0:
+                    raise ValueError(f"ID {rid} 的金额必须是大于 0 的有限数值")
 
                 if (
                     record_date != original["record_date"]
@@ -321,17 +401,11 @@ if records:
                     or amount != float(original["amount"])
                     or status != original["reimbursement_status"]
                 ):
-                    update_record(
-                        rid,
-                        record_date=record_date,
-                        category=category,
-                        unit=unit,
-                        spender=spender,
-                        description=description,
-                        amount=amount,
-                        status=status,
-                    )
-                    changed_count += 1
+                    pending_updates.append({"id": rid, "record_date": record_date, "category": category,
+                                            "unit": unit, "spender": spender, "description": description,
+                                            "amount": amount, "reimbursement_status": status})
+            budget_db.update_records(pending_updates)
+            changed_count = len(pending_updates)
         except Exception as exc:
             st.error(f"保存失败：{exc}")
         else:
@@ -469,6 +543,7 @@ with st.expander("♻️ 从 Excel 备份恢复"):
     confirm_restore = st.checkbox("我确认用这个 Excel 覆盖当前台账")
 
     if st.button("覆盖恢复台账", type="primary", disabled=not uploaded_backup or not confirm_restore):
+        require_budget_remote_unchanged()
         try:
             if replace_all_records is None:
                 raise RuntimeError("当前线上环境还没有加载到恢复函数，请在 Streamlit Cloud 重新部署后再试。")

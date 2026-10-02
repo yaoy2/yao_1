@@ -30,6 +30,9 @@ CLAUDE.md
 CONVERSATION_LOG.md
 
 # Local scratch artifacts
+.local-backups/
+.sync-state/
+.pytest_cache/
 *.tmp
 marvis_report*.pdf
 立即Recorder真实测试.bat
@@ -53,6 +56,7 @@ data/grade_workbench/
 115-ai-organizer/.env
 115-ai-organizer/data/*.sqlite
 115-ai-organizer/logs/*.log
+115-ai-organizer/reports/
 
 # Local run logs
 logs/*.log

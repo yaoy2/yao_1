@@ -572,7 +572,8 @@ def sync_backup_file():
 
 def parse_markdown_backup(text):
     records = []
-    chunks = re.split(r"\n##\s+", "\n" + text)
+    # A memo can contain Markdown headings and lists; only date headings start records.
+    chunks = re.split(r"\n##\s+(?=\d{4}-\d{2}-\d{2}\s*(?:\n|$))", "\n" + text)
     for chunk in chunks[1:]:
         lines = chunk.splitlines()
         if not lines:
@@ -585,7 +586,29 @@ def parse_markdown_backup(text):
         record_id = 0
         display_order = 0
         is_archived = False
-        for line in lines[1:]:
+        body_lines = lines[1:]
+        metadata_lines = []
+        metadata_prefixes = ("- 分类：", "- 标签：", "- 色卡：", "- ID：", "- 顺序：", "- 状态：")
+        # The writer puts metadata after the body. Locate the final metadata block,
+        # rather than treating every body line beginning with '- ' as metadata.
+        for index in range(len(body_lines) - 1, -1, -1):
+            if not body_lines[index].startswith("- 分类："):
+                continue
+            tail = body_lines[index:]
+            if (any(line.startswith("- 标签：") for line in tail)
+                    and all(not line.strip() or line.startswith(metadata_prefixes) for line in tail)):
+                metadata_lines = tail
+                body_lines = body_lines[:index]
+                break
+        # Support backups that explicitly separate header metadata and body.
+        if not metadata_lines and "### 内容" in body_lines:
+            marker = body_lines.index("### 内容")
+            header = body_lines[:marker]
+            if all(not line.strip() or line.startswith(metadata_prefixes) for line in header):
+                metadata_lines = header
+                body_lines = body_lines[marker + 1:]
+        content_lines = body_lines
+        for line in metadata_lines:
             if line.startswith("- ID："):
                 record_id = _coerce_record_id(line.replace("- ID：", "", 1).strip())
                 continue
@@ -603,8 +626,6 @@ def parse_markdown_backup(text):
                     display_order = 0
             elif line.startswith("- 状态："):
                 is_archived = line.replace("- 状态：", "", 1).strip() == "已隐藏"
-            elif not line.startswith("- "):
-                content_lines.append(line)
         content = "\n".join(content_lines).strip()
         if memo_date and content:
             records.append(
@@ -628,9 +649,50 @@ def restore_from_markdown_backup(path=None):
         return 0
     with open(path, "r", encoding="utf-8") as backup_file:
         records = parse_markdown_backup(backup_file.read())
+    if records and all(_coerce_record_id(record.get("id")) for record in records):
+        restore_synced_records(records)
+        return len(records)
     for record in reversed(records):
         _insert_memo_record(record)
     return len(records)
+
+
+def restore_synced_records(records):
+    """Restore a checked snapshot, preserving IDs, body text and hidden records."""
+    conn = get_connection()
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    palettes = parse_palettes()
+    try:
+        conn.execute("BEGIN")
+        conn.execute("DELETE FROM web_memos")
+        for index, record in enumerate(records):
+            record_id = _coerce_record_id(record.get("id"))
+            content = str(record.get("content", "")).strip()
+            memo_date = str(record.get("memo_date", "")).strip()
+            if not record_id or not content or not memo_date:
+                raise ValueError("synced memos must have positive IDs, dates and content")
+            palette = next((item for item in palettes
+                            if item.get("name") == record.get("palette_name")), pick_palette(index, palettes))
+            colors = palette.get("colors") or DEFAULT_PALETTE["colors"]
+            conn.execute(
+                """INSERT INTO web_memos
+                    (id, memo_date, content, category, tags_json, palette_id, palette_name,
+                     palette_colors_json, display_order, is_archived, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (record_id, memo_date, content, str(record.get("category") or "待整理"),
+                 json.dumps(record.get("tags") or [], ensure_ascii=False),
+                 int(palette.get("id", 0)), str(record.get("palette_name") or palette.get("name", "")),
+                 json.dumps(colors[:3], ensure_ascii=False), int(record.get("display_order") or record_id),
+                 int(bool(record.get("is_archived"))), str(record.get("created_at") or now),
+                 str(record.get("updated_at") or now)),
+            )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+    sync_backup_file()
 
 
 def has_markdown_backup_records(path=None):

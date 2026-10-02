@@ -515,7 +515,7 @@ def parse_markdown_backup(text):
         content_lines = []
         in_content = False
         for line in lines[1:]:
-            if line.strip() == "### 内容":
+            if not in_content and line.strip() == "### 内容":
                 in_content = True
                 continue
             if in_content:

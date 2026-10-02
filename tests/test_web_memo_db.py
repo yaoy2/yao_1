@@ -515,7 +515,7 @@ class WebMemoDbTest(unittest.TestCase):
 
         self.assertIn("merge_remote_web_memos_from_github()", page_source)
         self.assertIn("read_file_from_github", page_source)
-        self.assertIn("import_memo_records(remote_records)", page_source)
+        self.assertIn("merge_memo_snapshots(local_records, remote_records, baseline_records)", page_source)
         self.assertIn("remote_records and not local_records", page_source)
         self.assertIn("web_memo_db.init_db()\nmerge_remote_web_memos_from_github()", page_source)
 

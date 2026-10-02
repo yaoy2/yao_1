@@ -32,7 +32,7 @@ def test_old_year_remains_visible_and_save_preserves_it(page_functions):
     page = page_functions
     assert page["_compact_date_label"]("2025-12-31") == "2025-12-31"
     assert page["_compact_date_label"]("2026-12-31") == "12-31"
-    page["prepare_todo_edit"] = Mock(return_value={"due_date": "2025-12-31"})
+    page["prepare_todo_edit"] = Mock(return_value={"due_date": "2025-12-31", "_sync_sha": "observed-sha"})
     page["st"].session_state.update(todo_due_date_1="12-31", todo_due_time_1="17:00")
     page["save_todo_due_fields"](1)
     page["todo_db"].update_todo.assert_called_once_with(1, due_date="2025-12-31", due_time="17:00")

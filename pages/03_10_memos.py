@@ -1,5 +1,6 @@
 import os
 import sys
+import re
 from datetime import date
 
 import streamlit as st
@@ -8,6 +9,7 @@ import streamlit as st
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from utils import github_backup_sync, web_memo_db
+from utils.data_sync_validation import validate_backup
 from utils.ui_theme import render_home_link
 
 
@@ -72,61 +74,119 @@ def restore_web_memo_backup_from_github():
 
 def merge_remote_web_memos_from_github():
     try:
-        result = github_backup_sync.read_file_from_github(
-            "data/web_memos_backup.md",
-            secrets=st.secrets,
-            environ=os.environ,
+        snapshot = read_memo_remote_snapshot()
+        local_records = web_memo_db.get_memos(include_archived=True)
+        baseline = github_backup_sync.get_local_sync_baseline(
+            web_memo_db.BACKUP_MD_PATH, "data/web_memos_backup.md",
+            secrets=st.secrets, environ=os.environ,
         )
+        remote_records = snapshot["records"]
+        baseline_records = None if baseline is None else web_memo_db.parse_markdown_backup(baseline["content"])
+        merged = merge_memo_snapshots(local_records, remote_records, baseline_records)
+        if memo_record_values(merged) != memo_record_values(local_records):
+            web_memo_db.restore_synced_records(merged)
+        if memo_record_values(merged) == memo_record_values(remote_records):
+            github_backup_sync.remember_local_sync_baseline(
+                web_memo_db.BACKUP_MD_PATH, "data/web_memos_backup.md", snapshot["content"],
+                snapshot["sha"], secrets=st.secrets, environ=os.environ,
+            )
+        st.session_state["memo_remote_snapshot"] = snapshot
     except Exception as exc:
-        st.warning(f"便签备份从 GitHub 读取失败，将继续使用当前环境本地备份：{exc}")
-        return
-    if not result.get("ok"):
-        return
+        st.error(f"便签同步已停止，两边数据均已保留：{exc}")
+        st.stop()
 
-    remote_records = web_memo_db.parse_markdown_backup(result.get("content", ""))
-    if not remote_records:
-        return
-    inserted = web_memo_db.import_memo_records(remote_records)
-    if inserted:
-        st.info(f"已从 GitHub 备份补回 {inserted} 条便签。")
+
+def memo_record_values(records):
+    return sorted((
+        int(record.get("id") or 0), str(record.get("memo_date", "")), str(record.get("content", "")).strip(),
+        str(record.get("category") or "待整理"), tuple(record.get("tags") or []),
+        str(record.get("palette_name") or "默认色卡"), int(record.get("display_order") or record.get("id") or 0),
+        bool(record.get("is_archived")),
+    ) for record in records)
+
+
+def merge_memo_snapshots(local_records, remote_records, baseline_records):
+    def indexed(records):
+        result = {}
+        for record in records or []:
+            record_id = int(record.get("id") or 0)
+            if record_id <= 0 or record_id in result:
+                raise RuntimeError("便签 ID 不完整或重复，无法安全合并。")
+            result[record_id] = record
+        return result
+
+    local, remote, baseline = indexed(local_records), indexed(remote_records), indexed(baseline_records)
+    merged = []
+    def value(record):
+        return None if record is None else memo_record_values([record])[0]
+
+    for record_id in sorted(local.keys() | remote.keys() | baseline.keys()):
+        left, right, old = local.get(record_id), remote.get(record_id), baseline.get(record_id)
+        if value(left) == value(right):
+            chosen = left
+        elif baseline_records is not None and value(left) == value(old):
+            chosen = right
+        elif baseline_records is not None and value(right) == value(old):
+            chosen = left
+        elif baseline_records is None and (left is None or right is None):
+            chosen = left or right
+        else:
+            raise RuntimeError(f"便签 ID {record_id} 在两边有不同改动，已停止自动覆盖，请先核对。")
+        if chosen is not None:
+            merged.append(chosen)
+    return merged
+
+
+def read_memo_remote_snapshot():
+    result = github_backup_sync.read_file_from_github(
+        "data/web_memos_backup.md", secrets=st.secrets, environ=os.environ,
+    )
+    if result.get("reason") == "missing_remote_file":
+        return {"sha": None, "records": [], "content": ""}
+    if not result.get("ok") or not result.get("sha"):
+        raise RuntimeError("无法核实私有数据仓库的便签版本，请先恢复 GITHUB_BACKUP_TOKEN 连接。")
+    content = result.get("content", "")
+    records = validate_backup("data/web_memos_backup.md", content)
+    count = re.search(r"^- 记录数量：\s*(\d+)\s*$", content, re.MULTILINE)
+    if not count or int(count.group(1)) != len(records):
+        raise RuntimeError("远端便签备份未通过完整性检查，已停止写入。")
+    return {"sha": result["sha"], "records": records, "content": content}
+
+
+def require_memo_remote_unchanged():
+    try:
+        snapshot = memo_displayed_snapshot or st.session_state.get("memo_remote_snapshot")
+        current = read_memo_remote_snapshot()
+        if snapshot is None or snapshot["sha"] != current["sha"]:
+            raise RuntimeError("其他环境已更新便签，请刷新后再保存；本次未修改本地记录。")
+    except Exception as exc:
+        st.error(f"便签保存已停止：{exc}")
+        st.stop()
 
 
 def sync_web_memo_backup_to_github():
-    local_records = web_memo_db.get_memos()
     try:
-        remote_result = github_backup_sync.read_file_from_github(
-            "data/web_memos_backup.md",
-            secrets=st.secrets,
-            environ=os.environ,
-        )
-    except Exception as exc:
-        st.warning(f"便签已保存在当前环境，但同步到 GitHub 前读取远端备份失败：{exc}")
-        return
-    if remote_result.get("skipped") and remote_result.get("reason") == "missing_token":
-        st.info("便签已保存在当前环境；如需跨部署保留，请在 Streamlit secrets 配置 GITHUB_BACKUP_TOKEN。")
-        return
-    if remote_result.get("ok"):
-        remote_records = web_memo_db.parse_markdown_backup(remote_result.get("content", ""))
+        snapshot = st.session_state.get("memo_remote_snapshot")
+        current = read_memo_remote_snapshot()
+        if snapshot is None or current["sha"] != snapshot["sha"]:
+            raise RuntimeError("远端便签已更新，本次本地改动已保留，但没有覆盖远端。")
+        local_records = web_memo_db.get_memos(include_archived=True)
+        remote_records = current["records"]
         if remote_records and not local_records:
-            st.warning("GitHub 上还有便签备份，当前环境是空的，已阻止空备份覆盖远端。")
-            return
-        inserted = web_memo_db.import_memo_records(remote_records)
-        if inserted:
-            st.info(f"已与 GitHub 备份合并 {inserted} 条便签，再同步回远端。")
-
-    try:
+            raise RuntimeError("当前便签为空，已阻止空备份覆盖远端。")
         result = github_backup_sync.sync_file_to_github(
             web_memo_db.BACKUP_MD_PATH,
             "data/web_memos_backup.md",
             "data: sync web memo backup",
             secrets=st.secrets,
             environ=os.environ,
+            expected_sha=snapshot["sha"],
         )
+        if not result.get("ok"):
+            raise RuntimeError("私有数据仓库未确认保存，请先恢复 GITHUB_BACKUP_TOKEN 连接。")
     except Exception as exc:
-        st.warning(f"便签已保存在当前环境，但同步到 GitHub 失败：{exc}")
-        return
-    if result.get("skipped") and result.get("reason") == "missing_token":
-        st.info("便签已保存在当前环境；如需跨部署保留，请在 Streamlit secrets 配置 GITHUB_BACKUP_TOKEN。")
+        st.error(f"便签已保存在当前环境，但同步到 GitHub 失败：{exc}")
+        st.stop()
 
 
 def apply_style():
@@ -249,6 +309,7 @@ def apply_style():
     )
 
 apply_style()
+memo_displayed_snapshot = st.session_state.get("memo_remote_snapshot")
 restore_web_memo_backup_from_github()
 web_memo_db.init_db()
 merge_remote_web_memos_from_github()
@@ -307,6 +368,7 @@ with st.container(border=True):
         save_plain = col_plain.form_submit_button("只保存", use_container_width=True)
 
     if save_classified or save_plain:
+        require_memo_remote_unchanged()
         try:
             manual_tags = parse_manual_tags(selected_tags, new_tags)
             try:
@@ -351,16 +413,19 @@ with st.container(border=True):
                         st.markdown(_content_html, unsafe_allow_html=True)
                         move_up, move_down, edit_col, hide_col, _spacer = st.columns([0.18, 0.18, 0.18, 0.18, 1], gap="small")
                         if move_up.button("↑", key=f"memo_up_{record['id']}", disabled=index == 0, help="上移"):
+                            require_memo_remote_unchanged()
                             web_memo_db.move_memo(record["id"], "up")
                             sync_web_memo_backup_to_github()
                             st.rerun()
                         if move_down.button("↓", key=f"memo_down_{record['id']}", disabled=index == len(display_records) - 1, help="下移"):
+                            require_memo_remote_unchanged()
                             web_memo_db.move_memo(record["id"], "down")
                             sync_web_memo_backup_to_github()
                             st.rerun()
                         if edit_col.button("✎", key=f"memo_edit_{record['id']}", help="编辑"):
                             st.session_state["editing_memo_id"] = record["id"]
                         if hide_col.button("×", key=f"memo_archive_{record['id']}", help="隐藏"):
+                            require_memo_remote_unchanged()
                             web_memo_db.archive_memo(record["id"])
                             sync_web_memo_backup_to_github()
                             st.rerun()
@@ -387,6 +452,7 @@ with st.container(border=True):
                                 extra_tags = st.text_input("新增标签", key=f"memo_edit_extra_tags_{record['id']}")
                                 save_edit, cancel_edit = st.columns(2)
                                 if save_edit.form_submit_button("保存修改", use_container_width=True):
+                                    require_memo_remote_unchanged()
                                     try:
                                         web_memo_db.update_memo(
                                             record["id"],

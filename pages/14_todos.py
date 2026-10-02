@@ -1,8 +1,11 @@
 import importlib
 import os
+import re
 import sys
+import tempfile
 from time import monotonic
 from datetime import date, datetime
+from pathlib import Path
 
 import streamlit as st
 
@@ -10,6 +13,7 @@ import streamlit as st
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from utils import budget_auth, github_backup_sync, todo_db
+from utils.todo_backup_validation import validate_todo_backup
 from utils.todo_calendar import render_calendar_html, shift_month
 from utils.ui_theme import render_home_link
 
@@ -54,20 +58,101 @@ def require_todo_auth():
 
 
 def restore_todo_backup_from_github():
-    if todo_db.has_local_todos() or todo_db.has_markdown_backup_records():
+    if todo_db.has_local_todos():
         return
+    backup_path = Path(todo_db.BACKUP_MD_PATH)
+    if backup_path.exists() and backup_path.stat().st_size:
+        try:
+            local_records = validate_todo_remote_backup(
+                {"ok": True, "sha": "local-backup", "content": backup_path.read_text(encoding="utf-8")})
+            if local_records:
+                return
+        except (ValueError, OSError, UnicodeError) as exc:
+            st.error(f"本机待办备份无法完整读取，已保留原文件并停止初始化，避免覆盖：{exc}")
+            st.stop()
     try:
-        github_backup_sync.download_file_from_github(
-            todo_db.BACKUP_MD_PATH,
+        result = github_backup_sync.read_file_from_github(
             "data/todo_items_backup.md",
             secrets=st.secrets,
             environ=os.environ,
         )
+        if not result.get("ok"):
+            st.warning("待办远端备份未能核对，已暂停初始化以保留原有记录；恢复连接后重试。")
+            st.stop()
+        validate_todo_remote_backup(result)
+        backup_path.parent.mkdir(parents=True, exist_ok=True)
+        temporary_path = None
+        try:
+            with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", newline="\n", dir=backup_path.parent,
+                                             prefix=".todo-restore-", suffix=".tmp", delete=False) as temporary_file:
+                temporary_path = Path(temporary_file.name)
+                temporary_file.write(result["content"])
+            os.replace(temporary_path, backup_path)
+        finally:
+            if temporary_path is not None:
+                temporary_path.unlink(missing_ok=True)
+        github_backup_sync.remember_local_sync_baseline(
+            backup_path, "data/todo_items_backup.md", result["content"], result["sha"],
+            secrets=st.secrets, environ=os.environ,
+        )
     except Exception as exc:
-        st.warning(f"待办备份从 GitHub 读取失败，将继续使用当前环境本地备份：{exc}")
+        st.warning(f"待办备份从 GitHub 恢复失败，已暂停初始化以保留原有记录：{exc}")
+        st.stop()
+
+
+def validate_todo_remote_backup(result):
+    """Reject partial or ambiguous snapshots before importing or publishing records."""
+    text = result.get("content")
+    if not result.get("ok") or not result.get("sha") or not isinstance(text, str):
+        raise ValueError("备份版本无效")
+    return validate_todo_backup(text)
+
+
+def todo_record_snapshot(records):
+    # UID identifies a task across devices; numeric IDs can legitimately be remapped.
+    return {todo_db.record_uid(record): {
+                **{key: value for key, value in record.items() if key not in {"id", "uid"}},
+                "uid": todo_db.record_uid(record)}
+            for record in records}
+
+
+def pending_todo_sync_sha():
+    pending_sha = st.session_state.get("todo_pending_sync_sha")
+    if pending_sha:
+        return pending_sha
+    try:
+        baseline = github_backup_sync.get_local_sync_baseline(
+            todo_db.BACKUP_MD_PATH, "data/todo_items_backup.md", secrets=st.secrets, environ=os.environ)
+    except (OSError, ValueError, RuntimeError) as exc:
+        st.session_state["todo_pending_sync_sha"] = "invalid-local-baseline"
+        st.session_state["todo_sync_error"] = f"本机同步基线无法读取，已暂停合并和写入以保留待办记录：{exc}"
+        return "invalid-local-baseline"
+    if not baseline:
+        return None
+    try:
+        baseline_records = validate_todo_backup(baseline["content"])
+        baseline_sha = baseline["sha"]
+        if not baseline_sha:
+            raise ValueError("同步基线缺少版本")
+    except (KeyError, ValueError):
+        # An unreadable baseline cannot establish that overwriting the local DB is safe.
+        st.session_state["todo_pending_sync_sha"] = "invalid-local-baseline"
+        st.session_state["todo_sync_error"] = "本机同步基线无效，已暂停合并和写入以保留待办记录。"
+        return "invalid-local-baseline"
+    if todo_record_snapshot(baseline_records) != todo_record_snapshot(todo_db.get_todos(view="all")):
+        pending_sha = baseline_sha
+        st.session_state["todo_pending_sync_sha"] = pending_sha
+        return pending_sha
+    return None
+
+
+def warn_todo_sync_pending(message):
+    st.session_state["todo_sync_error"] = message
+    st.warning(message)
 
 
 def merge_remote_todos_from_github():
+    pending_sha = pending_todo_sync_sha()
     try:
         result = github_backup_sync.read_file_from_github(
             "data/todo_items_backup.md",
@@ -78,14 +163,27 @@ def merge_remote_todos_from_github():
         st.warning(f"待办备份从 GitHub 读取失败，将继续使用当前环境本地备份：{exc}")
         return False
     if not result.get("ok"):
-        return result.get("reason") in {"missing_token", "missing_remote_file"}
+        st.warning("暂时无法核对 GitHub 上的待办备份；当前环境记录仍保留，恢复连接后再同步。")
+        return False
 
-    remote_records = todo_db.parse_markdown_backup(result.get("content", ""))
-    if not remote_records:
+    try:
+        remote_records = validate_todo_remote_backup(result)
+    except ValueError as exc:
+        st.warning(f"GitHub 待办备份无法完整核对，已停止合并和写入：{exc}")
+        return False
+    if pending_sha:
+        if result["sha"] != pending_sha:
+            warn_todo_sync_pending("远端待办已变化，当前环境未同步的修改仍保留；已暂停合并，请先核对双方记录。")
+            return False
+        st.session_state["todo_observed_remote_sha"] = result["sha"]
         return True
     inserted = todo_db.import_todo_records(remote_records)
     if inserted:
         st.info(f"已从 GitHub 备份合并 {inserted} 条待办。")
+    github_backup_sync.remember_local_sync_baseline(
+        todo_db.BACKUP_MD_PATH, "data/todo_items_backup.md", result["content"], result["sha"],
+        secrets=st.secrets, environ=os.environ)
+    st.session_state["todo_observed_remote_sha"] = result["sha"]
     return True
 
 
@@ -97,7 +195,12 @@ def refresh_todos_if_needed():
             st.session_state["todo_remote_refreshed_at"] = monotonic()
 
 
-def sync_todo_backup_to_github():
+def sync_todo_backup_to_github(expected_sha=None):
+    expected_sha = expected_sha or pending_todo_sync_sha()
+    if not expected_sha:
+        warn_todo_sync_pending("没有已核对的待办版本，本次未写入远端；请先刷新并核对记录。")
+        return False
+    st.session_state["todo_pending_sync_sha"] = expected_sha
     local_records = todo_db.get_todos(view="all")
     try:
         remote_result = github_backup_sync.read_file_from_github(
@@ -106,19 +209,31 @@ def sync_todo_backup_to_github():
             environ=os.environ,
         )
     except Exception as exc:
-        st.warning(f"待办已保存在当前环境，但同步到 GitHub 前读取远端备份失败：{exc}")
-        return
+        warn_todo_sync_pending(f"待办已保存在当前环境，但同步到 GitHub 前读取远端备份失败：{exc}")
+        return False
     if remote_result.get("skipped") and remote_result.get("reason") == "missing_token":
-        st.info("待办已保存在当前环境；如需跨部署保留，请在 Streamlit secrets 配置 GITHUB_BACKUP_TOKEN。")
-        return
-    if remote_result.get("ok"):
-        remote_records = todo_db.parse_markdown_backup(remote_result.get("content", ""))
+        warn_todo_sync_pending("待办已保存在当前环境；如需跨部署保留，请在 Streamlit secrets 配置 GITHUB_BACKUP_TOKEN。")
+        return False
+    if not remote_result.get("ok"):
+        warn_todo_sync_pending("待办已保存在当前环境，但未能核对 GitHub 备份，本次未写入远端。")
+        return False
+    try:
+        remote_records = validate_todo_remote_backup(remote_result)
+        if remote_result["sha"] != expected_sha:
+            warn_todo_sync_pending("远端待办已在本次修改后变化；当前环境修改仍保留，本次未合并或覆盖，请先核对双方记录。")
+            return False
         if remote_records and not local_records:
-            st.warning("GitHub 上还有待办备份，当前环境为空，已阻止空备份覆盖远端。")
-            return
-        inserted = todo_db.import_todo_records(remote_records)
-        if inserted:
-            st.info(f"已与 GitHub 备份合并 {inserted} 条待办，再同步回远端。")
+            warn_todo_sync_pending("GitHub 上还有待办备份，当前环境为空，已阻止空备份覆盖远端。")
+            return False
+        # Validate the file that will actually be uploaded, including any local additions.
+        local_snapshot = validate_todo_remote_backup(
+            {"ok": True, "sha": remote_result["sha"],
+             "content": Path(todo_db.BACKUP_MD_PATH).read_text(encoding="utf-8")})
+        if local_snapshot != todo_db.get_todos(view="all"):
+            raise ValueError("本机备份与当前待办数据库不一致，需先核对")
+    except (ValueError, OSError, UnicodeError) as exc:
+        warn_todo_sync_pending(f"待办已保存在当前环境，但备份无法完整核对，本次未写入远端：{exc}")
+        return False
 
     try:
         result = github_backup_sync.sync_file_to_github(
@@ -127,13 +242,41 @@ def sync_todo_backup_to_github():
             "data: sync todo items backup",
             secrets=st.secrets,
             environ=os.environ,
-            expected_sha=remote_result.get("sha"),
+            expected_sha=expected_sha,
         )
     except Exception as exc:
-        st.warning(f"待办已保存在当前环境，但同步到 GitHub 失败：{exc}")
-        return
+        warn_todo_sync_pending(f"待办已保存在当前环境，但同步到 GitHub 失败：{exc}")
+        return False
     if result.get("skipped") and result.get("reason") == "missing_token":
-        st.info("待办已保存在当前环境；如需跨部署保留，请在 Streamlit secrets 配置 GITHUB_BACKUP_TOKEN。")
+        warn_todo_sync_pending("待办已保存在当前环境；如需跨部署保留，请在 Streamlit secrets 配置 GITHUB_BACKUP_TOKEN。")
+    elif not result.get("ok"):
+        warn_todo_sync_pending("待办已保存在当前环境，但尚未同步到 GitHub；请恢复连接后重试。")
+    if result.get("ok"):
+        st.session_state.pop("todo_pending_sync_sha", None)
+        st.session_state.pop("todo_sync_error", None)
+        return True
+    return False
+
+
+def add_todo_from_page(todo_text, due_date, due_time):
+    if re.search(r"^## TODO-|^### 内容\s*$", todo_text, re.M):
+        raise ValueError("待办正文不能包含备份控制标题。")
+    if not merge_remote_todos_from_github():
+        st.warning("暂时无法核对最新待办，本次未新增，请稍后重试。")
+        return False
+    expected_sha = st.session_state.get("todo_observed_remote_sha")
+    if not expected_sha:
+        st.warning("暂时无法核对待办版本，本次未新增，请稍后重试。")
+        return False
+    todo_db.add_todos_from_text(todo_text, record_date=todo_db.today().isoformat(),
+                               due_date=due_date, due_time=due_time)
+    st.session_state["todo_pending_sync_sha"] = expected_sha
+    st.session_state["todo_quick_add_saved"] = True
+    synced = sync_todo_backup_to_github(expected_sha=expected_sha)
+    st.session_state["todo_save_notice"] = "synced" if synced else "pending"
+    # Clear the submitted text and show the saved row even when the network failed.
+    st.rerun()
+    return True
 
 
 def apply_style():
@@ -290,6 +433,11 @@ def prepare_todo_edit(record_id):
     if not expected or current != expected or record.get("status") == "deleted":
         st.warning("这条待办已在其他入口变化，已刷新；请核对后再操作。")
         return False
+    sync_sha = st.session_state.get("todo_observed_remote_sha")
+    if not sync_sha:
+        st.warning("暂时无法核对待办版本，本次未修改，请稍后重试。")
+        return False
+    record["_sync_sha"] = sync_sha
     return record
 
 
@@ -306,24 +454,29 @@ def save_todo_due_fields(record_id):
         return
     due_time_val = str(new_due_time or "")
     todo_db.update_todo(record_id, due_date=due_date_val, due_time=due_time_val)
-    sync_todo_backup_to_github()
+    st.session_state["todo_pending_sync_sha"] = record["_sync_sha"]
+    sync_todo_backup_to_github(expected_sha=record["_sync_sha"])
 
 
 def delete_todo_record(record_id):
-    if not prepare_todo_edit(record_id):
+    record = prepare_todo_edit(record_id)
+    if not record:
         return
     todo_db.delete_todo(record_id)
-    sync_todo_backup_to_github()
+    st.session_state["todo_pending_sync_sha"] = record["_sync_sha"]
+    sync_todo_backup_to_github(expected_sha=record["_sync_sha"])
 
 
 def toggle_todo_done(record_id, checkbox_key):
-    if not prepare_todo_edit(record_id):
+    record = prepare_todo_edit(record_id)
+    if not record:
         return
     if st.session_state.get(checkbox_key):
         todo_db.complete_todo(record_id)
     else:
         todo_db.reopen_todo(record_id)
-    sync_todo_backup_to_github()
+    st.session_state["todo_pending_sync_sha"] = record["_sync_sha"]
+    sync_todo_backup_to_github(expected_sha=record["_sync_sha"])
 
 
 def render_todo_record(record):
@@ -433,10 +586,22 @@ metric_c.metric("全部记录", len(records_all))
 
 render_todo_calendar(records_all)
 
+if st.session_state.pop("todo_save_notice", None) == "synced":
+    st.success("待办已保存并同步。")
+if pending_todo_sync_sha():
+    st.warning(st.session_state.get("todo_sync_error") or "当前环境有已保存、尚未同步的待办修改。")
+    if st.button("重试同步", key="todo_retry_sync", help="仅同步已保存的修改，不会重复新增待办"):
+        if sync_todo_backup_to_github():
+            st.session_state["todo_save_notice"] = "synced"
+            st.rerun()
+
 with st.container(border=True):
     st.subheader("快速新增")
-    with st.form("todo_quick_add", clear_on_submit=True):
-        todo_text = st.text_area("待办文本", placeholder="例如：明天下午3点前提交学院材料", height=96)
+    if st.session_state.pop("todo_quick_add_saved", False):
+        st.session_state["todo_quick_add_text"] = ""
+    with st.form("todo_quick_add", clear_on_submit=False):
+        todo_text = st.text_area("待办文本", placeholder="例如：明天下午3点前提交学院材料", height=96,
+                                 key="todo_quick_add_text")
         parsed_due_date, parsed_due_time = todo_db.extract_due_fields(todo_text, todo_db.today())
         col_date, col_time, col_save = st.columns([1, 1, 1], vertical_alignment="bottom")
         with col_date:
@@ -452,18 +617,9 @@ with st.container(border=True):
             submitted = st.form_submit_button("保存待办", type="primary", use_container_width=True)
         if submitted:
             try:
-                todo_db.add_todos_from_text(
-                    todo_text,
-                    record_date=todo_db.today().isoformat(),
-                    due_date=due_date,
-                    due_time=due_time,
-                )
-            except ValueError:
-                st.error("请输入待办内容后再保存。")
-            else:
-                sync_todo_backup_to_github()
-                st.success("待办已保存。")
-                st.rerun()
+                add_todo_from_page(todo_text, due_date, due_time)
+            except ValueError as exc:
+                st.error(str(exc) or "请输入待办内容后再保存。")
 
 with st.container(border=True):
     search_col, = st.columns([1], gap="medium", vertical_alignment="bottom")

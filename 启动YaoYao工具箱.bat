@@ -8,6 +8,18 @@ if not exist ".venv\Scripts\python.exe" (
   exit /b 1
 )
 
+".venv\Scripts\python.exe" scripts\data_repo_sync.py pull --all
+if errorlevel 1 (
+  echo 数据核对未通过，已保留本机与云端记录。请查看上方原因后再启动。
+  pause
+  exit /b 1
+)
+".venv\Scripts\python.exe" scripts\local_password_setup.py
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
+
 ".venv\Scripts\python.exe" -m streamlit run hello.py
 if errorlevel 1 (
   echo.

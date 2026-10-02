@@ -6,16 +6,16 @@ import json
 import os
 import re
 import shutil
-import subprocess
 import tempfile
 import tomllib
 import uuid
 from contextlib import contextmanager
 from datetime import date
 from pathlib import Path
-from urllib.parse import urlencode, urlsplit
 
 from utils import github_backup_sync, todo_db
+from utils.github_cli import GitHubCliSession
+from utils.todo_backup_validation import validate_todo_backup
 
 REPO_PATH = "data/todo_items_backup.md"
 
@@ -24,41 +24,6 @@ def local_secrets():
     path = Path(todo_db.ROOT_DIR) / ".streamlit" / "secrets.toml"
     return tomllib.loads(path.read_text(encoding="utf-8-sig")) if path.exists() else {}
 
-
-class GitHubCliSession:
-    """Reuse gh's login locally without extracting or persisting its credentials."""
-
-    def __init__(self, executable):
-        self.executable = executable
-
-    def _request(self, method, url, params=None, json_body=None):
-        parsed = urlsplit(url)
-        if parsed.scheme != "https" or parsed.netloc != "api.github.com":
-            raise ValueError("GitHub CLI 仅允许访问 GitHub API。")
-        endpoint = parsed.path.lstrip("/")
-        if params:
-            endpoint += "?" + urlencode(params)
-        command = [self.executable, "api", "--hostname", "github.com", "--include", "--method", method, endpoint]
-        if json_body is not None:
-            command += ["--input", "-"]
-        result = subprocess.run(command, input=json.dumps(json_body) if json_body is not None else None,
-                                text=True, encoding="utf-8", capture_output=True, timeout=45,
-                                env={**os.environ, "GH_PROMPT_DISABLED": "1"})
-        output = result.stdout.replace("\r\n", "\n")
-        header, _, body = output.partition("\n\n")
-        status = re.match(r"HTTP/\S+\s+(\d{3})", header)
-        if not status:
-            raise RuntimeError("无法通过本机 GitHub CLI 读取服务，请检查 gh 登录和网络；保存结果尚未确认。")
-        response = type("GitHubCliResponse", (), {})()
-        response.status_code = int(status[1])
-        response.json = lambda: json.loads(body)
-        return response
-
-    def get(self, url, *, params=None, **kwargs):
-        return self._request("GET", url, params=params)
-
-    def put(self, url, *, json, **kwargs):
-        return self._request("PUT", url, json_body=json)
 
 
 def local_service():
@@ -119,7 +84,10 @@ class TodoChatService:
         if not result.get("ok"):
             raise RuntimeError("无法读取 M14 远端备份；请检查 GitHub 连接，未写入待办。")
         text = result["content"]
-        records = todo_db.parse_markdown_backup(text)
+        try:
+            records = validate_todo_backup(text)
+        except ValueError as exc:
+            raise RuntimeError("M14 备份格式无效，已停止写入，避免丢失记录。") from exc
         count = re.search(r"^- 记录数量：(\d+)\s*$", text, re.M)
         if not result.get("sha") or not count or int(count[1]) != len(records):
             raise RuntimeError("M14 备份格式或版本无效，已停止写入，避免丢失记录。")
