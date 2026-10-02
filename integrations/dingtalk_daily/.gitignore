@@ -1,0 +1,10 @@
+# Local identity, UI calibration and private chat artifacts must never be pushed.
+*.local.json
+.venv/
+__pycache__/
+.pytest_cache/
+*.py[cod]
+outputs/
+diagnostics/
+logs/
+*.log
