@@ -11,7 +11,7 @@
       "images": [
         {
           "id": "erangel",
-          "label": "密室位置与入口示意",
+          "label": "密室位置图",
           "filename": "erangel.png",
           "width": 3023,
           "height": 1701,
@@ -20,8 +20,14 @@
           "original_url": "https://images.steamusercontent.com/ugc/11546725800282512348/8371C3F0470068CD2B55813253132CF39F636CF4/",
           "author": "76561198045086703 及指南署名协作者",
           "source_note": "图面标注：2025-08 至 2025-09。来源指南最后更新于 2026-06-06；作者说明可能存在遗漏或过时点位。",
-          "legend": "黄色圆圈为位置，连线通向局部放大图；左侧为钥匙与入口外观。",
-          "sha256": "96bad65c79931d07c4088e033c287d4212c8e0cc51714a97a0dca072cb0a0d0b"
+          "legend": "黄色圆圈为位置，连线通向局部放大图。",
+          "sha256": "96bad65c79931d07c4088e033c287d4212c8e0cc51714a97a0dca072cb0a0d0b",
+          "display_crop": [
+            1348,
+            31,
+            1638,
+            1640
+          ]
         }
       ]
     },
@@ -33,7 +39,7 @@
       "images": [
         {
           "id": "miramar",
-          "label": "密室位置与入口示意",
+          "label": "密室位置图",
           "filename": "miramar.png",
           "width": 3023,
           "height": 1701,
@@ -42,8 +48,14 @@
           "original_url": "https://images.steamusercontent.com/ugc/9866695287589586660/71ED3F8502969C8BF16A57F3BBF65AF7D0BF49E1/",
           "author": "76561198045086703 及指南署名协作者",
           "source_note": "图面标注：2026-05。来源指南最后更新于 2026-06-06；作者说明可能存在遗漏或过时点位。",
-          "legend": "黄色圆圈为位置，连线通向局部放大图；左侧为钥匙与入口外观。",
-          "sha256": "d2309821c970c09bf8fff7ad15b994d5146117346b7fbb2bbc002875e959f295"
+          "legend": "黄色圆圈为位置，连线通向局部放大图。",
+          "sha256": "d2309821c970c09bf8fff7ad15b994d5146117346b7fbb2bbc002875e959f295",
+          "display_crop": [
+            1346,
+            31,
+            1639,
+            1641
+          ]
         }
       ],
       "mechanics_url": "https://www.pubg.com/en/news/10080"
@@ -52,11 +64,11 @@
       "id": "taego",
       "name": "泰戈 · Taego",
       "kind": "钥匙密室",
-      "access_note": "使用泰戈密室钥匙；图中同时提供建筑外观和入口放大示意。",
+      "access_note": "使用泰戈密室钥匙；图中黄色连线连接位置与局部放大图。",
       "images": [
         {
           "id": "taego",
-          "label": "密室位置与入口示意",
+          "label": "密室位置图",
           "filename": "taego.png",
           "width": 3023,
           "height": 1701,
@@ -65,8 +77,14 @@
           "original_url": "https://images.steamusercontent.com/ugc/11074162632809260800/65E8498C4EA32F373385C8205551E436A80CC7CA/",
           "author": "76561198045086703 及指南署名协作者",
           "source_note": "图面标注：2025-08 至 2025-09。来源指南最后更新于 2026-06-06；作者说明可能存在遗漏或过时点位。",
-          "legend": "黄色圆圈为位置，连线通向局部放大图；左侧为钥匙与入口外观。",
-          "sha256": "b4a372b73d2a12e8a1daf5874555f7235681d2c3c11edb358f5f5193fffe8bef"
+          "legend": "黄色圆圈为位置，连线通向局部放大图。",
+          "sha256": "b4a372b73d2a12e8a1daf5874555f7235681d2c3c11edb358f5f5193fffe8bef",
+          "display_crop": [
+            1348,
+            31,
+            1638,
+            1640
+          ]
         }
       ]
     },
@@ -78,7 +96,7 @@
       "images": [
         {
           "id": "rondo",
-          "label": "密室位置与入口示意",
+          "label": "密室位置图",
           "filename": "rondo.png",
           "width": 3023,
           "height": 1701,
@@ -87,8 +105,14 @@
           "original_url": "https://images.steamusercontent.com/ugc/12809037901238314162/080102F269CB2FD8C93CE09496AD4494FB1C4843/",
           "author": "76561198045086703 及指南署名协作者",
           "source_note": "图面标注：2026-05。来源指南最后更新于 2026-06-06；作者说明可能存在遗漏或过时点位。",
-          "legend": "黄色圆圈为位置，连线通向局部放大图；左侧为钥匙与入口外观。",
-          "sha256": "4236002dcb50e261306b5ad7f15e14fa4c49bffb9e9fedac76b597150a2d692c"
+          "legend": "黄色圆圈为位置，连线通向局部放大图。",
+          "sha256": "4236002dcb50e261306b5ad7f15e14fa4c49bffb9e9fedac76b597150a2d692c",
+          "display_crop": [
+            1348,
+            31,
+            1638,
+            1640
+          ]
         }
       ],
       "mechanics_url": "https://www.pubg.com/en-asia/news/9356?category=patch_notes"
@@ -115,7 +139,7 @@
         },
         {
           "id": "deston",
-          "label": "拖车位置与入口示意",
+          "label": "拖车位置图",
           "filename": "deston.png",
           "width": 3023,
           "height": 1701,
@@ -124,8 +148,14 @@
           "original_url": "https://images.steamusercontent.com/ugc/13218018147163945999/27EC5EF3444A078C1FBD4E089AC011ECE954845C/",
           "author": "76561198045086703 及指南署名协作者",
           "source_note": "图面标注：2025-08 至 2025-10。来源指南最后更新于 2026-06-06；作者说明可能存在遗漏或过时点位。",
-          "legend": "黄色圆圈为位置，连线通向局部放大图；左侧为钥匙与入口外观。",
-          "sha256": "04b35cfb574bca1db18839523a821a9893d920e6b2af503f83e15d508b210f3a"
+          "legend": "黄色圆圈为位置，连线通向局部放大图。",
+          "sha256": "04b35cfb574bca1db18839523a821a9893d920e6b2af503f83e15d508b210f3a",
+          "display_crop": [
+            1348,
+            31,
+            1638,
+            1641
+          ]
         },
         {
           "id": "deston-detail",
@@ -151,7 +181,7 @@
       "images": [
         {
           "id": "vikendi",
-          "label": "密室位置与入口示意",
+          "label": "密室位置图",
           "filename": "vikendi.png",
           "width": 3023,
           "height": 1701,
@@ -160,8 +190,14 @@
           "original_url": "https://images.steamusercontent.com/ugc/11119193349568779242/51115C3D40F0471F306D456B7D667085ACB341DD/",
           "author": "76561198045086703 及指南署名协作者",
           "source_note": "图面标注：2025-08 至 2025-10。来源指南最后更新于 2026-06-06；作者说明可能存在遗漏或过时点位。",
-          "legend": "黄色圆圈为位置，连线通向局部放大图；左侧为钥匙与入口外观。",
-          "sha256": "cdb386e2a543da3f79183871ff17948a37843aa388a2338a9a939a000e176448"
+          "legend": "黄色圆圈为位置，连线通向局部放大图。",
+          "sha256": "cdb386e2a543da3f79183871ff17948a37843aa388a2338a9a939a000e176448",
+          "display_crop": [
+            1348,
+            30,
+            1638,
+            1639
+          ]
         },
         {
           "id": "vikendi-detail",

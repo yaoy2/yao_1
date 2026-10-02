@@ -23,6 +23,10 @@ def test_catalog_covers_secret_maps_and_original_images_are_intact():
                 assert image.size == (item["width"], item["height"])
                 assert Image.MIME[image.format] == item["mime_type"]
                 assert max(image.size) >= 2000
+                if "display_crop" in item:
+                    x, y, width, height = item["display_crop"]
+                    assert 0 <= x < x + width <= image.width
+                    assert 0 <= y < y + height <= image.height
                 image.verify()
             assert item["original_url"].startswith("https://")
             assert item["source_url"].startswith("https://")

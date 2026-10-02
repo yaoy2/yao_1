@@ -53,7 +53,9 @@ def map_page(monkeypatch):
     monkeypatch.setattr(
         pubg_map_viewer,
         "build_map_viewer",
-        lambda image_bytes, mime_type, title: f"<p>{image_bytes.decode('ascii')}</p>",
+        lambda image_bytes, mime_type, title, *, crop_box=None: (
+            f"<p>{image_bytes.decode('ascii')} crop={crop_box}</p>"
+        ),
     )
     monkeypatch.setattr(ui_theme, "render_home_link", lambda: None)
     return AppTest.from_file(str(PAGE_PATH)), loaded
@@ -97,6 +99,23 @@ def test_image_selection_stays_with_its_own_map(map_page):
     assert not app.exception
     assert loaded[-1].startswith("erangel_")
     assert app.selectbox(key="pubg_secret_image_erangel").value == loaded[-1]
+
+
+def test_map_crop_is_passed_to_viewer_and_resets_for_full_maps(map_page):
+    from utils import pubg_secret_maps
+
+    catalog = pubg_secret_maps.load_catalog()
+    catalog[1]["images"][0]["display_crop"] = [1500, 0, 2000, 2000]
+    app, _loaded = map_page
+    app.run()
+    assert not app.exception
+    assert "2,000 × 2,000" in " ".join(item.value for item in app.caption)
+    assert "crop=(1500, 0, 2000, 2000)" in app.get("iframe")[0].proto.srcdoc
+
+    app.selectbox(key="pubg_secret_map").set_value("vikendi").run()
+    assert not app.exception
+    assert "crop=None" in app.get("iframe")[0].proto.srcdoc
+    assert "4,096 × 4,096" in " ".join(item.value for item in app.caption)
 
 
 @pytest.mark.parametrize("error_type", [OSError, ValueError])

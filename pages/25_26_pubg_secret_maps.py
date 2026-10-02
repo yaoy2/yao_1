@@ -54,10 +54,16 @@ with image_col:
         selected_image_id = next(iter(images_by_id))
 
 selected_image = images_by_id[selected_image_id]
+crop_box = (
+    tuple(selected_image["display_crop"]) if selected_image.get("display_crop") else None
+)
+display_width, display_height = (
+    crop_box[2:] if crop_box else (selected_image["width"], selected_image["height"])
+)
 st.caption(f"{selected_map['kind']} · {selected_map['access_note']}")
 st.caption(
     f"{selected_image['label']} · "
-    f"{selected_image['width']:,} × {selected_image['height']:,} 像素"
+    f"{display_width:,} × {display_height:,} 像素"
 )
 
 image_bytes = None
@@ -67,6 +73,7 @@ try:
         image_bytes,
         selected_image["mime_type"],
         f"{selected_map['name']} · {selected_image['label']}",
+        crop_box=crop_box,
     )
 except (OSError, ValueError):
     image_bytes = None
@@ -85,7 +92,7 @@ download_col, original_col, source_col = st.columns(3)
 with download_col:
     if image_bytes is not None:
         st.download_button(
-            "下载高清原图",
+            "下载来源原图",
             data=image_bytes,
             file_name=Path(selected_image["filename"]).name,
             mime=selected_image["mime_type"],

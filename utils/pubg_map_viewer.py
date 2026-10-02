@@ -2,16 +2,25 @@
 
 import base64
 from html import escape
+import json
 
 
 _IMAGE_MIME_TYPES = frozenset({"image/jpeg", "image/png", "image/webp", "image/gif"})
 
 
-def build_map_viewer(image_bytes: bytes, mime_type: str, title: str) -> str:
+def build_map_viewer(
+    image_bytes: bytes,
+    mime_type: str,
+    title: str,
+    *,
+    crop_box: tuple[int, int, int, int] | None = None,
+) -> str:
     """Return HTML for ``st.iframe(..., height="content")``.
 
     Source bytes are embedded as a data URL. Only raster MIME types are accepted;
     an invalid image payload is reported by the viewer's load-error state.
+    ``crop_box`` is an optional (x, y, width, height) display window in source
+    pixels; the embedded source bytes remain intact.
     """
     if not isinstance(image_bytes, bytes):
         raise TypeError("image_bytes must be bytes")
@@ -19,9 +28,18 @@ def build_map_viewer(image_bytes: bytes, mime_type: str, title: str) -> str:
         raise ValueError("image_bytes must not be empty")
     if mime_type not in _IMAGE_MIME_TYPES:
         raise ValueError("Unsupported raster image MIME type")
+    if crop_box is not None:
+        if not isinstance(crop_box, tuple) or len(crop_box) != 4:
+            raise TypeError("crop_box must be a tuple of four integers")
+        if any(not isinstance(value, int) or isinstance(value, bool) for value in crop_box):
+            raise TypeError("crop_box values must be non-boolean integers")
+        if crop_box[0] < 0 or crop_box[1] < 0 or crop_box[2] <= 0 or crop_box[3] <= 0:
+            raise ValueError("crop_box requires non-negative x/y and positive width/height")
     source = f"data:{mime_type};base64,{base64.b64encode(image_bytes).decode('ascii')}"
-    return _VIEWER_HTML.replace("__IMAGE_SOURCE__", source).replace(
-        "__MAP_TITLE__", escape(str(title), quote=True)
+    return (
+        _VIEWER_HTML.replace("__IMAGE_SOURCE__", source)
+        .replace("__CROP_BOX__", json.dumps(crop_box))
+        .replace("__MAP_TITLE__", escape(str(title), quote=True))
     )
 
 
@@ -43,7 +61,8 @@ button:focus-visible, .stage:focus-visible { outline: 2px solid #987436; outline
 .scale { margin-left: auto; color: #6b665e; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .stage { position: relative; height: clamp(300px, 76vw, 570px); overflow: hidden; touch-action: none; background: #f0eeea; cursor: grab; }
 .stage.dragging { cursor: grabbing; }
-.stage img { position: absolute; left: 0; top: 0; max-width: none; max-height: none; transform-origin: 0 0; user-select: none; -webkit-user-drag: none; visibility: hidden; }
+.map-layer { position: absolute; left: 0; top: 0; overflow: hidden; transform-origin: 0 0; visibility: hidden; }
+.map-layer img { position: absolute; left: 0; top: 0; max-width: none; max-height: none; user-select: none; -webkit-user-drag: none; }
 .message { position: absolute; inset: 0; display: grid; place-content: center; padding: 24px; text-align: center; color: #6b665e; pointer-events: none; }
 .message[hidden] { display: none; }
 .hint { padding: 6px 10px; color: #787168; font-size: 12px; background: #faf9f6; }
@@ -60,7 +79,9 @@ button:focus-visible, .stage:focus-visible { outline: 2px solid #987436; outline
     <span class="scale" id="scale" aria-label="当前缩放比例">加载中</span>
   </div>
   <div class="stage" id="stage" tabindex="0" role="region" aria-label="__MAP_TITLE__，可拖动及缩放" aria-describedby="hint">
-    <img id="map" src="__IMAGE_SOURCE__" alt="__MAP_TITLE__" draggable="false">
+    <div class="map-layer" id="map-layer">
+      <img id="map" src="__IMAGE_SOURCE__" alt="__MAP_TITLE__" draggable="false">
+    </div>
     <div class="message" id="message" role="status" aria-live="polite">正在加载高清地图…</div>
   </div>
   <div class="hint" id="hint">滚轮或双指缩放 · 拖动查看 · 聚焦地图后可用方向键移动，+ / − 缩放</div>
@@ -68,7 +89,9 @@ button:focus-visible, .stage:focus-visible { outline: 2px solid #987436; outline
 <script>
 (() => {
   "use strict";
+  const cropBox = __CROP_BOX__;
   const stage = document.getElementById("stage");
+  const mapLayer = document.getElementById("map-layer");
   const image = document.getElementById("map");
   const message = document.getElementById("message");
   const scaleLabel = document.getElementById("scale");
@@ -83,19 +106,21 @@ button:focus-visible, .stage:focus-visible { outline: 2px solid #987436; outline
   let x = 0;
   let y = 0;
   let fitting = true;
+  let contentWidth = 0;
+  let contentHeight = 0;
 
   function fitScale() {
-    return Math.min(stage.clientWidth / image.naturalWidth, stage.clientHeight / image.naturalHeight, 1);
+    return Math.min(stage.clientWidth / contentWidth, stage.clientHeight / contentHeight, 1);
   }
   function minScale() { return fitScale() / 2; }
   function clampScale(value) { return Math.min(8, Math.max(minScale(), value)); }
   function render() {
     if (!ready) return;
-    const width = image.naturalWidth * scale;
-    const height = image.naturalHeight * scale;
+    const width = contentWidth * scale;
+    const height = contentHeight * scale;
     x = width <= stage.clientWidth ? (stage.clientWidth - width) / 2 : Math.min(0, Math.max(stage.clientWidth - width, x));
     y = height <= stage.clientHeight ? (stage.clientHeight - height) / 2 : Math.min(0, Math.max(stage.clientHeight - height, y));
-    image.style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
+    mapLayer.style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
     scaleLabel.textContent = `${Math.round(scale * 100)}%`;
     zoomIn.disabled = scale >= 8;
     zoomOut.disabled = scale <= minScale();
@@ -104,8 +129,8 @@ button:focus-visible, .stage:focus-visible { outline: 2px solid #987436; outline
     if (!ready) return;
     fitting = true;
     scale = fitScale();
-    x = (stage.clientWidth - image.naturalWidth * scale) / 2;
-    y = (stage.clientHeight - image.naturalHeight * scale) / 2;
+    x = (stage.clientWidth - contentWidth * scale) / 2;
+    y = (stage.clientHeight - contentHeight * scale) / 2;
     render();
   }
   function zoom(value, anchorX = stage.clientWidth / 2, anchorY = stage.clientHeight / 2) {
@@ -130,24 +155,37 @@ button:focus-visible, .stage:focus-visible { outline: 2px solid #987436; outline
   function loaded() {
     if (ready) return;
     if (!image.naturalWidth || !image.naturalHeight) { failed(); return; }
+    const area = cropBox || [0, 0, image.naturalWidth, image.naturalHeight];
+    const [cropX, cropY, cropWidth, cropHeight] = area;
+    if (!area.every(Number.isSafeInteger) || cropX < 0 || cropY < 0 || cropWidth <= 0 || cropHeight <= 0 ||
+        cropWidth > image.naturalWidth - cropX || cropHeight > image.naturalHeight - cropY) {
+      failed("地图显示范围超出原图边界，请检查裁切配置。");
+      return;
+    }
+    contentWidth = cropWidth;
+    contentHeight = cropHeight;
     ready = true;
+    mapLayer.style.width = `${contentWidth}px`;
+    mapLayer.style.height = `${contentHeight}px`;
     image.style.width = `${image.naturalWidth}px`;
     image.style.height = `${image.naturalHeight}px`;
-    image.style.visibility = "visible";
+    image.style.left = `${-cropX}px`;
+    image.style.top = `${-cropY}px`;
+    mapLayer.style.visibility = "visible";
     message.hidden = true;
     buttons.forEach(button => { button.disabled = false; });
     fit();
   }
-  function failed() {
+  function failed(detail = "地图未能显示，请重新选择地图或刷新页面。") {
     ready = false;
-    image.style.visibility = "hidden";
+    mapLayer.style.visibility = "hidden";
     message.hidden = false;
-    message.textContent = "地图未能显示，请重新选择地图或刷新页面。";
+    message.textContent = detail;
     scaleLabel.textContent = "加载失败";
     buttons.forEach(button => { button.disabled = true; });
   }
   image.addEventListener("load", loaded);
-  image.addEventListener("error", failed);
+  image.addEventListener("error", () => failed());
   if (image.complete) { if (image.naturalWidth) loaded(); else failed(); }
 
   zoomIn.addEventListener("click", () => zoom(scale * 1.35));
