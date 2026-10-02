@@ -73,7 +73,8 @@ class HomePageTest(unittest.TestCase):
         by_code = {tool["code"]: tool for tool in tools}
         codes = [tool["code"] for tool in tools]
 
-        self.assertEqual(["M25", "M23", "M22", "M21", "M19", "M18", "M15", "M14", "M10"], codes[:9])
+        self.assertEqual(["M26", "M25", "M23", "M22", "M21", "M19", "M18", "M15", "M14", "M10"], codes[:10])
+        self.assertEqual("pages/25_26_pubg_secret_maps.py", by_code["M26"]["page"])
         self.assertEqual("pages/24_25_phone_transfer.py", by_code["M25"]["page"])
         self.assertEqual("pages/22_23_docker_monitor.py", by_code["M23"]["page"])
         self.assertEqual("pages/21_22_gpt_planner_luna_executor.py", by_code["M22"]["page"])
@@ -92,7 +93,7 @@ class HomePageTest(unittest.TestCase):
         blocked_codes = {tool["code"] for tool in tools if tool.get("blocked")}
         self.assertEqual({"M01", "M02", "M03", "M04", "M05", "M11", "M13", "M16", "M17", "M20", "M24"}, blocked_codes)
         self.assertEqual("M01", tools[-1]["code"])
-        self.assertEqual(24, len(tools))
+        self.assertEqual(25, len(tools))
 
     def test_homepage_sections_match_approved_apple_nav(self):
         _page_source, namespace = load_homepage_bits()
@@ -114,6 +115,7 @@ class HomePageTest(unittest.TestCase):
         self.assertEqual("个人", by_code["M21"]["section"])
         self.assertEqual("个人", by_code["M22"]["section"])
         self.assertEqual("个人", by_code["M23"]["section"])
+        self.assertEqual("个人", by_code["M26"]["section"])
         self.assertEqual("archived", by_code["M13"]["section"])
         self.assertEqual("archived", by_code["M24"]["section"])
         admin_codes = [tool["code"] for tool in namespace["tools_for_section"](tools, "行政")]
@@ -158,7 +160,7 @@ class HomePageTest(unittest.TestCase):
         page1_codes = [tool["code"] for tool in homepage_pages[0]]
         page2_codes = [tool["code"] for tool in homepage_pages[1]]
 
-        self.assertEqual(["M25", "M23", "M22", "M21", "M19", "M18", "M15", "M14"], codes[:8])
+        self.assertEqual(["M26", "M25", "M23", "M22", "M21", "M19", "M18", "M15", "M14"], codes[:9])
         self.assertEqual(codes[codes.index("M06") : codes.index("M06") + 6], ["M06", "M24", "M20", "M17", "M16", "M13"])
         self.assertTrue(tools[codes.index("M16")]["blocked"])
         self.assertTrue(tools[codes.index("M17")]["blocked"])
@@ -169,9 +171,9 @@ class HomePageTest(unittest.TestCase):
         self.assertNotIn("M13", page1_codes)
         self.assertIn("M16", page2_codes)
         self.assertIn("M17", page2_codes)
-        self.assertEqual(["M25", "M23", "M22", "M21", "M19", "M18", "M15", "M14", "M10"], page1_codes)
-        self.assertEqual(["M09", "M08", "M07", "M06", "M24", "M20", "M17", "M16", "M13"], page2_codes)
-        self.assertEqual(["M11", "M05", "M04", "M03", "M02", "M01"], [tool["code"] for tool in homepage_pages[2]])
+        self.assertEqual(["M26", "M25", "M23", "M22", "M21", "M19", "M18", "M15", "M14"], page1_codes)
+        self.assertEqual(["M10", "M09", "M08", "M07", "M06", "M24", "M20", "M17", "M16"], page2_codes)
+        self.assertEqual(["M13", "M11", "M05", "M04", "M03", "M02", "M01"], [tool["code"] for tool in homepage_pages[2]])
 
     def test_retired_grading_tools_show_crosses_in_homepage_entries(self):
         _page_source, namespace = load_homepage_bits()

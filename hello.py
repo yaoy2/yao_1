@@ -9,6 +9,16 @@ from utils.home_theme import apply_home_theme
 
 TOOLS = [
     {
+        "title": "PUBG 密室地图",
+        "desc": "切换地图查看高清密室位置标记，支持缩放、拖动和原图下载，帕拉莫除外。",
+        "tag": "游戏地图",
+        "created": "2026_10_02",
+        "page": "pages/25_26_pubg_secret_maps.py",
+        "code": "M26",
+        "accent": "amber",
+        "section": "个人",
+    },
+    {
         "title": "随手传",
         "desc": "手机用蜂窝网络发送原文件，办公电脑 L 自动按日期保存，不压缩、不覆盖。",
         "tag": "手机传文件",

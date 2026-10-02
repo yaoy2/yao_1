@@ -1,0 +1,206 @@
+{
+  "source_checked_on": "2026-10-02",
+  "scope": "PUBG: BATTLEGROUNDS PC / Console；排除帕拉莫。地图点位来自社区图，未做游戏内逐点复核。",
+  "rights": "图片及地图版权归原作者和 PUBG / KRAFTON 所有；保留原始图片、署名及来源，不纳入项目代码许可。",
+  "maps": [
+    {
+      "id": "erangel",
+      "name": "艾伦格 · Erangel",
+      "kind": "钥匙密室",
+      "access_note": "寻找带红色叉号木板的地下入口，破坏木板后使用密室钥匙开门。",
+      "images": [
+        {
+          "id": "erangel",
+          "label": "密室位置与入口示意",
+          "filename": "erangel.png",
+          "width": 3023,
+          "height": 1701,
+          "mime_type": "image/png",
+          "source_url": "https://steamcommunity.com/sharedfiles/filedetails/?id=3583051048",
+          "original_url": "https://images.steamusercontent.com/ugc/11546725800282512348/8371C3F0470068CD2B55813253132CF39F636CF4/",
+          "author": "76561198045086703 及指南署名协作者",
+          "source_note": "图面标注：2025-08 至 2025-09。来源指南最后更新于 2026-06-06；作者说明可能存在遗漏或过时点位。",
+          "legend": "黄色圆圈为位置，连线通向局部放大图；左侧为钥匙与入口外观。",
+          "sha256": "96bad65c79931d07c4088e033c287d4212c8e0cc51714a97a0dca072cb0a0d0b"
+        }
+      ]
+    },
+    {
+      "id": "miramar",
+      "name": "米拉玛 · Miramar",
+      "kind": "钥匙密室",
+      "access_note": "废弃矿洞中的密室，使用地图中随机刷新的密室钥匙。",
+      "images": [
+        {
+          "id": "miramar",
+          "label": "密室位置与入口示意",
+          "filename": "miramar.png",
+          "width": 3023,
+          "height": 1701,
+          "mime_type": "image/png",
+          "source_url": "https://steamcommunity.com/sharedfiles/filedetails/?id=3583051048",
+          "original_url": "https://images.steamusercontent.com/ugc/9866695287589586660/71ED3F8502969C8BF16A57F3BBF65AF7D0BF49E1/",
+          "author": "76561198045086703 及指南署名协作者",
+          "source_note": "图面标注：2026-05。来源指南最后更新于 2026-06-06；作者说明可能存在遗漏或过时点位。",
+          "legend": "黄色圆圈为位置，连线通向局部放大图；左侧为钥匙与入口外观。",
+          "sha256": "d2309821c970c09bf8fff7ad15b994d5146117346b7fbb2bbc002875e959f295"
+        }
+      ],
+      "mechanics_url": "https://www.pubg.com/en/news/10080"
+    },
+    {
+      "id": "taego",
+      "name": "泰戈 · Taego",
+      "kind": "钥匙密室",
+      "access_note": "使用泰戈密室钥匙；图中同时提供建筑外观和入口放大示意。",
+      "images": [
+        {
+          "id": "taego",
+          "label": "密室位置与入口示意",
+          "filename": "taego.png",
+          "width": 3023,
+          "height": 1701,
+          "mime_type": "image/png",
+          "source_url": "https://steamcommunity.com/sharedfiles/filedetails/?id=3583051048",
+          "original_url": "https://images.steamusercontent.com/ugc/11074162632809260800/65E8498C4EA32F373385C8205551E436A80CC7CA/",
+          "author": "76561198045086703 及指南署名协作者",
+          "source_note": "图面标注：2025-08 至 2025-09。来源指南最后更新于 2026-06-06；作者说明可能存在遗漏或过时点位。",
+          "legend": "黄色圆圈为位置，连线通向局部放大图；左侧为钥匙与入口外观。",
+          "sha256": "b4a372b73d2a12e8a1daf5874555f7235681d2c3c11edb358f5f5193fffe8bef"
+        }
+      ]
+    },
+    {
+      "id": "rondo",
+      "name": "荣都 · Rondo",
+      "kind": "钥匙密室",
+      "access_note": "使用密室钥匙进入圆门塔楼；打开其中一道门会同时解锁四道门。",
+      "images": [
+        {
+          "id": "rondo",
+          "label": "密室位置与入口示意",
+          "filename": "rondo.png",
+          "width": 3023,
+          "height": 1701,
+          "mime_type": "image/png",
+          "source_url": "https://steamcommunity.com/sharedfiles/filedetails/?id=3583051048",
+          "original_url": "https://images.steamusercontent.com/ugc/12809037901238314162/080102F269CB2FD8C93CE09496AD4494FB1C4843/",
+          "author": "76561198045086703 及指南署名协作者",
+          "source_note": "图面标注：2026-05。来源指南最后更新于 2026-06-06；作者说明可能存在遗漏或过时点位。",
+          "legend": "黄色圆圈为位置，连线通向局部放大图；左侧为钥匙与入口外观。",
+          "sha256": "4236002dcb50e261306b5ad7f15e14fa4c49bffb9e9fedac76b597150a2d692c"
+        }
+      ],
+      "mechanics_url": "https://www.pubg.com/en-asia/news/9356?category=patch_notes"
+    },
+    {
+      "id": "deston",
+      "name": "帝斯顿 · Deston",
+      "kind": "安全钥匙卡密室",
+      "access_note": "使用安全钥匙卡开启安全门；可切换楼内安全门图和拖车位置图。",
+      "images": [
+        {
+          "id": "deston-buildings",
+          "label": "安全门与楼内位置总览",
+          "filename": "deston-buildings.jpg",
+          "width": 2140,
+          "height": 1865,
+          "mime_type": "image/jpeg",
+          "source_url": "https://steamcommunity.com/sharedfiles/filedetails/?id=3377820392",
+          "original_url": "https://images.steamusercontent.com/ugc/49079278788877382/E5F8DAF2142E1B4A3DA3C505E09664449E0AB1CA/",
+          "author": "macintosh（指南整理）；图中保留原署名",
+          "source_note": "指南最后更新于 2026-05-17；图面未注明逐点核查日期，作为补充参考。",
+          "legend": "红色标记及对应照片为安全门；含 Ripton、Los Arcos 放大图。青色、蓝色等标记为图源附带的其他物资点。",
+          "sha256": "08a6dc9d1b9b2247b2e78753a413f9189f8c1bf7f96c79af949534b1f4130e03"
+        },
+        {
+          "id": "deston",
+          "label": "拖车位置与入口示意",
+          "filename": "deston.png",
+          "width": 3023,
+          "height": 1701,
+          "mime_type": "image/png",
+          "source_url": "https://steamcommunity.com/sharedfiles/filedetails/?id=3583051048",
+          "original_url": "https://images.steamusercontent.com/ugc/13218018147163945999/27EC5EF3444A078C1FBD4E089AC011ECE954845C/",
+          "author": "76561198045086703 及指南署名协作者",
+          "source_note": "图面标注：2025-08 至 2025-10。来源指南最后更新于 2026-06-06；作者说明可能存在遗漏或过时点位。",
+          "legend": "黄色圆圈为位置，连线通向局部放大图；左侧为钥匙与入口外观。",
+          "sha256": "04b35cfb574bca1db18839523a821a9893d920e6b2af503f83e15d508b210f3a"
+        },
+        {
+          "id": "deston-detail",
+          "label": "各区域位置放大图",
+          "filename": "deston-detail.jpg",
+          "width": 2013,
+          "height": 2004,
+          "mime_type": "image/jpeg",
+          "source_url": "https://steamcommunity.com/sharedfiles/filedetails/?id=3377820392",
+          "original_url": "https://images.steamusercontent.com/ugc/14797635521475544019/4F9B7878A2052636E786EC26D8F04327CA3EE1C3/",
+          "author": "macintosh（指南整理）；图中保留原署名",
+          "source_note": "指南最后更新于 2026-05-17；图面未注明逐点核查日期，作为补充参考。",
+          "legend": "各城镇局部放大示意；颜色标记沿用原作者图例，可结合安全门总览图辨认。",
+          "sha256": "2f68b1afacc237ab271fdff0304c36cea115ad03d5476b679eb74854fc1c6945"
+        }
+      ]
+    },
+    {
+      "id": "vikendi",
+      "name": "维寒迪 · Vikendi",
+      "kind": "安全钥匙卡密室",
+      "access_note": "安全钥匙卡用于密室；补充图同时标出熊洞和实验室营地。",
+      "images": [
+        {
+          "id": "vikendi",
+          "label": "密室位置与入口示意",
+          "filename": "vikendi.png",
+          "width": 3023,
+          "height": 1701,
+          "mime_type": "image/png",
+          "source_url": "https://steamcommunity.com/sharedfiles/filedetails/?id=3583051048",
+          "original_url": "https://images.steamusercontent.com/ugc/11119193349568779242/51115C3D40F0471F306D456B7D667085ACB341DD/",
+          "author": "76561198045086703 及指南署名协作者",
+          "source_note": "图面标注：2025-08 至 2025-10。来源指南最后更新于 2026-06-06；作者说明可能存在遗漏或过时点位。",
+          "legend": "黄色圆圈为位置，连线通向局部放大图；左侧为钥匙与入口外观。",
+          "sha256": "cdb386e2a543da3f79183871ff17948a37843aa388a2338a9a939a000e176448"
+        },
+        {
+          "id": "vikendi-detail",
+          "label": "密室、熊洞与实验室总览",
+          "filename": "vikendi-detail.jpg",
+          "width": 2801,
+          "height": 2801,
+          "mime_type": "image/jpeg",
+          "source_url": "https://steamcommunity.com/sharedfiles/filedetails/?id=3377820392",
+          "original_url": "https://images.steamusercontent.com/ugc/49072302477835860/D608D235A4118483C7A0F30C68D5A817EAF7ABF3/",
+          "author": "macintosh（指南整理）；图中保留原署名",
+          "source_note": "指南最后更新于 2026-05-17；图面未注明逐点核查日期，作为补充参考。",
+          "legend": "青色虚线圈：密室；黄色三角：熊洞；绿色圆圈：实验室营地。",
+          "sha256": "e811d3a95eba422b6d461c570d52bdc2129be55a7aa5e679bbeccfa615ba074e"
+        }
+      ]
+    },
+    {
+      "id": "karakin",
+      "name": "卡拉金 · Karakin",
+      "kind": "爆破地堡（补充）",
+      "access_note": "补充：使用黏性炸弹打开可破坏入口，查看爆破地堡和地下通道；这里不是钥匙密室。",
+      "mechanics_url": "https://pubg.com/en-asia/game-info/maps/karakin",
+      "images": [
+        {
+          "id": "karakin",
+          "label": "爆破地堡与地下通道",
+          "filename": "karakin.png",
+          "width": 2048,
+          "height": 2048,
+          "mime_type": "image/png",
+          "source_url": "https://www.reddit.com/r/PUBATTLEGROUNDS/comments/18je495/i_created_some_pubg_secret_room_maps_for_my_clan/",
+          "original_url": "https://i.redd.it/dp133vqlrj6c1.png",
+          "author": "HotdropWarrior（来源帖）；图面署名 @Letrix_",
+          "source_note": "来源帖发布于 2023-12-16，属于较早的社区参考图，未在当前游戏版本中逐点复核。",
+          "legend": "粉色圆圈：地下通道入口；蓝色：地下空间；绿色箭头与圆圈：Jamila 建筑。",
+          "sha256": "7d30ebe799a42f1a311295b3cd0897a9b594b75d474c7ee26d4161c424cd5ee7"
+        }
+      ]
+    }
+  ]
+}
