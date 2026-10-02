@@ -13,5 +13,7 @@ def test_guide_page_loads_and_distinguishes_versions():
     assert "M18" in markdown
     assert "M17" in markdown
     assert "M16" in markdown
+    assert "M16、M17 已停用" in markdown
+    assert "M17本地评分功能可用" not in markdown
     assert "跨电脑评分数据同步尚未启用" in markdown
     assert "公开仓库" in markdown

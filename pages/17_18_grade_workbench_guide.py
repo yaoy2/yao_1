@@ -56,10 +56,10 @@ st.markdown(
         </style>
     <div class="guide-hero">
       <h1>评分工作台使用说明</h1>
-      <p>先看本页确认入口和数据状态，再进入M17完成花名册、评分、调整、审核与导出。</p>
+      <p>M16、M17 已停用。本页保留原有流程与数据位置说明，供查阅历史记录。</p>
       <div class="status-line">
-        <span class="status-chip ok">✓ M17本地评分功能可用</span>
-        <span class="status-chip ok">✓ 原始分与调整分分离</span>
+        <span class="status-chip wait">❌ M16、M17 已停用</span>
+        <span class="status-chip">原有评分数据保留</span>
         <span class="status-chip wait">! 跨电脑评分数据同步尚未启用</span>
       </div>
     </div>
@@ -72,23 +72,23 @@ m18, m17, m16 = st.columns(3)
 with m18:
     st.markdown(
         '<div class="module-card"><span class="module-code">M18</span><h3>使用说明</h3>'
-        '<p>就是当前页面。忘记怎么操作、哪个版本有效、数据是否同步时先看这里。</p></div>',
+        '<p>就是当前页面，仅供查阅停用前的流程和数据说明。</p></div>',
         unsafe_allow_html=True,
     )
 with m17:
     st.markdown(
-        '<div class="module-card"><span class="module-code">M17</span><h3>正式评分工作台</h3>'
-        '<p>创建任务、导入花名册、填写小组原始分和个人调整、审核并导出。</p></div>',
+        '<div class="module-card"><span class="module-code">M17</span><h3>已停用 ❌</h3>'
+        '<p>任务创建、数据编辑、评分和导出已关闭，原有数据与文件保留。</p></div>',
         unsafe_allow_html=True,
     )
 with m16:
     st.markdown(
-        '<div class="module-card"><span class="module-code">M16</span><h3>已替代旧版</h3>'
-        '<p>仅保留历史对照，不再用于正式成绩处理，也不要在M16继续建立新任务。</p></div>',
+        '<div class="module-card"><span class="module-code">M16</span><h3>已停用 ❌</h3>'
+        '<p>报告导入、评分和成绩表生成已关闭，源码与历史材料保留。</p></div>',
         unsafe_allow_html=True,
     )
 
-st.subheader("完整操作流程")
+st.subheader("停用前的操作流程（历史说明）")
 flow = [
     ("01", "启动与更新", "在项目目录先执行 git pull，再启动 Streamlit，进入M18确认状态。"),
     ("02", "创建任务", "进入M17，为每个教学批次或班级建立独立任务，避免数据混在一起。"),

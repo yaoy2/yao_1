@@ -2,14 +2,14 @@
 
 [Project home](../../README.md) · [Repository map](../repository-structure.md) · [Getting started](getting-started.md)
 
-The registry in [hello.py](../../hello.py) is authoritative. There are **24 entries: 14 in current sections and 10 archived**. Some current entries are documentation or read-only showcases; each row states its actual boundary.
+The registry in [hello.py](../../hello.py) is authoritative. There are **24 entries: 13 in current sections and 11 archived**. Some current entries are documentation or read-only showcases; each row states its actual boundary.
 
 | Section | Entries |
 | --- | --- |
 | Administration | 5 |
-| Teaching | 2 |
+| Teaching | 1 |
 | Personal | 7 |
-| Archived | 10 |
+| Archived | 11 |
 
 | ID | Section | Status | Entry point | Behavior and requirements |
 | --- | --- | --- | --- | --- |
@@ -20,9 +20,9 @@ The registry in [hello.py](../../hello.py) is authoritative. There are **24 entr
 | M21 | Personal | Current | [Awesome Design MD](../../pages/20_21_awesome_design_md.py) | Browses 74 pinned design references with retained source attribution and third-party licensing. |
 | M20 | Archived | Archived | [Ding2026 文件中转发放系统](../../pages/19_20_ding2026.py) | Retired. Former functionality and statistics are no longer active; the page only shows retirement information. |
 | M19 | Personal | Current | [概念寓言馆](../../pages/18_19_concept_fables.py) | Searches and reads stored fables and concept mappings; the page does not write entries. |
-| M18 | Teaching | Current | [评分工作台使用说明](../../pages/17_18_grade_workbench_guide.py) | Explains M17 calculation rules, task storage, workflow, and migration. |
-| M17 | Teaching | Current | [教学评分工作台](../../pages/16_17_grade_workbench.py) | Maintains rosters, raw group scores, coefficients, and adjustments; validates and exports review workbooks. |
-| M16 | Archived | Archived | [旧版报告评分与成绩联动](../../pages/15_16_report_grader.py) | Superseded by M17; retained for historical comparison. |
+| M18 | Teaching | Current | [评分工作台使用说明](../../pages/17_18_grade_workbench_guide.py) | Historical guide for the retired M16/M17 workflows and retained data locations. |
+| M17 | Archived | Archived | [教学评分工作台](../../pages/16_17_grade_workbench.py) | Retired. The page only shows retirement information; task creation, data editing, scoring, and export are disabled. Source code, tasks, inputs, and outputs are retained. |
+| M16 | Archived | Archived | [旧版报告评分与成绩联动](../../pages/15_16_report_grader.py) | Retired. The page only shows retirement information; report import, scoring, and gradebook generation are disabled. Historical source code and materials are retained. |
 | M15 | Administration | Current | [邮件通知编辑器](../../pages/15_0_email_notice.py) | Parses, previews, and exports notices. The [single-file editor](../../assets/email_notice_editor.html) works offline. Institution defaults still require review. |
 | M14 | Administration | Current | [待办清单](../../pages/14_todos.py) | Chinese deadline recognition, search, soft archiving, backups, and configured GitHub synchronization. Shared access required; chat operations use conflict/retry checks. |
 | M13 | Archived | Archived | [LLM 余额管理](../../pages/00_13_llm_budget.py) | Retained historical balance/account implementation. |
@@ -40,4 +40,4 @@ The registry in [hello.py](../../hello.py) is authoritative. There are **24 entr
 
 M12 was removed. Module numbers preserve introduction order and are intentionally discontinuous. Independent subprojects are described separately in the [project overview](../../README.md).
 
-中文：行政 5、教学 2、个人 7、归档 10；M11、M20、M24 已停用，M25 需要本地组件，M23 当前只介绍三项任务。展示页不代表主库已经运行对应的外部系统。
+中文：行政 5、教学 1、个人 7、归档 11；M11、M16、M17、M20、M24 已停用，M25 需要本地组件，M23 当前只介绍三项任务。展示页不代表主库已经运行对应的外部系统。

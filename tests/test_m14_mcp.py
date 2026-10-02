@@ -1,6 +1,12 @@
 import tempfile
 import unittest
 import uuid
+import shlex
+import shutil
+import subprocess
+import sys
+import textwrap
+from pathlib import Path, PurePosixPath
 from unittest.mock import AsyncMock, patch
 
 try:
@@ -17,6 +23,48 @@ from tests.test_todo_chat import FakeGitHub, service
 
 
 class M14McpTest(unittest.IsolatedAsyncioTestCase):
+    def test_container_payload_can_import_and_save_a_todo(self):
+        root = Path(__file__).resolve().parents[1]
+        dockerfile = (root / "integrations/m14/Dockerfile").read_text(encoding="utf-8")
+        with tempfile.TemporaryDirectory() as directory:
+            staged = Path(directory)
+            for line in dockerfile.replace("\\\n", " ").splitlines():
+                parts = shlex.split(line)
+                if not parts or parts[0] != "COPY":
+                    continue
+                destination = staged / PurePosixPath(parts[-1]).relative_to("/app")
+                for source in parts[1:-1]:
+                    target = destination / Path(source).name if parts[-1].endswith("/") else destination
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copyfile(root / source, target)
+            check = textwrap.dedent('''
+                import base64, hashlib, sys, uuid
+                from types import SimpleNamespace
+                sys.path.insert(0, sys.argv[1])
+                from scripts.m14_mcp import create_server, TodoChatService
+                from utils import todo_db
+                class FakeGitHub:
+                    def __init__(self):
+                        self.content = todo_db.build_markdown_backup([])
+                    @property
+                    def sha(self):
+                        return hashlib.sha256(self.content.encode()).hexdigest()
+                    def get(self, *args, **kwargs):
+                        payload = {"sha": self.sha, "content": base64.b64encode(self.content.encode()).decode()}
+                        return SimpleNamespace(status_code=200, json=lambda: payload)
+                    def put(self, *args, json, **kwargs):
+                        assert json["sha"] == self.sha
+                        self.content = base64.b64decode(json["content"]).decode()
+                        return SimpleNamespace(status_code=200, json=lambda: {"content": {"sha": self.sha}})
+                service = TodoChatService(environ={"GITHUB_BACKUP_TOKEN": "fixture-only"}, session=FakeGitHub())
+                create_server(service)
+                assert service.add("Package smoke test", str(uuid.uuid4()))["created"] == 1
+                assert service.list()["total"] == 1
+            ''')
+            result = subprocess.run([sys.executable, "-I", "-B", "-c", check, str(staged)], cwd=staged,
+                                    capture_output=True, text=True, encoding="utf-8", timeout=30)
+            self.assertEqual(0, result.returncode, result.stderr)
+
     async def test_mcp_tools_use_existing_m14_logic(self):
         remote = FakeGitHub()
         async with Client(create_server(service(remote))) as client:

@@ -1,5 +1,7 @@
 import re
 
+import pytest
+
 from utils import ui_theme
 from utils.ui_theme import _get_sidebar_tools, _load_homepage_tools
 from unittest.mock import patch
@@ -25,9 +27,10 @@ def test_sidebar_pins_frequent_tools_before_other_modules():
     codes = [tool["code"] for tool in tools]
     assert codes[:4] == ["M15", "M14", "M08", "M06"]
     assert codes[4:10] == ["M25", "M23", "M22", "M21", "M19", "M18"]
-    assert codes[codes.index("M07") : codes.index("M07") + 5] == ["M07", "M24", "M20", "M16", "M13"]
+    assert codes[codes.index("M07") : codes.index("M07") + 6] == ["M07", "M24", "M20", "M17", "M16", "M13"]
     assert tools[codes.index("M24")]["blocked"] is True
     assert tools[codes.index("M16")]["blocked"] is True
+    assert tools[codes.index("M17")]["blocked"] is True
     assert tools[codes.index("M20")]["blocked"] is True
     assert tools[codes.index("M11")]["blocked"] is True
     assert codes[codes.index("M13") + 1] == "M11"
@@ -72,24 +75,29 @@ class _FakeStreamlit:
         self.switch_page_calls.append(page)
 
 
-def test_retired_recorder_shows_cross_to_right_of_title_without_lock(monkeypatch):
+@pytest.mark.parametrize("code, title", [
+    ("M11", "Recorder_笔记"),
+    ("M16", "旧版报告评分与成绩联动"),
+    ("M17", "教学评分工作台"),
+])
+def test_retired_tool_shows_cross_to_right_of_title_without_lock(monkeypatch, code, title):
     fake_st = _FakeStreamlit()
     monkeypatch.setattr(ui_theme, "st", fake_st)
 
     ui_theme.render_sidebar_nav()
 
     nav_body, _kwargs = fake_st.sidebar.markdown_calls[0]
-    recorder_link = re.search(
-        r'<a class="custom-nav-item"[^>]*title="M11 · Recorder_笔记">.*?</a>',
+    retired_link = re.search(
+        rf'<a class="custom-nav-item"[^>]*title="{re.escape(code)} · {re.escape(title)}">.*?</a>',
         nav_body,
         re.DOTALL,
     ).group(0)
-    assert '<span class="custom-nav-label">Recorder_笔记</span>' in recorder_link
-    assert '<span class="custom-nav-marks"> ❌</span>' in recorder_link
-    assert recorder_link.index("Recorder_笔记</span>") < recorder_link.index("❌")
-    assert recorder_link.count("❌") == 1
-    assert "🔒" not in recorder_link
-    assert "已停用" in recorder_link
+    assert f'<span class="custom-nav-label">{title}</span>' in retired_link
+    assert '<span class="custom-nav-marks"> ❌</span>' in retired_link
+    assert retired_link.index(f"{title}</span>") < retired_link.index("❌")
+    assert retired_link.count("❌") == 1
+    assert "🔒" not in retired_link
+    assert "已停用" in retired_link
 
 
 def test_home_link_uses_streamlit_homepage_route(monkeypatch):

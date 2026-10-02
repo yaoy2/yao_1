@@ -22,7 +22,7 @@ def page_functions():
     page = Path(__file__).resolve().parents[1] / "pages" / "14_todos.py"
     names = {"validate_todo_remote_backup", "merge_remote_todos_from_github", "sync_todo_backup_to_github",
              "restore_todo_backup_from_github", "todo_record_snapshot", "pending_todo_sync_sha",
-             "warn_todo_sync_pending", "prepare_todo_edit", "save_todo_due_fields", "toggle_todo_done",
+             "warn_todo_sync_pending", "confirm_pending_todo_sync", "prepare_todo_edit", "save_todo_due_fields", "toggle_todo_done",
              "delete_todo_record", "_date_value", "_full_date_from_compact", "add_todo_from_page"}
     nodes = [node for node in ast.parse(page.read_text(encoding="utf-8")).body
              if isinstance(node, ast.FunctionDef) and node.name in names]
@@ -275,3 +275,48 @@ def test_pending_comparison_retains_legacy_uid_and_numeric_id_remap_compatibilit
         legacy = {key: value for key, value in original.items() if key != "uid"}
         assert page_functions["todo_record_snapshot"]([legacy]) == page_functions["todo_record_snapshot"]([
             {**legacy, "uid": todo_db.record_uid(legacy)}])
+
+
+@pytest.mark.parametrize("action", ["merge_remote_todos_from_github", "sync_todo_backup_to_github"])
+def test_lost_success_response_recovers_without_uploading_again(page_functions, tmp_path, action):
+    page = page_functions
+    with patched_todo_storage(tmp_path):
+        todo_db.init_db()
+        todo_db.import_todo_records([record(), record(id=8, uid="second-record", content="另一项")])
+        local = todo_db.get_todos(view="all")
+        # Export time, line endings, order and local numeric IDs can differ across devices.
+        remote_rows = [{**row, "id": row["id"] + 100} for row in reversed(local)]
+        remote = {"ok": True, "sha": "committed-sha",
+                  "content": todo_db.build_markdown_backup(remote_rows).replace("\n", "\r\n")}
+        page["st"].session_state.update({"todo_pending_sync_sha": "before-write-sha",
+                                         "todo_sync_error": "成功响应丢失"})
+        page["github_backup_sync"].read_file_from_github.return_value = remote
+        before = Path(todo_db.DB_PATH).read_bytes()
+
+        assert page[action]() is True
+        assert Path(todo_db.DB_PATH).read_bytes() == before
+        assert "todo_pending_sync_sha" not in page["st"].session_state
+        assert "todo_sync_error" not in page["st"].session_state
+        assert page["st"].session_state["todo_observed_remote_sha"] == "committed-sha"
+        page["github_backup_sync"].sync_file_to_github.assert_not_called()
+        page["github_backup_sync"].remember_local_sync_baseline.assert_called_once_with(
+            todo_db.BACKUP_MD_PATH, "data/todo_items_backup.md", remote["content"], remote["sha"],
+            secrets=page["st"].secrets, environ=os.environ)
+
+
+@pytest.mark.parametrize("action", ["merge_remote_todos_from_github", "sync_todo_backup_to_github"])
+def test_matching_cloud_cannot_hide_stale_local_backup(page_functions, tmp_path, action):
+    page = page_functions
+    with patched_todo_storage(tmp_path):
+        todo_db.init_db()
+        todo_db.import_todo_records([record()])
+        local = todo_db.get_todos(view="all")
+        Path(todo_db.BACKUP_MD_PATH).write_text(todo_db.build_markdown_backup([]), encoding="utf-8")
+        page["st"].session_state["todo_pending_sync_sha"] = "before-write-sha"
+        page["github_backup_sync"].read_file_from_github.return_value = {
+            "ok": True, "sha": "committed-sha", "content": todo_db.build_markdown_backup(local)}
+
+        assert page[action]() is False
+        assert page["st"].session_state["todo_pending_sync_sha"] == "before-write-sha"
+        page["github_backup_sync"].sync_file_to_github.assert_not_called()
+        page["github_backup_sync"].remember_local_sync_baseline.assert_not_called()

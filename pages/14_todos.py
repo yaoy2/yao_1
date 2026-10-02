@@ -151,6 +151,23 @@ def warn_todo_sync_pending(message):
     st.warning(message)
 
 
+def confirm_pending_todo_sync(remote_result, remote_records, local_records):
+    """Recover a lost success response only when all three complete snapshots agree."""
+    local_snapshot = todo_record_snapshot(local_records)
+    if todo_record_snapshot(remote_records) != local_snapshot:
+        return False
+    backup_records = validate_todo_backup(Path(todo_db.BACKUP_MD_PATH).read_text(encoding="utf-8"))
+    if todo_record_snapshot(backup_records) != local_snapshot:
+        raise ValueError("本机备份与当前待办数据库不一致，需先核对")
+    github_backup_sync.remember_local_sync_baseline(
+        todo_db.BACKUP_MD_PATH, "data/todo_items_backup.md", remote_result["content"], remote_result["sha"],
+        secrets=st.secrets, environ=os.environ)
+    st.session_state["todo_observed_remote_sha"] = remote_result["sha"]
+    st.session_state.pop("todo_pending_sync_sha", None)
+    st.session_state.pop("todo_sync_error", None)
+    return True
+
+
 def merge_remote_todos_from_github():
     pending_sha = pending_todo_sync_sha()
     try:
@@ -173,6 +190,12 @@ def merge_remote_todos_from_github():
         return False
     if pending_sha:
         if result["sha"] != pending_sha:
+            try:
+                if confirm_pending_todo_sync(result, remote_records, todo_db.get_todos(view="all")):
+                    return True
+            except (ValueError, OSError, RuntimeError) as exc:
+                warn_todo_sync_pending(f"待办同步状态无法完整核对，当前环境记录仍保留：{exc}")
+                return False
             warn_todo_sync_pending("远端待办已变化，当前环境未同步的修改仍保留；已暂停合并，请先核对双方记录。")
             return False
         st.session_state["todo_observed_remote_sha"] = result["sha"]
@@ -220,6 +243,8 @@ def sync_todo_backup_to_github(expected_sha=None):
     try:
         remote_records = validate_todo_remote_backup(remote_result)
         if remote_result["sha"] != expected_sha:
+            if confirm_pending_todo_sync(remote_result, remote_records, local_records):
+                return True
             warn_todo_sync_pending("远端待办已在本次修改后变化；当前环境修改仍保留，本次未合并或覆盖，请先核对双方记录。")
             return False
         if remote_records and not local_records:
@@ -231,7 +256,7 @@ def sync_todo_backup_to_github(expected_sha=None):
              "content": Path(todo_db.BACKUP_MD_PATH).read_text(encoding="utf-8")})
         if local_snapshot != todo_db.get_todos(view="all"):
             raise ValueError("本机备份与当前待办数据库不一致，需先核对")
-    except (ValueError, OSError, UnicodeError) as exc:
+    except (ValueError, OSError, UnicodeError, RuntimeError) as exc:
         warn_todo_sync_pending(f"待办已保存在当前环境，但备份无法完整核对，本次未写入远端：{exc}")
         return False
 

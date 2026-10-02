@@ -9,12 +9,19 @@ import streamlit as st
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from utils import report_grader
 from utils.ui_theme import render_home_link
 
-
-st.set_page_config(page_title="报告评分与成绩表联动", page_icon="🧮", layout="wide")
+st.set_page_config(page_title="旧版报告评分与成绩联动 · 已停用", page_icon="❌", layout="wide")
 render_home_link()
+st.title("M16 · 旧版报告评分与成绩联动 ❌")
+st.warning("M16 已停用：报告导入、评分和成绩表生成已关闭。")
+st.write("原有源码与历史材料保留，页面仅显示停用说明。")
+st.caption("archived · 2026-10-02")
+st.stop()
+
+# Retain the historical implementation below; the retirement gate stops before
+# importing or executing any scoring or export code.
+from utils import report_grader
 
 
 DEFAULT_RUBRIC = report_grader.DEFAULT_BUSINESS_PLAN_RUBRIC

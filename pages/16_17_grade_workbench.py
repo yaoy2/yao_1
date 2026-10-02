@@ -12,6 +12,18 @@ import streamlit as st
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+from utils.ui_theme import render_home_link
+
+st.set_page_config(page_title="教学评分工作台 · 已停用", page_icon="❌", layout="wide")
+render_home_link()
+st.title("M17 · 教学评分工作台 ❌")
+st.warning("M17 已停用：任务创建、数据编辑、评分计算和工作簿导出已关闭。")
+st.write("原有源码、评分任务、输入文件与导出结果保留，页面仅显示停用说明。")
+st.caption("archived · 2026-10-02")
+st.stop()
+
+# Retain the historical implementation below; the retirement gate stops before
+# importing or executing any database, scoring, or export code.
 from utils.grade_workbench_export import build_review_workbook
 from utils.grade_workbench import (
     GROUP_COLUMNS,
@@ -38,11 +50,6 @@ from utils.grade_workbench_db import (
     save_settings,
     save_students,
 )
-from utils.ui_theme import render_home_link
-
-
-st.set_page_config(page_title="教学评分工作台", page_icon="📘", layout="wide")
-render_home_link()
 st.markdown(
     "<style>" + (Path(__file__).resolve().parents[1] / "utils" / "grade_workbench_theme.css").read_text(encoding="utf-8") + "</style>",
     unsafe_allow_html=True,
