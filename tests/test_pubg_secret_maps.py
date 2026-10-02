@@ -11,7 +11,7 @@ from utils import pubg_secret_maps as maps
 def test_catalog_covers_secret_maps_and_original_images_are_intact():
     catalog = maps.load_catalog()
     assert {item["id"] for item in catalog} == {
-        "erangel", "miramar", "taego", "rondo", "deston", "vikendi", "karakin"
+        "erangel", "miramar", "taego", "rondo", "deston", "vikendi"
     }
     image_ids = set()
     for map_info in catalog:

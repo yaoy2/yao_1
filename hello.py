@@ -10,7 +10,7 @@ from utils.home_theme import apply_home_theme
 TOOLS = [
     {
         "title": "PUBG 密室地图",
-        "desc": "切换地图查看高清密室位置标记，支持缩放、拖动和原图下载，帕拉莫除外。",
+        "desc": "切换地图查看高清密室位置标记，支持缩放、拖动和原图下载，排除帕拉莫和卡拉金。",
         "tag": "游戏地图",
         "created": "2026_10_02",
         "page": "pages/25_26_pubg_secret_maps.py",

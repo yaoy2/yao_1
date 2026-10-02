@@ -1,6 +1,6 @@
 {
   "source_checked_on": "2026-10-02",
-  "scope": "PUBG: BATTLEGROUNDS PC / Console；排除帕拉莫。地图点位来自社区图，未做游戏内逐点复核。",
+  "scope": "PUBG: BATTLEGROUNDS PC / Console；排除帕拉莫和卡拉金。地图点位来自社区图，未做游戏内逐点复核。",
   "rights": "图片及地图版权归原作者和 PUBG / KRAFTON 所有；保留原始图片、署名及来源，不纳入项目代码许可。",
   "maps": [
     {
@@ -176,29 +176,6 @@
           "source_note": "指南最后更新于 2026-05-17；图面未注明逐点核查日期，作为补充参考。",
           "legend": "青色虚线圈：密室；黄色三角：熊洞；绿色圆圈：实验室营地。",
           "sha256": "e811d3a95eba422b6d461c570d52bdc2129be55a7aa5e679bbeccfa615ba074e"
-        }
-      ]
-    },
-    {
-      "id": "karakin",
-      "name": "卡拉金 · Karakin",
-      "kind": "爆破地堡（补充）",
-      "access_note": "补充：使用黏性炸弹打开可破坏入口，查看爆破地堡和地下通道；这里不是钥匙密室。",
-      "mechanics_url": "https://pubg.com/en-asia/game-info/maps/karakin",
-      "images": [
-        {
-          "id": "karakin",
-          "label": "爆破地堡与地下通道",
-          "filename": "karakin.png",
-          "width": 2048,
-          "height": 2048,
-          "mime_type": "image/png",
-          "source_url": "https://www.reddit.com/r/PUBATTLEGROUNDS/comments/18je495/i_created_some_pubg_secret_room_maps_for_my_clan/",
-          "original_url": "https://i.redd.it/dp133vqlrj6c1.png",
-          "author": "HotdropWarrior（来源帖）；图面署名 @Letrix_",
-          "source_note": "来源帖发布于 2023-12-16，属于较早的社区参考图，未在当前游戏版本中逐点复核。",
-          "legend": "粉色圆圈：地下通道入口；蓝色：地下空间；绿色箭头与圆圈：Jamila 建筑。",
-          "sha256": "7d30ebe799a42f1a311295b3cd0897a9b594b75d474c7ee26d4161c424cd5ee7"
         }
       ]
     }
