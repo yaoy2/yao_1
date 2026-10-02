@@ -41,4 +41,3 @@ class GitHubCliSession:
 
     def put(self, url, *, json, **kwargs):
         return self._request("PUT", url, json_body=json)
-
