@@ -12,8 +12,8 @@ from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 
 from .config import Settings
-from .db import db_session, file_stats, init_db, list_plans
-from .operations import AUTO_ORGANIZE_CATEGORIES
+from .db import current_snapshot_start, db_session, file_stats, init_db
+from .operations import AUTO_ORGANIZE_CATEGORIES, COMPLETED_STATUSES, _valid_name
 
 
 REPORT_COLUMNS = (
@@ -66,6 +66,8 @@ def _report_row(
     risks: list[str] = []
     if not row.get("file_id") or row.get("file_id_source") != "native":
         risks.append("缺少115原生ID")
+    if not row.get("parent_id"):
+        risks.append("缺少来源父目录ID，请重新扫描")
     if row.get("confidence") == "low":
         risks.append("低置信度")
     if row.get("category") == "待识别":
@@ -74,7 +76,17 @@ def _report_row(
         risks.append("附件或其他类型需关联主文件")
     if plan_id in duplicate_ids:
         risks.append(f"疑似重复组({len(duplicate_ids[plan_id])}项)")
-    executable = not risks and bool(row.get("approved"))
+    if not _valid_name(str(row.get("suggested_name") or "")):
+        risks.append("建议文件名无效或超过255字节")
+    suggested_parts = [part for part in str(row.get("suggested_path") or "").split("/") if part]
+    parent_parts = suggested_parts[:-1] or [str(row.get("category") or "其他")]
+    if any(not _valid_name(part) for part in parent_parts):
+        risks.append("建议目录名无效或超过255字节")
+    executable = (
+        not risks
+        and bool(row.get("approved"))
+        and row.get("execute_status") not in COMPLETED_STATUSES
+    )
     return {
         "计划ID": plan_id,
         "批准状态": "已批准" if row.get("approved") else "未批准",
@@ -97,10 +109,7 @@ def _report_row(
 def collect_report(settings: Settings) -> dict[str, Any]:
     init_db(settings.db_path)
     with db_session(settings.db_path) as conn:
-        current = conn.execute(
-            "SELECT started_at FROM scan_runs WHERE status = 'ok' ORDER BY id DESC LIMIT 1"
-        ).fetchone()
-        snapshot_start = current["started_at"] if current else ""
+        snapshot_start = current_snapshot_start(conn)
         plans = [dict(row) for row in conn.execute(
             """
             SELECT p.*, f.size, f.hash_sha1, f.file_id_source, f.parent_id
@@ -171,6 +180,10 @@ def _write_excel(report: dict[str, Any], path: Path) -> None:
     for index, width in enumerate(widths, 1):
         detail.column_dimensions[get_column_letter(index)].width = width
     for row in detail.iter_rows(min_row=2):
+        for cell in row:
+            if isinstance(cell.value, str):
+                # Filenames and other remote text are data, never Excel formulas.
+                cell.data_type = "s"
         row[3].alignment = Alignment(wrap_text=True, vertical="top")
         row[13].alignment = Alignment(wrap_text=True, vertical="top")
         if row[3].value:
@@ -201,7 +214,7 @@ def _write_html(report: dict[str, Any], path: Path) -> None:
     row_html: list[str] = []
     for row in report["rows"]:
         risk = str(row["风险提示"])
-        css = "risk" if risk else "safe"
+        css = "risk" if risk else "safe" if row["可自动执行"] == "是" else "pending"
         values = [row[column] for column in REPORT_COLUMNS]
         row_html.append(
             f'<tr class="{css}">' + "".join(
@@ -222,7 +235,7 @@ table{{border-collapse:collapse;width:100%;font-size:12px}} th,td{{border-bottom
 th{{position:sticky;top:0;background:#1f4e78;color:white;white-space:nowrap}} tr.risk{{background:#fffaf0}} tr.safe{{background:#f4fff7}}
 @media(max-width:900px){{.cards{{grid-template-columns:repeat(2,1fr)}}}}
 </style></head><body><div class="wrap">
-<h1>115 文件整理报告</h1><div class="muted">生成于 {html.escape(report['generated_at'])}。绿色表示已批准且无已知风险；黄色必须人工复核。程序永不自动删除。</div>
+<h1>115 文件整理报告</h1><div class="muted">生成于 {html.escape(report['generated_at'])}。绿色表示已批准且通过本地执行检查；黄色必须人工复核；白色表示尚未批准或已完成。实际执行仍需核对操作清单和确认码。程序永不自动删除。</div>
 <div class="cards">{card_html}</div>
 <div class="panel"><b>分类：</b>{category_text}</div>
 <div class="panel"><table><thead><tr>{headers}</tr></thead><tbody>{''.join(row_html)}</tbody></table></div>

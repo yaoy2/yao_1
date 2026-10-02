@@ -1,8 +1,10 @@
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import MagicMock
 
-from app.config import load_settings
+from app.config import load_settings, normalize_path
+from app.openlist_client import OpenListClient
 from app.safety import (
     PathNotAllowedError,
     WriteDisabledError,
@@ -45,6 +47,23 @@ class SafetyTest(unittest.TestCase):
         for operation in ("mkdir", "move", "rename"):
             with self.assertRaises(WriteDisabledError):
                 assert_write_blocked(operation, self.settings)
+
+    def test_path_guard_resolves_dot_segments_before_checking_scope(self):
+        for path in ("/云下载/../私人文件", "/云下载/子目录/../../私人文件", r"\云下载\..\私人文件"):
+            with self.subTest(path=path):
+                self.assertFalse(is_under_root(path, self.settings.allowed_root))
+                with self.assertRaises(PathNotAllowedError):
+                    assert_under_allowed_root(path, self.settings)
+        self.assertEqual("/云下载/电影", normalize_path("/云下载/子目录/../电影/./"))
+        self.assertEqual("/云下载/电影", assert_under_allowed_root("/云下载/子目录/../电影", self.settings))
+
+    def test_traversal_is_blocked_before_openlist_request(self):
+        session = MagicMock()
+        client = OpenListClient(self.settings, session=session)
+        for method in (client.list_dir, client.get_item):
+            with self.assertRaises(PathNotAllowedError):
+                method("/云下载/../私人文件")
+        session.request.assert_not_called()
 
     def test_delete_is_always_forbidden(self):
         with self.assertRaises(WriteDisabledError) as ctx:

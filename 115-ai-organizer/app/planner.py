@@ -4,7 +4,7 @@ from typing import Any
 
 from .classifier import classify_item
 from .config import Settings
-from .db import db_session, init_db, upsert_plan
+from .db import current_snapshot_start, db_session, init_db, upsert_plan
 from .series import SERIES_CATEGORY, cluster_series, series_key, time_bucket
 
 # 只有这些分类的视频参与系列聚类；电影/动漫/电视剧已有明确去处。
@@ -26,8 +26,9 @@ def rebuild_plans(settings: Settings) -> int:
                 """
                 SELECT id, file_id, name, full_path, is_directory, extension, created_at
                 FROM files
-                WHERE is_directory = 0
-                """
+                WHERE is_directory = 0 AND scan_time >= ?
+                """,
+                (current_snapshot_start(conn),),
             ).fetchall()
         ]
         plan_by_row = {}

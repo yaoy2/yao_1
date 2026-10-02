@@ -15,6 +15,7 @@ import requests
 from .config import Settings, normalize_path
 from .db import (
     add_operation_log,
+    current_snapshot_start,
     db_session,
     init_db,
     set_plan_approved,
@@ -44,6 +45,8 @@ AUTO_ORGANIZE_CATEGORIES = {
     "普通视频",
 }
 
+COMPLETED_STATUSES = {"success", "already_done"}
+
 
 def _valid_name(name: str) -> bool:
     text = str(name or "").strip()
@@ -70,10 +73,7 @@ def confirmation_code(manifest: dict[str, Any]) -> str:
 def _plan_rows(settings: Settings) -> list[dict[str, Any]]:
     init_db(settings.db_path)
     with db_session(settings.db_path) as conn:
-        current = conn.execute(
-            "SELECT started_at FROM scan_runs WHERE status = 'ok' ORDER BY id DESC LIMIT 1"
-        ).fetchone()
-        snapshot_start = current["started_at"] if current else ""
+        snapshot_start = current_snapshot_start(conn)
         return [dict(row) for row in conn.execute(
             """
             SELECT p.*, f.parent_id, f.size, f.hash_sha1, f.file_id_source
@@ -108,6 +108,7 @@ def approve_safe_plans(settings: Settings) -> dict[str, int]:
         int(row["id"])
         for row in rows
         if row.get("file_id")
+        and row.get("execute_status") not in COMPLETED_STATUSES
         and row.get("file_id_source") == "native"
         and row.get("confidence") in {"high", "medium"}
         and row.get("category") in AUTO_ORGANIZE_CATEGORIES
@@ -143,10 +144,12 @@ def build_manifest(
     blocked: list[dict[str, Any]] = []
     targets: dict[str, int] = {}
     for row in rows:
-        if not row.get("approved"):
+        if not row.get("approved") or row.get("execute_status") in COMPLETED_STATUSES:
             continue
         reasons: list[str] = []
         plan_id = int(row["id"])
+        if not is_under_root(str(row.get("original_path") or ""), root_path):
+            reasons.append("来源路径超出扫描根目录")
         if not row.get("file_id") or row.get("file_id_source") != "native":
             reasons.append("缺少115原生ID")
         if not row.get("parent_id"):
@@ -175,11 +178,10 @@ def build_manifest(
         collision_key = target_path.casefold()
         if collision_key in targets:
             reasons.append(f"与计划 {targets[collision_key]} 的目标路径冲突")
-        else:
-            targets[collision_key] = plan_id
         if reasons:
             blocked.append({"plan_id": plan_id, "original_path": row["original_path"], "reasons": reasons})
             continue
+        targets[collision_key] = plan_id
         operations.append(
             {
                 "operation_id": str(uuid.uuid4()),
@@ -230,6 +232,7 @@ class Open115Writer:
         sleep_fn: Callable[[float], None] = time.sleep,
         monotonic_fn: Callable[[], float] = time.monotonic,
         request_interval: float = 1.0,
+        max_directory_entries: int = 10_000,
     ) -> None:
         self._access_token = access_token
         self.scan_root_id = str(scan_root_id)
@@ -238,6 +241,7 @@ class Open115Writer:
         self._monotonic = monotonic_fn
         self._request_interval = max(0.0, float(request_interval))
         self._last_request_at: float | None = None
+        self.max_directory_entries = max(1, int(max_directory_entries))
         self._directory_cache: dict[tuple[str, ...], str] = {(): self.scan_root_id}
 
     def _wait_limit(self) -> None:
@@ -278,19 +282,44 @@ class Open115Writer:
     def list_folder(self, folder_id: str) -> list[dict[str, Any]]:
         result: list[dict[str, Any]] = []
         offset = 0
+        seen_ids: set[str] = set()
+        expected_count: int | None = None
         while True:
             payload = self._request(
                 "GET",
                 OPEN115_FILES_URL,
                 params={"cid": folder_id, "limit": 200, "offset": offset, "show_dir": 1},
             )
-            page = payload.get("data") if isinstance(payload.get("data"), list) else []
-            result.extend(item for item in page if isinstance(item, dict))
+            page = payload.get("data")
+            if page is None and "data" in payload and payload.get("count") in (0, "0"):
+                page = []
+            if not isinstance(page, list) or any(not isinstance(item, dict) for item in page):
+                raise OperationError("115目录列表格式异常，无法安全检查同名文件。")
             try:
                 total = int(payload.get("count"))
             except (TypeError, ValueError):
-                total = len(result)
-            if len(result) >= total or len(page) < 200:
+                total = None
+            if total is not None:
+                if total < 0 or (expected_count is not None and total != expected_count):
+                    raise OperationError("115目录条目总数异常或在分页期间发生变化，请重新扫描。")
+                expected_count = total
+            for item in page:
+                item_id = self._item_id(item)
+                if not item_id or item_id in seen_ids:
+                    raise OperationError("115目录分页出现缺失或重复ID，无法确认列表完整性。")
+                seen_ids.add(item_id)
+            result.extend(page)
+            if len(result) > self.max_directory_entries or (
+                expected_count is not None and expected_count > self.max_directory_entries
+            ):
+                raise OperationError(f"115单层目录超过安全上限 {self.max_directory_entries}，已停止写入检查。")
+            if expected_count is not None and len(result) > expected_count:
+                raise OperationError("115目录列表超过报告总数，请重新扫描。")
+            if expected_count is not None and len(result) == expected_count:
+                return result
+            if len(page) < 200:
+                if expected_count is not None:
+                    raise OperationError("115目录列表提前结束，无法确认列表完整性。")
                 return result
             offset += 200
 
@@ -392,11 +421,52 @@ def load_manifest(path: str | Path) -> dict[str, Any]:
     return payload
 
 
-def _validate_current_plan(conn, operation: dict[str, Any]) -> None:
+def _validate_manifest_scope(settings: Settings, manifest: dict[str, Any]) -> list[dict[str, Any]]:
+    root_path = str(manifest.get("scan_root_path") or "")
+    organize_dir = str(manifest.get("organize_dir") or "")
+    if not root_path or not is_under_root(root_path, settings.allowed_root):
+        raise OperationError("清单扫描根路径超出当前允许范围，请重新生成清单。")
+    if not str(manifest.get("scan_root_id") or "").isdigit() or not _valid_name(organize_dir):
+        raise OperationError("清单扫描根目录或整理目录无效。")
+    operations = manifest.get("operations")
+    if not isinstance(operations, list):
+        raise OperationError("操作清单内容无效。")
+    for operation in operations:
+        if not isinstance(operation, dict):
+            raise OperationError("操作清单项目格式无效。")
+        source_path = str(operation.get("original_path") or "")
+        if not source_path or not is_under_root(source_path, root_path):
+            raise OperationError("清单来源路径超出扫描根目录，未执行任何115写入。")
+        parts = operation.get("target_parent_parts")
+        target_name = operation.get("target_name")
+        if (
+            not isinstance(parts, list)
+            or not parts
+            or parts[0] != organize_dir
+            or any(not isinstance(part, str) or not _valid_name(part) for part in parts)
+            or not isinstance(target_name, str)
+            or not _valid_name(target_name)
+        ):
+            raise OperationError("清单目标目录或文件名无效。")
+        target_parent = normalize_path("/".join([root_path, *parts]))
+        target_path = normalize_path("/".join([target_parent, target_name]))
+        if (
+            not is_under_root(target_path, root_path)
+            or normalize_path(str(operation.get("target_parent_path") or "")) != target_parent
+            or normalize_path(str(operation.get("target_path") or "")) != target_path
+        ):
+            raise OperationError("清单目标路径与实际操作目录不一致。")
+        if not str(operation.get("plan_id") or "").isdigit():
+            raise OperationError("清单计划ID无效。")
+    return operations
+
+
+def _validate_current_plan(conn, operation: dict[str, Any], organize_dir: str) -> str:
     row = conn.execute(
         """
         SELECT p.approved, p.file_id, p.original_name, p.suggested_name,
-               f.parent_id, f.file_id_source
+               p.original_path, p.execute_status, p.suggested_path, p.category, p.confidence,
+               f.parent_id, f.file_id_source, f.full_path, f.scan_time
         FROM organize_plans p JOIN files f ON f.id = p.file_row_id
         WHERE p.id = ?
         """,
@@ -404,14 +474,24 @@ def _validate_current_plan(conn, operation: dict[str, Any]) -> None:
     ).fetchone()
     if not row or not row["approved"]:
         raise OperationError("本地计划已不存在或已取消批准。")
+    suggested_parts = [part for part in str(row["suggested_path"] or "").split("/") if part]
+    parent_parts = suggested_parts[:-1] or [str(row["category"] or "其他")]
     if (
         str(row["file_id"]) != str(operation["file_id"])
         or str(row["parent_id"]) != str(operation["source_parent_id"])
         or str(row["original_name"]) != str(operation["original_name"])
         or str(row["suggested_name"]) != str(operation["target_name"])
+        or normalize_path(str(row["original_path"])) != normalize_path(str(operation["original_path"]))
+        or normalize_path(str(row["full_path"])) != normalize_path(str(operation["original_path"]))
+        or [organize_dir, *parent_parts] != operation["target_parent_parts"]
+        or str(row["category"]) != str(operation.get("category") or "")
+        or str(row["confidence"]) != str(operation.get("confidence") or "")
         or row["file_id_source"] != "native"
     ):
         raise OperationError("本地计划在生成清单后发生变化，请重新生成清单。")
+    if row["scan_time"] < current_snapshot_start(conn):
+        raise OperationError("本地计划已不属于当前扫描快照，请重新扫描并生成清单。")
+    return str(row["execute_status"])
 
 
 def execute_manifest(
@@ -427,9 +507,7 @@ def execute_manifest(
         raise OperationError("确认码不匹配，未执行任何115写入。")
     if writer.scan_root_id != str(manifest.get("scan_root_id")):
         raise OperationError("写入器根目录与操作清单不一致。")
-    operations = manifest.get("operations") or []
-    if not isinstance(operations, list):
-        raise OperationError("操作清单内容无效。")
+    operations = _validate_manifest_scope(settings, manifest)
     result = ExecuteResult(total=len(operations))
     init_db(settings.db_path)
     with db_session(settings.db_path) as conn:
@@ -437,40 +515,53 @@ def execute_manifest(
             operation_id = str(operation.get("operation_id") or uuid.uuid4())
             status = "failed"
             error = ""
+            plan_validated = False
             try:
-                _validate_current_plan(conn, operation)
-                source_items = writer.list_folder(str(operation["source_parent_id"]))
-                source = next(
-                    (item for item in source_items if writer._item_id(item) == str(operation["file_id"])),
-                    None,
-                )
-                if source is None:
-                    raise OperationError("来源目录中找不到该115文件ID，可能已被改动。")
-                if writer._item_name(source) != str(operation["original_name"]):
-                    raise OperationError("来源文件名已变化，拒绝按旧清单执行。")
-
-                target_parent_id = writer.ensure_directory(list(operation["target_parent_parts"]))
-                collision = writer.find_child(target_parent_id, str(operation["target_name"]))
-                if collision and writer._item_id(collision) != str(operation["file_id"]):
-                    raise OperationError("目标目录已有同名文件，已跳过，未覆盖。")
-                if collision and writer._item_id(collision) == str(operation["file_id"]):
+                current_status = _validate_current_plan(conn, operation, str(manifest["organize_dir"]))
+                plan_validated = True
+                if current_status in COMPLETED_STATUSES:
                     status = "already_done"
                     result.skipped += 1
                 else:
-                    if str(operation["target_name"]) != str(operation["original_name"]):
-                        writer.rename(str(operation["file_id"]), str(operation["target_name"]))
-                    if target_parent_id != str(operation["source_parent_id"]):
-                        writer.move(str(operation["file_id"]), target_parent_id)
-                    if not writer.verify_item(target_parent_id, str(operation["file_id"]), str(operation["target_name"])):
-                        raise OperationError("115返回成功，但最终位置核验失败，请停止并重新扫描。")
-                    status = "success"
-                    result.succeeded += 1
+                    source_items = writer.list_folder(str(operation["source_parent_id"]))
+                    source = next(
+                        (item for item in source_items if writer._item_id(item) == str(operation["file_id"])),
+                        None,
+                    )
+                    if source is None:
+                        raise OperationError("来源目录中找不到该115文件ID，可能已被改动。")
+                    if writer._item_name(source) != str(operation["original_name"]):
+                        raise OperationError("来源文件名已变化，拒绝按旧清单执行。")
+                    if str(operation["target_name"]) != str(operation["original_name"]) and any(
+                        writer._item_id(item) != str(operation["file_id"])
+                        and writer._item_name(item).casefold() == str(operation["target_name"]).casefold()
+                        for item in source_items
+                    ):
+                        raise OperationError("来源目录已有与改名目标同名的其他文件，已停止，未改名。")
+
+                    target_parent_id = writer.ensure_directory(list(operation["target_parent_parts"]))
+                    collision = writer.find_child(target_parent_id, str(operation["target_name"]))
+                    if collision and writer._item_id(collision) != str(operation["file_id"]):
+                        raise OperationError("目标目录已有同名文件，已跳过，未覆盖。")
+                    if collision:
+                        status = "already_done"
+                        result.skipped += 1
+                    else:
+                        if str(operation["target_name"]) != str(operation["original_name"]):
+                            writer.rename(str(operation["file_id"]), str(operation["target_name"]))
+                        if target_parent_id != str(operation["source_parent_id"]):
+                            writer.move(str(operation["file_id"]), target_parent_id)
+                        if not writer.verify_item(target_parent_id, str(operation["file_id"]), str(operation["target_name"])):
+                            raise OperationError("115返回成功，但最终位置核验失败，请停止并重新扫描。")
+                        status = "success"
+                        result.succeeded += 1
                 set_plan_execute_status(conn, int(operation["plan_id"]), status)
             except Exception as exc:
                 error = str(exc)
                 result.failed += 1
                 result.errors.append({"plan_id": operation.get("plan_id"), "error": error})
-                set_plan_execute_status(conn, int(operation["plan_id"]), "failed")
+                if plan_validated:
+                    set_plan_execute_status(conn, int(operation["plan_id"]), "failed")
             add_operation_log(
                 conn,
                 {

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from typing import Any
 from urllib.parse import urljoin
 
@@ -141,6 +142,71 @@ class OpenListClient:
             },
         )
         return data.get("data") or {}
+
+    def list_all(
+        self,
+        path: str,
+        per_page: int = 200,
+        refresh: bool = False,
+        max_directory_entries: int = 10_000,
+    ) -> dict[str, Any]:
+        page_size = max(1, int(per_page))
+        entry_limit = max(1, int(max_directory_entries))
+        content: list[dict[str, Any]] = []
+        expected_total: int | None = None
+        seen_pages: set[str] = set()
+        seen_native_ids: set[str] = set()
+        first_listing: dict[str, Any] = {}
+        page_number = 1
+        while True:
+            listing = self.list_dir(path, page=page_number, per_page=page_size, refresh=refresh)
+            if not isinstance(listing, dict):
+                raise OpenListError("OpenList 目录列表格式异常，拒绝保存不完整扫描。")
+            page = listing.get("content")
+            if "content" in listing and page is None and listing.get("total") in (0, "0"):
+                page = []
+            if not isinstance(page, list) or any(not isinstance(item, dict) for item in page):
+                raise OpenListError("OpenList 目录列表格式异常，拒绝保存不完整扫描。")
+            if page_number == 1:
+                first_listing = listing
+            total = listing.get("total")
+            if total is not None:
+                if isinstance(total, bool) or not (
+                    isinstance(total, int)
+                    or isinstance(total, str) and total.strip().isdigit()
+                ):
+                    raise OpenListError("OpenList 目录总数格式异常，请重新扫描。")
+                count = int(total)
+                if count < 0:
+                    raise OpenListError("OpenList 目录总数格式异常，请重新扫描。")
+                if expected_total is not None and count != expected_total:
+                    raise OpenListError("分页期间目录数量发生变化，请重新扫描。")
+                expected_total = count
+            if page:
+                page_key = json.dumps(page, sort_keys=True, ensure_ascii=False)
+                if page_key in seen_pages:
+                    raise OpenListError("OpenList 重复返回同一页，拒绝保存不完整扫描。")
+                seen_pages.add(page_key)
+                page_native_ids = {extract_native_id(item) for item in page} - {""}
+                if seen_native_ids & page_native_ids:
+                    raise OpenListError("OpenList 分页之间返回重复文件 ID，拒绝保存不完整扫描。")
+                seen_native_ids.update(page_native_ids)
+            content.extend(page)
+            if len(content) > entry_limit:
+                raise OpenListError(
+                    f"单层目录超过安全上限 {entry_limit}，请改用更小的扫描根目录。"
+                )
+            if expected_total is not None:
+                if len(content) > expected_total:
+                    raise OpenListError("目录列表与返回总数不一致，请重新扫描。")
+                if len(content) == expected_total:
+                    break
+            if len(page) < page_size:
+                if expected_total is not None:
+                    raise OpenListError("目录分页提前结束，拒绝保存不完整扫描。")
+                break
+            page_number += 1
+        return {**first_listing, "content": content, "total": len(content)}
 
     def get_item(self, path: str) -> dict[str, Any]:
         safe_path = assert_under_allowed_root(path, self.settings)

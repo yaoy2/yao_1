@@ -345,15 +345,20 @@ def finish_scan_run(conn: sqlite3.Connection, run_id: int, summary: dict[str, An
     )
 
 
-def file_stats(conn: sqlite3.Connection) -> dict[str, Any]:
+def current_snapshot_start(conn: sqlite3.Connection) -> str:
+    """Return the latest committed scan boundary, including scans without IDs."""
     current = conn.execute(
         """
         SELECT started_at FROM scan_runs
-        WHERE status = 'ok'
+        WHERE status IN ('ok', 'stopped_no_native_id')
         ORDER BY id DESC LIMIT 1
         """
     ).fetchone()
-    snapshot_start = current["started_at"] if current else ""
+    return current["started_at"] if current else ""
+
+
+def file_stats(conn: sqlite3.Connection) -> dict[str, Any]:
+    snapshot_start = current_snapshot_start(conn)
     row = conn.execute(
         """
         SELECT
@@ -415,10 +420,7 @@ def list_plans(
     keyword: str = "",
     approved: str = "",
 ) -> list[dict[str, Any]]:
-    current = conn.execute(
-        "SELECT started_at FROM scan_runs WHERE status = 'ok' ORDER BY id DESC LIMIT 1"
-    ).fetchone()
-    snapshot_start = current["started_at"] if current else ""
+    snapshot_start = current_snapshot_start(conn)
     clauses = ["f.scan_time >= ?"]
     params: list[Any] = [snapshot_start]
     if category:

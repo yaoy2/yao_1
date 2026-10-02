@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import time
 from typing import Any, Callable
 
@@ -101,9 +102,10 @@ class Open115ReadOnlyProvider:
         if value in (None, ""):
             return None
         try:
-            return int(value)
+            count = int(value)
         except (TypeError, ValueError):
             return None
+        return count if count >= 0 else None
 
     @staticmethod
     def _convert_item(item: dict[str, Any]) -> dict[str, Any]:
@@ -130,6 +132,8 @@ class Open115ReadOnlyProvider:
         raw_items: list[dict[str, Any]] = []
         offset = 0
         expected_count: int | None = None
+        seen_pages: set[str] = set()
+        seen_ids: set[str] = set()
         while True:
             payload = self._get(
                 OPEN115_FILES_URL,
@@ -140,16 +144,38 @@ class Open115ReadOnlyProvider:
                     "show_dir": 1,
                 },
             )
-            page = payload.get("data") if isinstance(payload.get("data"), list) else []
-            expected_count = self._count(payload)
-            raw_items.extend(item for item in page if isinstance(item, dict))
+            page = payload.get("data")
+            if page is None and "data" in payload and payload.get("count") in (0, "0"):
+                page = []
+            if not isinstance(page, list) or any(not isinstance(item, dict) for item in page):
+                raise Open115ReadOnlyError("115 Open目录列表格式异常，拒绝保存不完整扫描。")
+            count = self._count(payload)
+            if count is not None:
+                if expected_count is not None and count != expected_count:
+                    raise Open115ReadOnlyError("分页期间目录数量发生变化，请重新扫描。")
+                expected_count = count
+            if page:
+                page_ids = {str(item["fid"]) for item in page if item.get("fid")}
+                if seen_ids.intersection(page_ids):
+                    raise Open115ReadOnlyError("115 Open分页出现重复文件ID，请重新扫描。")
+                seen_ids.update(page_ids)
+                page_key = json.dumps(page, sort_keys=True, ensure_ascii=False)
+                if page_key in seen_pages:
+                    raise Open115ReadOnlyError("115 Open重复返回同一页，拒绝保存不完整扫描。")
+                seen_pages.add(page_key)
+            raw_items.extend(page)
             if len(raw_items) > self.max_directory_entries:
                 raise Open115ReadOnlyError(
                     f"单层目录超过安全上限 {self.max_directory_entries}，请改用更小的扫描根目录。"
                 )
-            if expected_count is not None and len(raw_items) >= expected_count:
-                break
+            if expected_count is not None:
+                if len(raw_items) > expected_count:
+                    raise Open115ReadOnlyError("目录列表与返回总数不一致，请重新扫描。")
+                if len(raw_items) == expected_count:
+                    break
             if len(page) < self.page_size:
+                if expected_count is not None:
+                    raise Open115ReadOnlyError("目录分页提前结束，拒绝保存不完整扫描。")
                 break
             offset += self.page_size
 

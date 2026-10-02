@@ -104,11 +104,14 @@ def scan(
         live_client = client or OpenListClient(settings)
         if not live_client.token:
             live_client.login()
-        list_fn = live_client.list_dir
+        list_fn = live_client.list_all
 
+    scan_error: Exception | None = None
     with db_session(settings.db_path) as conn:
         run_id = start_scan_run(conn, target, depth_limit, file_limit if file_limit < 10**9 else 0)
         result = ScanResult(run_id=run_id, scan_dir=target)
+        # Keep the run record when a partial scan must be rolled back.
+        conn.execute("SAVEPOINT scan_updates")
         try:
             queue: deque[tuple[str, int, str]] = deque([(target, 0, scan_root_id)])
             seen_dirs: set[str] = set()
@@ -223,8 +226,13 @@ def scan(
                 )
             finish_scan_run(conn, run_id, result.as_dict())
         except Exception as exc:
+            conn.execute("ROLLBACK TO SAVEPOINT scan_updates")
             result.status = "error"
             result.error = str(exc)
             finish_scan_run(conn, run_id, result.as_dict())
-            raise
+            scan_error = exc
+        finally:
+            conn.execute("RELEASE SAVEPOINT scan_updates")
+    if scan_error is not None:
+        raise scan_error
     return result

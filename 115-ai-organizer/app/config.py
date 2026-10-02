@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import posixpath
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -58,9 +59,7 @@ def normalize_path(path: str | None) -> str:
         text = "/" + text
     while "//" in text:
         text = text.replace("//", "/")
-    if len(text) > 1:
-        text = text.rstrip("/")
-    return text or "/"
+    return posixpath.normpath(text)
 
 
 @dataclass(frozen=True)
