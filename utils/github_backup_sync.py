@@ -29,6 +29,13 @@ def _content_hash(content):
     return hashlib.sha256(content.encode("utf-8")).hexdigest()
 
 
+def _same_text_content(left, right):
+    # read_text uses universal newlines; the remote baseline retains its bytes.
+    def normalized(value):
+        return value.replace("\r\n", "\n").replace("\r", "\n")
+    return normalized(left) == normalized(right)
+
+
 def _atomic_text(path, content):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -226,6 +233,7 @@ def read_file_from_github(repo_path, secrets=None, environ=None, session=None):
 
 
 def download_file_from_github(local_path, repo_path, secrets=None, environ=None, session=None):
+    repo_path = _normalized_path(repo_path)
     result = read_file_from_github(repo_path, secrets=secrets, environ=environ, session=session)
     if not result.get("ok"):
         return result
@@ -235,9 +243,10 @@ def download_file_from_github(local_path, repo_path, secrets=None, environ=None,
     from utils.data_sync_validation import MANAGED_FILES, validate_backup
     if repo_path in MANAGED_FILES:
         validate_backup(repo_path, content)
-    if local_path.exists() and local_path.read_text(encoding="utf-8") != content:
+    local_content = local_path.read_text(encoding="utf-8") if local_path.exists() else None
+    if local_content is not None and not _same_text_content(local_content, content):
         baseline = get_local_sync_baseline(local_path, repo_path, secrets, environ)
-        if baseline is None or _content_hash(local_path.read_text(encoding="utf-8")) != baseline["content_sha256"]:
+        if baseline is None or not _same_text_content(local_content, baseline["content"]):
             raise RuntimeError("本机文件有未核对的修改，未被拉取覆盖；请先保留并合并本机数据。")
     _atomic_text(local_path, content)
     remember_local_sync_baseline(local_path, repo_path, content, result["sha"], secrets, environ)

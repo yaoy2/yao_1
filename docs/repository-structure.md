@@ -19,7 +19,7 @@
 ## 主结构
 
 ```text
-E:\github\yao_1\
+yao_1\
 ├── hello.py                         # 首页、模块元数据与分区导航唯一来源
 ├── pages\                           # Streamlit 页面；文件名前缀只控制原生侧栏顺序
 │   ├── 18_19_concept_fables.py     # M19 概念寓言馆
@@ -27,8 +27,9 @@ E:\github\yao_1\
 │   ├── 20_21_awesome_design_md.py  # M21 Awesome Design MD 只读展示
 │   ├── 21_22_gpt_planner_luna_executor.py # M22 AI 协作流程只读展示
 │   ├── 22_23_docker_monitor.py     # M23 docker-monitor 只读展示
-│   ├── 23_24_mail_workbench.py     # M24 邮件工作台，实际收信在本机
-│   └── 24_25_phone_transfer.py     # M25 随手传，依赖配对收件端
+│   ├── 23_24_mail_workbench.py     # M24 已弃用，保留历史参考
+│   ├── 24_25_phone_transfer.py     # M25 随手传，依赖配对收件端
+│   └── 25_26_pubg_secret_maps.py   # M26 PUBG 密室地图查看器
 ├── utils\                           # 主应用可复用逻辑、数据校验和主题辅助
 ├── assets\                          # 可随主库部署的静态资产
 │   ├── ding2026_m20_snapshot.json  # M20 脱敏聚合快照
@@ -54,17 +55,18 @@ E:\github\yao_1\
 └── zhongshengshi\                  # 已暂停的独立子项目
 ```
 
-## M19—M25 边界
+## M19—M26 边界
 
 - **M19**：`concept_fables/` 提供目录逻辑和只读页面，实际条目存于 `data/concept_fables.json`；新增寓言由对应 Skill 写入，页面本身不提供写入操作。
 - **M20**：已停用并归入 archived，页面只显示停用说明；原有功能和统计不再生效。旧聚合快照保留历史用途，不代表当前页面仍在读取。
 - **M21**：页面只读 `assets/awesome-design-md/design-md/`。来源 URL 和固定提交记录在 `assets/awesome-design-md/SOURCE.md`；源仓库的 `.git` 元数据不嵌入主库，避免线上部署遗漏资产。
 - **M22**：页面介绍 `gpt-planner-luna-executor/` 与 `codex-grok-builder/` 两条路线的任务路由、交接边界、优化前后对照和实测记录，不创建代理、不调用模型、不控制浏览器，也不修改项目。公开脱敏记录位于 [docs/history/2026-09-05-skill-cost-optimization.md](history/2026-09-05-skill-cost-optimization.md)，区分独立通道验证与成本结论。
 - **M23**：只读展示三个任务（TrendRadar、AIHOT 增量、德亚显卡报价），GLM 已移除。不访问网络、不启容器、不读取本机状态、不发钉钉。真实监控在独立私有仓库 [yaoy2/docker-monitor](https://github.com/yaoy2/docker-monitor) 和本机 TrendRadar 容器，主库没有运行时依赖。
-- **M24**：展示已收取邮件、待办和归档结果；收信由明确请求触发，由单独配置的本机工作进程执行。可选 Jev 复核有独立的外部服务与数据传输边界，见 [邮件说明](guides/mail-jev.md)。
+- **M24**：已弃用并归入 archived，保留历史参考；当前邮件待办按用户指定的 Edge 工作流处理。旧版组件说明见 [邮件说明](guides/mail-jev.md)。
 - **M25**：手机向已配对的桌面收件端传文件，桌面收件页面须保持打开；克隆仓库不会自动配置接收服务。以校验后的接收状态确认送达。
+- **M26**：查看仓库内的 PUBG 密室地图图片，支持缩放、拖动和原图下载；排除帕拉莫和卡拉金。图片是固定资源，不代表实时游戏状态。
 
-完整的 24 个入口（行政 7、教学 2、个人 7、archived 8）见[模块目录](guides/module-catalog.md)。测试从 `hello.py` 提取注册信息，核对目录中的编号、分区、状态和页面路径。
+完整的 25 个入口（行政 5、教学 1、个人 8、archived 11）见[模块目录](guides/module-catalog.md)。测试从 `hello.py` 提取注册信息，核对目录中的编号、分区、状态和页面路径。
 
 ## 演示与贡献
 

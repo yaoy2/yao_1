@@ -45,6 +45,41 @@ def expense(record_id=7, amount=12.5, **changes):
 
 
 class MemoRestoreTest(unittest.TestCase):
+    def test_date_headings_in_body_round_trip_without_splitting_records(self):
+        bodies = ["## 2026-10-01\n\n昨天的内容\n\n## 2026-10-02\n\n今天的内容",
+                  "先写内容\n\n## 2026-10-03", "另一条记录\n\n末段"]
+        records = [memo(index + 1, body) for index, body in enumerate(bodies)]
+        backup = web_memo_db.build_markdown_backup(records) + "\n\n"
+        self.assertEqual(records, web_memo_db.parse_markdown_backup(backup))
+        self.assertEqual(records, validate_backup("data/web_memos_backup.md", backup))
+
+    def test_current_footer_wins_over_header_and_footer_style_body_text(self):
+        bodies = ["- 分类：正文\n- 标签：无\n### 内容\n正文",
+                  "- ID：99\n- 分类：正文\n- 标签：无\n### 内容\n正文\n\n## 2026-10-01\n日期小标题",
+                  "正文\n- 分类：正文分类\n- 标签：正文标签\n\n## 2026-10-01\n日期小标题"]
+        records = [memo(index + 1, body) for index, body in enumerate(bodies)]
+        backup = web_memo_db.build_markdown_backup(records)
+        self.assertEqual(records, web_memo_db.parse_markdown_backup(backup))
+
+    def test_header_metadata_backups_preserve_body_dates_and_later_records(self):
+        text = ("## 2026-10-02\n- ID：7\n- 分类：摘录\n- 标签：材料\n### 内容\n\n"
+                "正文\n\n## 2026-10-01\n\n日期小标题\n- 分类：正文分类\n- 标签：正文标签\n\n"
+                "## 2026-10-03\n- ID：8\n- 分类：工作记录\n- 标签：记录\n### 内容\n\n第二条\n\n")
+        records = web_memo_db.parse_markdown_backup(text)
+        self.assertEqual([7, 8], [record["id"] for record in records])
+        self.assertEqual("正文\n\n## 2026-10-01\n\n日期小标题\n- 分类：正文分类\n- 标签：正文标签", records[0]["content"])
+        self.assertEqual("摘录", records[0]["category"])
+        self.assertEqual("第二条", records[1]["content"])
+
+    def test_legacy_footer_without_ids_preserves_date_headings(self):
+        text = ("## 2026-10-02\n\n正文\n\n## 2026-10-01\n\n日期小标题\n\n"
+                "- 分类：摘录\n- 标签：材料\n- 色卡：默认色卡\n\n"
+                "## 2026-10-03\n\n第二条\n\n- 分类：工作记录\n- 标签：记录\n\n")
+        records = web_memo_db.parse_markdown_backup(text)
+        self.assertEqual(2, len(records))
+        self.assertEqual("正文\n\n## 2026-10-01\n\n日期小标题", records[0]["content"])
+        self.assertEqual("第二条", records[1]["content"])
+
     def test_markdown_round_trip_preserves_lists_metadata_style_text_headings_and_blank_lines(self):
         body = "第一段\n\n- 第一项\n- 分类：这是正文中的分类说明\n- 标签：这是正文\n\n## 工作说明\n\n最后一段\n- 尾部列表"
         record = memo(content=body, is_archived=True)

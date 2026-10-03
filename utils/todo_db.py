@@ -380,17 +380,19 @@ def _extract_due_date(text, base_date):
 
 
 def _extract_due_time(text):
-    colon = re.search(r"(?<!\d)([01]?\d|2[0-3])[:：]([0-5]\d)(?!\d)", text)
+    colon = re.search(r"(上午|早上|下午|晚上|中午)?\s*(?<!\d)(\d{1,2})[:：](\d{2})(?!\d)", text)
     if colon:
-        return f"{int(colon.group(1)):02d}:{int(colon.group(2)):02d}"
-
-    chinese = re.search(r"(上午|早上|下午|晚上|中午)?\s*(\d{1,2})\s*点\s*(半|[0-5]?\d分?)?", text)
-    if not chinese:
-        return ""
-    period = chinese.group(1) or ""
-    hour = int(chinese.group(2))
-    minute_text = chinese.group(3) or ""
-    minute = 30 if minute_text == "半" else int(re.sub(r"\D", "", minute_text) or 0)
+        period = colon.group(1) or ""
+        hour = int(colon.group(2))
+        minute = int(colon.group(3))
+    else:
+        chinese = re.search(r"(上午|早上|下午|晚上|中午)?\s*(?<!\d)(\d{1,2})\s*点\s*(半|\d{1,2}分?)?(?!\s*\d)", text)
+        if not chinese:
+            return ""
+        period = chinese.group(1) or ""
+        hour = int(chinese.group(2))
+        minute_text = chinese.group(3) or ""
+        minute = 30 if minute_text == "半" else int(re.sub(r"\D", "", minute_text) or 0)
     if period in ("下午", "晚上") and hour < 12:
         hour += 12
     if period == "中午" and hour < 11:

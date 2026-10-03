@@ -446,8 +446,11 @@ def archive_memo(record_id):
     return changed
 
 
-def move_memo(record_id, direction):
+def move_memo(record_id, direction, visible_ids=None):
     records = get_memos()
+    if visible_ids is not None:
+        visible_ids = set(visible_ids)
+        records = [record for record in records if record["id"] in visible_ids]
     ids = [record["id"] for record in records]
     if record_id not in ids:
         return False
@@ -570,11 +573,69 @@ def sync_backup_file():
     return BACKUP_MD_PATH
 
 
+def _split_memo_backup_metadata(body_lines):
+    prefixes = ("- 分类：", "- 标签：", "- 色卡：", "- ID：", "- 顺序：", "- 状态：")
+    footer = None
+    for index in range(len(body_lines) - 1, -1, -1):
+        if not body_lines[index].startswith("- 分类："):
+            continue
+        tail = body_lines[index:]
+        if (any(line.startswith("- 标签：") for line in tail)
+                and all(not line.strip() or line.startswith(prefixes) for line in tail)):
+            footer = (body_lines[:index], tail, "legacy_footer")
+            # Current backups have a complete system footer. Its metadata must
+            # win when pasted body text itself resembles an old-format header.
+            if all(any(line.startswith(prefix) for line in tail)
+                   for prefix in ("- ID：", "- 顺序：", "- 状态：")):
+                return body_lines[:index], tail, "footer"
+            break
+    if "### 内容" in body_lines:
+        marker = body_lines.index("### 内容")
+        header = body_lines[:marker]
+        if any(line.startswith(prefixes) for line in header) and all(
+                not line.strip() or line.startswith(prefixes) for line in header):
+            return body_lines[marker + 1:], header, "header"
+    if footer is not None:
+        return footer
+    return body_lines, [], None
+
+
+def _memo_backup_chunks(text):
+    # Date headings also occur in pasted notes. A new record needs metadata at
+    # the previous record's end or at its own beginning, not just a date heading.
+    parts = re.split(r"(\n##[ \t]+)(?=\d{4}-\d{2}-\d{2}[ \t]*(?:\r?\n|$))", "\n" + text)
+    candidates = []
+    for index in range(1, len(parts), 2):
+        prefix, chunk = parts[index:index + 2]
+        _, _, kind = _split_memo_backup_metadata(chunk.splitlines()[1:])
+        candidates.append((prefix, chunk, kind))
+    uses_system_footers = any(kind == "footer" for _, _, kind in candidates)
+    chunks = []
+    pending = []
+    previous_kind = None
+    current_kind = None
+    for prefix, chunk, kind in candidates:
+        if uses_system_footers:
+            boundary = previous_kind == "footer"
+        else:
+            boundary = (previous_kind == "legacy_footer" and current_kind != "header") or kind == "header"
+        if pending and boundary:
+            chunks.append("".join(pending))
+            pending = []
+        if not pending:
+            pending.append(chunk)
+            current_kind = kind
+        else:
+            pending.extend((prefix, chunk))
+        previous_kind = kind
+    if pending:
+        chunks.append("".join(pending))
+    return chunks
+
+
 def parse_markdown_backup(text):
     records = []
-    # A memo can contain Markdown headings and lists; only date headings start records.
-    chunks = re.split(r"\n##\s+(?=\d{4}-\d{2}-\d{2}\s*(?:\n|$))", "\n" + text)
-    for chunk in chunks[1:]:
+    for chunk in _memo_backup_chunks(text):
         lines = chunk.splitlines()
         if not lines:
             continue
@@ -586,28 +647,7 @@ def parse_markdown_backup(text):
         record_id = 0
         display_order = 0
         is_archived = False
-        body_lines = lines[1:]
-        metadata_lines = []
-        metadata_prefixes = ("- 分类：", "- 标签：", "- 色卡：", "- ID：", "- 顺序：", "- 状态：")
-        # The writer puts metadata after the body. Locate the final metadata block,
-        # rather than treating every body line beginning with '- ' as metadata.
-        for index in range(len(body_lines) - 1, -1, -1):
-            if not body_lines[index].startswith("- 分类："):
-                continue
-            tail = body_lines[index:]
-            if (any(line.startswith("- 标签：") for line in tail)
-                    and all(not line.strip() or line.startswith(metadata_prefixes) for line in tail)):
-                metadata_lines = tail
-                body_lines = body_lines[:index]
-                break
-        # Support backups that explicitly separate header metadata and body.
-        if not metadata_lines and "### 内容" in body_lines:
-            marker = body_lines.index("### 内容")
-            header = body_lines[:marker]
-            if all(not line.strip() or line.startswith(metadata_prefixes) for line in header):
-                metadata_lines = header
-                body_lines = body_lines[marker + 1:]
-        content_lines = body_lines
+        content_lines, metadata_lines, _ = _split_memo_backup_metadata(lines[1:])
         for line in metadata_lines:
             if line.startswith("- ID："):
                 record_id = _coerce_record_id(line.replace("- ID：", "", 1).strip())

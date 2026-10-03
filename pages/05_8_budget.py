@@ -5,6 +5,7 @@ import os
 import io
 import re
 import math
+from datetime import date, datetime
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -444,10 +445,14 @@ def _clean_excel_date(value):
         return ""
     if isinstance(value, pd.Timestamp):
         return value.strftime("%Y-%m-%d")
+    # Bare Excel serial numbers are ambiguous; pandas would interpret them as
+    # nanoseconds since 1970 and silently replace the user's actual date.
+    if not isinstance(value, (str, date, datetime)):
+        return ""
     parsed = pd.to_datetime(value, errors="coerce")
     if not pd.isna(parsed):
         return parsed.strftime("%Y-%m-%d")
-    return str(value).strip()
+    return ""
 
 
 def _records_from_excel(uploaded_file):
@@ -475,10 +480,10 @@ def _records_from_excel(uploaded_file):
         amount = pd.to_numeric(row.get("amount"), errors="coerce")
 
         if not record_date:
-            raise ValueError(f"第 {line_no} 行缺少日期。")
+            raise ValueError(f"第 {line_no} 行日期缺失或无效：{row.get('record_date')}，请使用 YYYY-MM-DD 日期。")
         if category not in BUDGET_CATEGORIES:
             raise ValueError(f"第 {line_no} 行费用类别不在配置中：{category}")
-        if pd.isna(amount) or amount <= 0:
+        if pd.isna(amount) or not math.isfinite(float(amount)) or amount <= 0:
             raise ValueError(f"第 {line_no} 行金额无效：{row.get('amount')}")
         if status not in REIMBURSEMENT_STATUSES:
             raise ValueError(f"第 {line_no} 行报销状态无效：{status}")

@@ -395,6 +395,7 @@ with st.container(border=True):
     keyword = st.text_input("搜索", placeholder="按关键词搜索", label_visibility="collapsed")
 
     display_records = web_memo_db.get_memos(category=selected_category, keyword=keyword.strip() or None)
+    visible_memo_ids = [record["id"] for record in display_records]
     if not display_records:
         st.info("还没有记录。先在上方粘贴一条。")
     else:
@@ -414,12 +415,12 @@ with st.container(border=True):
                         move_up, move_down, edit_col, hide_col, _spacer = st.columns([0.18, 0.18, 0.18, 0.18, 1], gap="small")
                         if move_up.button("↑", key=f"memo_up_{record['id']}", disabled=index == 0, help="上移"):
                             require_memo_remote_unchanged()
-                            web_memo_db.move_memo(record["id"], "up")
+                            web_memo_db.move_memo(record["id"], "up", visible_ids=visible_memo_ids)
                             sync_web_memo_backup_to_github()
                             st.rerun()
                         if move_down.button("↓", key=f"memo_down_{record['id']}", disabled=index == len(display_records) - 1, help="下移"):
                             require_memo_remote_unchanged()
-                            web_memo_db.move_memo(record["id"], "down")
+                            web_memo_db.move_memo(record["id"], "down", visible_ids=visible_memo_ids)
                             sync_web_memo_backup_to_github()
                             st.rerun()
                         if edit_col.button("✎", key=f"memo_edit_{record['id']}", help="编辑"):

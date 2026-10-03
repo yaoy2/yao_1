@@ -56,6 +56,36 @@ class TodoDbTest(unittest.TestCase):
                 self.assertEqual(1, len(todo_db.get_todos(keyword="15:00")))
                 self.assertEqual([], todo_db.get_todos(keyword="不存在"))
 
+    def test_colon_time_respects_chinese_period_and_existing_24_hour_values(self):
+        examples = {
+            "明天下午3:30交材料": "15:30",
+            "晚上8：15开会": "20:15",
+            "中午1:00集合": "13:00",
+            "上午09:30集合": "09:30",
+            "下午15:30交材料": "15:30",
+            "12:00集合": "12:00",
+            "23:59完成": "23:59",
+            "15点 30分开会": "15:30",
+        }
+        for text, expected_time in examples.items():
+            with self.subTest(text=text):
+                self.assertEqual(expected_time, todo_db.extract_due_fields(text)[1])
+
+    def test_invalid_time_is_not_partially_parsed_into_a_valid_deadline(self):
+        for text in ("25:30交材料", "15:80开会", "123点开会", "15点80分开会", "15点800分开会",
+                     "15点 800分开会", "15点 8000分开会"):
+            with self.subTest(text=text):
+                self.assertEqual("", todo_db.extract_due_fields(text)[1])
+
+    def test_inferred_afternoon_time_is_preserved_in_database_and_backup(self):
+        with tempfile.TemporaryDirectory() as tmpdir, patched_todo_storage(tmpdir) as tmp_path:
+            todo_db.init_db()
+            todo_db.add_todo("明天下午3:30提交材料")
+            record = todo_db.get_todos()[0]
+            restored = todo_db.parse_markdown_backup((tmp_path / "todo_items_backup.md").read_text(encoding="utf-8"))
+        self.assertEqual("15:30", record["due_time"])
+        self.assertEqual("15:30", restored[0]["due_time"])
+
     def test_update_todo_persists_due_date_time_to_database_and_backup(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             with patched_todo_storage(tmpdir) as tmp_path:

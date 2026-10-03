@@ -18,6 +18,33 @@ def patched_web_memo_storage(tmpdir):
 
 
 class WebMemoDbTest(unittest.TestCase):
+    def test_move_in_filtered_list_swaps_visible_neighbors_and_preserves_other_slots(self):
+        with tempfile.TemporaryDirectory() as tmpdir, patched_web_memo_storage(tmpdir):
+            web_memo_db.init_db()
+            for content in ("目标较早", "其他便签", "目标较晚"):
+                web_memo_db.add_memo("2026-10-02", content, classify=False)
+            before = web_memo_db.get_memos()
+            visible_ids = [record["id"] for record in web_memo_db.get_memos(keyword="目标")]
+            other_before = next(record for record in before if record["content"] == "其他便签")
+
+            self.assertTrue(web_memo_db.move_memo(visible_ids[1], "up", visible_ids=visible_ids))
+            self.assertEqual(["目标较早", "目标较晚"], [record["content"] for record in web_memo_db.get_memos(keyword="目标")])
+            other_after = next(record for record in web_memo_db.get_memos() if record["id"] == other_before["id"])
+            self.assertEqual(other_before, other_after)
+            self.assertTrue(web_memo_db.move_memo(visible_ids[1], "down", visible_ids=visible_ids))
+            self.assertEqual(before, web_memo_db.get_memos())
+
+    def test_move_at_filtered_boundary_does_not_cross_an_unrelated_memo(self):
+        with tempfile.TemporaryDirectory() as tmpdir, patched_web_memo_storage(tmpdir):
+            web_memo_db.init_db()
+            web_memo_db.add_memo("2026-10-02", "目标记录", classify=False)
+            web_memo_db.add_memo("2026-10-02", "其他记录", classify=False)
+            before = web_memo_db.get_memos()
+            target_id = before[1]["id"]
+            self.assertFalse(web_memo_db.move_memo(target_id, "up", visible_ids=[target_id]))
+            self.assertFalse(web_memo_db.move_memo(target_id, "down", visible_ids=[]))
+            self.assertEqual(before, web_memo_db.get_memos())
+
     def test_add_memo_classifies_and_lists_newest_first(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             with patched_web_memo_storage(tmpdir):

@@ -68,10 +68,30 @@ def validate_backup(repo_path, content):
 
 
 def would_drop_records(repo_path, before, after):
-    if isinstance(before, list):
-        return len(after) < len(before)
     if repo_path == "data/ding_minutes_cloud.json":
-        return len(after["records"]) < len(before["records"])
+        before, after = before["records"], after["records"]
+    if isinstance(before, list):
+        if len(after) < len(before):
+            return True
+        if repo_path == "data/todo_items_backup.md":
+            from utils.todo_db import record_uid
+            after_uids = {record_uid(item) for item in after}
+            legacy_after_ids = {item["id"] for item in after if not item.get("uid")}
+            for item in before:
+                if record_uid(item) in after_uids:
+                    continue
+                # Legacy snapshots have no UID; editing their date must not
+                # turn the derived UID into an apparent deletion.
+                if not item.get("uid") and item["id"] in legacy_after_ids:
+                    continue
+                return True
+            return False
+        if repo_path in {"data/budget_ledger_backup.md", "data/web_memos_backup.md", "data/ding_minutes_cloud.json"}:
+            # Additions must not hide removed records; editing existing fields is safe.
+            before_ids = {str(item["id"]) for item in before if item.get("id") is not None}
+            after_ids = {str(item["id"]) for item in after if item.get("id") is not None}
+            return not before_ids <= after_ids
+        return False
     if repo_path in {"data/llm_budget_accounts.json", "data/teacher_category_cache.json"}:
         return not before.keys() <= after.keys()
     return False

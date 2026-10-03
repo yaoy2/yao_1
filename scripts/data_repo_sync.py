@@ -60,7 +60,7 @@ def prepare(action, paths, secrets, environ):
             # UI deletion uses a checked snapshot; the bulk command must never silently erase records.
             before, after = validate_backup(repo_path, baseline["content"]), validate_backup(repo_path, content)
             if would_drop_records(repo_path, before, after):
-                raise RuntimeError(f"{repo_path} 记录数量减少，批量上传已停止；请在对应模块确认删除。")
+                raise RuntimeError(f"{repo_path} 存在记录被移除，批量上传已停止；请在对应模块确认删除。")
         items.append((repo_path, local, remote, content, same_remote))
     return items
 
