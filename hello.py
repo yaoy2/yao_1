@@ -10,8 +10,8 @@ from utils.home_theme import apply_home_theme
 TOOLS = [
     {
         "title": "Newspaper",
-        "desc": "传统报纸式阅读的交互预览：60 个栏目、文艺副刊、专题追踪与剪报整理。当前为示例内容，新闻采集和私人同步尚未接入。",
-        "tag": "报纸交互预览",
+        "desc": "汇集公开新闻、文学与书影资讯，保留媒体来源、发布时间和原文入口；支持全屏阅读、收藏、标记和笔记，个人记录保存在当前浏览器。",
+        "tag": "新闻阅报",
         "created": "2026_10_04",
         "page": "pages/27_28_newspaper.py",
         "code": "M28",
