@@ -26,8 +26,8 @@ st.set_page_config(page_title="M28·Newspaper", page_icon="📰", layout="wide")
 render_home_link()
 st.markdown("### 📰 M28·Newspaper")
 st.caption(
-    "个人 · 公开新闻聚合｜来源、发布时间与原文可查；新闻列表缓存 15 分钟。"
-    "收藏与笔记保存在当前浏览器，尚未提供跨设备同步。"
+    "个人 · 公开新闻与 AI 专版｜打开或更新页面时检查来源；综合新闻缓存 15 分钟，官方 AI 信源缓存 2 小时。"
+    "推荐偏好、收藏与笔记仅保存在当前浏览器，尚未提供跨设备同步。"
 )
 
 # Streamlit exposes the latest component value before the script reruns. Handle

@@ -51,7 +51,7 @@ def test_newspaper_page_passes_real_source_metadata(service):
     app = AppTest.from_file(str(PAGE)).run()
     assert not app.exception
     assert any("M28·Newspaper" in item.value for item in app.markdown)
-    assert any("公开新闻聚合" in item.value for item in app.caption)
+    assert any("公开新闻与 AI 专版" in item.value for item in app.caption)
     assert component_args(app)["feed"]["articles"][0]["url"] == ARTICLE["url"]
     assert (ROOT / "integrations" / "newspaper" / "frontend" / "index.html").is_file()
 
@@ -163,3 +163,51 @@ def test_transient_article_failure_is_not_retained_in_long_cache(monkeypatch):
         assert fetch.call_count == 2
     finally:
         component.cached_newspaper_article.clear()
+
+
+def test_official_ai_summary_does_not_fetch_original_site(monkeypatch):
+    component.cached_newspaper_article.clear()
+    official = {**ARTICLE, "id": "ai_official_test", "source_family": "ai_official",
+                "summary_only": True}
+    public_fetch = Mock()
+    ai_summary = Mock(return_value={"id": official["id"], "status": "summary",
+                                    "paragraphs": ["官方 RSS 摘要"]})
+    monkeypatch.setattr(component, "fetch_newspaper_article", public_fetch)
+    monkeypatch.setattr(component, "fetch_ai_official_article", ai_summary)
+    try:
+        assert component.cached_newspaper_article(official)["status"] == "summary"
+        ai_summary.assert_called_once_with(official)
+        public_fetch.assert_not_called()
+    finally:
+        component.cached_newspaper_article.clear()
+
+
+def test_combined_feed_preserves_official_metadata_and_deduplicates_urls(monkeypatch):
+    component.cached_newspaper_feed.clear()
+    official = {**ARTICLE, "id": "ai_official_test", "url": "https://openai.com/index/test",
+                "source_family": "ai_official", "ai_category": "ai-models", "summary_only": True}
+    monkeypatch.setattr(component, "load_newspaper_feed", Mock(return_value=deepcopy(FEED)))
+    monkeypatch.setattr(component, "cached_ai_official_feed", Mock(return_value={
+        "articles": [official, {**official, "id": "duplicate"}],
+        "sources": [{"id": "official", "status": "ok", "count": 2}], "errors": [],
+    }))
+    try:
+        result = component.cached_newspaper_feed()
+        assert result["articles"] == [ARTICLE, official]
+        assert len(result["sources"]) == 2
+        assert not result["errors"]
+    finally:
+        component.cached_newspaper_feed.clear()
+
+
+def test_one_feed_failure_does_not_remove_other_public_articles(monkeypatch):
+    component.cached_newspaper_feed.clear()
+    monkeypatch.setattr(component, "load_newspaper_feed", Mock(return_value=deepcopy(FEED)))
+    monkeypatch.setattr(component, "cached_ai_official_feed", Mock(side_effect=RuntimeError("private internals")))
+    try:
+        result = component.cached_newspaper_feed()
+        assert result["articles"] == [ARTICLE]
+        assert result["errors"]
+        assert "private internals" not in str(result)
+    finally:
+        component.cached_newspaper_feed.clear()

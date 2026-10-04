@@ -10,8 +10,8 @@ from utils.home_theme import apply_home_theme
 TOOLS = [
     {
         "title": "Newspaper",
-        "desc": "汇集公开新闻、文学与书影资讯，保留媒体来源、发布时间和原文入口；支持全屏阅读、收藏、标记和笔记，个人记录保存在当前浏览器。",
-        "tag": "新闻阅报",
+        "desc": "汇集公开新闻、官方 AI 资讯与文艺副刊；推荐逐步适应阅读兴趣，同时保留跨领域与探索内容，支持全屏阅读、收藏和笔记，个人记录仅保存在当前浏览器。",
+        "tag": "新闻 · AI · 推荐",
         "created": "2026_10_04",
         "page": "pages/27_28_newspaper.py",
         "code": "M28",
