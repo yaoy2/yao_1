@@ -9,6 +9,16 @@ from utils.home_theme import apply_home_theme
 
 TOOLS = [
     {
+        "title": "Newspaper",
+        "desc": "传统报纸式阅读的交互预览：60 个栏目、文艺副刊、专题追踪与剪报整理。当前为示例内容，新闻采集和私人同步尚未接入。",
+        "tag": "报纸交互预览",
+        "created": "2026_10_04",
+        "page": "pages/27_28_newspaper.py",
+        "code": "M28",
+        "accent": "amber",
+        "section": "个人",
+    },
+    {
         "title": "众声室",
         "desc": "让 Codex、Claude、Grok 在同一个群聊中阅读彼此的发言，支持点名、继续讨论、总结与导出。需启动本机讨论室并登录对应工具。",
         "tag": "AI 群聊",
