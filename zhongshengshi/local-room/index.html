@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>众声室 · 三方群聊</title>
+  <style>
+    :root{font-family:Inter,"Segoe UI","Microsoft YaHei",sans-serif;color:#233b39;background:#f1f3ef;font-synthesis:none;--ink:#233b39;--muted:#6d7f7b;--line:#dce3dd;--green:#245f50;--paper:#fffefb;--warn:#91652e}
+    *{box-sizing:border-box}body{margin:0}button,textarea,select{font:inherit}button,select{cursor:pointer}button{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:9px;padding:9px 13px;font-size:13px;font-weight:600;transition:background .15s,border-color .15s}button:hover:not(:disabled){background:#edf2ec;border-color:#b7c9bf}button:disabled,select:disabled{cursor:not-allowed;opacity:.45}button:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible{outline:3px solid #9ac8b8;outline-offset:3px}button.primary{background:var(--green);color:#fff;border-color:var(--green)}button.primary:hover:not(:disabled){background:#194d40}button.stop{color:#a44536;border-color:#e5c3bc;background:#fff8f4}button.small{font-size:12px;padding:7px 10px}.app{height:100vh;height:100dvh;max-width:1580px;margin:auto;display:grid;grid-template-columns:232px minmax(0,1fr);padding:18px;gap:18px}.sidebar{padding:12px 2px;display:flex;flex-direction:column;gap:26px;min-height:0}.brand{display:flex;gap:11px;align-items:center;padding:0 10px}.brand-mark{width:37px;height:37px;border:1px solid #9eb7aa;border-radius:12px;display:grid;place-items:center;color:var(--green);font-size:22px;background:#e5ede2}.brand h1{font-size:23px;letter-spacing:2px;margin:0 0 2px;font-weight:650}.brand p{font-size:11px;color:var(--muted);margin:0;letter-spacing:1px}.sidebar-title{font-size:11px;color:var(--muted);letter-spacing:1.5px;margin:0 12px 11px}.participant-list{display:grid;gap:8px}.participant{display:flex;gap:10px;align-items:center;border:1px solid transparent;padding:11px;border-radius:12px;background:#e9eee7}.avatar{width:33px;height:33px;border-radius:10px;display:grid;place-items:center;font-weight:700;flex-shrink:0;font-size:13px;background:#e0ebe4;color:#275944}.avatar.claude{background:#f2e5d9;color:#985b38}.avatar.grok{background:#e1e8ee;color:#455f73}.avatar.sir{background:var(--green);color:#fff}.participant-main{min-width:0;flex:1}.participant-heading{display:flex;align-items:center;gap:7px}.participant-name{font-size:13px;font-weight:650}.state-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#a4aaa5}.participant.ready .state-dot{background:#42846a}.participant.speaking{border-color:#8eb3a2;background:#e1ecdf}.participant.speaking .state-dot{background:#2c8061;animation:breathe 1.4s infinite}.participant-detail{font-size:11px;line-height:1.6;color:var(--muted);margin-top:3px;overflow-wrap:anywhere}.connection-row{display:flex;align-items:center;justify-content:space-between;padding:11px 10px 0;gap:8px}.connection-label{font-size:11px;color:var(--muted)}.text-button{border:0;background:transparent;padding:3px;color:var(--green);font-size:11px}.sidebar-note{margin:auto 11px 0;border-top:1px solid var(--line);padding-top:18px;font-size:12px;line-height:1.85;color:var(--muted)}.sidebar-note strong{color:#49655b;font-weight:600;display:block;margin-bottom:5px}.main{background:var(--paper);border:1px solid var(--line);border-radius:18px;box-shadow:0 6px 30px #253e3010;min-width:0;display:flex;flex-direction:column;overflow:hidden}.topbar{display:flex;justify-content:space-between;align-items:center;gap:16px;border-bottom:1px solid #e7ebe5;padding:19px 25px}.room-title{margin:0;font-size:16px;font-weight:650}.room-subtitle{font-size:11px;color:var(--muted);margin:5px 0 0}.top-actions{display:flex;gap:7px}.status-banner{margin:12px 24px 0;border-radius:8px;padding:9px 12px;font-size:12px;line-height:1.65;background:#f7f2e5;color:#806030;overflow-wrap:anywhere}.status-banner[hidden]{display:none}.conversation{overflow-y:auto;flex:1;padding:23px 25px;scroll-behavior:smooth;min-height:0;overscroll-behavior:contain}.empty{max-width:510px;margin:clamp(25px,8vh,85px) auto;text-align:center}.empty-mark{width:52px;height:52px;border:1px solid #c9d7c9;color:#759582;border-radius:17px;display:grid;place-items:center;margin:0 auto 20px;font-size:25px;background:#f4f7f0}.empty h2{font-size:24px;letter-spacing:.8px;margin:0 0 11px;font-weight:600}.empty p{font-size:13px;line-height:1.9;color:var(--muted);margin:0 auto 23px;max-width:420px}.starter-list{display:grid;gap:8px;max-width:415px;margin:auto}.starter{font-weight:400;text-align:left;font-size:12px;line-height:1.7;padding:10px 13px;background:#fafbf6;color:#596c61}.starter::before{content:"↗";margin-right:10px;color:#6b9079}.message{display:flex;align-items:flex-start;gap:11px;max-width:900px;margin:0 0 22px}.message.user{margin-left:auto;flex-direction:row-reverse;max-width:780px}.message-main{min-width:0;max-width:calc(100% - 44px)}.message-meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:1px 0 6px;font-size:11px;color:#8a9890}.message-meta strong{font-size:12px;color:#3d5148;font-weight:650}.message.user .message-meta{justify-content:flex-end}.message-status{font-size:10px;color:#8a9890}.message-status.live{color:#478065}.message-status.partial{color:var(--warn)}.bubble{font-size:14px;line-height:1.9;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;tab-size:2}.message.user .bubble{background:#edf2e9;border:1px solid #e3eade;padding:10px 14px;border-radius:13px 2px 13px 13px}.bubble.waiting{color:#8a9890;font-size:12px}.notice{max-width:860px;margin:0 0 18px 44px;padding:9px 12px;border-left:2px solid #d8b78b;background:#faf5eb;color:#8b643b;font-size:12px;line-height:1.7;overflow-wrap:anywhere;white-space:pre-wrap}.composer-area{border-top:1px solid #e7ebe5;background:#fafbf7;padding:13px 24px 14px}.discussion-tools{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:10px}.tool-spacer{flex:1}.summary-label{font-size:11px;color:var(--muted)}select{border:1px solid var(--line);color:#496056;background:#fffefb;border-radius:8px;font-size:12px;padding:7px 27px 7px 9px;max-width:100%}.composer{border:1px solid #c9d7ca;background:#fffefb;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px #1f3f2210}.composer:focus-within{border-color:#75a18a;box-shadow:0 0 0 2px #cde2cf55}textarea{width:100%;resize:none;min-height:71px;max-height:180px;padding:12px 14px 5px;border:0;outline:none!important;display:block;color:var(--ink);background:transparent;font-size:14px;line-height:1.7}textarea::placeholder{color:#95a095}.composer-bottom{display:flex;align-items:center;justify-content:space-between;padding:7px 9px 9px;gap:9px}.send-controls{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.send-controls label{font-size:11px;color:var(--muted);padding-left:4px}.send-controls select{border:0;background:#f2f5ee;padding-top:6px;padding-bottom:6px}.send-actions{display:flex;align-items:center;gap:7px}.send-actions button{white-space:nowrap}.composer-foot{display:flex;justify-content:space-between;gap:12px;font-size:10px;color:#8a988e;line-height:1.5;margin-top:8px}.activity{min-height:16px;color:#65806e}.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);max-width:min(620px,90vw);border-radius:10px;background:#294b3d;color:#fff;padding:12px 17px;font-size:12px;line-height:1.7;box-shadow:0 5px 25px #1b322933;z-index:10}.toast[hidden]{display:none}#stop-button[hidden]{display:none}@keyframes breathe{50%{opacity:.35}}@media(min-width:1300px){.conversation{padding-left:40px;padding-right:40px}.topbar{padding-left:40px;padding-right:40px}.composer-area{padding-left:40px;padding-right:40px}}@media(max-width:830px){.app{grid-template-columns:175px minmax(0,1fr);gap:11px;padding:10px}.sidebar{gap:20px}.brand{padding:0 4px;gap:8px}.brand h1{font-size:20px}.brand p{font-size:10px}.brand-mark{width:31px;height:34px}.participant{padding:9px 7px;gap:7px}.participant .avatar{width:27px;height:29px;font-size:11px}.participant-detail{font-size:10px}.topbar{padding:16px}.top-actions button{font-size:11px;padding:7px 9px}.conversation{padding:20px 16px}.composer-area{padding:11px 14px}.status-banner{margin-left:14px;margin-right:14px}.summary-label{display:none}.send-controls label{display:none}.composer-foot span:last-child{display:none}.sidebar-note{font-size:11px;margin-left:5px;margin-right:5px}}@media(max-width:610px){.app{display:flex;flex-direction:column;padding:8px;gap:9px}.sidebar{flex-direction:row;align-items:center;padding:0;gap:8px;flex-shrink:0}.brand{padding:0 2px}.brand h1{font-size:16px;letter-spacing:1px;white-space:nowrap}.brand p,.brand-mark,.sidebar-title,.connection-row,.sidebar-note,.participant-detail{display:none}.participant-list{display:flex;gap:4px;flex:1;justify-content:flex-end}.participant{padding:8px 7px;gap:5px}.participant .avatar{display:none}.participant-name{font-size:10px}.participant-heading{gap:4px}.main{flex:1;border-radius:13px;min-height:0}.topbar{padding:13px;gap:8px}.room-title{font-size:14px}.room-subtitle{font-size:10px}.conversation{padding:18px 13px}.message{gap:8px;margin-bottom:20px}.message-main{max-width:calc(100% - 36px)}.message .avatar{width:28px;height:29px;font-size:11px;border-radius:8px}.bubble{font-size:13px}.composer-area{padding:10px}.discussion-tools{gap:5px}.discussion-tools button{font-size:11px;padding:7px 8px}.discussion-tools select{font-size:11px;max-width:100px}.tool-spacer{display:none}.summary-label{display:none}.empty{margin:25px auto}.empty h2{font-size:21px}.empty p{font-size:12px}.composer-bottom{padding:6px 7px 8px}.send-controls{gap:3px}.send-controls select{font-size:11px;max-width:115px;padding-left:6px}.send-actions button{padding:8px 10px;font-size:12px}.notice{margin-left:36px}.composer-foot{font-size:9px}}@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;scroll-behavior:auto!important;transition:none!important}}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" aria-label="讨论成员">
+      <div class="brand"><div class="brand-mark" aria-hidden="true">声</div><div><h1>众声室</h1><p>一张桌子，三种思路</p></div></div>
+      <section style="flex:1;min-height:0"><p class="sidebar-title">本场成员 · 03</p><div class="participant-list" id="participants"></div><div class="connection-row"><span class="connection-label" id="connection-label">正在检查连接</span><button class="text-button" id="refresh-button" type="button">刷新</button></div></section>
+      <div class="sidebar-note"><strong>Sir 也是讨论的一员</strong>提出问题，点名追问，或让他们接着聊。每位成员都能看到本场已有的发言。<details style="margin-top:13px"><summary style="cursor:pointer;color:#49655b">成员未连接？</summary><div style="margin-top:7px;overflow-wrap:anywhere">Claude：双击本目录的 <code>login-claude-official.cmd</code>，按提示完成官方账号登录。<br>Grok：在终端运行 <code>grok login</code>。<br>登录由您本人完成，之后点击“刷新”。</div></details></div>
+    </aside>
+    <main class="main">
+      <header class="topbar"><div><h2 class="room-title">Codex · Claude · Grok</h2><p class="room-subtitle">共同讨论，各自回答</p></div><div class="top-actions"><button class="small" id="export-button" type="button" title="导出为 Markdown 文件">导出记录</button><button class="small" id="new-button" type="button">新讨论</button></div></header>
+      <div class="status-banner" id="status-banner" role="status" hidden></div>
+      <section class="conversation" id="conversation" aria-label="聊天记录" aria-live="polite" aria-relevant="additions">
+        <div class="empty" id="empty-state"><div class="empty-mark" aria-hidden="true">↔</div><h2>把想法放到桌上</h2><p>您发起一个话题，三位 AI 阅读彼此的回复，<br>补充、质疑，再一起把问题想清楚。</p><div class="starter-list"><button class="starter" type="button">帮我检视一个方案：先给判断，再互相指出遗漏。</button><button class="starter" type="button">讨论一个有争议的问题，分别给出最有力的支持和反对理由。</button><button class="starter" type="button">我有一个还不成熟的想法，先通过追问帮我理清。</button></div></div>
+      </section>
+      <section class="composer-area" aria-label="发送消息">
+        <div class="discussion-tools"><button class="small" id="continue-button" type="button" disabled>继续一轮</button><span class="tool-spacer"></span><label class="summary-label" for="summary-target">请谁整理</label><select id="summary-target" aria-label="选择整理讨论的成员"></select><button class="small" id="summary-button" type="button" disabled>整理讨论</button></div>
+        <form class="composer" id="composer-form"><textarea id="message-input" rows="2" aria-label="消息内容" placeholder="Sir，聊点什么？也可以选择一位成员，直接追问。"></textarea><div class="composer-bottom"><div class="send-controls"><label for="target-select">发给</label><select id="target-select" aria-label="选择接收消息的成员"><option value="all">所有可用成员</option></select><label for="rounds-select">讨论</label><select id="rounds-select" aria-label="讨论轮数"><option value="1">1 轮</option><option value="2">2 轮</option><option value="3">3 轮</option></select></div><div class="send-actions"><button class="stop" id="stop-button" type="button" hidden>停止</button><button class="primary" id="send-button" type="submit" disabled>发送 ↑</button></div></div></form>
+        <div class="composer-foot"><span class="activity" id="activity" role="status">正在检查本机连接…</span><span>Enter 发送 · Shift + Enter 换行</span></div><div class="composer-foot" style="margin-top:3px"><span>历史保存在此浏览器，所选成员会收到前文。请勿粘贴密钥。</span></div>
+      </section>
+    </main>
+  </div>
+  <div class="toast" id="toast" role="alert" hidden></div>
+  <script>
+    "use strict";
+    const ROOM_TOKEN = "__ROOM_TOKEN__";
+    const STORAGE_KEY = "zhongshengshi:local-room:v1";
+    const MEMBERS = [{id:"codex",name:"Codex",letter:"C"},{id:"claude",name:"Claude",letter:"A"},{id:"grok",name:"Grok",letter:"G"}];
+    const $ = id => document.getElementById(id);
+    const state = {records:[],providers:[],statusKnown:false,serverBusy:false,request:null,activeMessage:null,statusLoading:false,toastTimer:null,storageUnreadable:false};
+    const nodes = new Map();
+    const memberNodes = new Map();
+
+    function uid() { return crypto.randomUUID(); }
+    function make(tag, className, value) { const node=document.createElement(tag); if(className)node.className=className; if(value!==undefined)node.textContent=String(value); return node; }
+    function notify(message) { clearTimeout(state.toastTimer); $("toast").textContent=message; $("toast").hidden=false; state.toastTimer=setTimeout(()=>{$("toast").hidden=true;},6500); }
+    function setActivity(message) { $("activity").textContent=message; }
+    function atBottom() { const box=$("conversation"); return box.scrollHeight-box.scrollTop-box.clientHeight<110; }
+    function scrollDown(force=false) { if(force||atBottom()) $("conversation").scrollTop=$("conversation").scrollHeight; }
+    function save() { if(state.storageUnreadable)return;try { localStorage.setItem(STORAGE_KEY,JSON.stringify({records:state.records,draft:$("message-input").value,target:$("target-select").value,rounds:$("rounds-select").value})); } catch { notify("浏览器未能保存记录，请及时导出本场讨论。"); } }
+    function updateEmpty() { $("empty-state").hidden=state.records.length>0; }
+    function stamp(value) { const date=new Date(value); return Number.isNaN(date.getTime())?"":date.toLocaleTimeString("zh-CN",{hour:"2-digit",minute:"2-digit"}); }
+
+    function renderRecord(record) {
+      if(record.kind==="notice") { const notice=make("div","notice",record.text); notice.setAttribute("role","status"); $("conversation").append(notice); nodes.set(record.id,{root:notice}); return; }
+      const person=MEMBERS.find(item=>item.name===record.speaker);
+      const root=make("article","message"+(record.role==="user"?" user":""));
+      const avatar=make("div","avatar "+(person?.id||"sir"),person?.letter||"S"); avatar.setAttribute("aria-hidden","true");
+      const main=make("div","message-main"), meta=make("div","message-meta"), status=make("span","message-status");
+      meta.append(make("strong","",record.speaker),make("span","",stamp(record.createdAt)),status);
+      const bubble=make("div","bubble"); main.append(meta,bubble); root.append(avatar,main); $("conversation").append(root);
+      nodes.set(record.id,{root,bubble,status}); updateRecord(record);
+    }
+    function updateRecord(record) {
+      const view=nodes.get(record.id); if(!view?.bubble)return;
+      view.bubble.textContent=record.text||(record.pending?"正在思考…":"");
+      view.bubble.classList.toggle("waiting",!record.text&&Boolean(record.pending));
+      view.status.className="message-status"+(record.pending?" live":record.partial?" partial":"");
+      view.status.textContent=record.pending?"正在回复":record.partial?"回复未完成":record.model?record.model:"";
+    }
+    function appendRecord(record) { const follow=atBottom(); state.records.push(record); renderRecord(record); updateEmpty(); if(follow)scrollDown(true); save(); updateControls(); }
+    function notice(message) { appendRecord({id:uid(),kind:"notice",text:message,createdAt:new Date().toISOString()}); }
+    function removeEmptyPending(record) { const index=state.records.indexOf(record); if(index>=0)state.records.splice(index,1); nodes.get(record.id)?.root.remove(); nodes.delete(record.id); updateEmpty(); }
+    function settlePending() {
+      if(!state.activeMessage)return;
+      const record=state.activeMessage; record.pending=false;
+      if(record.text){record.partial=true;updateRecord(record);}else{removeEmptyPending(record);}
+      state.activeMessage=null; save();
+    }
+    function payloadMessages() { return state.records.filter(item=>item.kind==="message"&&item.text.trim()&&(item.role==="user"||(item.role==="assistant"&&!item.partial&&!item.pending))).map(item=>({role:item.role,speaker:item.speaker,text:item.text})); }
+
+    function buildMembers() {
+      MEMBERS.forEach(member=>{
+        const row=make("div","participant"), avatar=make("div","avatar "+member.id,member.letter), body=make("div","participant-main"), heading=make("div","participant-heading");
+        heading.append(make("span","participant-name",member.name),make("span","state-dot")); const detail=make("div","participant-detail","正在检查…"); body.append(heading,detail);row.append(avatar,body);$("participants").append(row);memberNodes.set(member.id,{row,detail});
+        const option=make("option","",member.name);option.value=member.id;option.disabled=true;$("target-select").append(option);
+        const summary=make("option","",member.name);summary.value=member.id;summary.disabled=true;$("summary-target").append(summary);
+      });
+    }
+    function provider(id) { return state.providers.find(item=>item.id===id); }
+    function availableMembers() { return MEMBERS.filter(member=>provider(member.id)?.available); }
+    function chosenMembers(mode) {
+      const target=mode==="summary"?$("summary-target").value:$("target-select").value;
+      return target==="all"?availableMembers().map(item=>item.id):provider(target)?.available?[target]:[];
+    }
+    function updateMembers() {
+      MEMBERS.forEach(member=>{
+        const info=provider(member.id), item=memberNodes.get(member.id), speaking=state.activeMessage?.speaker===member.name;
+        item.row.classList.toggle("ready",Boolean(info?.available));item.row.classList.toggle("speaking",speaking);
+        item.detail.textContent=speaking?"正在阅读前文并回复…":info?.detail||(state.statusKnown?(info?.available?"已连接":"未连接"):"尚未连接本机服务");
+        item.row.title=member.name+"："+item.detail.textContent;
+        for(const select of [$("target-select"),$("summary-target")]){const option=Array.from(select.options).find(value=>value.value===member.id);option.disabled=!info?.available;option.textContent=member.name+(info?.available?"":" · 未连接");}
+      });
+      if(!provider($("summary-target").value)?.available){const first=availableMembers()[0];if(first)$("summary-target").value=first.id;}
+      $("connection-label").textContent=state.statusKnown?availableMembers().length+" / 3 已连接":"连接未就绪";
+    }
+    function updateControls() {
+      const blocked=Boolean(state.request)||state.serverBusy||!state.statusKnown;
+      const hasHistory=payloadMessages().length>0;
+      $("send-button").disabled=blocked||!$("message-input").value.trim()||!chosenMembers("discuss").length;
+      $("continue-button").disabled=blocked||!hasHistory||!chosenMembers("discuss").length;
+      $("summary-button").disabled=blocked||!hasHistory||!chosenMembers("summary").length;
+      $("target-select").disabled=Boolean(state.request);$("rounds-select").disabled=Boolean(state.request);$("summary-target").disabled=Boolean(state.request);
+      $("stop-button").hidden=!state.request;$("stop-button").disabled=Boolean(state.request?.stopping);$("stop-button").textContent=state.request?.stopping?"停止中…":"停止";
+      $("new-button").disabled=Boolean(state.request)||state.serverBusy;$("export-button").disabled=!hasHistory;
+      let banner="";
+      if(!state.statusKnown)banner="尚未连上本机服务。请从启动入口打开此页面，再刷新连接。";
+      else if(!availableMembers().length)banner="三位成员均未就绪。请先在本机完成对应工具的安装和登录，再刷新连接。";
+      else if(state.serverBusy&&!state.request)banner="另一个页面正在使用讨论服务，请等它结束后继续。";
+      else if($("target-select").value==="all"){const missing=MEMBERS.filter(member=>!provider(member.id)?.available);if(missing.length)banner="本次只发送给已连接成员；暂不包含 "+missing.map(item=>item.name).join("、")+"。";}
+      else if(!chosenMembers("discuss").length)banner="当前选择的成员尚未连接，请改选其他成员或刷新连接。";
+      if(state.storageUnreadable)banner+=(banner?" ":"")+"原有历史无法读取，自动保存已暂停以保留原数据。本轮请及时导出，或确认开始新讨论后恢复保存。";
+      $("status-banner").textContent=banner;$("status-banner").hidden=!banner;
+    }
+    async function refreshStatus(manual=false) {
+      if(state.statusLoading)return;state.statusLoading=true;$("refresh-button").disabled=true;
+      try{
+        const response=await fetch(manual?"/api/status?refresh=1":"/api/status",{cache:"no-store"});if(!response.ok)throw new Error("状态读取失败");const body=await response.json();if(!Array.isArray(body.providers))throw new Error("状态格式不正确");
+        state.providers=body.providers.filter(item=>MEMBERS.some(member=>member.id===item.id)).map(item=>({id:item.id,available:item.available===true,detail:typeof item.detail==="string"?item.detail:""}));state.statusKnown=true;state.serverBusy=body.busy===true;
+        if(!state.request)setActivity(state.serverBusy?"讨论服务正在忙碌":availableMembers().length?"已就绪，随时加入讨论":"等待成员连接");
+        if(manual)notify("已刷新："+availableMembers().length+" 位成员可用。");
+      }catch{state.statusKnown=false;state.providers=[];state.serverBusy=false;if(!state.request)setActivity("本机服务暂时无法连接");if(manual)notify("未能连接本机服务，请检查启动窗口是否仍在运行。");}
+      finally{state.statusLoading=false;$("refresh-button").disabled=false;updateMembers();updateControls();}
+    }
+
+    function handleEvent(event,request) {
+      if(!event||typeof event.type!=="string")throw new Error("收到无法识别的讨论数据。");
+      if(event.type==="start"){
+        settlePending();const member=MEMBERS.find(item=>item.id===event.provider);if(!member)throw new Error("收到未知成员的回复。");
+        const record={id:uid(),kind:"message",role:"assistant",speaker:member.name,text:"",createdAt:new Date().toISOString(),pending:true,partial:false};state.activeMessage=record;appendRecord(record);setActivity(member.name+" 正在回复…");updateMembers();
+      }else if(event.type==="delta"){
+        if(!state.activeMessage||typeof event.text!=="string")return;const follow=atBottom();state.activeMessage.text+=event.text;updateRecord(state.activeMessage);if(follow)scrollDown(true);save();
+      }else if(event.type==="message"){
+        const member=MEMBERS.find(item=>item.id===event.provider);if(!member||typeof event.text!=="string")throw new Error("收到不完整的成员回复。");
+        let record=state.activeMessage;
+        if(record&&record.speaker!==member.name){settlePending();record=null;}
+        if(!record){record={id:uid(),kind:"message",role:"assistant",speaker:member.name,text:"",createdAt:new Date().toISOString()};appendRecord(record);}
+        const follow=atBottom();record.text=event.text;record.pending=false;record.partial=false;if(typeof event.model==="string")record.model=event.model;updateRecord(record);state.activeMessage=null;if(follow)scrollDown(true);request.completed+=1;save();updateMembers();
+      }else if(event.type==="error"){
+        settlePending();request.errors+=1;const member=MEMBERS.find(item=>item.id===event.provider);notice((member?member.name+"：":"")+(typeof event.message==="string"?event.message:"本次回复未完成。"));updateMembers();
+      }else if(event.type==="done"){request.done=true;settlePending();}
+    }
+    async function readEvents(response,request) {
+      if(!response.body)throw new Error("浏览器无法读取流式回复。");
+      const reader=response.body.getReader(), decoder=new TextDecoder();let buffer="";
+      try{
+        while(true){const part=await reader.read();buffer+=decoder.decode(part.value||new Uint8Array(),{stream:!part.done});let newline;
+          while((newline=buffer.indexOf("\n"))>=0){const line=buffer.slice(0,newline).trim();buffer=buffer.slice(newline+1);if(line)handleEvent(JSON.parse(line),request);}
+          if(part.done){if(buffer.trim())handleEvent(JSON.parse(buffer),request);break;}
+        }
+      }finally{reader.releaseLock();}
+      if(!request.done)throw new Error("讨论连接提前断开；已收到的回复已保留。");
+    }
+    async function responseError(response) {
+      let message="请求失败（"+response.status+"）";
+      try{const body=await response.json();if(typeof body.error==="string")message=body.error;else if(typeof body.message==="string")message=body.message;}catch{}
+      return message;
+    }
+    async function discuss(mode,addUser=false,forceOneRound=false) {
+      if(state.request||state.serverBusy)return;
+      const participants=chosenMembers(mode), draft=$("message-input").value.trim();
+      if(!state.statusKnown||!participants.length){notify("请先连接并选择至少一位成员。");return;}
+      if(addUser&&!draft)return;if(!addUser&&!payloadMessages().length)return;
+      if(addUser){appendRecord({id:uid(),kind:"message",role:"user",speaker:"Sir",text:draft,createdAt:new Date().toISOString()});$("message-input").value="";resizeInput();scrollDown(true);}
+      const request={id:uid(),stopping:false,done:false,completed:0,errors:0};state.request=request;state.serverBusy=true;updateControls();save();setActivity(mode==="summary"?"正在整理本场讨论…":"正在邀请成员加入讨论…");
+      try{
+        const response=await fetch("/api/discuss",{method:"POST",headers:{"Content-Type":"application/json","X-Room-Token":ROOM_TOKEN},body:JSON.stringify({request_id:request.id,messages:payloadMessages(),participants,rounds:mode==="summary"||forceOneRound?1:Number($("rounds-select").value),mode})});
+        if(!response.ok)throw new Error(await responseError(response));await readEvents(response,request);
+        setActivity(request.stopping?"已停止；收到的内容已保留":request.errors?"本轮结束，部分成员未完成回复":mode==="summary"?"整理完成，您可以继续追问":"本轮结束，您可以接话或继续一轮");
+      }catch(error){settlePending();notice(error instanceof Error?error.message:"本次讨论未完成，请稍后重试。");setActivity("讨论已中断，已收到的内容保留在上方");}
+      finally{settlePending();state.request=null;state.serverBusy=false;updateMembers();updateControls();save();setTimeout(()=>{void refreshStatus();},1200);}
+    }
+    async function stopDiscussion() {
+      const request=state.request;if(!request||request.stopping)return;request.stopping=true;updateControls();setActivity("正在请求停止当前讨论…");
+      try{const response=await fetch("/api/cancel",{method:"POST",headers:{"Content-Type":"application/json","X-Room-Token":ROOM_TOKEN},body:JSON.stringify({request_id:request.id})});if(!response.ok)throw new Error(await responseError(response));if(state.request===request)setActivity("已发送停止请求，正在等待当前成员结束…");}
+      catch(error){if(state.request===request){request.stopping=false;updateControls();setActivity("停止请求未送达，可以再次尝试");}notify(error instanceof Error?error.message:"停止请求未送达。");}
+    }
+    function exportMarkdown() {
+      if(!payloadMessages().length)return;
+      const date=new Date(), lines=["# 众声室讨论记录","",date.toLocaleString("zh-CN"),""];
+      state.records.forEach(record=>{if(record.kind==="notice"){lines.push("> 系统提示："+record.text.replace(/\n/g,"\n> "),"");return;}if(!record.text)return;lines.push("## "+record.speaker+(record.partial||record.pending?"（未完成）":""),"",record.text,"");});
+      const blob=new Blob([lines.join("\n")],{type:"text/markdown;charset=utf-8"}), url=URL.createObjectURL(blob), link=document.createElement("a");link.href=url;link.download="众声室-"+date.toLocaleDateString("sv-SE")+"-"+String(date.getHours()).padStart(2,"0")+String(date.getMinutes()).padStart(2,"0")+".md";document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+    }
+    function newDiscussion() {
+      if(state.request||state.serverBusy)return;
+      if((state.records.length||$("message-input").value.trim()||state.storageUnreadable)&&!confirm(state.storageUnreadable?"原有历史无法读取。开始新讨论会覆盖此浏览器中保存的原数据和当前草稿。确定继续吗？":"开始新讨论会清空此浏览器中的当前记录和输入草稿。需要保留的内容请先导出。继续吗？"))return;
+      state.records=[];state.storageUnreadable=false;nodes.forEach(node=>node.root.remove());nodes.clear();$("message-input").value="";resizeInput();updateEmpty();save();updateControls();setActivity("新讨论已准备好");$("message-input").focus();
+    }
+    function restore() {
+      try{
+        const raw=localStorage.getItem(STORAGE_KEY);if(!raw)return;const saved=JSON.parse(raw);if(!saved||!Array.isArray(saved.records))throw new Error("历史格式无法识别");
+        if(Array.isArray(saved.records)){saved.records.forEach(item=>{
+          if(!item||typeof item.text!=="string"||!item.text.trim())return;
+          if(item.kind==="notice"){state.records.push({id:uid(),kind:"notice",text:item.text,createdAt:item.createdAt});return;}
+          if(item.kind!=="message"||!['user','assistant'].includes(item.role)||!['Sir','Codex','Claude','Grok'].includes(item.speaker))return;
+          state.records.push({id:uid(),kind:"message",role:item.role,speaker:item.speaker,text:item.text,createdAt:typeof item.createdAt==="string"?item.createdAt:new Date().toISOString(),partial:Boolean(item.partial||item.pending),model:typeof item.model==="string"?item.model:undefined});
+        });state.records.forEach(renderRecord);updateEmpty();scrollDown(true);}
+        if(typeof saved.draft==="string")$("message-input").value=saved.draft;
+        if(["all","codex","claude","grok"].includes(saved.target))$("target-select").value=saved.target;
+        if(["1","2","3"].includes(String(saved.rounds)))$("rounds-select").value=String(saved.rounds);
+      }catch{state.storageUnreadable=true;notify("原有本地记录未能读取，已暂停自动保存以保留原数据。本轮请及时导出。");}
+      resizeInput();
+    }
+    function resizeInput() { const input=$("message-input");input.style.height="auto";input.style.height=Math.min(180,Math.max(71,input.scrollHeight))+"px"; }
+
+    buildMembers();restore();updateControls();
+    $("composer-form").addEventListener("submit",event=>{event.preventDefault();void discuss("discuss",true);});
+    $("message-input").addEventListener("input",()=>{resizeInput();save();updateControls();});
+    $("message-input").addEventListener("keydown",event=>{if(event.key==="Enter"&&!event.shiftKey&&!event.isComposing){event.preventDefault();if(!$("send-button").disabled)void discuss("discuss",true);}});
+    $("target-select").addEventListener("change",()=>{save();updateControls();});$("rounds-select").addEventListener("change",save);$("summary-target").addEventListener("change",updateControls);
+    $("continue-button").addEventListener("click",()=>{void discuss("discuss",false,true);});$("summary-button").addEventListener("click",()=>{void discuss("summary");});$("stop-button").addEventListener("click",()=>{void stopDiscussion();});
+    $("refresh-button").addEventListener("click",()=>{void refreshStatus(true);});$("export-button").addEventListener("click",exportMarkdown);$("new-button").addEventListener("click",newDiscussion);
+    document.querySelectorAll(".starter").forEach(button=>button.addEventListener("click",()=>{$("message-input").value=button.textContent;resizeInput();save();updateControls();$("message-input").focus();}));
+    window.addEventListener("beforeunload",event=>{if(state.request){event.preventDefault();event.returnValue="";}});
+    void refreshStatus();setInterval(()=>{if(!state.request&&!document.hidden)void refreshStatus();},15000);
+  </script>
+</body>
+</html>
