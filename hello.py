@@ -512,6 +512,9 @@ def render_home():
           <div class="sub-title">{escape(display_title)}</div>
           <div class="sub-actions">
             <a href="#modules" target="_self">浏览模块</a>
+            <span class="sub-divider sub-divider-browse" aria-hidden="true">·</span>
+            <a class="sub-newspaper" href="{escape(build_streamlit_page_href('pages/27_28_newspaper.py'), quote=True)}" target="_self">Newspaper</a>
+            <span class="sub-divider" aria-hidden="true">·</span>
             <a class="pill pill-primary pill-sm" href="#modules" target="_self">进入工作台</a>
           </div>
         </div>

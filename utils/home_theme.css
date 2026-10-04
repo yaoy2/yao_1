@@ -181,9 +181,11 @@ body:has(.apple-home) .sub-title {
 body:has(.apple-home) .sub-actions {
     display: flex;
     align-items: center;
-    gap: 18px;
+    gap: 12px;
     font-size: 14px;
+    white-space: nowrap;
 }
+body:has(.apple-home) .sub-divider { color: var(--colors-ink-muted-48); }
 body:has(.apple-home) .pill {
     display: inline-flex;
     align-items: center;
@@ -350,5 +352,9 @@ body:has(.apple-home) .span-6 { grid-column: span 2; }
 body:has(.apple-home) .product-tile h1 { font-size: 30px; }
 body:has(.apple-home) .lead-playful { font-size: 20px; }
 body:has(.apple-home) .quote h2 { font-size: 20px; }
-body:has(.apple-home) .sub-actions a:not(.pill) { display: none; }
+body:has(.apple-home) .sub-nav { height: auto; min-height: 52px; }
+body:has(.apple-home) .sub-nav-inner { height: auto; min-height: 52px; flex-wrap: wrap; padding-block: 8px; row-gap: 6px; }
+body:has(.apple-home) .sub-actions { gap: 8px; margin-left: auto; }
+body:has(.apple-home) .sub-actions a:not(.pill):not(.sub-newspaper),
+body:has(.apple-home) .sub-divider-browse { display: none; }
 }

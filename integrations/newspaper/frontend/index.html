@@ -6,6 +6,18 @@
 <meta name="color-scheme" content="light">
 <title>Newspaper · 综合新闻</title>
 <style>
+/* Unmodified UnifrakturCook Bold from Google Fonts, retrieved 2026-10-04.
+   Source: https://github.com/google/fonts/tree/main/ofl/unifrakturcook
+   Font: https://raw.githubusercontent.com/google/fonts/main/ofl/unifrakturcook/UnifrakturCook-Bold.ttf
+   SHA-256: ea002fa9c65f1a612af100e00d87ab65f16381f450020ec3d021f3dbf79a6dcd
+   License: SIL OFL 1.1; bundled in fonts/OFL-UnifrakturCook.txt. */
+@font-face {
+ font-family:'UnifrakturCook';
+ src:url('./fonts/UnifrakturCook-Bold.ttf') format('truetype');
+ font-style:normal;
+ font-weight:700;
+ font-display:swap;
+}
 html,body { margin:0; padding:0; width:100%; min-width:0; background:#f7f3e9; color:#292821; color-scheme:light; }
 body { overflow-x:hidden; }
 button { cursor:pointer; }
@@ -27,7 +39,7 @@ button:disabled { cursor:not-allowed; }
 #paper-comprehensive .good { color:var(--green); }
 #paper-comprehensive .shell { display:flex; justify-content:space-between; gap:12px;  flex-wrap:wrap; font-size:12px; color:var(--muted-ink); }
 #paper-comprehensive .mast { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:center; gap:15px; padding:13px 0; border-bottom:4px double var(--ink); }
-#paper-comprehensive .mast h1 { font:700 clamp(33px,5.3vw,59px)/1.05 Georgia,'Times New Roman',serif; letter-spacing:-2px; margin:0 0 8px; text-align:center; }
+#paper-comprehensive .mast h1 { font:700 clamp(40px,5.7vw,68px)/1.08 'UnifrakturCook',Georgia,'Times New Roman',serif; letter-spacing:0; margin:0 0 8px; text-align:center; }
 #paper-comprehensive .mast .motto { font-size:11px; letter-spacing:4px; text-align:center; }
 #paper-comprehensive .mast .edition { font-size:12px; }
 #paper-comprehensive .mast .reading-return { text-align:right; }
@@ -120,7 +132,7 @@ button:disabled { cursor:not-allowed; }
 #paper-comprehensive:fullscreen .reader-bar { position:sticky; top:-18px; z-index:2; background:var(--page); }
 @media(max-width:740px) {
  #paper-comprehensive .mast { grid-template-columns:minmax(0,1fr); gap:8px; }
- #paper-comprehensive .mast h1 { font-size:clamp(38px,10vw,58px); letter-spacing:-1.5px; }
+ #paper-comprehensive .mast h1 { font-size:clamp(40px,11vw,60px); letter-spacing:0; }
  #paper-comprehensive .mast .reading-return { display:flex; align-items:center; justify-content:center; gap:12px; flex-wrap:wrap; text-align:center; }
  #paper-comprehensive .mast .motto { font-size:10px; letter-spacing:2px; }
  #paper-comprehensive .main-nav { gap:2px; }
