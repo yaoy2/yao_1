@@ -2,17 +2,18 @@
 
 [Project home](../../README.md) · [Repository map](../repository-structure.md) · [Getting started](getting-started.md)
 
-The registry in [hello.py](../../hello.py) is authoritative. There are **25 entries: 14 in current sections and 11 archived**. Some current entries are documentation or read-only showcases; each row states its actual boundary.
+The registry in [hello.py](../../hello.py) is authoritative. There are **26 entries: 15 in current sections and 11 archived**. Some current entries are documentation or read-only showcases; each row states its actual boundary.
 
 | Section | Entries |
 | --- | --- |
 | Administration | 5 |
 | Teaching | 1 |
-| Personal | 8 |
+| Personal | 9 |
 | Archived | 11 |
 
 | ID | Section | Status | Entry point | Behavior and requirements |
 | --- | --- | --- | --- | --- |
+| M27 | Personal | Current | [众声室](../../pages/26_27_ai_discussion_room.py) | Opens the local Codex / Claude / Grok discussion room. Requires the local launcher and signed-in CLI tools; unavailable participants are skipped. The hosted page does not run CLI tools or hold chat sessions. |
 | M26 | Personal | Current | [PUBG 密室地图](../../pages/25_26_pubg_secret_maps.py) | Views bundled map images with zoom, pan, and original-image download. Paramo and Karakin are excluded. |
 | M25 | Administration | Current | [随手传](../../pages/24_25_phone_transfer.py) | Paired phone-to-desktop transfer; the receiving desktop page must remain open. Requires configured transfer services. |
 | M24 | Archived | Archived | [邮件工作台](../../pages/23_24_mail_workbench.py) | Retired from navigation; retained for historical reference. Current mail todos follow the Edge-based workflow. |
@@ -41,4 +42,4 @@ The registry in [hello.py](../../hello.py) is authoritative. There are **25 entr
 
 M12 was removed. Module numbers preserve introduction order and are intentionally discontinuous. Independent subprojects are described separately in the [project overview](../../README.md).
 
-中文：行政 5、教学 1、个人 8、归档 11；M11、M16、M17、M20、M24 已停用，M25 需要本地组件，M26 查看仓库内地图图片，M23 当前只介绍三项任务。展示页不代表主库已经运行对应的外部系统。
+中文：行政 5、教学 1、个人 9、归档 11；M11、M16、M17、M20、M24 已停用，M27 为本机 AI 群聊入口，M25 需要本地组件，M26 查看仓库内地图图片，M23 当前只介绍三项任务。展示页不代表主库已经运行对应的外部系统。

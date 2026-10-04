@@ -9,6 +9,16 @@ from utils.home_theme import apply_home_theme
 
 TOOLS = [
     {
+        "title": "众声室",
+        "desc": "让 Codex、Claude、Grok 在同一个群聊中阅读彼此的发言，支持点名、继续讨论、总结与导出。需启动本机讨论室并登录对应工具。",
+        "tag": "AI 群聊",
+        "created": "2026_10_04",
+        "page": "pages/26_27_ai_discussion_room.py",
+        "code": "M27",
+        "accent": "green",
+        "section": "个人",
+    },
+    {
         "title": "PUBG 密室地图",
         "desc": "切换地图查看高清密室位置标记，支持缩放、拖动和原图下载，排除帕拉莫和卡拉金。",
         "tag": "游戏地图",

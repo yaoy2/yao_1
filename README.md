@@ -40,7 +40,7 @@ For the full toolbox, use `首次安装.bat`, then `启动YaoYao工具箱.bat`. 
 
 ## What is in the repository?
 
-The current catalog has **25 entries: Administration 5, Teaching 1, Personal 8, and archived 11**. Fourteen entries are in current sections. Some are read-only guides or showcases; this is not a count of independent applications.
+The current catalog has **26 entries: Administration 5, Teaching 1, Personal 9, and archived 11**. Fifteen entries are in current sections. Some are read-only guides or showcases; this is not a count of independent applications.
 
 | Area | Examples | Boundary |
 | --- | --- | --- |
