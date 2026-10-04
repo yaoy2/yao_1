@@ -1,6 +1,7 @@
 """Exercise the component event bridge without network or a Streamlit server."""
 
 from copy import deepcopy
+import importlib
 import json
 from pathlib import Path
 from unittest.mock import Mock
@@ -64,6 +65,24 @@ def test_newspaper_registration_survives_detached_page_execution(service):
     ).run()
     assert not app.exception
     assert app.get("component_instance")
+
+
+def test_page_refreshes_a_retained_legacy_service_only_once(service, monkeypatch):
+    monkeypatch.setattr(component, "NEWSPAPER_SERVICE_VERSION", 0)
+
+    def upgrade(module):
+        assert module is component
+        module.NEWSPAPER_SERVICE_VERSION = 2
+        return module
+
+    reload_service = Mock(side_effect=upgrade)
+    monkeypatch.setattr(importlib, "reload", reload_service)
+    app = AppTest.from_file(str(PAGE)).run()
+    assert not app.exception
+    assert component_args(app)["feed"]["articles"] == FEED["articles"]
+    app.run()
+    assert not app.exception
+    reload_service.assert_called_once_with(component)
 
 
 def test_read_uses_displayed_feed_and_does_not_replay_nonce(service):

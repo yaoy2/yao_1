@@ -2,9 +2,16 @@
 
 from copy import deepcopy
 from datetime import datetime, timezone
+import importlib
 import time
 
 import streamlit as st
+
+from utils import newspaper_component
+# Cloud can replace the page while retaining its previously imported services.
+# Refresh only the older service that has no official AI feed integration.
+if getattr(newspaper_component, "NEWSPAPER_SERVICE_VERSION", 0) < 2:
+    newspaper_component = importlib.reload(newspaper_component)
 
 from utils.newspaper_component import (
     cached_newspaper_article,

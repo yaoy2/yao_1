@@ -10,6 +10,9 @@ from utils.newspaper_data import fetch_newspaper_article, load_newspaper_feed
 from utils.newspaper_ai_sources import fetch_ai_official_article, load_ai_official_feed
 
 
+NEWSPAPER_SERVICE_VERSION = 2
+
+
 @st.cache_data(ttl=7200, max_entries=1, show_spinner=False)
 def cached_ai_official_feed():
     """Official AI RSS changes slowly; share its cache independently."""
