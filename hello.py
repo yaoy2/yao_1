@@ -1,3 +1,4 @@
+import importlib
 import re
 from html import escape
 from pathlib import Path
@@ -5,6 +6,10 @@ from urllib.parse import quote
 
 import streamlit as st
 
+from utils import home_theme
+# Refresh legacy Cloud imports so stylesheet changes become visible immediately.
+if getattr(home_theme, "HOME_THEME_VERSION", 0) < 2:
+    home_theme = importlib.reload(home_theme)
 from utils.home_theme import apply_home_theme
 
 TOOLS = [
