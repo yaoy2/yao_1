@@ -20,6 +20,7 @@ from bs4 import BeautifulSoup
 import requests
 
 
+NEWSPAPER_SOURCE_VERSION = 2
 SHANGHAI = timezone(timedelta(hours=8))
 REQUEST_TIMEOUT = (3.5, 7)
 MAX_RESPONSE_BYTES = 2_000_000
@@ -133,6 +134,44 @@ def _safe_url(value, *, article_only=False):
         return ""
 
 
+def _cache_policy(cache_control):
+    """Keep response cache restrictions explicit for shared-cache callers."""
+    directives = {part.split("=", 1)[0].strip().lower()
+                  for part in cache_control.split(",") if part.strip()}
+    maximum = (re.search(r'(?:^|,)\s*s-maxage\s*=\s*"?(\d+)', cache_control, re.I)
+               or re.search(r'(?:^|,)\s*max-age\s*=\s*"?(\d+)', cache_control, re.I))
+    max_age = int(maximum.group(1)) if maximum else None
+    store = not bool(directives & {"private", "no-store"})
+    policy = {"store": store, "reuse": store and "no-cache" not in directives and max_age != 0}
+    if max_age is not None:
+        policy["max_age_seconds"] = max_age
+    return policy
+
+
+def _combine_cache_policies(*policies):
+    result = {"store": True, "reuse": True}
+    for policy in policies:
+        if not isinstance(policy, dict):
+            continue
+        for key in ("store", "reuse"):
+            if policy.get(key) is False:
+                result[key] = False
+        age = policy.get("max_age_seconds")
+        if isinstance(age, int) and not isinstance(age, bool) and age >= 0:
+            result["max_age_seconds"] = min(age, result.get("max_age_seconds", age))
+    return result
+
+
+class _FetchedBytes(bytes):
+    """Bytes-compatible response body carrying its original cache directives."""
+
+    def __new__(cls, content, cache_control=""):
+        instance = super().__new__(cls, content)
+        instance.cache_control = cache_control
+        instance.cache_policy = _cache_policy(cache_control)
+        return instance
+
+
 def _fetch_bytes(url, *, article_only=False):
     """Bound size/idle waits and validate each redirect; total deadline is best effort."""
     current = _safe_url(url, article_only=article_only)
@@ -161,7 +200,7 @@ def _fetch_bytes(url, *, article_only=False):
                 content.extend(chunk)
                 if len(content) > MAX_RESPONSE_BYTES:
                     raise ValueError("来源响应过大")
-            return bytes(content)
+            return _FetchedBytes(content, response.headers.get("Cache-Control", ""))
     raise ValueError("来源跳转次数过多")
 
 
@@ -332,6 +371,8 @@ def _deduplicate(articles):
 
 def _load_source(source, now):
     content = _fetch_bytes(source.url)
+    cache_control = getattr(content, "cache_control", "")
+    policy = _cache_policy(cache_control)
     if source.parser == "rss":
         articles = _parse_rss(content, source)
     elif source.parser in ("cctv", "military"):
@@ -346,6 +387,8 @@ def _load_source(source, now):
     articles = [a for a in articles if cutoff <= _publication(a["published_at"]) <= now + timedelta(days=1)]
     if not articles:
         raise ValueError("来源没有近期有效内容，暂不收入报纸")
+    for article in articles:
+        article.update(cache_control=cache_control, cache_policy=dict(policy))
     return sorted(_deduplicate(articles), key=lambda a: a["published_at"], reverse=True)[:source.limit]
 
 
@@ -373,11 +416,14 @@ def load_newspaper_feed():
         for future in as_completed(pending):
             source = pending[future]
             state = {"id": source.id, "name": source.name, "scope": source.scope,
-                     "status": "ok", "count": 0, "checked_at": _now().isoformat(), "error": ""}
+                     "status": "ok", "count": 0, "checked_at": _now().isoformat(), "error": "",
+                     "cache_control": "", "cache_policy": _cache_policy("")}
             try:
                 articles = future.result()
                 by_source[source.id] = articles
-                state["count"] = len(articles)
+                state.update(count=len(articles),
+                             cache_control=articles[0].get("cache_control", "") if articles else "",
+                             cache_policy=_combine_cache_policies(*(a.get("cache_policy") for a in articles)))
             except Exception as error:
                 state.update(status="error", error=_error_message(error))
             statuses[source.id] = state
@@ -387,6 +433,7 @@ def load_newspaper_feed():
     sources = [statuses[source.id] for source in SOURCES]
     return {"articles": articles[:MAX_ARTICLES], "sources": sources,
             "fetched_at": _now().isoformat(),
+            "cache_policy": _combine_cache_policies(*(s["cache_policy"] for s in sources)),
             "errors": ["%s · %s：%s" % (s["name"], s["scope"], s["error"])
                        for s in sources if s["status"] == "error"]}
 
@@ -433,12 +480,17 @@ def fetch_newspaper_article(article_dict):
               "paragraphs": [summary] if summary else [],
               "source": _plain(article.get("source"), 80), "url": url,
               "title": _plain(article.get("title"), 300),
-              "published_at": str(article.get("published_at") or ""), "message": ""}
+              "published_at": str(article.get("published_at") or ""), "message": "",
+              "cache_policy": _combine_cache_policies(article.get("cache_policy"))}
     if not url:
         result.update(status="error", paragraphs=[], message="文章网址不在允许的官方来源范围内")
         return result
     try:
-        paragraphs = _extract_paragraphs(_fetch_bytes(url, article_only=True), url)
+        content = _fetch_bytes(url, article_only=True)
+        cache_control = getattr(content, "cache_control", "")
+        result.update(cache_control=cache_control,
+                      cache_policy=_combine_cache_policies(result["cache_policy"], _cache_policy(cache_control)))
+        paragraphs = _extract_paragraphs(content, url)
         if paragraphs:
             result.update(status="full", paragraphs=paragraphs, message="已提取来源公开正文，原文链接保留。")
         else:

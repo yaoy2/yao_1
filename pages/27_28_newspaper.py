@@ -10,12 +10,13 @@ import streamlit as st
 from utils import newspaper_component
 # Cloud can replace the page while retaining its previously imported services.
 # Refresh an older service after a source or cache contract changes.
-if getattr(newspaper_component, "NEWSPAPER_SERVICE_VERSION", 0) < 3:
+if getattr(newspaper_component, "NEWSPAPER_SERVICE_VERSION", 0) < 4:
     newspaper_component = importlib.reload(newspaper_component)
 
 from utils.newspaper_component import (
     cached_newspaper_article,
     cached_newspaper_feed,
+    newspaper_feed_for_page,
     declare_newspaper_component,
 )
 from utils.ui_theme import render_home_link
@@ -33,7 +34,7 @@ st.set_page_config(page_title="M28·Newspaper", page_icon="📰", layout="wide")
 render_home_link()
 st.markdown("### 📰 M28·Newspaper")
 st.caption(
-    "个人 · 多来源公开新闻与 AI 专版｜按来源要求更新；综合新闻缓存最长 15 分钟，官方 AI 信源最长 2 小时。读取失败可稍后重试。"
+    "个人 · 多来源公开新闻与 AI 专版｜优先读取已完成的有效日报；尚无日报时即时获取，手动更新可检查全部来源。"
     "推荐偏好、收藏与笔记仅保存在当前浏览器，尚未提供跨设备同步。"
 )
 
@@ -66,7 +67,7 @@ if is_new_request and request["action"] == "read" and st.session_state.get(DISPL
 else:
     try:
         with st.spinner("正在读取新闻来源…"):
-            feed = cached_newspaper_feed()
+            feed = newspaper_feed_for_page(force_live=bool(is_new_request and request["action"] == "refresh"))
     except Exception:
         # Do not expose transport internals or secrets through a public page.
         feed = {
@@ -90,6 +91,11 @@ elif not feed.get("articles") and st.session_state.get(LAST_FEED_KEY):
     feed["attempted_at"] = failed_feed.get("fetched_at")
 
 st.session_state[DISPLAY_FEED_KEY] = feed
+
+if feed.get("delivery") == "daily":
+    st.caption("定时日报 · " + str(feed.get("edition_date", ""))
+               + " · 采集完成：" + str(feed.get("fetched_at", ""))
+               + "。日报只收录允许保存的来源；点击更新可读取全部即时来源。")
 
 if is_new_request and request["action"] == "read":
     # The browser sends an article ID only. Never fetch a URL supplied by it.

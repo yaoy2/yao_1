@@ -113,6 +113,48 @@ class NewspaperParsingTest(unittest.TestCase):
 
 
 class NewspaperFeedTest(unittest.TestCase):
+    def test_response_cache_policy_reaches_articles_sources_and_feed(self):
+        cases = (
+            ("", {"store": True, "reuse": True}),
+            ("private", {"store": False, "reuse": False}),
+            ("No-Store, max-age=600", {"store": False, "reuse": False, "max_age_seconds": 600}),
+            ('private="Set-Cookie", public', {"store": False, "reuse": False}),
+            ("public, no-cache", {"store": True, "reuse": False}),
+            ("public, max-age=0, must-revalidate", {"store": True, "reuse": False, "max_age_seconds": 0}),
+            ('public, max-age="600"', {"store": True, "reuse": True, "max_age_seconds": 600}),
+            ("public, max-age=600, s-maxage=0", {"store": True, "reuse": False, "max_age_seconds": 0}),
+        )
+        for control, expected in cases:
+            with self.subTest(control=control), patch.object(news, "SOURCES", (RSS_SOURCE,)), \
+                    patch.object(news.requests, "get", return_value=response(body=rss({}), headers={"Cache-Control": control})), \
+                    patch.object(news, "_now", return_value=NOW):
+                feed = news.load_newspaper_feed()
+            self.assertEqual([], feed["errors"])
+            self.assertEqual(1, len(feed["articles"]))
+            for item in (feed, feed["sources"][0], feed["articles"][0]):
+                self.assertEqual(expected, item["cache_policy"])
+            self.assertEqual(control, feed["sources"][0]["cache_control"])
+            self.assertEqual(control, feed["articles"][0]["cache_control"])
+
+    def test_aggregate_retains_strictest_policy_and_smallest_finite_ttl(self):
+        sources = news.SOURCES[:3]
+        controls = {sources[0].url: "public, max-age=900", sources[1].url: "public, max-age=60",
+                    sources[2].url: "private"}
+
+        def fetch(url, **kwargs):
+            index = list(controls).index(url)
+            return response(body=rss({"link": CN_URL.replace("10707824", str(10707824 + index))}),
+                            headers={"Cache-Control": controls[url]})
+
+        with patch.object(news, "SOURCES", sources), patch.object(news.requests, "get", side_effect=fetch), \
+                patch.object(news, "_now", return_value=NOW):
+            feed = news.load_newspaper_feed()
+        self.assertEqual(3, len(feed["articles"]))
+        self.assertEqual({"store": False, "reuse": False, "max_age_seconds": 60}, feed["cache_policy"])
+        self.assertEqual([900, 60, None], [source["cache_policy"].get("max_age_seconds") for source in feed["sources"]])
+        self.assertTrue(feed["articles"][0]["cache_policy"]["store"])
+        self.assertFalse(feed["articles"][2]["cache_policy"]["store"])
+
     def test_failure_is_isolated_and_completion_order_does_not_change_source_priority(self):
         first, second = news.SOURCES[:2]
         broken = news.Source("broken", "错误来源", "测试", "https://news.cctv.com/", "rss", "地方城市")
@@ -143,6 +185,17 @@ class NewspaperFeedTest(unittest.TestCase):
 
 
 class NewspaperSafetyTest(unittest.TestCase):
+    def test_fetch_remains_bytes_compatible_and_keeps_final_response_policy(self):
+        redirect = response(302, headers={"Location": CN_URL})
+        final = response(body=b"response text", headers={"Cache-Control": "private, max-age=60"})
+        with patch.object(news.requests, "get", side_effect=[redirect, final]):
+            body = news._fetch_bytes(CN_URL, article_only=True)
+        self.assertIsInstance(body, bytes)
+        self.assertEqual(b"response text", body)
+        self.assertEqual("response text", body.decode("utf-8"))
+        self.assertEqual("private, max-age=60", body.cache_control)
+        self.assertEqual({"store": False, "reuse": False, "max_age_seconds": 60}, body.cache_policy)
+
     def test_url_rejects_local_hosts_lookalikes_credentials_and_other_paths(self):
         invalid = ["file:///etc/passwd", "http://127.0.0.1/", "http://localhost/",
                    "https://www.chinanews.com.cn.evil.example/x", "https://user@www.chinanews.com.cn/x",
@@ -178,6 +231,34 @@ class NewspaperSafetyTest(unittest.TestCase):
 class NewspaperReaderTest(unittest.TestCase):
     def setUp(self):
         self.article = news._parse_rss(rss({}), RSS_SOURCE)[0]
+
+    def test_article_response_policy_survives_full_and_summary_reading(self):
+        full = ('<div class="left_zw"><p>' + '正文保留原始信息和出处。' * 12 + '</p><p>' +
+                '背景报道与新闻事实。' * 12 + '</p></div>').encode("utf-8")
+        cases = (("private", {"store": False, "reuse": False}),
+                 ("no-store", {"store": False, "reuse": False}),
+                 ("no-cache", {"store": True, "reuse": False}),
+                 ("max-age=0", {"store": True, "reuse": False, "max_age_seconds": 0}),
+                 ("max-age=120", {"store": True, "reuse": True, "max_age_seconds": 120}))
+        for body, status in ((full, "full"), (b"<html>Video only</html>", "summary")):
+            for control, policy in cases:
+                with self.subTest(status=status, control=control), \
+                        patch.object(news.requests, "get", return_value=response(body=body, headers={"Cache-Control": control})):
+                    detail = news.fetch_newspaper_article(self.article)
+                self.assertEqual(status, detail["status"])
+                self.assertEqual(control, detail["cache_control"])
+                self.assertEqual(policy, detail["cache_policy"])
+
+    def test_article_response_cannot_weaken_feed_policy_or_expiry(self):
+        article = {**self.article, "cache_policy": {"store": False, "reuse": False, "max_age_seconds": 30}}
+        with patch.object(news.requests, "get", return_value=response(body=b"<html>Video only</html>",
+                                                                      headers={"Cache-Control": "public, max-age=600"})):
+            result = news.fetch_newspaper_article(article)
+        self.assertEqual({"store": False, "reuse": False, "max_age_seconds": 30}, result["cache_policy"])
+        with patch.object(news, "_fetch_bytes", side_effect=requests.Timeout):
+            failed = news.fetch_newspaper_article(article)
+        self.assertEqual("error", failed["status"])
+        self.assertEqual(article["cache_policy"], failed["cache_policy"])
 
     def test_known_article_container_becomes_plain_paragraphs(self):
         first = "第一段真实正文，保留新闻事实和原始出处。" * 8

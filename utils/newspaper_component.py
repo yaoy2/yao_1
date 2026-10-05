@@ -2,16 +2,43 @@
 
 from pathlib import Path
 from datetime import datetime, timezone
+import importlib
 
 import streamlit as st
 import streamlit.components.v1 as components
 
+from utils import newspaper_data as _newspaper_data
+if getattr(_newspaper_data, "NEWSPAPER_SOURCE_VERSION", 0) < 2:
+    _newspaper_data = importlib.reload(_newspaper_data)
+
 from utils.newspaper_data import fetch_newspaper_article, load_newspaper_feed
 from utils.newspaper_ai_sources import fetch_ai_official_article, load_ai_official_feed
 from utils.newspaper_sources import fetch_extended_article, load_extended_news_feed
+from utils.newspaper_daily import read_daily_feed
 
 
-NEWSPAPER_SERVICE_VERSION = 3
+NEWSPAPER_SERVICE_VERSION = 4
+
+
+@st.cache_data(ttl=60, max_entries=1, show_spinner=False)
+def _read_daily_feed():
+    # Credentials stay server-side and are never component arguments.
+    return read_daily_feed(secrets=st.secrets)
+
+
+def newspaper_feed_for_page(force_live=False):
+    """Prefer a valid completed edition; manual refresh still reads all sources."""
+    if not force_live:
+        try:
+            daily = _read_daily_feed()
+            if daily:
+                expires_at = datetime.fromisoformat(daily["expires_at"])
+                if expires_at.tzinfo and expires_at > datetime.now(timezone.utc):
+                    return daily
+        except Exception:
+            # A missing private snapshot must never break public news reading.
+            pass
+    return cached_newspaper_feed()
 
 
 class _IncompleteFeed(Exception):
@@ -108,6 +135,7 @@ def cached_newspaper_feed():
 
 
 def _clear_combined_feed():
+    _read_daily_feed.clear()
     _complete_newspaper_feed.clear()
     _recent_newspaper_feed.clear()
     # Manual refresh retries failed AI sources; successful two-hour batches stay.

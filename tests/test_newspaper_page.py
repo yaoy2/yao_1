@@ -44,6 +44,7 @@ def isolate_public_source_caches(monkeypatch):
         component._recent_ai_official_feed.clear()
 
     clear()
+    monkeypatch.setattr(component, "_read_daily_feed", Mock(return_value=None))
     monkeypatch.setattr(component, "load_extended_news_feed", Mock(return_value={
         "articles": [], "sources": [], "errors": [],
     }))
@@ -88,7 +89,7 @@ def test_page_refreshes_a_retained_legacy_service_only_once(service, monkeypatch
 
     def upgrade(module):
         assert module is component
-        module.NEWSPAPER_SERVICE_VERSION = 3
+        module.NEWSPAPER_SERVICE_VERSION = 4
         return module
 
     reload_service = Mock(side_effect=upgrade)
@@ -348,3 +349,43 @@ def test_short_publisher_expiry_cannot_be_extended_by_a_one_hour_article_cache(m
     assert component.cached_newspaper_article(article)["status"] == "full"
     assert component.cached_newspaper_article(article)["status"] == "full"
     assert fetch.call_count == 2
+
+
+def test_page_prefers_valid_daily_edition_and_reports_real_completion(service, monkeypatch):
+    daily = {**deepcopy(FEED), "delivery": "daily", "edition_date": "2026-10-05",
+             "expires_at": "2099-10-06T01:00:00+00:00"}
+    monkeypatch.setattr(component, "_read_daily_feed", Mock(return_value=daily))
+    live, _ = service
+    app = AppTest.from_file(str(PAGE)).run()
+    assert not app.exception
+    assert component_args(app)["feed"]["delivery"] == "daily"
+    assert any("定时日报" in item.value and daily["fetched_at"] in item.value for item in app.caption)
+    live.assert_not_called()
+
+
+def test_expired_daily_edition_falls_back_to_current_public_sources(service, monkeypatch):
+    daily = {**deepcopy(FEED), "delivery": "daily", "expires_at": "2020-01-01T01:00:00+00:00"}
+    monkeypatch.setattr(component, "_read_daily_feed", Mock(return_value=daily))
+    live, _ = service
+    assert component.newspaper_feed_for_page() == FEED
+    live.assert_called_once()
+
+
+def test_private_snapshot_failure_does_not_break_public_news(service, monkeypatch):
+    monkeypatch.setattr(component, "_read_daily_feed", Mock(side_effect=RuntimeError("private details")))
+    live, _ = service
+    assert component.newspaper_feed_for_page() == FEED
+    live.assert_called_once()
+
+
+def test_manual_refresh_bypasses_daily_snapshot(service, monkeypatch):
+    read_daily = Mock(return_value={**deepcopy(FEED), "delivery": "daily",
+                                   "expires_at": "2099-10-06T01:00:00+00:00"})
+    monkeypatch.setattr(component, "_read_daily_feed", read_daily)
+    app = AppTest.from_file(str(PAGE)).run()
+    app.session_state[KEY] = {"action": "refresh", "nonce": "daily-to-live"}
+    app.run()
+    assert not app.exception
+    assert "delivery" not in component_args(app)["feed"]
+    assert read_daily.call_count == 1
+    service[0].assert_called_once()
