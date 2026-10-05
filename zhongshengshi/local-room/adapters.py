@@ -13,7 +13,9 @@ import threading
 import time
 import tomllib
 
-NAMES = {"codex": "Codex", "claude": "Claude", "grok": "Grok"}
+import gemini_bridge
+
+NAMES = {"codex": "GPT", "grok": "Grok", "gemini": "Gemini"}
 CREATE_FLAGS = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
 
@@ -24,6 +26,17 @@ def executable(provider: str) -> str | None:
         return str(native) if native.is_file() else None
     if found and Path(found).suffix.lower() not in (".cmd", ".bat", ".ps1"):
         return found
+    # Explorer can retain an older PATH than Codex or a newly opened terminal.
+    # Resolve standard per-user installs without changing the system environment.
+    local = Path(os.environ.get("LOCALAPPDATA", str(Path.home() / "AppData/Local")))
+    if provider == "codex":
+        candidates = list((local / "OpenAI/Codex/bin").glob("*/codex.exe"))
+        if candidates:
+            return str(max(candidates, key=lambda path: path.stat().st_mtime))
+    if provider == "grok":
+        native = Path.home() / ".grok/bin/grok.exe"
+        if native.is_file():
+            return str(native)
     return None
 
 
@@ -53,6 +66,8 @@ def status_command(provider: str, path: str) -> tuple[list[str], dict | None]:
 
 
 def provider_status(provider: str) -> dict:
+    if provider == "gemini":
+        return gemini_bridge.status()
     result = {"id": provider, "name": NAMES[provider], "available": False, "detail": "未找到命令行工具"}
     path = executable(provider)
     if not path:
@@ -98,6 +113,8 @@ def codex_model_args() -> list[str]:
 
 
 def command(provider: str, prompt: str, cwd: str) -> tuple[list[str], str | None, dict | None]:
+    if provider == "gemini":
+        return gemini_bridge.command(prompt, cwd)
     path = executable(provider)
     if not path:
         raise RuntimeError(f"未找到 {NAMES[provider]} 命令行工具")
@@ -130,6 +147,48 @@ def parse_event(provider: str, event: dict) -> list[tuple[str, str]]:
     """Return public answer text only; omit thoughts, tool output and auth metadata."""
     kind = event.get("type")
     found: list[tuple[str, str]] = []
+    if provider == "gemini":
+        kind = event.get("event")
+        if kind == "init":
+            info = event.get("init")
+            # Antigravity 1.2.16 advertises the build's tool catalog even for an
+            # agent with no tools. The bridge enforces tools=[], excludes default
+            # components, and denies tool permissions before starting the child.
+            if (not isinstance(info, dict) or info.get("agent") != "room-text-only"
+                    or info.get("permission_mode") != "request-review"
+                    or not isinstance(info.get("tools"), list)
+                    or any(not isinstance(tool, str) for tool in info["tools"])):
+                found.append(("error", "Gemini 通道未确认专用对话配置，已停止本次调用"))
+            elif not isinstance(info.get("model"), str) or not info["model"].lower().startswith("gemini-"):
+                found.append(("error", "Google 客户端未确认使用 Gemini 模型，已停止本次调用"))
+            else:
+                found.append(("ready", ""))
+        elif kind == "step_update":
+            step = event.get("step_update")
+            if isinstance(step, dict):
+                if step.get("step_type") == "tool":
+                    found.append(("error", "Gemini 意外产生工具操作，已停止本次调用"))
+                elif step.get("step_type") == "agent_response":
+                    content = step.get("text_delta")
+                    if isinstance(content, str):
+                        found.append(("delta", content))
+        elif kind == "result":
+            result = event.get("result")
+            if not isinstance(result, dict):
+                return [("error", "Gemini 返回的完成信息无效")]
+            error = result.get("error")
+            if result.get("status") == "SUCCESS" and not error:
+                if isinstance(result.get("response"), str) and result["response"]:
+                    found.append(("final", result["response"]))
+                found.append(("complete", ""))
+            else:
+                detail = error.get("message") if isinstance(error, dict) else error
+                found.append(("error", str(detail or "Gemini 未正常完成回复：" + str(result.get("status", "未知状态")))))
+        elif kind == "error":
+            error = event.get("error")
+            detail = error.get("message") if isinstance(error, dict) else error
+            found.append(("error", str(event.get("message") or detail or "Gemini 返回错误")))
+        return found
     if provider == "codex":
         item = event.get("item", {})
         if kind == "item.completed" and item.get("type") == "agent_message":
@@ -178,10 +237,16 @@ class Cancelled(Exception):
 def run_cli(provider: str, prompt: str, emit, cancel: threading.Event, timeout: int = 240) -> str:
     with tempfile.TemporaryDirectory(prefix="ai-room-chat-") as cwd:
         args, stdin, env = command(provider, prompt, cwd)
-        process = subprocess.Popen(args, cwd=cwd, env=env, stdin=subprocess.PIPE,
-                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                   text=True, encoding="utf-8", errors="replace",
-                                   creationflags=CREATE_FLAGS)
+        # A large write into a child stdin pipe can block before cancellation is
+        # checked. A private temporary input file keeps startup cancellable even
+        # if the CLI never reads stdin. It is removed with this request's folder.
+        input_path = Path(cwd) / "request-stdin.txt"
+        input_path.write_text(stdin or "", encoding="utf-8")
+        with input_path.open("rb") as input_stream:
+            process = subprocess.Popen(args, cwd=cwd, env=env, stdin=input_stream,
+                                       stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                       text=True, encoding="utf-8", errors="replace",
+                                       creationflags=CREATE_FLAGS)
         lines: queue.Queue = queue.Queue()
 
         def reader(stream, source):
@@ -200,17 +265,14 @@ def run_cli(provider: str, prompt: str, emit, cancel: threading.Event, timeout: 
         answer = ""
         streamed = ""
         complete = False
-        failure = ""
+        ready = provider != "gemini"
         ended = set()
         try:
-            if stdin:
-                process.stdin.write(stdin)
-            process.stdin.close()
             while len(ended) < 2:
                 if cancel.is_set():
                     raise Cancelled("已停止生成")
                 if time.monotonic() > deadline:
-                    raise RuntimeError("本次回复超过 4 分钟，已停止；可以单独点名重试")
+                    raise RuntimeError("本次回复超过 4 分钟，已停止；可以在该模型栏单独重试")
                 try:
                     source, line = lines.get(timeout=0.1)
                 except queue.Empty:
@@ -229,22 +291,28 @@ def run_cli(provider: str, prompt: str, emit, cancel: threading.Event, timeout: 
                     stderr = (stderr + line)[-6000:]
                     continue
                 for kind, text in parse_event(provider, event):
-                    if kind == "delta":
+                    if kind == "error":
+                        # An unsafe init or terminal failure must not leave this
+                        # request's child running while waiting for more output.
+                        raise RuntimeError(safe_error(text))
+                    if kind == "ready":
+                        ready = True
+                    elif not ready:
+                        raise RuntimeError("Gemini 未确认纯文字运行配置，已停止本次调用")
+                    elif kind == "delta":
                         streamed += text
                         emit({"type": "delta", "text": text})
                     elif kind == "final":
                         answer = text
                     elif kind == "complete":
                         complete = True
-                    elif kind == "error":
-                        failure = text
             code = process.wait(timeout=3)
             if cancel.is_set():
                 raise Cancelled("已停止生成")
-            if code or failure:
-                raise RuntimeError(safe_error(failure or stderr or f"命令行退出码 {code}"))
+            if code:
+                raise RuntimeError(safe_error(stderr or f"命令行退出码 {code}"))
             if not complete:
-                raise RuntimeError("未收到模型正常完成信号，请重试；部分输出未纳入后续讨论")
+                raise RuntimeError("未收到模型正常完成信号，请重试；部分输出未纳入后续上下文")
             answer = (answer or streamed).strip()
             if not answer:
                 raise RuntimeError("模型未返回可用回复")

@@ -1,6 +1,5 @@
 """Start or reopen the local room without changing installed tools or settings."""
 import json
-import os
 from pathlib import Path
 import subprocess
 import sys
@@ -13,17 +12,27 @@ ROOT = Path(__file__).resolve().parent
 URL = "http://127.0.0.1:8766"
 
 
-def healthy():
+def health():
     try:
         with build_opener(ProxyHandler({})).open(URL + "/api/health", timeout=1) as response:
-            return json.load(response).get("app") == "local-discussion-room"
+            result = json.load(response)
+            return result if isinstance(result, dict) and result.get("app") == "local-discussion-room" else None
     except (OSError, ValueError, URLError):
-        return False
+        return None
+
+
+def healthy():
+    result = health()
+    return bool(result and result.get("version") == 2)
 
 
 def main():
+    running = health()
+    if running and running.get("version") != 2:
+        raise RuntimeError("本机端口 8766 仍运行旧版众声室。请先关闭旧版服务，再双击本文件启动新版；聊天记录仍保存在原浏览器中。")
     if not healthy():
-        runtime = Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "AiDiscussionRoom"
+        # Keep diagnostics visible to both Explorer and packaged desktop apps.
+        runtime = Path.home() / ".ai-discussion-room"
         runtime.mkdir(parents=True, exist_ok=True)
         with (runtime / "server.log").open("a", encoding="utf-8") as log:
             process = subprocess.Popen([sys.executable, "-X", "utf8", str(ROOT / "server.py")],
@@ -43,4 +52,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except (RuntimeError, OSError) as error:
+        print(f"无法启动众声室：{error}")
+        raise SystemExit(1)

@@ -25,8 +25,8 @@ TOOLS = [
     },
     {
         "title": "众声室",
-        "desc": "让 Codex、Claude、Grok 在同一个群聊中阅读彼此的发言，支持点名、继续讨论、总结与导出。需启动本机讨论室并登录对应工具。",
-        "tag": "AI 群聊",
+        "desc": "同一输入同时交给 GPT、Grok、Gemini，分栏查看各自回答；每个模型保留独立上下文，支持连续对话、单独重试和导出。需启动本机工作台并登录对应工具。",
+        "tag": "AI 对照",
         "created": "2026_10_04",
         "page": "pages/26_27_ai_discussion_room.py",
         "code": "M27",
