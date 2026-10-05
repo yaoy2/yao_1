@@ -166,6 +166,31 @@
       : lane === 'explore' ? candidate.novelty * 20 + candidate.freshness * 8 + candidate.affinity * 4 + candidate.tie * 4
       : candidate.freshness * 12 + candidate.novelty * 8 + candidate.affinity * (lane === 'balance' ? 12 : 6);
     const eligible = candidate => !used.has(candidate.id) && ['source', 'category', 'group'].every(key => (usedDimensions[key].get(candidate[key]) || 0) < caps[key]);
+    function occupy(candidate) {
+      used.add(candidate.id);
+      for (const key of ['source', 'category', 'group']) usedDimensions[key].set(candidate[key], (usedDimensions[key].get(candidate[key]) || 0) + 1);
+    }
+    function release(candidate) {
+      used.delete(candidate.id);
+      for (const key of ['source', 'category', 'group']) usedDimensions[key].set(candidate[key], (usedDimensions[key].get(candidate[key]) || 0) - 1);
+    }
+    function rankingScore(candidate, lane) {
+      const penalty = (usedDimensions.group.get(candidate.group) || 0) * (wide ? 6 : 4)
+        + (usedDimensions.category.get(candidate.category) || 0) * 3
+        + (usedDimensions.source.get(candidate.source) || 0) * 2;
+      return baseScore(candidate, lane) - penalty;
+    }
+    function bestCandidate(lane, predicate, pool = candidates) {
+      let best = null, bestScore = -Infinity;
+      for (const candidate of pool) {
+        if (!eligible(candidate) || !predicate(candidate)) continue;
+        const score = rankingScore(candidate, lane);
+        if (score > bestScore || (score === bestScore && (!best || candidate.tie > best.tie || (candidate.tie === best.tie && compare(candidate.id, best.id) < 0)))) {
+          best = candidate; bestScore = score;
+        }
+      }
+      return best ? {candidate: best, score: bestScore} : null;
+    }
     function reason(candidate, lane) {
       if (lane === 'interest') {
         if ((model.category.get(candidate.category) || 0) > 0.2) return `与你近期关注的「${candidate.category}」栏目相关`;
@@ -180,38 +205,112 @@
     function select(lane, maximum, predicate) {
       let added = 0;
       while (added < maximum && items.length < requested) {
-        let best = null, bestScore = -Infinity;
-        for (const candidate of candidates) {
-          if (!eligible(candidate) || !predicate(candidate)) continue;
-          const penalty = (usedDimensions.group.get(candidate.group) || 0) * (wide ? 6 : 4)
-            + (usedDimensions.category.get(candidate.category) || 0) * 3
-            + (usedDimensions.source.get(candidate.source) || 0) * 2;
-          const score = baseScore(candidate, lane) - penalty;
-          if (score > bestScore || (score === bestScore && (!best || candidate.tie > best.tie || (candidate.tie === best.tie && compare(candidate.id, best.id) < 0)))) {
-            best = candidate; bestScore = score;
-          }
-        }
-        if (!best) break;
-        used.add(best.id);
-        for (const key of ['source', 'category', 'group']) usedDimensions[key].set(best[key], (usedDimensions[key].get(best[key]) || 0) + 1);
+        const next = bestCandidate(lane, predicate);
+        if (!next) break;
+        const best = next.candidate;
+        occupy(best);
         counts[lane]++; added++;
-        items.push({article: best.article, lane, reason: reason(best, lane), score: Math.round(bestScore * 1000) / 1000});
+        items.push({article: best.article, lane, reason: reason(best, lane), score: Math.round(next.score * 1000) / 1000});
       }
     }
     if (cold) select('balance', requested, () => true);
     else {
-      // Reserve breadth first so a very strong interest cannot consume its slots.
-      select('cross', quotas.cross, candidate => candidate.cross);
-      select('explore', quotas.explore, candidate => candidate.explore);
-      select('interest', quotas.interest, candidate => candidate.interest);
+      const predicates = {interest: candidate => candidate.interest,
+        cross: candidate => candidate.cross, explore: candidate => candidate.explore};
+      function remainingCapacity(lane) {
+        const pool = candidates.filter(candidate => eligible(candidate) && predicates[lane](candidate));
+        let capacity = pool.length;
+        for (const key of ['source', 'category', 'group']) {
+          const offered = new Map();
+          for (const candidate of pool) offered.set(candidate[key], (offered.get(candidate[key]) || 0) + 1);
+          const slots = [...offered].reduce((total, [value, count]) => total
+            + Math.min(count, caps[key] - (usedDimensions[key].get(value) || 0)), 0);
+          capacity = Math.min(capacity, slots);
+        }
+        return capacity;
+      }
+      // A fixed lane order can consume the only source slots available to another
+      // lane. Allocate one item at a time to the lane with least remaining choice.
+      // Breadth wins equal scarcity; an impossible interest quota is capped at its
+      // available capacity instead of taking priority over achievable breadth.
+      while (items.length < requested) {
+        const choices = ['cross', 'explore', 'interest'].map((lane, priority) => {
+          const needed = quotas[lane] - counts[lane];
+          const capacity = needed > 0 ? remainingCapacity(lane) : 0;
+          return {lane, priority, capacity,
+            choicePerSlot: capacity ? capacity / Math.min(needed, capacity) : Infinity};
+        }).filter(choice => choice.capacity > 0)
+          .sort((a, b) => a.choicePerSlot - b.choicePerSlot || a.priority - b.priority);
+        if (!choices.length) break;
+        select(choices[0].lane, 1, predicates[choices[0].lane]);
+      }
+      // A source/category/group intersection can make the capacity estimate too
+      // optimistic. Repair a blocked slot by moving one existing pick to a valid
+      // alternative in its own lane. This preserves every lane already reserved.
+      const byId = new Map(candidates.map(candidate => [candidate.id, candidate]));
+      const repairPools = Object.fromEntries(['cross', 'explore', 'interest'].map(lane => {
+        const sorted = candidates.filter(predicates[lane]).sort((a, b) => rankingScore(b, lane) - rankingScore(a, lane)
+          || b.tie - a.tie || compare(a.id, b.id));
+        const structures = new Set(), representatives = [], extras = [];
+        for (const candidate of sorted) {
+          const structure = JSON.stringify([candidate.source, candidate.category, candidate.group]);
+          if (structures.has(structure)) extras.push(candidate);
+          else { structures.add(structure); representatives.push(candidate); }
+        }
+        // Retain different resource combinations before repeated stories. Repair
+        // is deliberately bounded rather than an expensive global optimizer.
+        return [lane, [...representatives, ...extras].slice(0, 128)];
+      }));
+      let repairAttempts = 0;
+      function repair(lane) {
+        const waiting = repairPools[lane].filter(candidate => !used.has(candidate.id))
+          .sort((a, b) => rankingScore(b, lane) - rankingScore(a, lane) || b.tie - a.tie || compare(a.id, b.id)).slice(0, 32);
+        for (const wanted of waiting) {
+          const blockers = ['source', 'category', 'group'].filter(key => (usedDimensions[key].get(wanted[key]) || 0) >= caps[key]);
+          for (let index = 0; index < items.length; index++) {
+            const previous = items[index], old = byId.get(previous.article.id);
+            if (!blockers.some(key => old[key] === wanted[key])) continue;
+            if (++repairAttempts > 240) return false;
+            release(old);
+            if (eligible(wanted)) {
+              const wantedScore = rankingScore(wanted, lane);
+              occupy(wanted);
+              const alternative = bestCandidate(previous.lane, predicates[previous.lane], repairPools[previous.lane]);
+              if (alternative) {
+                occupy(alternative.candidate);
+                items[index] = {article: alternative.candidate.article, lane: previous.lane,
+                  reason: reason(alternative.candidate, previous.lane), score: Math.round(alternative.score * 1000) / 1000};
+                counts[lane]++;
+                items.push({article: wanted.article, lane, reason: reason(wanted, lane), score: Math.round(wantedScore * 1000) / 1000});
+                return true;
+              }
+              release(wanted);
+            }
+            occupy(old);
+          }
+        }
+        return false;
+      }
+      for (const lane of ['cross', 'explore', 'interest']) {
+        while (items.length < requested && counts[lane] < quotas[lane] && repairAttempts < 240) {
+          if (!repair(lane)) break;
+        }
+      }
       // Unfilled interest slots may become breadth; breadth slots never become interest.
       select('cross', requested - items.length, candidate => candidate.cross);
       select('explore', requested - items.length, candidate => candidate.explore);
     }
     const unmet = !cold && ['interest', 'cross', 'explore'].some(lane => counts[lane] < quotas[lane]);
+    const percentage = value => items.length ? Math.round(value / items.length * 1000) / 10 : 0;
+    const targetInterestPercent = cold ? null : RATIOS[strength][0] * 100;
+    const coverage = {total: items.length, interestPercent: percentage(counts.interest),
+      breadthPercent: percentage(counts.cross + counts.explore), balancePercent: percentage(counts.balance),
+      targetInterestPercent, targetBreadthPercent: cold ? null : 100 - targetInterestPercent,
+      belowBreadthTarget: !cold && items.length > 0 && (counts.cross + counts.explore) / items.length < (1 - RATIOS[strength][0]) - 1e-9};
     if (!candidates.length) notes.push('当前没有可推荐的未隐藏新闻。');
     else if (items.length < requested) notes.push(`候选内容或来源、栏目、版组多样性不足，本次仅推荐 ${items.length} 条真实新闻。`);
     if (unmet) notes.push('受候选分布与多样性上限影响，实际兴趣、跨领域与探索比例已调整；未用兴趣内容填满保留位置。');
+    if (coverage.belowBreadthTarget) notes.push(`本批跨领域与探索占 ${coverage.breadthPercent}%（目标 ${coverage.targetBreadthPercent}%）；受当前候选与来源、栏目、版组上限限制，保留现有新闻，未宣称已达到目标比例。`);
     // Interleave lanes for reading; do not place all interest recommendations together.
     const queues = Object.fromEntries(LANES.map(lane => [lane, items.filter(item => item.lane === lane)]));
     const ordered = [];
@@ -220,7 +319,7 @@
     }
     return {items: ordered, stats: {requested, available: candidates.length, returned: ordered.length,
       quotas, counts, degraded: ordered.length < requested || unmet, notes, interests: model.interests,
-      strength, diversity: wide ? 'wide' : 'standard', caps, coldStart: cold, activeSignals: profile.events.length}};
+      strength, diversity: wide ? 'wide' : 'standard', caps, coverage, coldStart: cold, activeSignals: profile.events.length}};
   }
 
   return Object.freeze({defaultProfile, resetProfile: defaultProfile, reset: defaultProfile,

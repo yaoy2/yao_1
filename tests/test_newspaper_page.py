@@ -35,6 +35,22 @@ FEED = {
 }
 
 
+@pytest.fixture(autouse=True)
+def isolate_public_source_caches(monkeypatch):
+    def clear():
+        component._complete_newspaper_feed.clear()
+        component._recent_newspaper_feed.clear()
+        component._complete_ai_official_feed.clear()
+        component._recent_ai_official_feed.clear()
+
+    clear()
+    monkeypatch.setattr(component, "load_extended_news_feed", Mock(return_value={
+        "articles": [], "sources": [], "errors": [],
+    }))
+    yield
+    clear()
+
+
 @pytest.fixture
 def service(monkeypatch):
     feed = Mock(return_value=deepcopy(FEED))
@@ -72,7 +88,7 @@ def test_page_refreshes_a_retained_legacy_service_only_once(service, monkeypatch
 
     def upgrade(module):
         assert module is component
-        module.NEWSPAPER_SERVICE_VERSION = 2
+        module.NEWSPAPER_SERVICE_VERSION = 3
         return module
 
     reload_service = Mock(side_effect=upgrade)
@@ -230,3 +246,105 @@ def test_one_feed_failure_does_not_remove_other_public_articles(monkeypatch):
         assert "private internals" not in str(result)
     finally:
         component.cached_newspaper_feed.clear()
+
+
+def test_failed_ai_feed_retries_after_refresh_instead_of_waiting_two_hours(monkeypatch):
+    failure = {"articles": [], "sources": [{"id": "official", "status": "error"}],
+               "errors": ["公开来源暂不可用"]}
+    recovered = {"articles": [{**ARTICLE, "id": "ai-recovered",
+                               "url": "https://openai.com/index/recovered"}],
+                 "sources": [{"id": "official", "status": "ok"}], "errors": []}
+    fetch = Mock(side_effect=[failure, recovered])
+    monkeypatch.setattr(component, "load_ai_official_feed", fetch)
+    monkeypatch.setattr(component, "load_newspaper_feed", Mock(return_value=deepcopy(FEED)))
+    first = component.cached_newspaper_feed()
+    assert first["errors"]
+    assert component.cached_newspaper_feed() == first
+    assert fetch.call_count == 1  # Share the brief retry window across viewers.
+    component.cached_newspaper_feed.clear()
+    second = component.cached_newspaper_feed()
+    assert not second["errors"]
+    assert [item["id"] for item in second["articles"]] == [ARTICLE["id"], "ai-recovered"]
+    assert fetch.call_count == 2
+    component.cached_newspaper_feed.clear()
+    assert component.cached_newspaper_feed()["articles"] == second["articles"]
+    assert fetch.call_count == 2  # Successful AI batches keep their longer cache.
+
+
+def test_partial_ai_failure_is_also_retried(monkeypatch):
+    partial = {"articles": [ARTICLE], "sources": [{"id": "a", "status": "ok"},
+                 {"id": "b", "status": "error"}], "errors": []}
+    complete = {**partial, "sources": [{"id": "a", "status": "ok"},
+                                      {"id": "b", "status": "ok"}]}
+    fetch = Mock(side_effect=[partial, complete])
+    monkeypatch.setattr(component, "load_ai_official_feed", fetch)
+    assert component.cached_ai_official_feed() == partial
+    component.cached_newspaper_feed.clear()
+    assert component.cached_ai_official_feed() == complete
+    assert fetch.call_count == 2
+
+
+def test_extended_sources_merge_and_route_to_their_reader(monkeypatch):
+    extended = {**ARTICLE, "id": "media-test", "source_family": "public_media",
+                "url": "https://www.yicai.com/news/fixture.html"}
+    monkeypatch.setattr(component, "load_newspaper_feed", Mock(return_value=deepcopy(FEED)))
+    monkeypatch.setattr(component, "cached_ai_official_feed", Mock(return_value={
+        "articles": [], "sources": [], "errors": []}))
+    monkeypatch.setattr(component, "load_extended_news_feed", Mock(return_value={
+        "articles": [extended], "sources": [{"id": "media", "status": "ok"}], "errors": []}))
+    result = component.cached_newspaper_feed()
+    assert result["articles"] == [ARTICLE, extended]
+    assert len(result["sources"]) == 2
+    reader = Mock(return_value={"id": extended["id"], "status": "full", "paragraphs": ["公开正文"]})
+    old_reader = Mock()
+    monkeypatch.setattr(component, "fetch_extended_article", reader)
+    monkeypatch.setattr(component, "fetch_newspaper_article", old_reader)
+    component.cached_newspaper_article.clear()
+    assert component.cached_newspaper_article(extended)["status"] == "full"
+    reader.assert_called_once_with(extended)
+    old_reader.assert_not_called()
+
+
+def test_publisher_no_reuse_policy_survives_both_combined_cache_layers(monkeypatch):
+    def feed_with_id(article_id):
+        return {"articles": [{**ARTICLE, "id": article_id,
+                              "url": "https://openai.com/index/" + article_id}],
+                "sources": [{"id": "official", "status": "ok"}], "errors": [],
+                "cache_policy": {"store": True, "reuse": False}}
+
+    fetch = Mock(side_effect=[feed_with_id("first"), feed_with_id("second")])
+    monkeypatch.setattr(component, "load_ai_official_feed", fetch)
+    monkeypatch.setattr(component, "load_newspaper_feed", Mock(return_value=deepcopy(FEED)))
+    first = component.cached_newspaper_feed()
+    second = component.cached_newspaper_feed()
+    assert first["cache_policy"]["reuse"] is False
+    assert second["cache_policy"]["reuse"] is False
+    assert first["articles"][-1]["id"] == "first"
+    assert second["articles"][-1]["id"] == "second"
+    assert fetch.call_count == 2
+
+
+def test_article_no_reuse_policy_returns_content_without_retaining_it(monkeypatch):
+    article = {**ARTICLE, "id": "media-no-reuse", "source_family": "public_media"}
+    fetch = Mock(side_effect=[
+        {"id": article["id"], "status": "full", "paragraphs": ["第一版正文"],
+         "cache_policy": {"store": True, "reuse": False}},
+        {"id": article["id"], "status": "full", "paragraphs": ["更新后的正文"],
+         "cache_policy": {"store": True, "reuse": False}},
+    ])
+    monkeypatch.setattr(component, "fetch_extended_article", fetch)
+    component.cached_newspaper_article.clear()
+    assert component.cached_newspaper_article(article)["paragraphs"] == ["第一版正文"]
+    assert component.cached_newspaper_article(article)["paragraphs"] == ["更新后的正文"]
+    assert fetch.call_count == 2
+
+
+def test_short_publisher_expiry_cannot_be_extended_by_a_one_hour_article_cache(monkeypatch):
+    article = {**ARTICLE, "id": "media-short-expiry", "source_family": "public_media"}
+    fetch = Mock(return_value={"id": article["id"], "status": "full", "paragraphs": ["公开正文"],
+                               "cache_policy": {"store": True, "reuse": True, "max_age_seconds": 60}})
+    monkeypatch.setattr(component, "fetch_extended_article", fetch)
+    component.cached_newspaper_article.clear()
+    assert component.cached_newspaper_article(article)["status"] == "full"
+    assert component.cached_newspaper_article(article)["status"] == "full"
+    assert fetch.call_count == 2

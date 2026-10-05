@@ -8,25 +8,68 @@ import streamlit.components.v1 as components
 
 from utils.newspaper_data import fetch_newspaper_article, load_newspaper_feed
 from utils.newspaper_ai_sources import fetch_ai_official_article, load_ai_official_feed
+from utils.newspaper_sources import fetch_extended_article, load_extended_news_feed
 
 
-NEWSPAPER_SERVICE_VERSION = 2
+NEWSPAPER_SERVICE_VERSION = 3
+
+
+class _IncompleteFeed(Exception):
+    """Carry partial or non-reusable public results through cache decorators."""
+
+    def __init__(self, feed):
+        super().__init__("Some public sources are temporarily unavailable")
+        self.feed = feed
+
+
+def _require_complete(feed):
+    if feed.get("errors") or any(source.get("status") == "error"
+                                 for source in feed.get("sources", [])):
+        raise _IncompleteFeed(feed)
+    return feed
+
+
+def _require_reusable(feed, cache_seconds):
+    policy = feed.get("cache_policy") or {}
+    if policy.get("reuse") is False or policy.get("store") is False:
+        raise _IncompleteFeed(feed)
+    max_age = policy.get("max_age_seconds")
+    if isinstance(max_age, (int, float)) and max_age <= cache_seconds:
+        # A fixed-TTL cache cannot promise a shorter publisher expiry. Returning
+        # it without caching also avoids adding time spent in a shorter layer.
+        raise _IncompleteFeed(feed)
+    return feed
+
+
+@st.cache_data(ttl=60, max_entries=1, show_spinner=False)
+def _recent_ai_official_feed():
+    # A short retry window avoids hammering an unavailable publisher.
+    return _require_reusable(load_ai_official_feed(), 60)
 
 
 @st.cache_data(ttl=7200, max_entries=1, show_spinner=False)
+def _complete_ai_official_feed():
+    return _require_complete(_require_reusable(_recent_ai_official_feed(), 7200))
+
+
 def cached_ai_official_feed():
-    """Official AI RSS changes slowly; share its cache independently."""
-    return load_ai_official_feed()
+    """Cache successful AI batches for two hours, failures for only one minute."""
+    try:
+        return _complete_ai_official_feed()
+    except _IncompleteFeed as error:
+        return error.feed
 
 
-@st.cache_data(ttl=900, max_entries=1, show_spinner=False)
-def cached_newspaper_feed():
-    """Share a short-lived public feed without storing personal reading data."""
+@st.cache_data(ttl=60, max_entries=1, show_spinner=False)
+def _recent_newspaper_feed():
+    """Share the retry window, including partial results, across viewers."""
     result = {"articles": [], "sources": [], "errors": [],
+              "cache_policy": {"store": True, "reuse": True},
               "fetched_at": datetime.now(timezone.utc).isoformat()}
     seen_urls = set()
     for label, loader in (("综合新闻", load_newspaper_feed),
-                          ("官方 AI 信源", cached_ai_official_feed)):
+                          ("官方 AI 信源", cached_ai_official_feed),
+                          ("扩展媒体", load_extended_news_feed)):
         try:
             feed = loader()
         except Exception:
@@ -36,23 +79,74 @@ def cached_newspaper_feed():
             continue
         result["sources"].extend(feed.get("sources", []))
         result["errors"].extend(feed.get("errors", []))
+        for key in ("store", "reuse"):
+            if (feed.get("cache_policy") or {}).get(key) is False:
+                result["cache_policy"][key] = False
+        max_age = (feed.get("cache_policy") or {}).get("max_age_seconds")
+        if isinstance(max_age, (int, float)):
+            previous = result["cache_policy"].get("max_age_seconds", max_age)
+            result["cache_policy"]["max_age_seconds"] = min(previous, max_age)
         for article in feed.get("articles", []):
             identity = article.get("url") or article.get("id")
             if identity and identity not in seen_urls:
                 seen_urls.add(identity)
                 result["articles"].append(article)
-    return result
+    return _require_reusable(result, 60)
+
+
+@st.cache_data(ttl=900, max_entries=1, show_spinner=False)
+def _complete_newspaper_feed():
+    return _require_complete(_require_reusable(_recent_newspaper_feed(), 900))
+
+
+def cached_newspaper_feed():
+    """Never turn a temporary source outage into a fifteen-minute empty feed."""
+    try:
+        return _complete_newspaper_feed()
+    except _IncompleteFeed as error:
+        return error.feed
+
+
+def _clear_combined_feed():
+    _complete_newspaper_feed.clear()
+    _recent_newspaper_feed.clear()
+    # Manual refresh retries failed AI sources; successful two-hour batches stay.
+    _recent_ai_official_feed.clear()
+
+
+def _clear_ai_feed():
+    _complete_ai_official_feed.clear()
+    _recent_ai_official_feed.clear()
+
+
+# Preserve the cache API used by the page and test fixtures.
+cached_newspaper_feed.clear = _clear_combined_feed
+cached_ai_official_feed.clear = _clear_ai_feed
 
 
 @st.cache_data(ttl=3600, max_entries=192, show_spinner=False)
-def cached_newspaper_article(article):
-    detail = (fetch_ai_official_article(article)
-              if article.get("source_family") == "ai_official"
-              else fetch_newspaper_article(article))
+def _cached_newspaper_article(article):
+    family = article.get("source_family")
+    if family == "ai_official":
+        detail = fetch_ai_official_article(article)
+    elif family == "public_media":
+        detail = fetch_extended_article(article)
+    else:
+        detail = fetch_newspaper_article(article)
     if detail.get("status") == "error":
         # A temporary transport failure must not become a one-hour cached result.
         raise RuntimeError("News article temporarily unavailable")
-    return detail
+    return _require_reusable(detail, 3600)
+
+
+def cached_newspaper_article(article):
+    try:
+        return _cached_newspaper_article(article)
+    except _IncompleteFeed as error:
+        return error.feed
+
+
+cached_newspaper_article.clear = _cached_newspaper_article.clear
 
 
 def declare_newspaper_component():

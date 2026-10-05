@@ -9,8 +9,8 @@ import streamlit as st
 
 from utils import newspaper_component
 # Cloud can replace the page while retaining its previously imported services.
-# Refresh only the older service that has no official AI feed integration.
-if getattr(newspaper_component, "NEWSPAPER_SERVICE_VERSION", 0) < 2:
+# Refresh an older service after a source or cache contract changes.
+if getattr(newspaper_component, "NEWSPAPER_SERVICE_VERSION", 0) < 3:
     newspaper_component = importlib.reload(newspaper_component)
 
 from utils.newspaper_component import (
@@ -33,7 +33,7 @@ st.set_page_config(page_title="M28·Newspaper", page_icon="📰", layout="wide")
 render_home_link()
 st.markdown("### 📰 M28·Newspaper")
 st.caption(
-    "个人 · 公开新闻与 AI 专版｜打开或更新页面时检查来源；综合新闻缓存 15 分钟，官方 AI 信源缓存 2 小时。"
+    "个人 · 多来源公开新闻与 AI 专版｜按来源要求更新；综合新闻缓存最长 15 分钟，官方 AI 信源最长 2 小时。读取失败可稍后重试。"
     "推荐偏好、收藏与笔记仅保存在当前浏览器，尚未提供跨设备同步。"
 )
 

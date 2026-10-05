@@ -55,6 +55,62 @@ test('strength is bounded; wide diversity has stricter caps', () => {
   }
 });
 
+test('fresh cross-domain articles cannot consume the only source capacity for a learned interest', () => {
+  const dated = (id, category, group, source, age = 0) => ({...article(id, group, category, source),
+    published_at: new Date(NOW - age * DAY).toISOString()});
+  const profile = Recommendation.applyFeedback(null, dated('liked', '目标栏目', '目标版组', '来源S'), 'important', {now: NOW});
+  const interest = Array.from({length: 5}, (_, index) => dated(`interest${index}`, '目标栏目', '目标版组', '来源S'));
+  const sameSourceCross = Array.from({length: 5}, (_, index) => dated(`cross-S${index}`, `新栏目${index}`, `新版组${index}`, '来源S'));
+  const alternatives = Array.from({length: 60}, (_, index) => dated(`cross-other${index}`, `栏目${index % 10}`, `版组${index % 6}`, `其他来源${index % 8}`, 30));
+  const input = [...interest, ...sameSourceCross, ...alternatives];
+  const result = Recommendation.rankRecommendations(input, profile, {now: NOW, seed: 'audit'});
+  const cold = Recommendation.rankRecommendations(input, null, {now: NOW, seed: 'audit'});
+  assert.equal(result.items.length, 20);
+  assert.equal(result.stats.counts.interest, 5);
+  assert.ok(result.items.filter(item => item.article.category === '目标栏目').length > cold.items.filter(item => item.article.category === '目标栏目').length);
+  assert.ok(result.items.filter(item => item.article.source === '来源S').every(item => item.lane === 'interest'));
+  assert.ok(result.stats.counts.cross >= result.stats.quotas.cross);
+  assert.ok(result.stats.counts.explore >= result.stats.quotas.explore);
+  for (const field of ['group', 'category', 'source']) assert.ok(Math.max(...Object.values(histogram(result.items, field))) <= result.stats.caps[field]);
+  assert.deepEqual(result, Recommendation.rankRecommendations([...input].reverse(), profile, {now: NOW, seed: 'audit'}));
+});
+
+test('scarce cross-domain source slots are also protected from a stronger interest pool', () => {
+  let profile = Recommendation.applyFeedback(null, article('learn-A', '偏好版组A', '偏好栏目A', '来源S'), 'important', {now: NOW});
+  profile = Recommendation.applyFeedback(profile, article('learn-B', '偏好版组B', '偏好栏目B', '来源T'), 'important', {now: NOW});
+  const preferred = Array.from({length: 60}, (_, index) => ({...article(`preferred${index}`, `偏好版组${index % 2 ? 'B' : 'A'}`,
+    `偏好栏目${index % 2 ? 'B' : 'A'}`, index < 10 ? '来源S' : `兴趣来源${index % 8}`),
+    published_at: new Date(NOW - (index < 10 ? 0 : DAY)).toISOString()}));
+  const cross = Array.from({length: 5}, (_, index) => article(`scarce-cross${index}`, `其他版组${index}`, `其他栏目${index}`, '来源S'));
+  const explore = Array.from({length: 12}, (_, index) => article(`explore${index}`, '偏好版组B', `探索栏目${index % 3}`, `探索来源${index % 4}`));
+  const result = Recommendation.rankRecommendations([...preferred, ...cross, ...explore], profile, {now: NOW});
+  assert.equal(result.items.length, 20);
+  assert.equal(result.stats.counts.cross, 5);
+  assert.equal(result.stats.counts.explore, 3);
+  assert.equal(result.stats.counts.interest, 12);
+  assert.ok(cross.every(candidate => result.items.some(item => item.article.id === candidate.id)));
+  for (const field of ['group', 'category', 'source']) assert.ok(Math.max(...Object.values(histogram(result.items, field))) <= result.stats.caps[field]);
+});
+
+test('a same-lane substitution fills a feasible slot blocked by intersecting caps', () => {
+  const profile = Recommendation.applyFeedback(null, article('learn', 'G0', 'C0', 'S0'), 'important', {now: NOW});
+  const rows = [
+    ['C5', 'G2', 'S3', 9], ['C1', 'G0', 'S1', 11], ['C1', 'G0', 'S3', 3], ['C1', 'G0', 'S2', 10],
+    ['C4', 'G2', 'S2', 3], ['C5', 'G2', 'S3', 11], ['C2', 'G1', 'S3', 10], ['C1', 'G0', 'S0', 8],
+    ['C5', 'G2', 'S2', 6], ['C4', 'G2', 'S2', 10],
+  ];
+  const input = rows.map(([category, group, source, age], index) => ({...article(`a${index}`, group, category, source),
+    published_at: new Date(NOW - age * DAY).toISOString()}));
+  const result = Recommendation.rankRecommendations(input, profile, {now: NOW, limit: 6, seed: 'fixed'});
+  assert.equal(result.items.length, 6);
+  assert.deepEqual(result.stats.counts, {interest: 3, cross: 1, explore: 2, balance: 0});
+  assert.ok(result.items.some(item => item.article.source === 'S1'));
+  assert.equal(result.stats.degraded, false);
+  assert.equal(new Set(result.items.map(item => item.article.id)).size, 6);
+  for (const field of ['group', 'category', 'source']) assert.ok(Math.max(...Object.values(histogram(result.items, field))) <= result.stats.caps[field]);
+  assert.deepEqual(result, Recommendation.rankRecommendations([...input].reverse(), profile, {now: NOW, limit: 6, seed: 'fixed'}));
+});
+
 test('short clicks do not train; repeated article and same-column clicking are capped', () => {
   const target = article('read');
   let profile = Recommendation.applyFeedback(null, target, 'read', {now: NOW, dwellMs: 14999});
@@ -154,6 +210,23 @@ test('sparse or concentrated candidates honestly return fewer items without fabr
   assert.deepEqual(empty.stats.notes, ['当前没有可推荐的未隐藏新闻。']);
 });
 
+test('sparse breadth is reported as an actual percentage rather than a guaranteed target', () => {
+  let profile = Recommendation.applyFeedback(null, article('like-a', '组A', '栏目A', '来源A'), 'important', {now: NOW});
+  profile = Recommendation.applyFeedback(profile, article('like-b', '组A', '栏目B', '来源B'), 'important', {now: NOW});
+  const preferred = Array.from({length: 30}, (_, index) => article(`preferred${index}`, '组A', index % 2 ? '栏目A' : '栏目B', `兴趣来源${index % 8}`));
+  const input = [...preferred, article('outside', '别的组', '别的栏目', '别的来源')];
+  const result = Recommendation.rankRecommendations(input, profile, {now: NOW});
+  assert.ok(result.items.length > 1, 'retain available news instead of creating an empty quota-compliant result');
+  assert.equal(result.stats.coverage.targetBreadthPercent, 40);
+  assert.equal(result.stats.coverage.breadthPercent, Math.round(1 / result.items.length * 1000) / 10);
+  assert.equal(result.stats.coverage.belowBreadthTarget, true);
+  assert.ok(result.stats.notes.some(note => note.includes(`${result.stats.coverage.breadthPercent}%`) && note.includes('目标 40%')));
+  const cold = Recommendation.rankRecommendations(input, null, {now: NOW});
+  assert.equal(cold.stats.coverage.balancePercent, 100);
+  assert.equal(cold.stats.coverage.targetBreadthPercent, null);
+  assert.equal(cold.stats.coverage.belowBreadthTarget, false);
+});
+
 test('sorting is deterministic, independent of candidate order, and never mutates inputs', () => {
   const input = candidates(), profile = trained(), original = JSON.stringify([input, profile]);
   const first = Recommendation.rankRecommendations(input, profile, {now: NOW, seed: 'stable'});
@@ -162,6 +235,16 @@ test('sorting is deterministic, independent of candidate order, and never mutate
   assert.equal(JSON.stringify([input, profile]), original);
   const different = Recommendation.rankRecommendations(input, profile, {now: NOW, seed: 'different'});
   assert.notDeepEqual(first.items.map(item => item.article.id), different.items.map(item => item.article.id));
+});
+
+test('a thousand candidates preserve deterministic selection, breadth and dimension caps', () => {
+  const input = Array.from({length: 1000}, (_, index) => article(`large${index}`, `版组${Math.floor(index / 50)}`,
+    `栏目${Math.floor(index / 10)}`, `来源${index % 24}`));
+  const result = Recommendation.rankRecommendations(input, trained(), {now: NOW, seed: 'large'});
+  assert.equal(result.items.length, 20);
+  assert.ok(result.stats.counts.cross + result.stats.counts.explore >= 8);
+  for (const field of ['group', 'category', 'source']) assert.ok(Math.max(...Object.values(histogram(result.items, field))) <= result.stats.caps[field]);
+  assert.deepEqual(result, Recommendation.rankRecommendations([...input].reverse(), trained(), {now: NOW, seed: 'large'}));
 });
 
 test('profile normalization bounds fields, drops invalid or expired events, and strips article content', () => {
