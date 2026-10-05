@@ -75,7 +75,7 @@ INACTIVE_SOURCES = (
     {"id": "media_xiaohongshu", "name": "小红书", "scope": "社区内容",
      "note": "公开浏览需要登录，尚无已核实可用的公开新闻订阅；暂未接入。"},
     {"id": "media_thepaper", "name": "澎湃新闻", "scope": "综合新闻",
-     "note": "公开首页要求 no-store，不写入本站共享新闻缓存；暂未接入。"},
+     "note": "已核实公开页面，独立列表适配尚未完成；暂未接入。"},
 )
 
 
