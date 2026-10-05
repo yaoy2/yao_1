@@ -6,16 +6,15 @@
 <meta name="color-scheme" content="light">
 <title>Newspaper · 综合新闻</title>
 <style>
-/* Unmodified UnifrakturCook Bold from Google Fonts, retrieved 2026-10-04.
-   Source: https://github.com/google/fonts/tree/main/ofl/unifrakturcook
-   Font: https://raw.githubusercontent.com/google/fonts/main/ofl/unifrakturcook/UnifrakturCook-Bold.ttf
-   SHA-256: ea002fa9c65f1a612af100e00d87ab65f16381f450020ec3d021f3dbf79a6dcd
-   License: SIL OFL 1.1; bundled in fonts/OFL-UnifrakturCook.txt. */
+/* Unmodified Great Vibes from Google Fonts, retrieved 2026-10-05.
+   Source: https://github.com/google/fonts/tree/main/ofl/greatvibes
+   Font: https://raw.githubusercontent.com/google/fonts/main/ofl/greatvibes/GreatVibes-Regular.ttf
+   License: SIL OFL 1.1; bundled in fonts/OFL-GreatVibes.txt. */
 @font-face {
- font-family:'UnifrakturCook';
- src:url('./fonts/UnifrakturCook-Bold.ttf') format('truetype');
+ font-family:'Great Vibes';
+ src:url('./fonts/GreatVibes-Regular.ttf') format('truetype');
  font-style:normal;
- font-weight:700;
+ font-weight:400;
  font-display:swap;
 }
 html,body { margin:0; padding:0; width:100%; min-width:0; background:#f7f3e9; color:#292821; color-scheme:light; }
@@ -39,7 +38,7 @@ button:disabled { cursor:not-allowed; }
 #paper-comprehensive .good { color:var(--green); }
 #paper-comprehensive .shell { display:flex; justify-content:space-between; gap:12px;  flex-wrap:wrap; font-size:12px; color:var(--muted-ink); }
 #paper-comprehensive .mast { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:center; gap:15px; padding:13px 0; border-bottom:4px double var(--ink); }
-#paper-comprehensive .mast h1 { font:700 clamp(40px,5.7vw,68px)/1.08 'UnifrakturCook',Georgia,'Times New Roman',serif; letter-spacing:0; margin:0 0 8px; text-align:center; }
+#paper-comprehensive .mast h1 { font:400 clamp(48px,6.4vw,82px)/1.2 'Great Vibes',Georgia,'Times New Roman',serif; letter-spacing:0; margin:0 0 4px; text-align:center; }
 #paper-comprehensive .mast .motto { font-size:11px; letter-spacing:4px; text-align:center; }
 #paper-comprehensive .mast .edition { font-size:12px; }
 #paper-comprehensive .mast .reading-return { text-align:right; }
@@ -132,7 +131,7 @@ button:disabled { cursor:not-allowed; }
 #paper-comprehensive:fullscreen .reader-bar { position:sticky; top:-18px; z-index:2; background:var(--page); }
 @media(max-width:740px) {
  #paper-comprehensive .mast { grid-template-columns:minmax(0,1fr); gap:8px; }
- #paper-comprehensive .mast h1 { font-size:clamp(40px,11vw,60px); letter-spacing:0; }
+ #paper-comprehensive .mast h1 { font-size:clamp(46px,12.5vw,66px); letter-spacing:0; }
  #paper-comprehensive .mast .reading-return { display:flex; align-items:center; justify-content:center; gap:12px; flex-wrap:wrap; text-align:center; }
  #paper-comprehensive .mast .motto { font-size:10px; letter-spacing:2px; }
  #paper-comprehensive .main-nav { gap:2px; }
@@ -140,7 +139,7 @@ button:disabled { cursor:not-allowed; }
 }
 @media(max-width:350px) {
  #paper-comprehensive { padding:12px; }
- #paper-comprehensive .mast h1 { font-size:36px; }
+ #paper-comprehensive .mast h1 { font-size:40px; }
  #paper-comprehensive .mast .motto { letter-spacing:1px; }
  #paper-comprehensive .source-table th,#paper-comprehensive .source-table td { padding:8px 3px; }
 }
