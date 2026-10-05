@@ -266,7 +266,7 @@ export default function Home() {
         <header className="flex flex-wrap items-end justify-between gap-3 border-b border-ink/10 pb-4">
           <div>
             <p className="text-sm font-semibold text-rust">本地 MVP · 最小圆桌链路</p>
-            <h1 className="text-3xl font-bold">众声室</h1>
+            <h1 className="text-3xl font-bold">问山集</h1>
           </div>
           <div className="text-sm text-ink/70">自由讨论 · 短消息流</div>
         </header>
@@ -488,7 +488,7 @@ function ChatTranscript({ transcript }: { transcript: RoundtableTranscriptItem[]
   return (
     <section className="overflow-hidden rounded-[10px] bg-[#e9e9e9] shadow-[0_12px_30px_rgba(15,23,42,0.08)] ring-1 ring-black/5">
       <div className="flex h-12 items-center justify-between border-b border-black/10 bg-[#f7f7f7] px-4">
-        <h2 className="truncate text-[15px] font-semibold text-[#1f2328]">众声室圆桌群聊{transcript.length ? `（${transcript.length}）` : ""}</h2>
+        <h2 className="truncate text-[15px] font-semibold text-[#1f2328]">问山集 · 旧版圆桌实验{transcript.length ? `（${transcript.length}）` : ""}</h2>
         <div className="flex items-center gap-4 text-[20px] leading-none text-[#6b7280]" aria-hidden="true">
           <span className="text-[17px]">⌕</span>
           <span className="-mt-1">⋯</span>

@@ -70,7 +70,7 @@ docs/               安装、结构、路线图与历史记录
 | 项目 | 用途与状态 | 说明 |
 | --- | --- | --- |
 | Deepself | 个人表达研究和回复工具；原始朋友圈及私密报告仅留本机。 | [README](Deepself/README.md) |
-| Zhongshengshi | 已暂停的 Next.js 多模型圆桌概念验证。 | [README](zhongshengshi/README.md) |
+| 问山集 · Wenshanji | 本机并行对话工作台：上方统一输入问题，GPT、Grok、Gemini 同时独立回答，各自保留上下文；Claude 仅预留空间，暂未接入。原 Next.js 圆桌实验保留并暂停。 | [README](wenshanji/README.md) |
 | Codex → Grok Builder | 按任务范围交接编码工作，保留具体执行边界。 | [说明](codex-grok-builder/README_EN.md) |
 | GPT Planner · Luna Executor | 按任务需要选择规划与执行路线。 | [说明](gpt-planner-luna-executor/README_EN.md) |
 | 115 AI Organizer | 云盘盘点与人工审核后的整理，执行需满足其专用授权要求。 | [README](115-ai-organizer/README.md) |

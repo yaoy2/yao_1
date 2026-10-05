@@ -14,7 +14,7 @@ The registry in [hello.py](../../hello.py) is authoritative. There are **27 entr
 | ID | Section | Status | Entry point | Behavior and requirements |
 | --- | --- | --- | --- | --- |
 | M28 | Personal | Current | [Newspaper](../../pages/27_28_newspaper.py) | Aggregates public news, official AI RSS and literary/film coverage with original source links and publication dates. Browser-local recommendations learn from reading and explicit feedback while reserving cross-topic and discovery slots. Public articles use extracted text where available; official AI feeds remain attributed summaries with original links. Clippings, notes and recommendation preferences stay in the current browser; cross-device synchronization is not connected. |
-| M27 | Personal | Current | [众声室](../../pages/26_27_ai_discussion_room.py) | Opens a local parallel chat workbench for GPT, Grok and Gemini. One prompt goes to selected models concurrently, each with independent conversation history. Requires the local launcher and signed-in CLI tools. The hosted page does not run CLI tools or hold chat sessions. |
+| M27 | Personal | Current | [问山集](../../pages/26_27_ai_discussion_room.py) | Opens the [Wenshanji](../../wenshanji/README.md) local parallel chat workbench for GPT, Grok and Gemini. A shared input at the top sends one prompt to selected models concurrently, each with independent conversation history. Claude has a reserved column and is not connected. Requires the local launcher and signed-in CLI tools. The hosted page does not run CLI tools or hold chat sessions. |
 | M26 | Personal | Current | [PUBG 密室地图](../../pages/25_26_pubg_secret_maps.py) | Views bundled map images with zoom, pan, and original-image download. Paramo and Karakin are excluded. |
 | M25 | Administration | Current | [随手传](../../pages/24_25_phone_transfer.py) | Paired phone-to-desktop transfer; the receiving desktop page must remain open. Requires configured transfer services. |
 | M24 | Archived | Archived | [邮件工作台](../../pages/23_24_mail_workbench.py) | Retired from navigation; retained for historical reference. Current mail todos follow the Edge-based workflow. |
@@ -43,4 +43,4 @@ The registry in [hello.py](../../hello.py) is authoritative. There are **27 entr
 
 M12 was removed. Module numbers preserve introduction order and are intentionally discontinuous. Independent subprojects are described separately in the [project overview](../../README.md).
 
-中文：行政 5、教学 1、个人 10、归档 11；M11、M16、M17、M20、M24 已停用，M28 聚合公开新闻并在浏览器保存剪报，尚无跨设备同步；M27 为本机三模型并行对话入口，M25 需要本地组件，M26 查看仓库内地图图片，M23 当前只介绍三项任务。展示页不代表主库已经运行对应的外部系统。
+中文：行政 5、教学 1、个人 10、归档 11；M11、M16、M17、M20、M24 已停用，M28 聚合公开新闻并在浏览器保存剪报，尚无跨设备同步；M27 问山集为本机三模型并行对话入口，Claude 仅预留、暂未接入；M25 需要本地组件，M26 查看仓库内地图图片，M23 当前只介绍三项任务。展示页不代表主库已经运行对应的外部系统。

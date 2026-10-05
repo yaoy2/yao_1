@@ -77,7 +77,7 @@ class HomePageTest(unittest.TestCase):
         self.assertEqual("pages/27_28_newspaper.py", by_code["M28"]["page"])
         self.assertEqual("Newspaper", by_code["M28"]["title"])
         self.assertEqual("pages/26_27_ai_discussion_room.py", by_code["M27"]["page"])
-        self.assertEqual("众声室", by_code["M27"]["title"])
+        self.assertEqual("问山集", by_code["M27"]["title"])
         self.assertEqual("pages/25_26_pubg_secret_maps.py", by_code["M26"]["page"])
         self.assertEqual("pages/24_25_phone_transfer.py", by_code["M25"]["page"])
         self.assertEqual("pages/22_23_docker_monitor.py", by_code["M23"]["page"])

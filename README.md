@@ -70,7 +70,7 @@ These projects have their own setup and data boundaries. Cloning the main reposi
 | Project | Purpose and status | Guide |
 | --- | --- | --- |
 | Deepself | Personal-expression research and a reply tool; original posts and private reports stay local. | [README](Deepself/README.md) |
-| Zhongshengshi | Paused Next.js multi-model roundtable proof of concept. | [README](zhongshengshi/README.md) |
+| Wenshanji · 问山集 | Local parallel chat workbench: enter one shared prompt at the top for GPT, Grok and Gemini to answer concurrently with independent contexts. Claude has a reserved space and is not connected. The earlier Next.js roundtable experiment is retained and paused. | [README](wenshanji/README.md) |
 | Codex → Grok Builder | Task-scoped coding handoffs with explicit execution boundaries. | [English guide](codex-grok-builder/README_EN.md) |
 | GPT Planner · Luna Executor | Planning and execution routes selected for the task. | [English guide](gpt-planner-luna-executor/README_EN.md) |
 | 115 AI Organizer | Cloud-file inventory and reviewed organization; execution has its own approval requirements. | [README](115-ai-organizer/README.md) |

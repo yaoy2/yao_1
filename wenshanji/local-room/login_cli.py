@@ -34,7 +34,7 @@ def _login():
         args, env = [path, "--no-auto-update", "login"], grok_chat_env()
         print("请亲自完成 Grok 登录。")
     result = subprocess.run(args, env=env)
-    print("返回讨论室后，点击“刷新连接”。")
+    print("返回问山集后，点击“刷新连接”。")
     return result.returncode
 
 

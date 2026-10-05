@@ -29,7 +29,7 @@ def healthy():
 def main():
     running = health()
     if running and running.get("version") != 2:
-        raise RuntimeError("本机端口 8766 仍运行旧版众声室。请先关闭旧版服务，再双击本文件启动新版；聊天记录仍保存在原浏览器中。")
+        raise RuntimeError("本机端口 8766 仍运行旧版问山集。请先关闭旧版服务，再双击本文件启动新版；聊天记录仍保存在原浏览器中。")
     if not healthy():
         # Keep diagnostics visible to both Explorer and packaged desktop apps.
         runtime = Path.home() / ".ai-discussion-room"
@@ -55,5 +55,5 @@ if __name__ == "__main__":
     try:
         main()
     except (RuntimeError, OSError) as error:
-        print(f"无法启动众声室：{error}")
+        print(f"无法启动问山集：{error}")
         raise SystemExit(1)
