@@ -187,6 +187,60 @@ class WindowsTaskPlanningTest(unittest.TestCase):
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertEqual({"OwnerRejected": True, "ChangedRejected": True}, json.loads(result.stdout))
 
+    def test_exported_defaults_are_accepted_without_weakening_configuration_checks(self):
+        # Task Scheduler omits these default-valued nodes when exporting a
+        # registered task. Exercise that representation without registering one.
+        defaults = {
+            "/t:Task/t:Principals/t:Principal/t:RunLevel": "HighestAvailable",
+            "/t:Task/t:Settings/t:AllowStartOnDemand": "false",
+            "/t:Task/t:Settings/t:Enabled": "false",
+            "/t:Task/t:Settings/t:RunOnlyIfIdle": "true",
+            "/t:Task/t:Settings/t:WakeToRun": "true",
+            "/t:Task/t:Triggers/t:CalendarTrigger/t:Enabled": "false",
+        }
+        required = (
+            "/t:Task/t:Actions/t:Exec/t:Command",
+            "/t:Task/t:Actions/t:Exec/t:Arguments",
+            "/t:Task/t:Actions/t:Exec/t:WorkingDirectory",
+            "/t:Task/t:Principals/t:Principal/t:LogonType",
+            "/t:Task/t:Triggers/t:CalendarTrigger/t:StartBoundary",
+            "/t:Task/t:Triggers/t:CalendarTrigger/t:ScheduleByDay/t:DaysInterval",
+            "/t:Task/t:Settings/t:RunOnlyIfNetworkAvailable",
+            "/t:Task/t:Settings/t:StartWhenAvailable",
+            "/t:Task/t:Settings/t:AllowHardTerminate",
+            "/t:Task/t:Settings/t:ExecutionTimeLimit",
+        )
+        cases = [{"name": "changed:" + path, "path": path, "value": value}
+                 for path, value in defaults.items()]
+        cases.extend({"name": "missing:" + path, "path": path, "value": None}
+                     for path in required)
+        encoded_xml = base64.b64encode(self.plan["TaskXml"].encode("utf-8")).decode("ascii")
+        encoded_cases = base64.b64encode(json.dumps(cases).encode("utf-8")).decode("ascii")
+        code = "$tokens=$null; $errors=$null; $ast=[System.Management.Automation.Language.Parser]::ParseFile(" \
+               + ps_string(self.installer) + ", [ref]$tokens, [ref]$errors); " \
+               + "$functions=$ast.FindAll({param($node) $node -is [System.Management.Automation.Language.FunctionDefinitionAst]}, $true); " \
+               + ". ([scriptblock]::Create(($functions | ForEach-Object {$_.Extent.Text}) -join \"`n\")); " \
+               + "$xmlText=[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('" + encoded_xml + "')); [xml]$planned=$xmlText; " \
+               + "$cases=[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('" + encoded_cases + "')) | ConvertFrom-Json; " \
+               + "[xml]$exported=$xmlText; $ns=New-Object System.Xml.XmlNamespaceManager($exported.NameTable); " \
+               + "$ns.AddNamespace('t', 'http://schemas.microsoft.com/windows/2004/02/mit/task'); " \
+               + "foreach ($case in $cases) {if ($null -ne $case.value) {" \
+               + "$node=$exported.SelectSingleNode($case.path,$ns); [void]$node.ParentNode.RemoveChild($node)}}; " \
+               + "Assert-NewspaperTaskDefinition -Actual $exported -Planned $planned; " \
+               + "$rejected=@{}; foreach ($case in $cases) {[xml]$changed=$xmlText; " \
+               + "$caseNs=New-Object System.Xml.XmlNamespaceManager($changed.NameTable); " \
+               + "$caseNs.AddNamespace('t', 'http://schemas.microsoft.com/windows/2004/02/mit/task'); " \
+               + "$node=$changed.SelectSingleNode($case.path,$caseNs); " \
+               + "if ($null -eq $case.value) {[void]$node.ParentNode.RemoveChild($node)} else {$node.InnerText=$case.value}; " \
+               + "$rejected[$case.name]=$false; try {Assert-NewspaperTaskDefinition -Actual $changed -Planned $planned} " \
+               + "catch {$rejected[$case.name]=$true}}; " \
+               + "@{OmittedDefaultsAccepted=$true; Rejected=$rejected} | ConvertTo-Json -Depth 3"
+        result = ps_run(code)
+        self.assertEqual(0, result.returncode, result.stderr)
+        report = json.loads(result.stdout)
+        self.assertTrue(report["OmittedDefaultsAccepted"])
+        self.assertEqual({case["name"]: True for case in cases}, report["Rejected"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -30,7 +30,20 @@ function Get-NewspaperXmlValue {
     $namespaces = New-Object System.Xml.XmlNamespaceManager($Document.NameTable)
     $namespaces.AddNamespace('t', 'http://schemas.microsoft.com/windows/2004/02/mit/task')
     $node = $Document.SelectSingleNode($XPath, $namespaces)
-    if ($null -eq $node) { return '' }
+    if ($null -eq $node) {
+        # Task Scheduler omits default values when exporting a registered task.
+        # Normalize only known defaults; missing required values still fail.
+        $defaults = @{
+            '/t:Task/t:Principals/t:Principal/t:RunLevel' = 'LeastPrivilege'
+            '/t:Task/t:Triggers/t:CalendarTrigger/t:Enabled' = 'true'
+            '/t:Task/t:Settings/t:AllowStartOnDemand' = 'true'
+            '/t:Task/t:Settings/t:Enabled' = 'true'
+            '/t:Task/t:Settings/t:RunOnlyIfIdle' = 'false'
+            '/t:Task/t:Settings/t:WakeToRun' = 'false'
+        }
+        if ($defaults.ContainsKey($XPath)) { return $defaults[$XPath] }
+        return ''
+    }
     return $node.InnerText
 }
 
@@ -70,6 +83,7 @@ function Assert-NewspaperTaskDefinition {
         '/t:Task/t:Principals/t:Principal/t:LogonType',
         '/t:Task/t:Principals/t:Principal/t:RunLevel',
         '/t:Task/t:Triggers/t:CalendarTrigger/t:ScheduleByDay/t:DaysInterval',
+        '/t:Task/t:Triggers/t:CalendarTrigger/t:Enabled',
         '/t:Task/t:Settings/t:MultipleInstancesPolicy',
         '/t:Task/t:Settings/t:DisallowStartIfOnBatteries',
         '/t:Task/t:Settings/t:StopIfGoingOnBatteries',
