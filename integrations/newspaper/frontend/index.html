@@ -191,11 +191,16 @@ button:disabled { cursor:not-allowed; }
 #paper-comprehensive .backup-panel h3,#paper-comprehensive .note-conflict h4 { margin:0 0 7px; }
 #paper-comprehensive .conflict-versions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
 #paper-comprehensive .conflict-versions textarea { width:100%; min-height:90px; font-size:12px; }
+#paper-comprehensive .sync-strip { display:flex; align-items:center; flex-wrap:wrap; gap:5px 12px; padding:6px 0; border-bottom:1px solid var(--rule); font-size:12px; }
+#paper-comprehensive .sync-strip .fine { flex:1; min-width:180px; }
+#paper-comprehensive .sync-conflict { margin:10px 0; padding:10px; border:1px solid var(--rule); }
+#paper-comprehensive .sync-conflict pre { white-space:pre-wrap; overflow-wrap:anywhere; font:inherit; font-size:12px; max-height:180px; overflow:auto; background:var(--white); padding:7px; }
 @media(max-width:450px) { #paper-comprehensive .conflict-versions { grid-template-columns:1fr; } #paper-comprehensive .browse-filters label { width:100%; } #paper-comprehensive .browse-filters select { flex:1; min-width:0; max-width:100%; } }
 </style>
 <div id="paper-comprehensive" aria-label="Newspaper 综合新闻" tabindex="-1"></div>
 <script src="./recommendation.js"></script>
 <script src="./library.js"></script>
+<script src="./sync.js"></script>
 <script>
 (() => {
  const root=document.getElementById("paper-comprehensive");
@@ -224,6 +229,8 @@ button:disabled { cursor:not-allowed; }
  const RECOMMEND_KEY='newspaper-local-recommendation-v1';
  const recommendationEngine=window.NewspaperRecommendation||null;
  const libraryEngine=window.NewspaperLibrary||null;
+ const syncEngine=window.NewspaperSync||null;
+ const SYNC_KEY='newspaper-reader-sync-v1';
  const state={screen:'front',category:'',type:'全部',query:'',filter:'全部',folder:'全部',current:null,returnTo:null,readerWide:false,notesOpen:false,topic:'group-0',artGroup:'全部',aiSource:'全部',aiCategory:'全部',allSource:'全部',allGroup:'全部',newsLimit:30,notice:'',undo:null};
  const defaults=()=>({version:1,revision:'',records:{},pins:[...defaultPins],pinsCustomized:false,following:[],lastRead:null,lastArticle:null,design:{columns:3,title:17,read:18}});
  let data=defaults(),articles=[],articleIndex=new Map(),sources=[];
@@ -234,6 +241,9 @@ button:disabled { cursor:not-allowed; }
  const details=new Map(),pendingReads=new Map(),drafts=Object.create(null),draftBases=Object.create(null),noteConflicts=Object.create(null);
  let returnScrollSequence=0;
  let importPreview=null,importBusy=false,importSequence=0;
+ let syncTimer=null,syncRequest=null;
+ const sessionSyncNonces=new Set(),revokedSyncNonces=new Set();
+ const cloud={enabled:false,status:'locked',message:'请在页面上方解锁跨设备同步；本浏览器已有缓存仍保留。',baseline:null,conflicts:[],needsRender:false};
  const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const clone=value=>JSON.parse(JSON.stringify(value));
  const text=value=>typeof value==='string'?value.trim():'';
@@ -290,7 +300,7 @@ button:disabled { cursor:not-allowed; }
   try{
    const stored=localStorage.getItem(STORE_KEY),remote=stored?normalizeStore(JSON.parse(stored)):defaults();
    if(remote.revision!==data.revision){data=remote;storageWarning='';state.notice='另一标签页更新了本地收藏，已载入最新状态；请重试这次操作。';return false;}
-   data=clone(data);change();data.revision=nonce();localStorage.setItem(STORE_KEY,JSON.stringify(data));storageWarning='';state.notice=successMessage;return true;
+   data=clone(data);change();data.revision=nonce();localStorage.setItem(STORE_KEY,JSON.stringify(data));storageWarning='';state.notice=successMessage;scheduleSync();return true;
   }catch{data=before;storageWarning='浏览器未能写入本地收藏，可能是存储被禁用或空间不足。本次操作未保存，原有内容保留。';state.notice='保存未成功，请检查浏览器存储后重试。';return false;}
  }
  const record=id=>Object.hasOwn(data.records,id)?data.records[id]:{};
@@ -305,6 +315,12 @@ button:disabled { cursor:not-allowed; }
  function updateRecord(id,patch){Object.assign(ensureRecord(id),patch);}
  function libraryCount(){return Object.values(data.records).filter(r=>r.saved||r.mark||r.note).length;}
  function post(type,extra={}){if(window.parent!==window)window.parent.postMessage({isStreamlitMessage:true,type,...extra},'*');}
+ function fallbackRequestQueue(){
+  let active=null,disabled=false;const queued=[];
+  const pump=()=>queueMicrotask(()=>{if(active||disabled||!queued.length)return;active=queued.shift();const item=active;item.timer=setTimeout(()=>{if(active!==item)return;active=null;item.onTimeout?.();pump();},item.timeout||90000);post('streamlit:setComponentValue',{value:item.value});});
+  return {enqueue(value,options={}){queued.push({value,...options});pump();},acknowledge(value){if(!value||active?.value.nonce!==value)return false;clearTimeout(active.timer);active=null;pump();return true;},cancel(predicate){for(let i=queued.length-1;i>=0;i--)if(predicate(queued[i].value))queued.splice(i,1);if(active&&predicate(active.value)){clearTimeout(active.timer);active=null;}pump();},setDisabled(value){disabled=value;if(!value)pump();}};
+ }
+ const requests=syncEngine?.createRequestQueue({send:value=>post('streamlit:setComponentValue',{value})})||fallbackRequestQueue();
  function syncFrameHeight(){if(frameQueued)return;frameQueued=true;requestAnimationFrame(()=>{frameQueued=false;if(document.fullscreenElement===root)return;const height=Math.ceil(root.getBoundingClientRect().height)+2;if(height!==lastFrameHeight){lastFrameHeight=height;post('streamlit:setFrameHeight',{height});}});}
  function defaultRecommendations(){return {version:1,personalized:true,strength:'balanced',diversity:'standard',profile:recommendationEngine?.defaultProfile()||{version:1,events:[],hiddenIds:[]}};}
  function normalizeRecommendations(raw){
@@ -316,9 +332,112 @@ button:disabled { cursor:not-allowed; }
   try{
    const stored=localStorage.getItem(RECOMMEND_KEY),next=stored?normalizeRecommendations(JSON.parse(stored)):defaultRecommendations();
    const before=JSON.stringify(next);change(next);
-   if(JSON.stringify(next)!==before||reset){localStorage.setItem(RECOMMEND_KEY,JSON.stringify(next));recommendationDirty=true;}
+   if(JSON.stringify(next)!==before||reset){localStorage.setItem(RECOMMEND_KEY,JSON.stringify(next));recommendationDirty=true;scheduleSync();}
    recommendationPreferences=next;recommendationWarning='';if(message)state.notice=message;return true;
   }catch{recommendationWarning='本浏览器未能保存推荐偏好，原有记录保留。';if(message)state.notice='推荐设置保存失败，请检查浏览器存储权限。';return false;}
+ }
+ function defaultSyncDocument(){return syncEngine.documentOf(defaults(),defaultRecommendations());}
+ function normalizeSyncDocument(raw){
+  if(!raw||raw.version!==1||!raw.library||!raw.recommendations)throw new Error('云端阅读数据格式不受支持，本地内容保留。');
+  return syncEngine.documentOf(normalizeStore(raw.library),normalizeRecommendations(raw.recommendations));
+ }
+ function localSyncDocument(){
+  const prefs=localStorage.getItem(RECOMMEND_KEY);
+  return syncEngine.documentOf(latestLibrary(),prefs?normalizeRecommendations(JSON.parse(prefs)):defaultRecommendations());
+ }
+ function storedSyncBaseline(){
+  const raw=localStorage.getItem(SYNC_KEY);if(!raw)return {token:'',sha:null,document:defaultSyncDocument(),conflicts:[]};
+  const saved=JSON.parse(raw);
+  if(saved.version!==1||typeof saved.token!=='string'||!(saved.sha===null||typeof saved.sha==='string')||!Array.isArray(saved.conflicts))throw new Error('本地同步基线无法读取；收藏保留，请导出备份后重试。');
+  return {...saved,document:normalizeSyncDocument(saved.document)};
+ }
+ function syncStatusText(){return {locked:'同步未解锁',pending:'待同步',loading:'正在同步',synced:'已同步',conflict:'同步有冲突',error:'同步失败',offline:'离线 · 待同步'}[cloud.status]||'待同步';}
+ function syncSummary(){return `<span><strong>${esc(syncStatusText())}</strong>${cloud.conflicts.length?` · ${cloud.conflicts.length} 处需选择`:''}</span><span class="fine">${esc(cloud.message)}</span>${cloud.enabled?button(cloud.status==='loading'?'同步中…':'立即同步','sync-now','',false,'bare',!!syncRequest):''}${cloud.conflicts.length?button('处理冲突','nav','settings',false,'bare'):''}`;}
+ function syncConflictDetails(){
+  const labels={note:'笔记',tags:'标签',folder:'归档',mark:'标记',saved:'保存状态',hidden:'隐藏状态',read:'已读状态',lastRead:'上次阅读',lastArticle:'上次阅读文章',strength:'兴趣程度',diversity:'领域跨度',personalized:'个性化开关',title:'标题',columns:'栏数'};
+  const display=value=>value===null?'（空）':typeof value==='string'?(value||'（空）'):JSON.stringify(value,null,2);
+  return cloud.conflicts.length?`<div class="fine">双方内容均已保留。请逐项选择；未保存的笔记草稿不会上传。</div>${cloud.conflicts.map((item,index)=>{const id=item.path[1]==='records'?item.path[2]:null,title=id?(record(id).article?.title||id):'阅读偏好',field=labels[item.path.at(-1)]||item.path.at(-1);return `<section class="sync-conflict"><strong>${esc(title)} · ${esc(field)}</strong><div class="conflict-versions"><div><span class="fine">本机版本</span><pre>${esc(item.localExists?display(item.local):'（已删除）')}</pre>${button('保留本机版本','sync-local',String(index))}</div><div><span class="fine">云端版本</span><pre>${esc(item.remoteExists?display(item.remote):'（已删除）')}</pre>${button('采用云端版本','sync-remote',String(index))}</div></div></section>`;}).join('')}`:'';
+ }
+ function renderSyncStatus(){root.querySelectorAll('[data-sync-status]').forEach(element=>{element.innerHTML=syncSummary();});root.querySelectorAll('[data-sync-conflicts]').forEach(element=>{element.innerHTML=syncConflictDetails();});syncFrameHeight();}
+ function backgroundRender(){
+  // A server response/poll must not replace a live textarea or move its cursor.
+  if(state.screen==='reader'&&state.notesOpen&&root.querySelector('[data-note-form]')){const draft=noteDraft();if(draft){beginNoteEdit(state.current);drafts[state.current]=draft;}cloud.needsRender=true;renderSyncStatus();return;}
+  render();
+ }
+ function syncFailed(message){cloud.status='error';cloud.message=message||'同步暂未成功，本地内容保留；可稍后重试。';renderSyncStatus();}
+ function scheduleSync(){
+  if(!cloud.enabled||!syncEngine)return;
+  clearTimeout(syncTimer);if(cloud.conflicts.length){cloud.status='conflict';renderSyncStatus();return;}
+  cloud.status=navigator.onLine===false?'offline':syncRequest?'loading':'pending';cloud.message=navigator.onLine===false?'本地修改已保存，联网后自动重试。':'本地修改已保存，正在等待同步。';renderSyncStatus();
+  syncTimer=setTimeout(()=>startSync('load'),1000);
+ }
+ function startSync(operation='load'){
+  if(!cloud.enabled||!syncEngine||!requests||syncRequest)return;
+  clearTimeout(syncTimer);syncTimer=null;
+  if(navigator.onLine===false){cloud.status='offline';cloud.message='本地修改已保存，联网后自动重试。';renderSyncStatus();return;}
+  try{
+   const baseline=storedSyncBaseline();cloud.baseline=baseline;cloud.conflicts=baseline.conflicts;
+   if(cloud.conflicts.length){cloud.status='conflict';cloud.message='请选择冲突字段要保留的版本后继续同步。';renderSyncStatus();return;}
+   const requestNonce=nonce(),document=localSyncDocument();sessionSyncNonces.add(requestNonce);
+   syncRequest={nonce:requestNonce,operation,base:baseline.document,baselineToken:baseline.token,...(operation==='save'?{sentDocument:document}:{})};
+   const value={action:'reader_sync',nonce:requestNonce,operation,expected_sha:baseline.sha,...(operation==='save'?{document}:{})};
+   requests.enqueue(value,{timeout:95000,onTimeout:()=>{if(!cloud.enabled||syncRequest?.nonce!==requestNonce)return;syncRequest=null;syncFailed('同步请求暂未返回，本地内容保留；重试会先核对云端版本。');}});
+   cloud.status='loading';cloud.message='正在核对本机与云端修改。';renderSyncStatus();
+  }catch(error){syncFailed(error.message);}
+ }
+ function persistSyncResult(remote,sha,merged,expectedToken,expectedLocal){
+  const current=storedSyncBaseline();if(current.token!==expectedToken)return false;
+  const latest=localSyncDocument(),normalized=normalizeSyncDocument(merged.document);
+  if(expectedLocal&&!syncEngine.equal(latest,expectedLocal))return false;
+  if(!syncEngine.equal(latest.library,normalized.library)){const library=normalizeStore(normalized.library);library.revision=nonce();localStorage.setItem(STORE_KEY,JSON.stringify(library));data=library;}
+  else data=latestLibrary();
+  if(!syncEngine.equal(latest.recommendations,normalized.recommendations))localStorage.setItem(RECOMMEND_KEY,JSON.stringify(normalized.recommendations));
+  recommendationPreferences=normalized.recommendations;recommendationDirty=true;
+  const unchanged=current.sha===sha&&syncEngine.equal(current.document,remote)&&syncEngine.equal(current.conflicts,merged.conflicts);
+  const baseline=unchanged?current:{version:1,token:nonce(),sha,document:remote,conflicts:merged.conflicts};
+  if(!unchanged)localStorage.setItem(SYNC_KEY,JSON.stringify(baseline));cloud.baseline=baseline;cloud.conflicts=merged.conflicts;storageWarning='';
+  return true;
+ }
+ function receiveSync(payload){
+  const enabled=payload?.enabled===true&&!!syncEngine&&!!requests;
+  if(!enabled){
+   for(const value of sessionSyncNonces)revokedSyncNonces.add(value);sessionSyncNonces.clear();
+   clearTimeout(syncTimer);syncTimer=null;syncRequest=null;requests?.cancel(value=>value.action==='reader_sync');
+   cloud.enabled=false;cloud.baseline=null;cloud.conflicts=[];cloud.status='locked';cloud.message=syncEngine?(text(payload?.message)||'请在页面上方解锁跨设备同步；本浏览器已有缓存仍保留。'):'同步模块暂未载入，本地收藏仍可使用。';return;
+  }
+  if(payload.nonce&&revokedSyncNonces.has(payload.nonce))return;
+  const wasEnabled=cloud.enabled;cloud.enabled=true;
+  if(!wasEnabled){cloud.status='pending';cloud.message='已解锁，正在核对本浏览器已有记录。';setTimeout(()=>startSync('load'),0);return;}
+  if(!syncRequest||payload.nonce!==syncRequest.nonce)return;
+  const request=syncRequest;syncRequest=null;
+  if(payload.status==='error'){syncFailed(text(payload.message));return;}
+  if(!['loaded','saved','conflict'].includes(payload.status)){syncFailed('同步响应未完成，本地内容保留，请重试。');return;}
+  try{
+   const baseline=storedSyncBaseline();
+   if(baseline.token!==request.baselineToken){cloud.baseline=baseline;cloud.conflicts=baseline.conflicts;cloud.status='pending';cloud.message='另一标签页完成了同步，正在重新核对。';setTimeout(()=>startSync('load'),0);return;}
+   if(!(payload.sha===null||(typeof payload.sha==='string'&&payload.sha))||(payload.document===null)!==(payload.sha===null)||(payload.status==='saved'&&(payload.document===null||request.operation!=='save')))throw new Error('云端版本回执不完整，本地内容保留。');
+   const remote=payload.document===null?defaultSyncDocument():normalizeSyncDocument(payload.document),local=localSyncDocument();
+   const base=payload.status==='saved'&&request.sentDocument?request.sentDocument:request.base;
+   const merged=syncEngine.mergeDocuments(base,local,remote,baseline.conflicts);
+   if(!persistSyncResult(remote,payload.sha,merged,request.baselineToken,local)){setTimeout(()=>startSync('load'),0);return;}
+   if(merged.conflicts.length){cloud.status='conflict';cloud.message='同一字段在两端有不同修改，双方内容均已保留。';}
+   else if(!syncEngine.equal(normalizeSyncDocument(merged.document),remote)){cloud.status='pending';cloud.message='已合并两端修改，正在保存云端版本。';setTimeout(()=>startSync('save'),0);}
+   else{cloud.status='synced';cloud.message='收藏、笔记和阅读偏好已与云端一致。';}
+  }catch(error){syncFailed(error.message);}
+ }
+ function chooseSyncConflict(index,side){
+  if(!cloud.enabled||!syncEngine)return;
+  try{
+   const baseline=storedSyncBaseline(),item=baseline.conflicts[index];if(!item)return;
+   const local=localSyncDocument();
+   if(cloud.baseline?.token!==baseline.token||!syncEngine.sameConflictValue(local,item)){
+    const merged=syncEngine.mergeDocuments(baseline.document,local,baseline.document,baseline.conflicts);
+    persistSyncResult(baseline.document,baseline.sha,merged,baseline.token,local);state.notice='本机或另一标签页的内容已经变化，请重新比较后选择。';return;
+   }
+   const merged={document:syncEngine.resolveConflict(local,item,side),conflicts:baseline.conflicts.filter((_,i)=>i!==index)};
+   if(!persistSyncResult(baseline.document,baseline.sha,merged,baseline.token,local)){state.notice='另一标签页更新了同步状态，请重新比较。';return;}
+   cloud.status=merged.conflicts.length?'conflict':'pending';cloud.message=merged.conflicts.length?'继续处理其余冲突。':'选择已保存，正在同步。';if(!merged.conflicts.length)scheduleSync();
+  }catch(error){syncFailed(error.message);}
  }
  function recommendFeedback(article,type,dwellMs=0){
   if(!article||!recommendationEngine)return;const retract=['restore','unsave','unimportant'].includes(type);if(!recommendationPreferences?.personalized&&!retract)return;
@@ -345,7 +464,7 @@ button:disabled { cursor:not-allowed; }
   const prefs=recommendationPreferences,rows=recommendationRows(),stats=recommendationBatch?.stats||{},interests=Array.isArray(stats.interests)?stats.interests.filter(x=>x&&text(x.category)).slice(0,4):[];
   const counts=rows.reduce((acc,row)=>{acc[row.lane]=(acc[row.lane]||0)+1;return acc;},{}),cold=stats.coldStart===true||(!counts.interest&&!counts.cross&&!counts.explore),breadthPercent=rows.length?Math.round(((counts.cross||0)+(counts.explore||0))/rows.length*1000)/10:0;
   const summary=!prefs.personalized?'个性化已关闭，按多个领域均衡浏览；不再积累新的兴趣行为。':interests.length?`本组参考的兴趣：${interests.map(x=>x.category).join('、')}。偏好会随时间减弱，可继续探索其他领域。`:'兴趣记录尚少，先从多个领域均衡选文。持续阅读、保存与重要标记会逐步影响下一组。';
-  return `<h2 class="page-title">为你推荐</h2><div class="fine">每组约 20 篇。兴趣偏好仅在本浏览器计算和保存；当前列表保持顺序，点击更新后再应用新的阅读行为与新闻。</div><div class="recommend-toolbar"><div class="filter-row">${button('更新推荐','recommend-refresh')}${button(prefs.personalized?'关闭个性化':'开启个性化','recommend-toggle')}${button('重置兴趣偏好','recommend-reset')}</div><div class="settings-fields"><label>兴趣程度<select data-recommend-setting="strength" aria-label="兴趣程度" ${!prefs.personalized?'disabled':''}>${[['light','轻'],['balanced','均衡'],['strong','较强']].map(([key,label])=>`<option value="${key}" ${prefs.strength===key?'selected':''}>${label}</option>`).join('')}</select></label><label>领域跨度<select data-recommend-setting="diversity" aria-label="领域跨度">${[['standard','标准'],['wide','更广']].map(([key,label])=>`<option value="${key}" ${prefs.diversity===key?'selected':''}>${label}</option>`).join('')}</select></label></div></div><div class="recommend-summary">${esc(summary)}<details><summary>推荐为什么这样选</summary><p>有效阅读会提供较轻的兴趣信号；保存和“重要”提供较明确的信号。“不感兴趣”会隐藏这篇文章，并减少相近内容。重复点击不会不断叠加，旧兴趣会逐渐减弱。</p><p>默认目标为兴趣 60%、跨领域 25%、探索 15%；轻模式为 40% / 35% / 25%，较强为 70% / 20% / 10%。候选充足时，按所选强度以 30%—60% 的跨领域与探索内容为目标，同时限制单一栏目、来源和版组的占比。候选不足时保留可用新闻，并说明本批实际比例与原因。</p><p>只有前台可见阅读累计至少 15 秒才计入阅读信号。关闭个性化会停止积累新行为，重置兴趣偏好会清除兴趣记录；收藏、笔记与已隐藏的文章保留。</p></details></div><div class="section-label"><span>${rows.length} 篇${cold?' · 多领域浏览':` · 兴趣 ${counts.interest||0} / 跨领域 ${counts.cross||0} / 探索 ${counts.explore||0} · 广度 ${breadthPercent}%`}</span><span>${recommendationDirty?'偏好或新闻有变化，更新推荐后应用。':'当前这组已固定，可安心阅读。'}</span></div>${Array.isArray(stats.notes)&&stats.notes.length?`<div class="fine">${stats.notes.map(esc).join(' ')}</div>`:''}<div class="recommend-grid">${rows.length?rows.map(entry=>recommendationCard(entry)).join(''):`<div class="empty">${receivedFeed?'当前没有可推荐的未隐藏新闻，可更新新闻或调整“不感兴趣”记录。':'正在等待新闻来源…'}</div>`}</div>`;
+  return `<h2 class="page-title">为你推荐</h2><div class="fine">每组约 20 篇。推荐在本浏览器计算，解锁后阅读偏好参与跨设备同步；当前列表保持顺序，点击更新后再应用新的阅读行为与新闻。</div><div class="recommend-toolbar"><div class="filter-row">${button('更新推荐','recommend-refresh')}${button(prefs.personalized?'关闭个性化':'开启个性化','recommend-toggle')}${button('重置兴趣偏好','recommend-reset')}</div><div class="settings-fields"><label>兴趣程度<select data-recommend-setting="strength" aria-label="兴趣程度" ${!prefs.personalized?'disabled':''}>${[['light','轻'],['balanced','均衡'],['strong','较强']].map(([key,label])=>`<option value="${key}" ${prefs.strength===key?'selected':''}>${label}</option>`).join('')}</select></label><label>领域跨度<select data-recommend-setting="diversity" aria-label="领域跨度">${[['standard','标准'],['wide','更广']].map(([key,label])=>`<option value="${key}" ${prefs.diversity===key?'selected':''}>${label}</option>`).join('')}</select></label></div></div><div class="recommend-summary">${esc(summary)}<details><summary>推荐为什么这样选</summary><p>有效阅读会提供较轻的兴趣信号；保存和“重要”提供较明确的信号。“不感兴趣”会隐藏这篇文章，并减少相近内容。重复点击不会不断叠加，旧兴趣会逐渐减弱。</p><p>默认目标为兴趣 60%、跨领域 25%、探索 15%；轻模式为 40% / 35% / 25%，较强为 70% / 20% / 10%。候选充足时，按所选强度以 30%—60% 的跨领域与探索内容为目标，同时限制单一栏目、来源和版组的占比。候选不足时保留可用新闻，并说明本批实际比例与原因。</p><p>只有前台可见阅读累计至少 15 秒才计入阅读信号。关闭个性化会停止积累新行为，重置兴趣偏好会清除兴趣记录；收藏、笔记与已隐藏的文章保留。</p></details></div><div class="section-label"><span>${rows.length} 篇${cold?' · 多领域浏览':` · 兴趣 ${counts.interest||0} / 跨领域 ${counts.cross||0} / 探索 ${counts.explore||0} · 广度 ${breadthPercent}%`}</span><span>${recommendationDirty?'偏好或新闻有变化，更新推荐后应用。':'当前这组已固定，可安心阅读。'}</span></div>${Array.isArray(stats.notes)&&stats.notes.length?`<div class="fine">${stats.notes.map(esc).join(' ')}</div>`:''}<div class="recommend-grid">${rows.length?rows.map(entry=>recommendationCard(entry)).join(''):`<div class="empty">${receivedFeed?'当前没有可推荐的未隐藏新闻，可更新新闻或调整“不感兴趣”记录。':'正在等待新闻来源…'}</div>`}</div>`;
  }
  function resetReadingClock(){readingClock={id:state.screen==='reader'?state.current:null,elapsed:0,last:0,counted:false};}
  function tickReadingClock(){
@@ -357,16 +476,14 @@ button:disabled { cursor:not-allowed; }
  function requestRead(id){
   const article=findArticle(id);if(!article||article.summary_only)return;
   if(!articleIndex.has(id)){state.notice='这篇文章已不在当前新闻列表中；仍可阅读本浏览器保存的内容，或打开原文。';return;}
-  if(pendingReads.has(id))return;const requestNonce=nonce();
-  const timer=setTimeout(()=>{if(pendingReads.get(id)?.nonce!==requestNonce)return;pendingReads.delete(id);details.set(id,{id,status:'error',paragraphs:[],message:'正文请求暂未返回，可重试或前往原文。'});if(state.current===id)render();},45000);
-  pendingReads.set(id,{nonce:requestNonce,timer});post('streamlit:setComponentValue',{value:{action:'read',id,nonce:requestNonce}});
+  if(pendingReads.has(id)||!requests)return;const requestNonce=nonce();
+  pendingReads.set(id,{nonce:requestNonce});requests.enqueue({action:'read',id,nonce:requestNonce},{timeout:50000,onTimeout:()=>{if(pendingReads.get(id)?.nonce!==requestNonce)return;pendingReads.delete(id);details.set(id,{id,status:'error',paragraphs:[],message:'正文请求暂未返回，可重试或前往原文。'});if(state.current===id)backgroundRender();}});
  }
  function normalizeSources(raw){return Array.isArray(raw)?raw.filter(source=>source&&typeof source==='object').map(source=>({id:text(source.id),name:text(source.name)||'未命名来源',scope:text(source.scope),status:['ok','excluded','skipped'].includes(source.status)?source.status:'error',count:Number.isFinite(Number(source.count))?Math.max(0,Number(source.count)):0,checked_at:validDate(source.checked_at),error:text(source.error),note:text(source.note)})):[];}
  function sourceErrors(raw){return Array.isArray(raw)?raw.map(error=>typeof error==='string'?error:text(error?.message)||text(error?.error)).filter(Boolean):[];}
  function requestRefresh(){
-  if(pendingRefresh)return;const requestNonce=nonce();
-  const timer=setTimeout(()=>{if(pendingRefresh?.nonce!==requestNonce)return;pendingRefresh=null;state.notice='更新请求暂未返回，已保留现有新闻；可稍后重试。';render();},75000);
-  pendingRefresh={nonce:requestNonce,timer};state.notice='正在更新新闻，当前版面和本地收藏保留。';post('streamlit:setComponentValue',{value:{action:'refresh',nonce:requestNonce}});
+  if(pendingRefresh||!requests)return;const requestNonce=nonce();
+  pendingRefresh={nonce:requestNonce};state.notice='正在更新新闻，当前版面和本地收藏保留。';requests.enqueue({action:'refresh',nonce:requestNonce},{timeout:95000,onTimeout:()=>{if(pendingRefresh?.nonce!==requestNonce)return;pendingRefresh=null;state.notice='更新请求暂未返回，已保留现有新闻；可稍后重试。';backgroundRender();}});
  }
  function button(label,action,id='',pressed=false,cls='',disabled=false){return `<button type="button" class="${cls}" data-action="${esc(action)}" data-id="${esc(id)}"${pressed?' aria-pressed="true"':''}${disabled?' disabled':''}>${esc(label)}</button>`;}
  function originalLink(a,label='阅读原文 ↗'){const url=a?.url;return url?`<a class="source-link" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(label)}</a>`:'';}
@@ -408,27 +525,28 @@ button:disabled { cursor:not-allowed; }
   const message=summaryOnly?'以下为来源提供的摘要，完整内容请阅读原文。':(full?(savedFull?'正在阅读本浏览器保存的正文副本。':detail.message||(detail.content_origin==='feed_full'?'显示来源订阅提供的正文，保留原始语言与原文链接。':'已取得来源页面正文。')):loading?'正在读取来源页面正文；可先阅读下方摘要。':detail?.status==='error'?(detail.message||'正文读取暂时失败，可重试或前往原文。'):(detail?.message||'目前仅有来源摘要。可尝试读取正文，或前往原文。'));
   const paragraphs=summaryOnly?(a.summary?[a.summary]:[]):full?detail.paragraphs:(detail?.paragraphs.length?detail.paragraphs:(a.summary?[a.summary]:[]));
   const related=articles.filter(x=>x.id!==a.id&&!record(x.id).hidden&&(x.category===a.category||x.group===a.group)).slice(0,4);
-  return `<div class="shell"><span>Newspaper / ${esc(a.category)} / ${esc(a.kind)}</span><span>${savedFull?'已保存正文':full?'来源正文':loading?'正文载入中':'摘要阅读'}</span></div><div class="reader-bar">${button('← 返回列表','back')}<span class="grow"></span>${button(r.saved?'✓ 已保存':full?'保存正文':'保存摘要','save',a.id,r.saved)}${r.saved&&!savedFull&&full?button('补存已取得正文','upgrade-save',a.id):''}${button(r.mark?`⚑ ${r.mark}`:'标记待读','mark',a.id,!!r.mark)}${button('字号 +','size')}${button(document.fullscreenElement===root?'退出全屏':'全屏阅读','fullscreen')}${button(state.readerWide?'舒适行宽':'铺满阅读','wide')}${originalLink(a,'原文 ↗')}</div><article class="reader-body ${state.readerWide?'wide':''}"><div class="accent fine">${esc(a.category)} · ${esc(a.kind)}</div><h1 tabindex="-1">${esc(a.title)}</h1><div class="fine">${esc(publisher(a))} · ${esc(articleTime(a))}${r.saved_at&&r.saved?` · 保存于 ${esc(dateLabel(r.saved_at))}`:''}</div><div class="reader-source">${esc(message)}${!summaryOnly&&!full&&articleIndex.has(a.id)?` ${button(loading?'读取中…':'重试正文','retry-read',a.id,false,'',loading)}`:''}</div>${paragraphs.length?paragraphs.map(paragraph=>`<p class="read-text">${esc(paragraph)}</p>`).join(''):'<div class="reader-empty">此来源暂未提供摘要或可提取的正文，请打开原文阅读。</div>'}<div class="reading-actions">${marks.map(mark=>button(mark,'set-mark',mark,r.mark===mark)).join('')}${button(r.read?'✓ 已读':'标为已读','read-status',a.id,!!r.read)}${button('写备注 / 归档','notes')}${button('不感兴趣','hide',a.id)}</div>${state.notesOpen?`<form class="reader-notes" data-note-form><h3>我的阅读笔记</h3><div class="fine">仅保存在本浏览器，不上传服务器。</div>${noteConflictPanel(a.id)}<textarea name="note" aria-label="我的备注" maxlength="8000" placeholder="记下值得留意的一点…">${esc(note.note||'')}</textarea><div class="note-fields"><label>归档位置<select name="folder">${folders.map(folder=>`<option ${note.folder===folder?'selected':''}>${esc(folder)}</option>`).join('')}</select></label><label>标签<input name="tags" maxlength="500" value="${esc(note.tags||'')}" placeholder="例如：教学，AI，待讨论"></label></div><div class="reading-actions">${button('保存笔记与归档','save-note')}${button('收起','notes')}</div></form>`:''}<section><h2 class="page-title">相关栏目阅读</h2><div class="fine">按同一栏目或版组选取，不代表报道的是同一事件，也不表示相互佐证。</div>${related.length?related.map(x=>item(x)).join(''):'<p class="fine">当前暂无其他相关条目。</p>'}</section></article>`;
+  return `<div class="shell"><span>Newspaper / ${esc(a.category)} / ${esc(a.kind)}</span><span>${savedFull?'已保存正文':full?'来源正文':loading?'正文载入中':'摘要阅读'}</span></div><div class="reader-bar">${button('← 返回列表','back')}<span class="grow"></span>${button(r.saved?'✓ 已保存':full?'保存正文':'保存摘要','save',a.id,r.saved)}${r.saved&&!savedFull&&full?button('补存已取得正文','upgrade-save',a.id):''}${button(r.mark?`⚑ ${r.mark}`:'标记待读','mark',a.id,!!r.mark)}${button('字号 +','size')}${button(document.fullscreenElement===root?'退出全屏':'全屏阅读','fullscreen')}${button(state.readerWide?'舒适行宽':'铺满阅读','wide')}${originalLink(a,'原文 ↗')}</div><article class="reader-body ${state.readerWide?'wide':''}"><div class="accent fine">${esc(a.category)} · ${esc(a.kind)}</div><h1 tabindex="-1">${esc(a.title)}</h1><div class="fine">${esc(publisher(a))} · ${esc(articleTime(a))}${r.saved_at&&r.saved?` · 保存于 ${esc(dateLabel(r.saved_at))}`:''}</div><div class="reader-source">${esc(message)}${!summaryOnly&&!full&&articleIndex.has(a.id)?` ${button(loading?'读取中…':'重试正文','retry-read',a.id,false,'',loading)}`:''}</div>${paragraphs.length?paragraphs.map(paragraph=>`<p class="read-text">${esc(paragraph)}</p>`).join(''):'<div class="reader-empty">此来源暂未提供摘要或可提取的正文，请打开原文阅读。</div>'}<div class="reading-actions">${marks.map(mark=>button(mark,'set-mark',mark,r.mark===mark)).join('')}${button(r.read?'✓ 已读':'标为已读','read-status',a.id,!!r.read)}${button('写备注 / 归档','notes')}${button('不感兴趣','hide',a.id)}</div>${state.notesOpen?`<form class="reader-notes" data-note-form><h3>我的阅读笔记</h3><div class="fine">先保存在本浏览器；解锁后已保存的笔记与归档会同步到私有云端，未保存草稿留在本页。</div>${noteConflictPanel(a.id)}<textarea name="note" aria-label="我的备注" maxlength="8000" placeholder="记下值得留意的一点…">${esc(note.note||'')}</textarea><div class="note-fields"><label>归档位置<select name="folder">${folders.map(folder=>`<option ${note.folder===folder?'selected':''}>${esc(folder)}</option>`).join('')}</select></label><label>标签<input name="tags" maxlength="500" value="${esc(note.tags||'')}" placeholder="例如：教学，AI，待讨论"></label></div><div class="reading-actions">${button('保存笔记与归档','save-note')}${button('收起','notes')}</div></form>`:''}<section><h2 class="page-title">相关栏目阅读</h2><div class="fine">按同一栏目或版组选取，不代表报道的是同一事件，也不表示相互佐证。</div>${related.length?related.map(x=>item(x)).join(''):'<p class="fine">当前暂无其他相关条目。</p>'}</section></article>`;
  }
  function library(){
   const filters=['全部','已保存','待读','重要','待核实','有笔记','已读','不感兴趣'],query=state.query.toLocaleLowerCase();
   const rows=Object.values(data.records).filter(r=>{if(state.filter==='不感兴趣')return r.hidden;if(state.filter==='已读')return r.read;if(state.filter==='有笔记')return !!r.note;if(state.filter==='已保存')return r.saved;if(marks.includes(state.filter))return r.mark===state.filter;return r.saved||r.mark||r.note;}).filter(r=>(state.folder==='全部'||(r.folder||'未分类')===state.folder)&&(!query||[r.article.title,r.article.source,r.article.category,r.note,r.tags,...(r.detail?.paragraphs||[])].some(value=>String(value||'').toLocaleLowerCase().includes(query))));
-  return `<h2 class="page-title">我的收藏</h2><div class="fine">文章快照、标记和笔记只保存在本浏览器；尚未启用跨设备同步。清除网站数据会移除这些本地记录。</div><form class="search-row" data-search-form><input name="q" aria-label="搜索本地收藏" placeholder="搜索收藏、笔记、标签与已存正文…" value="${esc(state.query)}">${button('搜索','search')}${backupControls()}</form>${backupPreviewPanel()}<div class="filter-row">${filters.map(filter=>button(filter,'library-filter',filter,state.filter===filter)).join('')}</div><div class="collection-toolbar"><label>归档 <select data-folder-filter aria-label="筛选归档位置">${['全部',...folders].map(folder=>`<option ${state.folder===folder?'selected':''}>${esc(folder)}</option>`).join('')}</select></label><span class="fine">${rows.length} 篇</span></div>${rows.length?rows.map(r=>{const a=r.article;return `<article class="saved-row"><div>${button(a.title,'read',a.id,false,'bare news-title')}<div class="item-meta">${esc(a.category)} · ${esc(publisher(a))} · ${esc(articleTime(a))} · ${esc(r.folder||'未分类')}</div><div class="state-tags">${[r.saved?(r.detail?.status==='full'&&!a.summary_only?'已存正文快照':'已存摘要与出处'):'',r.mark||'',r.read?'已读':'',r.hidden?'已隐藏于报纸':'',r.tags||''].filter(Boolean).map(esc).join(' · ')}</div>${r.note?`<div class="fine">我的备注：${esc(r.note)}</div>`:''}</div><div class="row-controls">${r.hidden?button('恢复显示','restore',a.id):''}${button('整理笔记','edit-note',a.id)}${r.saved?button('取消保存','save',a.id):''}${r.mark?button('取消标记','clear-mark',a.id):''}</div></article>`;}).join(''):'<div class="empty">当前筛选下没有内容。可保存文章、标记待读，或调整搜索条件。</div>'}`;
+  return `<h2 class="page-title">我的收藏</h2><div class="fine">文章快照、标记和笔记先保存在本浏览器，解锁后自动同步到私有云端。清除网站数据会移除本地缓存，尚未同步的修改请先导出备份。</div><form class="search-row" data-search-form><input name="q" aria-label="搜索本地收藏" placeholder="搜索收藏、笔记、标签与已存正文…" value="${esc(state.query)}">${button('搜索','search')}${backupControls()}</form>${backupPreviewPanel()}<div class="filter-row">${filters.map(filter=>button(filter,'library-filter',filter,state.filter===filter)).join('')}</div><div class="collection-toolbar"><label>归档 <select data-folder-filter aria-label="筛选归档位置">${['全部',...folders].map(folder=>`<option ${state.folder===folder?'selected':''}>${esc(folder)}</option>`).join('')}</select></label><span class="fine">${rows.length} 篇</span></div>${rows.length?rows.map(r=>{const a=r.article;return `<article class="saved-row"><div>${button(a.title,'read',a.id,false,'bare news-title')}<div class="item-meta">${esc(a.category)} · ${esc(publisher(a))} · ${esc(articleTime(a))} · ${esc(r.folder||'未分类')}</div><div class="state-tags">${[r.saved?(r.detail?.status==='full'&&!a.summary_only?'已存正文快照':'已存摘要与出处'):'',r.mark||'',r.read?'已读':'',r.hidden?'已隐藏于报纸':'',r.tags||''].filter(Boolean).map(esc).join(' · ')}</div>${r.note?`<div class="fine">我的备注：${esc(r.note)}</div>`:''}</div><div class="row-controls">${r.hidden?button('恢复显示','restore',a.id):''}${button('整理笔记','edit-note',a.id)}${r.saved?button('取消保存','save',a.id):''}${r.mark?button('取消标记','clear-mark',a.id):''}</div></article>`;}).join(''):'<div class="empty">当前筛选下没有内容。可保存文章、标记待读，或调整搜索条件。</div>'}`;
  }
  function arts(){const literary=catalog[8][0],film=catalog[9][0],rows=articles.filter(a=>(a.group===literary||a.group===film)&&(state.artGroup==='全部'||a.group===state.artGroup)&&isMatch(a));return `<h2 class="page-title">文艺副刊</h2><div class="fine">来自当前来源的小说、文学、书评与影视报道；未取得的作品信息不补写、不编造评分。</div><div class="filter-row">${['全部',literary,film].map(group=>button(group,'art-group',group,state.artGroup===group)).join('')}</div><div class="article-list">${rows.length?rows.map(a=>item(a,true)).join(''):'<div class="empty">本次尚未取得符合条件的文学或影视内容，可查看来源状态或稍后更新。</div>'}</div>`;}
  function topicPage(){
   if(state.screen==='topics')return `<h2 class="page-title">专题浏览</h2><div class="fine">目前按已标注的栏目归入版组，方便集中阅读；尚未进行事件识别或自动观点比较。</div><div class="topic-grid">${topics.map(topic=>{const count=articles.filter(a=>topic.categories.includes(a.category)&&!record(a.id).hidden).length;return `<section class="topic"><div class="fine">栏目归类 · ${count} 篇</div><h3>${esc(topic.name)}</h3><p class="fine">${topic.categories.map(esc).join(' / ')}</p>${button('进入主题','topic',topic.id)} ${button(data.following.includes(topic.id)?'✓ 已关注':'关注此版组','follow',topic.id,data.following.includes(topic.id))}</section>`;}).join('')}</div>`;
   const topic=topics.find(t=>t.id===state.topic)||topics[0],rows=articles.filter(a=>topic.categories.includes(a.category)&&isMatch(a));return `<h2 class="page-title">${esc(topic.name)}</h2><div class="section-label"><span>按本版组的栏目归类，保留各自来源</span>${button(data.following.includes(topic.id)?'✓ 已关注':'关注此版组','follow',topic.id,data.following.includes(topic.id))}</div><div class="filter-row">${button('返回专题目录','nav','topics')}</div><div class="article-list">${rows.length?rows.map(a=>item(a,true)).join(''):'<div class="empty">本次尚未取得此版组的内容。</div>'}</div>`;
  }
- function settings(){return `<h2 class="page-title">来源与阅读设置</h2><section class="setting-group"><h3>本次新闻来源</h3><div class="fine">采集成功时间：${esc(dateLabel(fetchedAt,'尚未成功取得新闻'))}${attemptedAt?` · 最近尝试：${esc(dateLabel(attemptedAt))}`:''}。列表可用不代表每篇正文都能提取。</div>${sources.length?`<table class="source-table"><thead><tr><th>来源 / 覆盖</th><th>本次状态</th><th>检查时间</th></tr></thead><tbody>${sources.map(source=>`<tr><td>${esc(source.name)}<small>${esc(source.scope)}</small></td><td>${source.status==='ok'?`<span class="good">已取得 ${source.count} 篇</span>`:['excluded','skipped'].includes(source.status)?'<span>未接入 / 暂不采集</span>':'<span class="error-text">读取失败</span>'}${source.error?`<small class="error-text">${esc(source.error)}</small>`:''}${source.note?`<small>${esc(source.note)}</small>`:''}</td><td>${esc(dateLabel(source.checked_at,'未提供'))}</td></tr>`).join('')}</tbody></table>`:'<p class="fine">尚未收到来源状态。</p>'}</section><section class="setting-group"><h3>首页与更新</h3><div class="filter-row">${button('调整首页栏目','nav','catalog')}${button(pendingRefresh?'正在更新…':'更新报纸','refresh','',false,'',!!pendingRefresh)}</div><div class="fine">刷新保留当前阅读与本浏览器收藏。没有取得内容的栏目保持空白状态。</div></section><section class="setting-group"><h3>本浏览器收藏</h3><p>保存会保留当前取得的文章信息与正文；只有摘要时明确保存摘要。记录不会上传服务器，也不会同步到其他设备。</p>${button('进入我的收藏','nav','library')}${backupControls()}</section><section class="setting-group"><h3>版面与字号</h3><div class="settings-fields"><label>报纸栏数<select data-design="columns">${[2,3,4].map(n=>`<option value="${n}" ${data.design.columns===n?'selected':''}>${n} 栏</option>`).join('')}</select></label><label>标题字号<select data-design="title">${[15,17,19,21].map(n=>`<option value="${n}" ${data.design.title===n?'selected':''}>${n}</option>`).join('')}</select></label></div></section>`;}
+ function settings(){return `<h2 class="page-title">来源与阅读设置</h2><section class="setting-group"><h3>本次新闻来源</h3><div class="fine">采集成功时间：${esc(dateLabel(fetchedAt,'尚未成功取得新闻'))}${attemptedAt?` · 最近尝试：${esc(dateLabel(attemptedAt))}`:''}。列表可用不代表每篇正文都能提取。</div>${sources.length?`<table class="source-table"><thead><tr><th>来源 / 覆盖</th><th>本次状态</th><th>检查时间</th></tr></thead><tbody>${sources.map(source=>`<tr><td>${esc(source.name)}<small>${esc(source.scope)}</small></td><td>${source.status==='ok'?`<span class="good">已取得 ${source.count} 篇</span>`:['excluded','skipped'].includes(source.status)?'<span>未接入 / 暂不采集</span>':'<span class="error-text">读取失败</span>'}${source.error?`<small class="error-text">${esc(source.error)}</small>`:''}${source.note?`<small>${esc(source.note)}</small>`:''}</td><td>${esc(dateLabel(source.checked_at,'未提供'))}</td></tr>`).join('')}</tbody></table>`:'<p class="fine">尚未收到来源状态。</p>'}</section><section class="setting-group"><h3>首页与更新</h3><div class="filter-row">${button('调整首页栏目','nav','catalog')}${button(pendingRefresh?'正在更新…':'更新报纸','refresh','',false,'',!!pendingRefresh)}</div><div class="fine">刷新保留当前阅读与本浏览器收藏。没有取得内容的栏目保持空白状态。</div></section><section class="setting-group"><h3>收藏与跨设备同步</h3><div class="sync-strip" data-sync-status>${syncSummary()}</div><p>收藏、笔记、标签、归档、已读与隐藏状态，以及阅读偏好和版面设置，先保存本地，解锁后同步到私有云端。未解锁时仅使用本浏览器缓存；退出解锁不会清除此设备的缓存。推荐排序仍在本浏览器计算。</p><div data-sync-conflicts>${syncConflictDetails()}</div>${button('进入我的收藏','nav','library')}${backupControls()}</section><section class="setting-group"><h3>版面与字号</h3><div class="settings-fields"><label>报纸栏数<select data-design="columns">${[2,3,4].map(n=>`<option value="${n}" ${data.design.columns===n?'selected':''}>${n} 栏</option>`).join('')}</select></label><label>标题字号<select data-design="title">${[15,17,19,21].map(n=>`<option value="${n}" ${data.design.title===n?'selected':''}>${n}</option>`).join('')}</select></label></div></section>`;}
 
  function render(){
+  cloud.needsRender=false;
   if(!recommendationBatch&&articles.length)buildRecommendationBatch();
   const active=document.activeElement,activeName=active&&root.contains(active)?active.name:'';let selection=null;if(activeName&&typeof active.selectionStart==='number')selection=[active.selectionStart,active.selectionEnd];
   root.style.setProperty('--paper-columns',data.design.columns);root.style.setProperty('--title-size',data.design.title+'px');root.style.setProperty('--read-size',data.design.read+'px');
   const content=state.screen==='front'?front():state.screen==='all'?allNews():state.screen==='ai'?aiPage():state.screen==='recommend'?recommendationPage():state.screen==='catalog'?catalogPage():state.screen==='section'?section():state.screen==='reader'?reader():state.screen==='library'?library():state.screen==='arts'?arts():['topics','topic'].includes(state.screen)?topicPage():settings();
   const feedNotice=stale?`本次更新未能取得新的完整结果，继续显示上次成功取得的新闻（${dateLabel(fetchedAt,'时间未知')}）。`:(feedErrors.length?'部分来源本次未能读取；已取得的新闻仍可阅读，详情见“来源与设置”。':'');
-  root.innerHTML=`${state.screen==='reader'?'':chrome()}${feedNotice?`<div class="notice" role="status">${esc(feedNotice)}</div>`:''}${storageWarning?`<div class="notice" role="alert">${esc(storageWarning)}</div>`:''}${recommendationWarning?`<div class="notice" role="status">${esc(recommendationWarning)}</div>`:''}<div class="notice" role="status" aria-live="polite">${esc(state.notice)}${state.undo?` ${button('撤销','undo','','','bare')}`:''}</div>${content}<footer class="footer"><span>新闻内容来自所标注来源 · 时间均按北京时间展示</span><span>收藏与笔记仅在本浏览器保存</span></footer>`;
+  root.innerHTML=`${state.screen==='reader'?'':chrome()}<div class="sync-strip" role="status" data-sync-status>${syncSummary()}</div>${feedNotice?`<div class="notice" role="status">${esc(feedNotice)}</div>`:''}${storageWarning?`<div class="notice" role="alert">${esc(storageWarning)}</div>`:''}${recommendationWarning?`<div class="notice" role="status">${esc(recommendationWarning)}</div>`:''}<div class="notice" role="status" aria-live="polite">${esc(state.notice)}${state.undo?` ${button('撤销','undo','','','bare')}`:''}</div>${content}<footer class="footer"><span>新闻内容来自所标注来源 · 时间均按北京时间展示</span><span>本地保留缓存 · 解锁后自动同步收藏与阅读偏好</span></footer>`;
   if(componentDisabled)root.querySelectorAll('button,input,textarea,select').forEach(el=>{el.disabled=true;});
   if(activeName){const next=Array.from(root.querySelectorAll('[name]')).find(el=>el.name===activeName);if(next){next.focus({preventScroll:true});if(selection&&typeof next.setSelectionRange==='function')try{next.setSelectionRange(...selection);}catch{}}}
   syncFrameHeight();
@@ -502,7 +620,7 @@ button:disabled { cursor:not-allowed; }
  function backupControls(){return `${button('导出收藏备份','export')}${button(importBusy?'正在读取备份…':'导入收藏备份','import-library','',false,'',importBusy||!libraryEngine)}<input type="file" data-library-import accept=".json,application/json" aria-label="选择收藏备份文件" hidden>`;}
  function backupPreviewPanel(){
   if(!importPreview)return '';const preview=importPreview,stats=preview.stats;
-  return `<section class="backup-panel" aria-label="备份导入预览"><h3>导入预览</h3><div class="fine">${esc(preview.name)} · ${stats.incoming} 条记录</div><p>新增 ${stats.added} 条，已有 ${stats.overlap} 条；可补全 ${stats.filled} 条，${stats.conflicts} 条存在不同的笔记、标签或归档。</p><p class="fine">默认合并：现有非空笔记、标签和标记优先，补入缺少的记录与内容。现有隐藏状态和版面设置保留。文件只在本浏览器处理，最大 10 MiB。</p>${preview.conflicts.length?`<details><summary>查看将保留现有内容的条目</summary><ul>${preview.conflicts.slice(0,30).map(value=>`<li>${esc(value.title)}</li>`).join('')}</ul>${preview.conflicts.length>30?`<p class="fine">其余 ${preview.conflicts.length-30} 条按同一规则处理。</p>`:''}</details>`:''}<div class="filter-row">${button('确认合并导入','confirm-import','',false,'',!stats.incoming)}${button('取消','cancel-import')}</div></section>`;
+  return `<section class="backup-panel" aria-label="备份导入预览"><h3>导入预览</h3><div class="fine">${esc(preview.name)} · ${stats.incoming} 条记录</div><p>新增 ${stats.added} 条，已有 ${stats.overlap} 条；可补全 ${stats.filled} 条，${stats.conflicts} 条存在不同的笔记、标签或归档。</p><p class="fine">默认合并：现有非空笔记、标签和标记优先，补入缺少的记录与内容。现有隐藏状态和版面设置保留。文件在本浏览器解析，确认导入后将按当前解锁状态参与同步；最大 10 MiB。</p>${preview.conflicts.length?`<details><summary>查看将保留现有内容的条目</summary><ul>${preview.conflicts.slice(0,30).map(value=>`<li>${esc(value.title)}</li>`).join('')}</ul>${preview.conflicts.length>30?`<p class="fine">其余 ${preview.conflicts.length-30} 条按同一规则处理。</p>`:''}</details>`:''}<div class="filter-row">${button('确认合并导入','confirm-import','',false,'',!stats.incoming)}${button('取消','cancel-import')}</div></section>`;
  }
  async function prepareImport(file){
   if(!file||!libraryEngine)return;const ticket=++importSequence;importPreview=null;
@@ -530,7 +648,7 @@ button:disabled { cursor:not-allowed; }
  root.addEventListener('input',event=>{if(event.target.closest('[data-note-form]')){beginNoteEdit(state.current);const draft=noteDraft();if(draft)drafts[state.current]=draft;}});
  root.addEventListener('click',event=>{
   const target=event.target.closest('button[data-action]');if(!target||componentDisabled||target.disabled)return;
-  const action=target.dataset.action,id=target.dataset.id;returnScrollSequence++;if(action==='fullscreen'){toggleFullscreen();return;}state.notice='';
+  const action=target.dataset.action,id=target.dataset.id;if(action==='sync-now'){startSync('load');renderSyncStatus();return;}if(action==='sync-local'||action==='sync-remote'){chooseSyncConflict(Number(id),action==='sync-local'?'local':'remote');render();return;}returnScrollSequence++;if(action==='fullscreen'){toggleFullscreen();return;}state.notice='';
   if(action==='nav'){if(state.screen==='reader')tickReadingClock();state.screen=id;state.query='';state.type='全部';state.undo=null;resetReadingClock();if(id==='recommend'&&recommendationDirty)buildRecommendationBatch();}
   if(action==='clear-news-filters'){state.query='';state.allSource='全部';state.allGroup='全部';state.type='全部';state.newsLimit=30;}if(action==='more-news')state.newsLimit+=30;
   if(action==='section'){state.screen='section';state.category=id;state.query='';state.type='全部';}
@@ -550,7 +668,7 @@ button:disabled { cursor:not-allowed; }
   if(action==='topic'){state.screen='topic';state.topic=id;state.query='';state.type='全部';}
   if(action==='follow')commit(()=>{data.following=data.following.includes(id)?data.following.filter(value=>value!==id):[...data.following,id];},'关注状态已保存在本浏览器。');
   if(action==='recommend-refresh'){recommendationSeed++;if(buildRecommendationBatch())state.notice='已按当前新闻与本浏览器偏好更新推荐。';}
-  if(action==='recommend-toggle'){if(updateRecommendations(prefs=>{prefs.personalized=!prefs.personalized;},recommendationPreferences.personalized?'已关闭个性化，继续提供多领域新闻。':'已开启个性化，偏好仅在本浏览器保存。')){resetReadingClock();buildRecommendationBatch();}}
+  if(action==='recommend-toggle'){if(updateRecommendations(prefs=>{prefs.personalized=!prefs.personalized;},recommendationPreferences.personalized?'已关闭个性化，继续提供多领域新闻。':'已开启个性化，解锁后偏好自动同步。')){resetReadingClock();buildRecommendationBatch();}}
   if(action==='recommend-reset'&&recommendationEngine){if(updateRecommendations(prefs=>{prefs.profile=recommendationEngine.resetProfile();},'兴趣偏好已重置，收藏、笔记与已隐藏的文章保留。',true)){resetReadingClock();buildRecommendationBatch();}}
   if(action==='art-group')state.artGroup=id;if(action==='ai-source'&&['全部','官方信源','综合新闻'].includes(id))state.aiSource=id;if(action==='ai-category'&&(id==='全部'||AI_SECTIONS.some(([key])=>key===id)))state.aiCategory=id;if(action==='refresh')requestRefresh();if(action==='retry-read')requestRead(id);if(action==='export')exportLibrary();if(action==='import-library'){root.querySelector('[data-library-import]')?.click();return;}if(action==='confirm-import')confirmImport();if(action==='cancel-import'){importPreview=null;importSequence++;state.notice='已取消导入，收藏未改变。';}render();
  });
@@ -560,7 +678,7 @@ button:disabled { cursor:not-allowed; }
  document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement)fullscreenExitAt=Date.now();const button=root.querySelector('[data-action="fullscreen"]');if(button)button.textContent=document.fullscreenElement===root?'退出全屏':'全屏阅读';syncFrameHeight();});
  window.addEventListener('message',event=>{
   if(event.source!==window.parent||event.data?.type!=='streamlit:render')return;
-  const args=event.data.args||{};componentDisabled=event.data.disabled===true;
+  const args=event.data.args||{};componentDisabled=event.data.disabled===true;requests?.setDisabled(componentDisabled);receiveSync(args.reader_sync);
   if(args.feed&&typeof args.feed==='object'){
    const previousFeedVersion=feedVersion,feed=args.feed,next=Array.isArray(feed.articles)?feed.articles.map(normalizeArticle).filter(Boolean):[],unique=new Map(next.map(a=>[a.id,a]));
    if(unique.size||!articles.length){articles=[...unique.values()].sort(compareArticleTime);articleIndex=new Map(articles.map(a=>[a.id,a]));fetchedAt=validDate(feed.fetched_at);}
@@ -571,11 +689,28 @@ button:disabled { cursor:not-allowed; }
   if(detail){const pending=pendingReads.get(detail.id);if(!pending||handled===pending.nonce){details.set(detail.id,detail);if(pending){clearTimeout(pending.timer);pendingReads.delete(detail.id);}}}
   if(pendingRefresh&&handled===pendingRefresh.nonce){clearTimeout(pendingRefresh.timer);pendingRefresh=null;state.notice=text(args.request_message)||(stale?'本次更新未成功，已保留上次取得的新闻。':sources.length&&sources.every(source=>source.status==='error')?'本次更新失败，暂未取得新闻；请查看来源状态。':articles.length?'新闻来源已更新。':'本次未取得可展示的新闻，请稍后重试。');}
   if(handled){for(const [id,pending] of pendingReads){if(pending.nonce!==handled||detail?.id===id)continue;clearTimeout(pending.timer);pendingReads.delete(id);details.set(id,{id,status:'error',paragraphs:[],message:text(args.request_message)||'本次未取得正文，可重试或打开原文。'});}}
-  if(text(args.request_message)&&!pendingRefresh)state.notice=text(args.request_message);render();
+  if(text(args.request_message)&&!pendingRefresh)state.notice=text(args.request_message);requests?.acknowledge(handled);requests?.acknowledge(args.reader_sync?.nonce);backgroundRender();
  });
- window.addEventListener('storage',event=>{if(event.key===RECOMMEND_KEY){try{recommendationPreferences=event.newValue?normalizeRecommendations(JSON.parse(event.newValue)):defaultRecommendations();recommendationWarning='';recommendationDirty=true;resetReadingClock();render();}catch{recommendationWarning='另一标签页的推荐偏好暂时无法读取，当前设置保留。';render();}return;}if(event.key!==STORE_KEY)return;try{data=event.newValue?normalizeStore(JSON.parse(event.newValue)):defaults();storageBroken=false;storageWarning='';state.notice='本浏览器另一标签页的收藏变化已载入。';recommendationDirty=true;render();}catch{storageWarning='另一标签页写入的收藏暂时无法读取，当前内容保留。';render();}});
+ window.addEventListener('storage',event=>{
+  if(![STORE_KEY,RECOMMEND_KEY,SYNC_KEY].includes(event.key))return;
+  try{
+   if(event.key===SYNC_KEY){
+    if(!cloud.enabled)return;
+    const baseline=storedSyncBaseline();cloud.baseline=baseline;cloud.conflicts=baseline.conflicts;
+    cloud.status=cloud.conflicts.length?'conflict':syncEngine.equal(localSyncDocument(),baseline.document)?'synced':'pending';
+    cloud.message=cloud.conflicts.length?'另一标签页保留了待处理冲突。':'已载入另一标签页的同步状态。';
+    if(!syncRequest&&!cloud.conflicts.length&&cloud.status==='pending')scheduleSync();
+   }else{
+    // Read the current pair, not an earlier storage event's value.
+    data=latestLibrary();const raw=localStorage.getItem(RECOMMEND_KEY);recommendationPreferences=raw?normalizeRecommendations(JSON.parse(raw)):defaultRecommendations();
+    storageBroken=false;storageWarning='';recommendationWarning='';recommendationDirty=true;resetReadingClock();
+    state.notice='本浏览器另一标签页的收藏与偏好变化已载入。';scheduleSync();
+   }
+   backgroundRender();
+  }catch{storageWarning='另一标签页的最新数据暂时无法读取，当前内容保留。';backgroundRender();}
+ });
  if(typeof IntersectionObserver==='function')new IntersectionObserver(entries=>{readerInView=entries.some(entry=>entry.isIntersecting);if(!readerInView)readingClock.last=0;}).observe(root);
- document.addEventListener('visibilitychange',()=>{readingClock.last=0;});window.addEventListener('blur',()=>{readingClock.last=0;});window.addEventListener('focus',()=>{readingClock.last=0;});setInterval(tickReadingClock,1000);
+ document.addEventListener('visibilitychange',()=>{readingClock.last=0;});window.addEventListener('blur',()=>{readingClock.last=0;});window.addEventListener('focus',()=>{readingClock.last=0;startSync('load');});window.addEventListener('online',()=>startSync('load'));window.addEventListener('offline',()=>{if(cloud.enabled&&!syncRequest){cloud.status='offline';cloud.message='本地修改已保存，联网后自动重试。';renderSyncStatus();}});setInterval(()=>{if(!document.hidden)startSync('load');},60000);setInterval(tickReadingClock,1000);
  window.addEventListener('resize',syncFrameHeight);if(typeof ResizeObserver==='function')new ResizeObserver(syncFrameHeight).observe(root);
  loadLibrary();loadRecommendations();render();firstFeedTimer=setTimeout(()=>{if(receivedFeed)return;state.notice='暂未收到新闻数据。可稍后更新，或进入“我的收藏”阅读已保存内容。';render();},25000);post('streamlit:componentReady',{apiVersion:1});
 })();

@@ -2,6 +2,7 @@
 
 from copy import deepcopy
 import importlib
+import hashlib
 import json
 from pathlib import Path
 from unittest.mock import Mock
@@ -10,6 +11,7 @@ import pytest
 from streamlit.testing.v1 import AppTest
 
 import utils.newspaper_component as component
+from utils import budget_auth, newspaper_reader_sync
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -37,6 +39,7 @@ FEED = {
 
 @pytest.fixture(autouse=True)
 def isolate_public_source_caches(monkeypatch):
+    monkeypatch.setattr(budget_auth, "get_budget_password", Mock(return_value=None))
     def clear():
         component._complete_newspaper_feed.clear()
         component._recent_newspaper_feed.clear()
@@ -72,6 +75,138 @@ def test_newspaper_page_passes_real_source_metadata(service):
     assert any("公开新闻与 AI 专版" in item.value for item in app.caption)
     assert component_args(app)["feed"]["articles"][0]["url"] == ARTICLE["url"]
     assert (ROOT / "integrations" / "newspaper" / "frontend" / "index.html").is_file()
+
+
+def test_locked_reader_sync_does_not_read_write_or_disclose_private_data(service, monkeypatch):
+    load = Mock(return_value={"document": {"private": "must not appear"}})
+    save = Mock()
+    monkeypatch.setattr(newspaper_reader_sync, "load_reader_state", load)
+    monkeypatch.setattr(newspaper_reader_sync, "save_reader_state", save)
+    app = AppTest.from_file(str(PAGE)).run()
+    for operation in ("load", "save"):
+        app.session_state[KEY] = {"action": "reader_sync", "operation": operation,
+                                  "nonce": f"locked-{operation}", "expected_sha": None,
+                                  "document": {"attacker": True}, "authenticated": True}
+        app.run()
+        assert not app.exception
+        assert component_args(app)["reader_sync"] == {"enabled": False, "status": "locked"}
+    load.assert_not_called()
+    save.assert_not_called()
+
+
+def _unlock_fixture(app, monkeypatch, password="fixture-only-password"):
+    monkeypatch.setattr(budget_auth, "get_budget_password", Mock(return_value=password))
+    app.session_state["_newspaper_reader_auth"] = hashlib.sha256(password.encode()).hexdigest()
+
+
+def test_authenticated_sync_preserves_feed_and_deduplicates_requests(service, monkeypatch):
+    feed, _ = service
+    document = {"version": 1, "library": {"fixture": "private"}}
+    load = Mock(return_value={"ok": True, "status": "loaded", "sha": "a" * 40, "document": document})
+    save = Mock(return_value={"ok": True, "status": "saved", "sha": "b" * 40, "document": document})
+    monkeypatch.setattr(newspaper_reader_sync, "load_reader_state", load)
+    monkeypatch.setattr(newspaper_reader_sync, "save_reader_state", save)
+    app = AppTest.from_file(str(PAGE)).run()
+    _unlock_fixture(app, monkeypatch)
+    app.session_state[KEY] = {"action": "reader_sync", "operation": "load", "nonce": "sync-load"}
+    app.run()
+    assert not app.exception
+    result = component_args(app)["reader_sync"]
+    assert result["enabled"] is True and result["document"] == document
+    assert result["nonce"] == "sync-load"
+    app.run()
+    load.assert_called_once()
+    app.session_state[KEY] = {"action": "reader_sync", "operation": "save", "nonce": "sync-save",
+                              "document": document, "expected_sha": "a" * 40}
+    app.run()
+    assert not app.exception
+    save.assert_called_once()
+    assert save.call_args.args == (document, "a" * 40)
+    assert component_args(app)["reader_sync"]["status"] == "saved"
+    assert feed.call_count == 1
+
+
+def test_password_change_locks_session_and_drops_prior_cloud_payload(service, monkeypatch):
+    load = Mock()
+    monkeypatch.setattr(newspaper_reader_sync, "load_reader_state", load)
+    app = AppTest.from_file(str(PAGE)).run()
+    _unlock_fixture(app, monkeypatch)
+    app.session_state["_newspaper_reader_sync_response"] = {
+        "status": "loaded", "document": {"private": "old payload"}}
+    monkeypatch.setattr(budget_auth, "get_budget_password", Mock(return_value="rotated-fixture"))
+    app.session_state[KEY] = {"action": "reader_sync", "operation": "load", "nonce": "after-rotation"}
+    app.run()
+    assert not app.exception
+    assert component_args(app)["reader_sync"] == {"enabled": False, "status": "locked"}
+    load.assert_not_called()
+
+
+def test_authenticated_sync_requires_cas_and_sanitizes_unexpected_errors(service, monkeypatch):
+    save = Mock(side_effect=RuntimeError("secret-token-value"))
+    monkeypatch.setattr(newspaper_reader_sync, "save_reader_state", save)
+    app = AppTest.from_file(str(PAGE)).run()
+    _unlock_fixture(app, monkeypatch)
+    app.session_state[KEY] = {"action": "reader_sync", "operation": "save", "nonce": "missing-cas"}
+    app.run()
+    save.assert_not_called()
+    assert component_args(app)["reader_sync"]["status"] == "error"
+    app.session_state[KEY] = {"action": "reader_sync", "operation": "save", "nonce": "network-fail",
+                              "expected_sha": None, "document": {}}
+    app.run()
+    assert not app.exception
+    assert "secret-token-value" not in json.dumps(component_args(app))
+
+
+def test_password_form_unlocks_only_after_valid_password_and_can_lock(service, monkeypatch):
+    monkeypatch.setattr(budget_auth, "get_budget_password", Mock(return_value="fixture-password"))
+    load = Mock()
+    monkeypatch.setattr(newspaper_reader_sync, "load_reader_state", load)
+    app = AppTest.from_file(str(PAGE)).run()
+    app.text_input[0].set_value("wrong")
+    next(button for button in app.button if button.label == "启用跨设备同步").click().run()
+    assert not app.exception
+    assert component_args(app)["reader_sync"]["enabled"] is False
+    app.text_input[0].set_value("fixture-password")
+    next(button for button in app.button if button.label == "启用跨设备同步").click().run()
+    assert not app.exception
+    assert component_args(app)["reader_sync"] == {"enabled": True, "status": "ready"}
+    next(button for button in app.button if button.label == "停止本次会话同步").click().run()
+    assert not app.exception
+    assert component_args(app)["reader_sync"]["enabled"] is False
+    load.assert_not_called()
+
+
+def test_login_does_not_replay_sync_write_left_by_locked_component(service, monkeypatch):
+    monkeypatch.setattr(budget_auth, "get_budget_password", Mock(return_value="fixture-password"))
+    save = Mock()
+    monkeypatch.setattr(newspaper_reader_sync, "save_reader_state", save)
+    app = AppTest.from_file(str(PAGE)).run()
+    app.session_state[KEY] = {"action": "reader_sync", "operation": "save", "nonce": "before-login",
+                              "expected_sha": None, "document": {"unreviewed": True}}
+    app.text_input[0].set_value("fixture-password")
+    next(button for button in app.button if button.label == "启用跨设备同步").click().run()
+    assert not app.exception
+    save.assert_not_called()
+    assert component_args(app)["reader_sync"] == {"enabled": True, "status": "ready"}
+
+
+def test_cloud_response_never_crosses_streamlit_sessions(service, monkeypatch):
+    load = Mock(return_value={"ok": True, "status": "loaded", "sha": "a" * 40,
+                              "document": {"fixture": "owner-only"}})
+    monkeypatch.setattr(newspaper_reader_sync, "load_reader_state", load)
+    owner = AppTest.from_file(str(PAGE)).run()
+    _unlock_fixture(owner, monkeypatch)
+    owner.session_state[KEY] = {"action": "reader_sync", "operation": "load", "nonce": "owner-load"}
+    owner.run()
+    visitor = AppTest.from_file(str(PAGE)).run()
+    visitor.session_state[KEY] = {"action": "reader_sync", "operation": "load", "nonce": "visitor-load"}
+    visitor.run()
+    assert not owner.exception and not visitor.exception
+    assert component_args(owner)["reader_sync"]["document"] == {"fixture": "owner-only"}
+    assert component_args(visitor)["reader_sync"] == {"enabled": False, "status": "locked"}
+    load.assert_called_once()
+    next(button for button in owner.button if button.label == "停止本次会话同步").click().run()
+    assert component_args(owner)["reader_sync"] == {"enabled": False, "status": "locked"}
 
 
 def test_newspaper_registration_survives_detached_page_execution(service):
@@ -158,6 +293,7 @@ def test_failed_refresh_keeps_last_success_and_throttles_repeat(service):
     assert not app.exception
     feed.clear.assert_called_once()
     assert "稍后" in component_args(app)["request_message"]
+    assert feed.call_count == 2  # Initial load plus one accepted refresh.
 
 
 def test_initial_source_failure_is_real_empty_state(service):

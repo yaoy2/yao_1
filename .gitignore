@@ -54,6 +54,7 @@ data/teacher_category_cache.json
 data/todo_items_backup.md
 data/web_memos_backup.md
 data/newspaper_daily.json
+data/newspaper_reader.json
 data/grade_workbench/
 115-ai-organizer/.env
 115-ai-organizer/data/*.sqlite

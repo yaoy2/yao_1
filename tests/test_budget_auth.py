@@ -41,6 +41,12 @@ class BudgetAuthTest(unittest.TestCase):
         self.assertFalse(budget_auth.is_budget_password_valid("Secret", "secret"))
         self.assertFalse(budget_auth.is_budget_password_valid("", "secret"))
 
+    def test_unicode_password_does_not_crash_comparison(self):
+        self.assertTrue(budget_auth.is_budget_password_valid("中文密码🔐", "中文密码🔐"))
+        self.assertFalse(budget_auth.is_budget_password_valid("中文", "secret"))
+        self.assertFalse(budget_auth.is_budget_password_valid("不同密码", "中文密码🔐"))
+        self.assertFalse(budget_auth.is_budget_password_valid("\ud800", "secret"))
+
 
 if __name__ == "__main__":
     unittest.main()

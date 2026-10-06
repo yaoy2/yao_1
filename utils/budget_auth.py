@@ -1,6 +1,8 @@
 import hmac
 import os
 
+BUDGET_AUTH_VERSION = 2
+
 
 def _clean_password(value):
     if value is None:
@@ -46,4 +48,7 @@ def is_budget_password_valid(input_password, configured_password):
     configured_password = _clean_password(configured_password)
     if not input_password or not configured_password:
         return False
-    return hmac.compare_digest(input_password, configured_password)
+    try:
+        return hmac.compare_digest(input_password.encode("utf-8"), configured_password.encode("utf-8"))
+    except UnicodeEncodeError:
+        return False
