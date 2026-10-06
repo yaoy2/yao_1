@@ -9,7 +9,7 @@ import pytest
 from utils import newspaper_sources as media
 from utils import newspaper_data as news
 from utils.newspaper_interviews import (
-    INTERVIEW_CATEGORY, SHANGHAI, has_interview_label, is_recent_interview, retain_interviews, without_expired_interviews,
+    INTERVIEW_CATEGORY, SHANGHAI, has_interview_label, interview_cutoff, is_recent_interview, retain_interviews, without_expired_interviews,
 )
 
 
@@ -21,11 +21,20 @@ def interview(published_at, **changes):
 
 
 @pytest.mark.parametrize("offset, expected", [
-    (timedelta(), True), (timedelta(days=-7), True),
-    (timedelta(days=-7, seconds=-1), False), (timedelta(seconds=1), False),
+    (timedelta(), True), (timedelta(days=-183), True),
+    (timedelta(days=-183, seconds=-1), False), (timedelta(seconds=1), False),
 ])
-def test_seven_day_window_has_explicit_inclusive_boundaries(offset, expected):
+def test_six_calendar_month_window_has_explicit_inclusive_boundaries(offset, expected):
     assert is_recent_interview(interview((NOW + offset).isoformat()), NOW) is expected
+
+
+@pytest.mark.parametrize("current, expected", [
+    ("2026-08-31T12:00:00+08:00", "2026-02-28T12:00:00+08:00"),
+    ("2024-08-31T12:00:00+08:00", "2024-02-29T12:00:00+08:00"),
+    ("2026-03-31T23:00:00+00:00", "2025-10-01T07:00:00+08:00"),
+])
+def test_cutoff_uses_beijing_calendar_and_clamps_short_months(current, expected):
+    assert interview_cutoff(datetime.fromisoformat(current)).isoformat() == expected
 
 
 @pytest.mark.parametrize("value", [None, "", "not a date", "2026-10-05", "2026-10-05T12:00:00"])
@@ -36,7 +45,7 @@ def test_collection_or_update_never_substitutes_for_publication(value):
 
 def test_timezone_offsets_represent_the_same_instant_and_other_sections_are_untouched():
     recent = interview(NOW.astimezone(timezone.utc).isoformat())
-    old = interview((NOW - timedelta(days=8)).isoformat())
+    old = interview((NOW - timedelta(days=184)).isoformat())
     other = {"category": "散文随笔", "published_at": ""}
     assert without_expired_interviews([old, recent, other], NOW) == [recent, other]
     assert len([old, recent, other]) == 3
@@ -77,7 +86,7 @@ def test_writer_column_membership_and_list_date_are_used_without_inventing_summa
 
 
 def test_old_or_future_interviews_are_successful_empty_results():
-    content = writer_page((WRITER_URL, "旧作家访谈", "2026-09-28"),
+    content = writer_page((WRITER_URL, "旧作家访谈", "2026-04-05"),
                           (WRITER_URL.replace("40808385", "40808386"), "未来稿件", "2026-10-07"))
     assert media._parse_chinawriter_interviews(content, WRITER, NOW) == []
     with patch.object(media, "PUBLIC_SOURCES", (WRITER,)), patch.object(media, "INACTIVE_SOURCES", ()), \
@@ -85,7 +94,7 @@ def test_old_or_future_interviews_are_successful_empty_results():
         feed = media.load_extended_news_feed()
     assert feed["errors"] == []
     assert feed["sources"][0]["status"] == "ok"
-    assert feed["sources"][0]["note"] == "近 7 天暂无新访谈"
+    assert feed["sources"][0]["note"] == "近半年暂无新访谈"
 
 
 @pytest.mark.parametrize("content", [b'<html>login or structure changed</html>',
@@ -95,8 +104,8 @@ def test_missing_list_or_dates_are_reported_as_source_failures(content):
         media._parse_chinawriter_interviews(content, WRITER, NOW)
 
 
-def test_lifeweek_reads_only_the_interview_list_and_enforces_exact_week():
-    row = '{id:273320,title:"作家的文学世界",pubTime:"2026-09-29 12:00:00",contentType:a,summary:"公开导读"}'
+def test_lifeweek_reads_only_the_interview_list_and_enforces_six_months():
+    row = '{id:273320,title:"作家的文学世界",pubTime:"2026-04-06 12:00:00",contentType:a,summary:"公开导读"}'
     recommended = '{id:999999,title:"推荐广告",pubTime:"2026-10-05 12:00:00",contentType:a}'
     rows = media._parse_lifeweek_interviews(lifeweek_page(row, recommended), LIFEWEEK, NOW)
     assert len(rows) == 1
@@ -105,7 +114,7 @@ def test_lifeweek_reads_only_the_interview_list_and_enforces_exact_week():
     assert rows[0]["category"] == INTERVIEW_CATEGORY
     assert rows[0]["summary"] == "公开导读"
     assert media._parse_lifeweek_interviews(lifeweek_page(row.replace("12:00:00", "11:59:59")), LIFEWEEK, NOW) == []
-    assert media._parse_lifeweek_interviews(lifeweek_page(row.replace("2026-09-29", "2026-10-07")), LIFEWEEK, NOW) == []
+    assert media._parse_lifeweek_interviews(lifeweek_page(row.replace("2026-04-06", "2026-10-07")), LIFEWEEK, NOW) == []
     with pytest.raises(ValueError):
         media._parse_lifeweek_interviews(lifeweek_page(row.replace("pubTime", "updateTime")), LIFEWEEK, NOW)
 
@@ -163,7 +172,8 @@ def test_general_publishers_classify_recent_interviews_in_the_independent_group(
     assert row["group"] == "人物与访谈"
     assert row["kind"] == "访谈"
     assert media._article(source, "专访企业家", row["url"], "", "", NOW) is None
-    assert media._article(source, "专访企业家", row["url"], (NOW-timedelta(days=8)).isoformat(), "", NOW) is None
+    assert media._article(source, "专访企业家", row["url"], (NOW-timedelta(days=184)).isoformat(), "", NOW) is None
+    assert media._article(source, "专访企业家", row["url"], (NOW-timedelta(days=100)).isoformat(), "", NOW) is not None
     assert media._article(source, "专访企业家", row["url"], NOW.isoformat(), "", NOW, time_basis="updated") is None
     base = news._article(news.SOURCES[5], "专访运动员：备战新赛季",
                          "https://www.chinanews.com.cn/ty/2026/10-06/123456.shtml", NOW.isoformat())
@@ -193,13 +203,13 @@ def test_chinanews_uses_list_date_and_explicit_interview_evidence_not_just_a_per
                     (url.replace("12345", "12346"), "AI伦理困局何解？", "作者评论", "2026-10-5 18:53"),
                     (url.replace("12345", "12347"), "企业家怎么看未来？", "——访某企业创始人", "2026-10-4 19:45"),
                     (url.replace("/dxw/", "/cul/shipin/"), "同题视频", "专访科学家", "2026-10-5 19:00"),
-                    (url.replace("12345", "12348"), "旧采访", "专访运动员", "2026-9-28 18:00"))
+                    (url.replace("12345", "12348"), "旧采访", "专访运动员", "2026-4-5 18:00"))
     rows = media._parse_chinanews_interviews(page, source, NOW)
     assert len(rows) == 2
     assert rows[0]["published_at"] == "2026-10-05T20:48:00+08:00"
     assert all(row["group"] == "人物与访谈" and not row["summary_only"] for row in rows)
     with patch.object(media, "_request", return_value=(page, "max-age=120")):
-        loaded, _ = media._load_source(source, NOW)
+        loaded, _, _ = media._load_source(source, NOW)
     assert loaded[0]["cache_policy"]["max_age_seconds"] == 120
 
 
@@ -209,7 +219,7 @@ def test_cctv_full_programs_use_web_release_stamp_and_never_fetch_video_or_claim
     row = {"mode": 0, "title": "《对话》企业家的创新探索", "brief": "本期节目对话企业创始人。", "url": url,
            "time": "2026-09-20 21:30:00", "focus_date": int((NOW-timedelta(days=1)).timestamp()*1000)}
     payload = {"data": {"list": [row, {**row, "mode": 1}, {**row, "title": "精彩预告"},
-                                   {**row, "focus_date": int((NOW-timedelta(days=8)).timestamp()*1000)},
+                                   {**row, "focus_date": int((NOW-timedelta(days=184)).timestamp()*1000)},
                                    {**row, "focus_date": None, "time": NOW.isoformat()},
                                    {**row, "url": "https://other.test/video.shtml"}]}}
     rows = media._parse_cctv_interviews(json.dumps(payload).encode(), source, NOW)
@@ -230,6 +240,92 @@ def test_general_feeds_reject_expired_interviews_before_taking_the_display_limit
     recent = news._article(source, "专访企业家：新市场",
                           "https://www.chinanews.com.cn/cj/2026/10-05/12345.shtml", NOW.isoformat())
     expired = {**recent, "id": "expired", "url": recent["url"].replace("12345", "12346"),
-               "published_at": (NOW-timedelta(days=8)).isoformat()}
+               "published_at": (NOW-timedelta(days=184)).isoformat()}
     with patch.object(news, "_fetch_bytes", return_value=b"unused"), patch.object(news, "_parse_rss", return_value=[expired, recent]):
         assert [row["id"] for row in news._load_source(source, NOW)] == [recent["id"]]
+
+
+def test_writer_history_follows_public_links_and_keeps_more_than_twenty_articles():
+    first = writer_page(*[(WRITER_URL.replace("40808385", str(41000000+i)), f"访谈 {i}", "2026-09-01")
+                          for i in range(40)]) + b'<a href="index2.html">next</a>'
+    second = writer_page((WRITER_URL, "半年前访谈", "2026-04-07"),
+                         (WRITER_URL.replace("40808385", "40808386"), "过期访谈", "2026-04-01")) + b'<a href="index3.html">next</a>'
+    with patch.object(media, "_request", side_effect=[(first, "max-age=600"), (second, "max-age=60")]) as request:
+        rows, control, note = media._load_source(WRITER, NOW)
+    assert len(rows) == 41 and note == ""
+    assert [call.args[0] for call in request.call_args_list] == [WRITER.url, WRITER.url.replace("index.html", "index2.html")]
+    assert all(row["cache_policy"]["max_age_seconds"] == 60 for row in rows)
+    assert media._cache_policy(control)["max_age_seconds"] == 60
+
+
+def test_unavailable_history_preserves_current_articles_and_reports_incomplete_coverage():
+    first = writer_page((WRITER_URL, "公开访谈", "2026-10-05")) + b'<a href="index2.html">next</a>'
+    with patch.object(media, "_request", side_effect=[(first, ""), TimeoutError("private connection info")]), \
+         patch.object(media, "PUBLIC_SOURCES", (WRITER,)), patch.object(media, "INACTIVE_SOURCES", ()), \
+         patch.object(media, "_now", return_value=NOW):
+        feed = media.load_extended_news_feed()
+    assert len(feed["articles"]) == 1 and feed["sources"][0]["status"] == "ok"
+    assert "部分历史列表" in feed["sources"][0]["note"]
+    assert "private connection" not in str(feed)
+
+
+def test_history_does_not_follow_unpublished_or_foreign_next_links():
+    first = writer_page((WRITER_URL, "公开访谈", "2026-10-05")) + b'<a href="https://other.test/index2.html">next</a>'
+    with patch.object(media, "_request", return_value=(first, "")) as request:
+        assert len(media._load_source(WRITER, NOW)[0]) == 1
+    request.assert_called_once_with(WRITER.url, WRITER)
+
+
+def test_history_does_not_stop_before_other_items_on_the_inclusive_cutoff_day():
+    now = NOW.replace(hour=0)
+    first = writer_page((WRITER_URL, "边界日第一页", "2026-04-06")) + b'<a href="index2.html">next</a>'
+    second = writer_page((WRITER_URL.replace("40808385", "40808386"), "边界日第二页", "2026-04-06"))
+    with patch.object(media, "_request", side_effect=[(first, ""), (second, "")]):
+        assert len(media._load_source(WRITER, now)[0]) == 2
+
+
+def interview_rss(url, body, title="Guest interview"):
+    return (f'<rss xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><item><title>{title}</title>'
+            f'<link>{url}</link><pubDate>Thu, 01 Oct 2026 10:00:00 +0800</pubDate>'
+            f'<description>Published introduction.</description><content:encoded><![CDATA[{body}]]></content:encoded>'
+            '</item></channel></rss>').encode()
+
+
+def test_independent_magazine_keeps_interview_body_without_promoting_other_feed_items():
+    source = media.SOURCE_BY_ID["media_thetalks_interviews"]
+    body = '<p>' + 'Interviewer asks about the architecture. ' * 5 + '</p><p>' + 'The guest discusses the design. ' * 5 + '</p>'
+    rows = media._parse_feed(interview_rss("https://the-talks.com/interview/guest/", body), source, NOW)
+    assert len(rows) == 1 and not rows[0]["summary_only"]
+    assert rows[0]["category"] == INTERVIEW_CATEGORY
+    with patch.object(media, "_request") as request:
+        result = media.fetch_extended_article(rows[0])
+    request.assert_not_called()
+    assert result["status"] == "full" and len(result["paragraphs"]) == 2
+    assert media._parse_feed(interview_rss("https://the-talks.com/advert/", body), source, NOW) == []
+
+
+def test_blog_essays_are_excluded_while_a_long_complete_transcript_remains_readable():
+    source = media.SOURCE_BY_ID["media_dwarkesh_interviews"]
+    url = "https://www.dwarkesh.com/p/guest"
+    section = '<p><strong>Dwarkesh Patel</strong></p><p>A question about the guest work.</p>'
+    section += '<p><strong><span>Guest Name</span></strong></p><p>A complete answer from the interviewee.</p>'
+    body = '<h2>Sponsors</h2><p>Unrelated advertisement.</p><h2><strong>Transcript</strong></h2>' + section * 120
+    rows = media._parse_feed(interview_rss(url, body), source, NOW)
+    assert len(rows) == 1 and not rows[0]["summary_only"]
+    assert len(rows[0]["feed_paragraphs"]) == 480
+    with patch.object(media, "_request") as request:
+        detail = media.fetch_extended_article(rows[0])
+    request.assert_not_called()
+    assert detail["status"] == "full" and len(detail["paragraphs"]) == 480
+    assert "advertisement" not in str(detail["paragraphs"])
+    assert media._parse_feed(interview_rss(url, body.replace("Transcript", "Essay")), source, NOW) == []
+    assert media._parse_feed(interview_rss(url, body.replace("Dwarkesh Patel", "No Host")), source, NOW) == []
+
+
+def test_transcript_limits_reject_oversize_bodies_instead_of_truncating_them():
+    source = media.SOURCE_BY_ID["media_dwarkesh_interviews"]
+    section = '<p><strong>Dwarkesh Patel</strong></p><p>Question?</p><p><strong>Guest</strong></p><p>Answer.</p>'
+    body = '<h2>Transcript</h2>' + section * 201
+    rows = media._parse_feed(interview_rss("https://www.dwarkesh.com/p/guest", body), source, NOW)
+    assert rows[0]["summary_only"] and rows[0]["feed_paragraphs"] == []
+    assert media._dwarkesh_transcript(body + '<p>' + 'x'*240000 + '</p>') == ""

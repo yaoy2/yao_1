@@ -1,9 +1,10 @@
 /* Pure helpers for local library backups and concurrent note editing. */
 (function (root, factory) {
-  const api = factory();
+  const interviews = typeof module === 'object' && module.exports ? require('./interviews.js') : root?.NewspaperInterviews;
+  const api = factory(interviews);
   if (typeof module === 'object' && module.exports) module.exports = api;
   if (root) root.NewspaperLibrary = api;
-})(typeof globalThis === 'object' ? globalThis : this, function () {
+})(typeof globalThis === 'object' ? globalThis : this, function (interviews) {
   'use strict';
   const MAX_BACKUP_BYTES = 10 * 1024 * 1024;
   const MAX_RECORDS = 20000;
@@ -68,10 +69,14 @@
         throw new Error('备份的文章快照格式不正确。');
       }
     }
+    if (own(raw, 'interviews')) {
+      if (!interviews) throw new Error('访谈记录模块暂未载入，未导入任何内容。');
+      interviews.validateState(raw.interviews);
+    }
     return raw;
   }
 
-  function mergeLibraries(current, incoming) {
+  function mergeLibraries(current, incoming, options = {}) {
     const library = clone(current), conflicts = [];
     let added = 0, overlap = 0, filled = 0;
     for (const [id, source] of Object.entries(incoming.records)) {
@@ -91,6 +96,10 @@
       }
       // Current hidden state, article identity, non-empty notes and settings remain authoritative.
       if (JSON.stringify(target) !== before) filled++;
+    }
+    if (own(current, 'interviews') || own(incoming, 'interviews')) {
+      if (!interviews) throw new Error('访谈记录模块暂未载入，原有收藏保留。');
+      library.interviews = interviews.mergeStates([current.interviews, incoming.interviews], options);
     }
     return {library, stats: {incoming: Object.keys(incoming.records).length, added, overlap, filled,
       conflicts: conflicts.length, total: Object.keys(library.records).length}, conflicts};

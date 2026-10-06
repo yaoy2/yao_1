@@ -5,7 +5,7 @@ never truncates personal material, and performs all compression in memory.
 """
 
 import base64
-from datetime import datetime
+from datetime import datetime, timedelta
 from email.utils import parsedate_to_datetime
 import gzip
 import hashlib
@@ -17,8 +17,10 @@ from urllib.parse import urlsplit
 import zlib
 
 from utils import github_backup_sync as sync
+from utils.newspaper_interviews import SHANGHAI, is_recent_interview
 
 
+NEWSPAPER_READER_VERSION = 2
 READER_PATH = "data/newspaper_reader.json"
 PRIVATE_REPO = "yaoy2/yao_1-data"
 PRIVATE_BRANCH = "main"
@@ -42,7 +44,7 @@ ARTICLE_FIELDS = ARTICLE_TEXT_FIELDS | ARTICLE_DATE_FIELDS | ARTICLE_METADATA_FI
     "id", "time_basis", "date_precision", "url", "summary_only"}
 DETAIL_FIELDS = frozenset({"id", "status", "paragraphs", "source", "url", "title", "published_at", "content_origin", "message"})
 RECORD_FIELDS = frozenset({"article", "saved", "hidden", "read", "mark", "note", "tags", "folder", "saved_at", "detail"})
-LIBRARY_FIELDS = frozenset({"version", "records", "pins", "pinsCustomized", "following", "lastArticle", "lastRead", "design"})
+LIBRARY_FIELDS = frozenset({"version", "records", "pins", "pinsCustomized", "following", "lastArticle", "lastRead", "design", "interviews"})
 RECOMMENDATION_FIELDS = frozenset({"version", "personalized", "strength", "diversity", "profile"})
 ENVELOPE_FIELDS = frozenset({"format", "version", "encoding", "uncompressed_bytes", "sha256", "data"})
 
@@ -210,8 +212,58 @@ def _unique_strings(values, maximum, *, identifiers=False):
     _require(len(set(values)) == len(values))
 
 
+def _edition_date(value):
+    _require(type(value) is str and bool(re.fullmatch(r"\d{4}-\d{2}-\d{2}", value)))
+    try:
+        datetime.strptime(value, "%Y-%m-%d")
+    except ValueError as error:
+        raise _SyncFailure("schema") from error
+
+
+def _interviews(value):
+    """Optional daily selections contain only ten list snapshots and seen hashes."""
+    _keys(value, {"version", "batch", "seen"}, {"version", "batch", "seen"})
+    _version(value["version"])
+    seen = value["seen"]
+    _require(type(seen) is list and len(seen) <= 2400)
+    for entry in seen:
+        _keys(entry, {"edition_date", "keys"}, {"edition_date", "keys"})
+        _edition_date(entry["edition_date"])
+        keys = entry["keys"]
+        _require(type(keys) is list and 1 <= len(keys) <= 3)
+        prefixes = set()
+        for key in keys:
+            _require(type(key) is str and bool(re.fullmatch(r"(?:id|url|title):[a-f0-9]{64}", key)))
+            prefix = key.split(":", 1)[0]
+            _require(prefix not in prefixes)
+            prefixes.add(prefix)
+    batch = value["batch"]
+    if batch is None:
+        return
+    _keys(batch, {"edition_date", "generated_at", "articles"}, {"edition_date", "generated_at", "articles"})
+    _edition_date(batch["edition_date"])
+    _string(batch["generated_at"], 100, nonempty=True)
+    try:
+        stamp = datetime.fromisoformat(batch["generated_at"].replace("Z", "+00:00"))
+        _require(stamp.tzinfo is not None)
+    except ValueError as error:
+        raise _SyncFailure("schema") from error
+    _require(batch["edition_date"] == (stamp.astimezone(SHANGHAI) - timedelta(hours=9)).date().isoformat())
+    articles = batch["articles"]
+    _require(type(articles) is list and len(articles) <= 10)
+    ids, urls = set(), set()
+    for article in articles:
+        _article(article)
+        _require(article.get("category") == "访谈与对话" and article.get("summary_only") is not True
+                 and "视频" not in article.get("kind", "") and is_recent_interview(article, stamp))
+        _url(article.get("url"))
+        _require(bool(article.get("url")) and article["id"] not in ids and article["url"] not in urls)
+        ids.add(article["id"])
+        urls.add(article["url"])
+
+
 def _library(library):
-    _keys(library, LIBRARY_FIELDS, LIBRARY_FIELDS)
+    _keys(library, LIBRARY_FIELDS, LIBRARY_FIELDS - {"interviews"})
     _version(library["version"])
     records = library["records"]
     _require(type(records) is dict)
@@ -247,6 +299,8 @@ def _library(library):
     _keys(design, {"columns", "title", "read"}, {"columns", "title", "read"})
     for key, choices in (("columns", {2, 3, 4}), ("title", {15, 17, 19, 21}), ("read", {18, 20, 22, 24})):
         _require(type(design[key]) is int and design[key] in choices)
+    if "interviews" in library:
+        _interviews(library["interviews"])
 
 
 def _recommendations(recommendations):

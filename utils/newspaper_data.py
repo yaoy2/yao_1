@@ -22,7 +22,7 @@ import requests
 from utils.newspaper_interviews import INTERVIEW_CATEGORY, has_interview_label, is_recent_interview, retain_interviews
 
 
-NEWSPAPER_SOURCE_VERSION = 4
+NEWSPAPER_SOURCE_VERSION = 5
 SHANGHAI = timezone(timedelta(hours=8))
 REQUEST_TIMEOUT = (3.5, 7)
 MAX_RESPONSE_BYTES = 2_000_000
@@ -389,8 +389,8 @@ def _load_source(source, now):
     if not articles:
         raise ValueError("来源未返回含有效标题、日期和链接的新闻")
     cutoff = now - timedelta(days=source.max_age_days)
-    articles = [a for a in articles if cutoff <= _publication(a["published_at"]) <= now + timedelta(days=1)
-                and (a["category"] != INTERVIEW_CATEGORY or is_recent_interview(a, now))]
+    articles = [a for a in articles if (is_recent_interview(a, now) if a["category"] == INTERVIEW_CATEGORY
+                else cutoff <= _publication(a["published_at"]) <= now + timedelta(days=1))]
     if not articles:
         raise ValueError("来源没有近期有效内容，暂不收入报纸")
     for article in articles:

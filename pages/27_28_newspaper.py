@@ -13,7 +13,7 @@ import streamlit as st
 from utils import newspaper_component
 # Cloud can replace the page while retaining its previously imported services.
 # Refresh an older service after a source or cache contract changes.
-if getattr(newspaper_component, "NEWSPAPER_SERVICE_VERSION", 0) < 6:
+if getattr(newspaper_component, "NEWSPAPER_SERVICE_VERSION", 0) < 7:
     newspaper_component = importlib.reload(newspaper_component)
 
 from utils.newspaper_component import (
@@ -24,6 +24,9 @@ from utils.newspaper_component import (
 )
 from utils.ui_theme import render_home_link
 from utils import budget_auth, newspaper_reader_sync
+
+if getattr(newspaper_reader_sync, "NEWSPAPER_READER_VERSION", 0) < 2:
+    newspaper_reader_sync = importlib.reload(newspaper_reader_sync)
 
 if getattr(budget_auth, "BUDGET_AUTH_VERSION", 0) < 2:
     budget_auth = importlib.reload(budget_auth)
@@ -88,7 +91,7 @@ render_home_link()
 st.markdown("### 📰 M28·Newspaper")
 st.caption(
     "个人 · 多来源公开新闻与 AI 专版｜优先读取已完成的有效日报；尚无日报时即时获取，手动更新可检查全部来源。"
-    "访谈与阅读专栏收录近 7 天各行业、各领域的人物专访与对话。"
+    "访谈与阅读收录近半年各领域文字访谈，每天北京时间 09:00 换一组，最多 10 篇，跨天不重复。"
     "解锁跨设备同步后，收藏、笔记和推荐偏好会自动合并到私有仓库；未解锁时继续保存在当前浏览器。"
 )
 sync_enabled = render_sync_access()
@@ -174,7 +177,8 @@ st.session_state[DISPLAY_FEED_KEY] = feed
 if feed.get("delivery") == "daily":
     st.caption("定时日报 · " + str(feed.get("edition_date", ""))
                + " · 采集完成：" + str(feed.get("fetched_at", ""))
-               + "。日报只收录允许保存的来源；点击更新可读取全部即时来源。")
+               + (" · 访谈实时补充：" + str(feed["live_interviews_checked_at"]) if feed.get("live_interviews_checked_at") else "")
+               + "。日报只收录允许保存的来源；访谈同时检查独立博客与媒体专栏。")
 
 if is_new_request and request["action"] == "read":
     # The browser sends an article ID only. Never fetch a URL supplied by it.

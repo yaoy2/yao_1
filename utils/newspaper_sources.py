@@ -20,13 +20,16 @@ from bs4 import BeautifulSoup
 import requests
 
 from utils.newspaper_data import CATEGORY_GROUP
-from utils.newspaper_interviews import INTERVIEW_CATEGORY, has_interview_label, is_recent_interview, retain_interviews
+from utils.newspaper_interviews import INTERVIEW_CATEGORY, has_interview_label, interview_cutoff, is_recent_interview, retain_interviews
 
 
-NEWSPAPER_MEDIA_VERSION = 3
+NEWSPAPER_MEDIA_VERSION = 4
 SHANGHAI = timezone(timedelta(hours=8))
 MAX_WORKERS = 4
 MAX_ITEMS_PER_SOURCE = 20
+MAX_INTERVIEWS_PER_SOURCE = 320
+MAX_HISTORY_PAGES = 8
+MAX_HISTORY_SECONDS = 25
 MAX_RESPONSE_BYTES = 2_000_000
 MAX_REQUEST_SECONDS = 18
 REQUEST_TIMEOUT = (3.5, 7)
@@ -63,17 +66,21 @@ PUBLIC_SOURCES = (
     PublicSource("media_toutiao", "今日头条热榜", "https://www.toutiao.com/hot-event/hot-board/?origin=toutiao_pc", ("www.toutiao.com",), "地方城市", "toutiao", 7),
     PublicSource("media_lifeweek", "三联生活周刊", "https://www.lifeweek.com.cn/", ("www.lifeweek.com.cn",), "散文随笔", "lifeweek", 60),
     PublicSource("media_lifeweek_interviews", "三联生活周刊", "https://www.lifeweek.com.cn/column/79",
-                 ("www.lifeweek.com.cn",), INTERVIEW_CATEGORY, "lifeweek_interviews", 7),
+                 ("www.lifeweek.com.cn",), INTERVIEW_CATEGORY, "lifeweek_interviews", 184),
     PublicSource("media_chinawriter_interviews", "中国作家网", "https://www.chinawriter.com.cn/403997/405057/index.html",
-                 ("www.chinawriter.com.cn",), INTERVIEW_CATEGORY, "chinawriter_interviews", 7),
+                 ("www.chinawriter.com.cn",), INTERVIEW_CATEGORY, "chinawriter_interviews", 184),
     PublicSource("media_chinanews_interviews", "中新网·东西问", "https://www.chinanews.com.cn/dxw/",
-                 ("www.chinanews.com.cn",), INTERVIEW_CATEGORY, "chinanews_interviews", 7),
+                 ("www.chinanews.com.cn",), INTERVIEW_CATEGORY, "chinanews_interviews", 184),
+    PublicSource("media_thetalks_interviews", "The Talks", "https://the-talks.com/feed/",
+                 ("the-talks.com",), INTERVIEW_CATEGORY, "rss", 184),
+    PublicSource("media_dwarkesh_interviews", "Dwarkesh Patel 博客", "https://www.dwarkesh.com/feed",
+                 ("www.dwarkesh.com",), INTERVIEW_CATEGORY, "rss", 184),
     PublicSource("media_cctv_dialogue", "央视《对话》",
                  "https://api.cntv.cn/NewVideo/getVideoListByColumn?id=TOPC1451530382483536&sort=desc&serviceId=tvcctv&mode=0&n=20&p=1&t=json",
-                 ("api.cntv.cn", "tv.cctv.com"), INTERVIEW_CATEGORY, "cctv_interviews", 7),
+                 ("api.cntv.cn", "tv.cctv.com"), INTERVIEW_CATEGORY, "cctv_interviews", 184),
     PublicSource("media_cctv_face_to_face", "央视《面对面》",
                  "https://api.cntv.cn/NewVideo/getVideoListByColumn?id=TOPC1451559038345600&n=20&sort=desc&p=1&mode=0&serviceId=tvcctv&t=json",
-                 ("api.cntv.cn", "tv.cctv.com"), INTERVIEW_CATEGORY, "cctv_interviews", 7),
+                 ("api.cntv.cn", "tv.cctv.com"), INTERVIEW_CATEGORY, "cctv_interviews", 184),
     PublicSource("media_bbc", "BBC News", "https://feeds.bbci.co.uk/news/world/rss.xml", ("feeds.bbci.co.uk", "www.bbc.co.uk", "www.bbc.com", "bbc.com"), "国际要闻"),
     PublicSource("media_guardian", "The Guardian", "https://www.theguardian.com/world/rss", ("www.theguardian.com",), "国际要闻"),
     PublicSource("media_france24", "France 24", "https://www.france24.com/en/rss", ("www.france24.com",), "国际要闻"),
@@ -85,8 +92,12 @@ PUBLIC_SOURCES = (
 )
 SOURCE_BY_ID = {source.id: source for source in PUBLIC_SOURCES}
 INTERVIEW_SOURCE_IDS = frozenset(source.id for source in PUBLIC_SOURCES if source.category == INTERVIEW_CATEGORY)
+LIVE_INTERVIEW_SOURCE_IDS = frozenset({"media_yicai", "media_chinanews_interviews", "media_thetalks_interviews",
+                                      "media_dwarkesh_interviews"})
 PUBLIC_ARTICLE_SOURCES = frozenset({"media_yicai", "media_chinawriter_interviews", "media_chinanews_interviews"})
-ALLOWED_FEEDS = frozenset(source.url for source in PUBLIC_SOURCES)
+WRITER_HISTORY_URLS = frozenset(
+    f"https://www.chinawriter.com.cn/403997/405057/index{page}.html" for page in range(2, MAX_HISTORY_PAGES + 1))
+ALLOWED_FEEDS = frozenset(source.url for source in PUBLIC_SOURCES) | WRITER_HISTORY_URLS
 INACTIVE_SOURCES = (
     {"id": "media_xiaohongshu", "name": "小红书", "scope": "社区内容",
      "note": "公开浏览需要登录，尚无已核实可用的公开新闻订阅；暂未接入。"},
@@ -103,9 +114,8 @@ def _cache_policy(cache_control):
     """Describe whether this response may enter the application's shared cache."""
     directives = {part.split("=", 1)[0].strip().lower()
                   for part in cache_control.split(",") if part.strip()}
-    maximum = (re.search(r'(?:^|,)\s*s-maxage\s*=\s*"?(\d+)', cache_control, re.I)
-               or re.search(r'(?:^|,)\s*max-age\s*=\s*"?(\d+)', cache_control, re.I))
-    max_age = int(maximum.group(1)) if maximum else None
+    maximum = re.findall(r'(?:^|,)\s*(?:s-maxage|max-age)\s*=\s*"?(\d+)', cache_control, re.I)
+    max_age = min(map(int, maximum)) if maximum else None
     store = not bool(directives & {"private", "no-store"})
     policy = {"store": store, "reuse": store and "no-cache" not in directives and max_age != 0}
     if max_age is not None:
@@ -215,8 +225,8 @@ def _category(title, default):
     return default
 
 
-def _body_paragraphs(value, *, min_paragraphs=2, min_characters=160):
-    if not isinstance(value, str) or len(value) > 120000:
+def _body_paragraphs(value, *, min_paragraphs=2, min_characters=160, max_html_characters=120000, max_paragraphs=150):
+    if not isinstance(value, str) or len(value) > max_html_characters:
         return []
     soup = BeautifulSoup(value, "html.parser")
     text = soup.get_text(" ", strip=True)
@@ -228,7 +238,7 @@ def _body_paragraphs(value, *, min_paragraphs=2, min_characters=160):
                   for node in soup.find_all(["p", "h2", "h3", "li"])
                   if not node.find_parent(["p", "li"])]
     paragraphs = [text for text in paragraphs if text]
-    if (len(paragraphs) < min_paragraphs or len(paragraphs) > 150
+    if (len(paragraphs) < min_paragraphs or len(paragraphs) > max_paragraphs
             or sum(map(len, paragraphs)) < min_characters or any(len(p) > 6000 for p in paragraphs)):
         return []
     return paragraphs
@@ -240,14 +250,15 @@ def _article(source, title, url, raw_date, summary, now, *, local=False,
     if not title or not url:
         return None
     date, precision = _date(raw_date, local=local)
-    if date and (date < now - timedelta(days=source.max_age_days) or date > now + timedelta(minutes=5)):
-        return None
     is_interview = source.category == INTERVIEW_CATEGORY or has_interview_label(title)
+    if date and not is_interview and (date < now - timedelta(days=source.max_age_days) or date > now + timedelta(minutes=5)):
+        return None
     category = INTERVIEW_CATEGORY if is_interview else _category(title, source.category)
     if is_interview and not is_recent_interview({"category": category, "published_at": date.isoformat() if date else "",
                                                "time_basis": time_basis}, now):
         return None
-    paragraphs = [] if restricted else _body_paragraphs(body)
+    limits = {"max_html_characters": 240000, "max_paragraphs": 800} if source.id == "media_dwarkesh_interviews" else {}
+    paragraphs = [] if restricted else _body_paragraphs(body, **limits)
     time_basis = time_basis if date else "collected"
     return {
         "id": "media_" + hashlib.sha256(url.encode("utf-8")).hexdigest()[:24],
@@ -272,6 +283,28 @@ def _article(source, title, url, raw_date, summary, now, *, local=False,
 class _SafeTreeBuilder(ET.TreeBuilder):
     def doctype(self, name, pubid, system):
         raise ValueError("不支持含实体声明的订阅源")
+
+
+def _dwarkesh_transcript(body):
+    """Accept a complete, public host/guest transcript, never a blog essay."""
+    if not isinstance(body, str) or len(body) > 400000:
+        return ""
+    soup = BeautifulSoup(body, "html.parser")
+    headings = [node for node in soup.find_all("h2") if node.get_text(" ", strip=True).casefold() == "transcript"]
+    if len(headings) != 1:
+        return ""
+    transcript = "".join(str(node) for node in headings[0].next_siblings)
+    if len(transcript) > 240000:
+        return ""
+    speakers = []
+    for node in BeautifulSoup(transcript, "html.parser").find_all("p"):
+        strong = node.find("strong")
+        label = node.get_text(" ", strip=True)
+        if strong and 0 < len(label) <= 80 and label == strong.get_text(" ", strip=True):
+            speakers.append(label)
+    if speakers.count("Dwarkesh Patel") < 2 or not any(speakers.count(name) >= 2 for name in set(speakers) - {"Dwarkesh Patel"}):
+        return ""
+    return transcript
 
 
 def _parse_feed(content, source, now):
@@ -299,6 +332,13 @@ def _parse_feed(content, source, now):
             basis = "published"
             summary = node.findtext(namespace + "description")
             body = node.findtext(CONTENT + "encoded") or (summary if source.description_is_body else "")
+        if source.id == "media_dwarkesh_interviews":
+            body = _dwarkesh_transcript(body)
+            if not body:
+                continue
+        if source.id == "media_thetalks_interviews" and not re.fullmatch(
+                r"https://the-talks\.com/interview/[a-z0-9-]+/", _safe_url(url, source)):
+            continue
         article = _article(source, node.findtext(namespace + "title"), url, raw_date,
                            summary, now, time_basis=basis, body=body)
         if article:
@@ -645,7 +685,37 @@ def _deduplicate(articles):
     return list(by_url.values())
 
 
+def _writer_history(content, source, now, started):
+    """Follow only published, bounded next-page links; preserve partial results."""
+    articles, controls, note = [], [], ""
+    for page in range(2, MAX_HISTORY_PAGES + 1):
+        soup = BeautifulSoup(content, "html.parser", from_encoding="utf-8")
+        dates = [_date(node.get_text(strip=True), local=True)[0]
+                 for node in soup.select("ul.previous_list > li > em")]
+        if any(value and value < interview_cutoff(now) for value in dates):
+            break
+        next_url = urljoin(source.url, f"index{page}.html")
+        links = {urljoin(source.url, link.get("href", "")) for link in soup.select("a[href]")}
+        if next_url not in links or next_url not in WRITER_HISTORY_URLS:
+            break
+        if time.monotonic() - started > MAX_HISTORY_SECONDS:
+            note = "历史列表读取达到时间上限，已保留本次取得的访谈。"
+            break
+        try:
+            content, control = _request(next_url, source)
+            rows = _parse_chinawriter_interviews(content, source, now)
+        except Exception:
+            note = "部分历史列表暂时无法读取，已保留本次取得的访谈。"
+            break
+        controls.append(control)
+        articles.extend(rows)
+    else:
+        note = "历史列表最多检查 8 页，半年范围以本次取得的条目为准。"
+    return articles, controls, note
+
+
 def _load_source(source, now):
+    started = time.monotonic()
     content, cache_control = _request(source.url, source)
     parser = {"rss": _parse_feed, "yicai": _parse_yicai,
               "toutiao": _parse_toutiao, "lifeweek": _parse_lifeweek,
@@ -653,13 +723,20 @@ def _load_source(source, now):
               "chinawriter_interviews": _parse_chinawriter_interviews,
               "chinanews_interviews": _parse_chinanews_interviews,
               "cctv_interviews": _parse_cctv_interviews}[source.parser]
-    articles = _deduplicate(parser(content, source, now))
+    articles = parser(content, source, now)
+    note = ""
+    if source.parser == "chinawriter_interviews":
+        older, controls, note = _writer_history(content, source, now, started)
+        articles.extend(older)
+        cache_control = ", ".join(control for control in [cache_control, *controls] if control)
+    articles = _deduplicate(articles)
     articles.sort(key=lambda row: row["published_at"] or row["updated_at"] or row["discovered_at"], reverse=True)
     policy = _cache_policy(cache_control)
-    articles = retain_interviews(articles, MAX_ITEMS_PER_SOURCE)
+    limit = MAX_INTERVIEWS_PER_SOURCE if source.id in INTERVIEW_SOURCE_IDS else MAX_ITEMS_PER_SOURCE
+    articles = retain_interviews(articles, limit)
     for article in articles:
         article["cache_policy"] = dict(policy)
-    return articles, cache_control
+    return articles, cache_control, note
 
 
 def _error_message(error):
@@ -674,32 +751,34 @@ def _error_message(error):
     return "公开来源暂不可用"
 
 
-def load_extended_news_feed():
+def load_extended_news_feed(*, source_ids=None):
     """Fetch public lists independently; report failure without invented news."""
     started = _now()
     by_source, states = {}, {}
+    configured = tuple(source for source in PUBLIC_SOURCES if source_ids is None or source.id in source_ids)
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
-        pending = {pool.submit(_load_source, source, started): source for source in PUBLIC_SOURCES}
+        pending = {pool.submit(_load_source, source, started): source for source in configured}
         for future in as_completed(pending):
             source = pending[future]
             state = {"id": source.id, "name": source.name, "scope": "公开媒体 · " + source.category,
                      "status": "ok", "count": 0, "checked_at": _now().isoformat(),
                      "source_family": "public_media", "error": "", "note": ""}
             try:
-                rows, cache_control = future.result()
+                rows, cache_control, history_note = future.result()
                 by_source[source.id] = rows
                 policy = _cache_policy(cache_control)
                 state.update(count=len(rows), cache_control=cache_control, cache_policy=policy,
-                             note=_cache_note(policy) or ("" if rows else "近 7 天暂无新访谈" if source.id in INTERVIEW_SOURCE_IDS else "近期无有效条目"))
+                             note="；".join(filter(None, [_cache_note(policy), history_note,
+                                  "" if rows else "近半年暂无新访谈" if source.id in INTERVIEW_SOURCE_IDS else "近期无有效条目"])))
             except Exception as error:
                 state.update(status="error", error=_error_message(error))
             states[source.id] = state
-    articles = _deduplicate([row for source in PUBLIC_SOURCES for row in by_source.get(source.id, [])])
+    articles = _deduplicate([row for source in configured for row in by_source.get(source.id, [])])
     articles.sort(key=lambda row: row["published_at"] or row["updated_at"] or row["discovered_at"], reverse=True)
-    sources = [states[source.id] for source in PUBLIC_SOURCES]
+    sources = [states[source.id] for source in configured]
     sources.extend({**source, "status": "excluded", "count": 0, "error": "",
                     "source_family": "public_media", "checked_at": ""}
-                   for source in INACTIVE_SOURCES)
+                   for source in INACTIVE_SOURCES if source_ids is None)
     policy = _combine_cache_policies(*(state.get("cache_policy") for state in states.values()))
     return {"articles": articles, "sources": sources, "fetched_at": _now().isoformat(),
             "cache_policy": policy,
@@ -725,8 +804,9 @@ def fetch_extended_article(article_dict):
         result.update(status="error", paragraphs=[], message="文章网址不在对应公开来源范围内")
         return result
     paragraphs = article.get("feed_paragraphs")
+    maximum_paragraphs = 800 if source.id == "media_dwarkesh_interviews" else 150
     if (not article.get("restricted") and article.get("content_origin") == "feed_full" and isinstance(paragraphs, list)
-            and 1 < len(paragraphs) <= 150 and all(isinstance(p, str) and len(p) <= 6000 for p in paragraphs)):
+            and 1 < len(paragraphs) <= maximum_paragraphs and all(isinstance(p, str) and len(p) <= 6000 for p in paragraphs)):
         result.update(status="full", paragraphs=[_plain(p, 6000) for p in paragraphs],
                       summary_only=False, content_origin="feed_full",
                       message="显示来源订阅提供的正文，保留原始语言与原文链接。")

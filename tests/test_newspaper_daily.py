@@ -61,6 +61,20 @@ def snapshot(at=NOW, *, source_feed=None):
 
 
 class SnapshotTest(unittest.TestCase):
+    def test_six_month_marker_is_retained_but_old_snapshots_remain_readable(self):
+        payload = snapshot()
+        assert payload["interview_window_months"] == 6
+        assert daily.feed_from_daily_snapshot(payload, now=NOW)["interview_window_months"] == 6
+        del payload["interview_window_months"]
+        assert daily.feed_from_daily_snapshot(payload, now=NOW)["interview_window_months"] == 0
+
+    def test_old_interview_from_general_news_is_not_limited_by_ordinary_news_age(self):
+        row = item("media_yicai", url="https://www.yicai.com/news/12345.html")
+        row.update(group="人物与访谈", category="访谈与对话", kind="访谈", summary_only=False,
+                   published_at=(NOW - timedelta(days=100)).isoformat(), time_basis="published")
+        result = daily.validate_daily_snapshot(snapshot(source_feed=feed([row])))
+        assert result["article_count"] == 1
+
     def test_interview_snapshot_keeps_column_and_on_demand_reading(self):
         row = item("media_chinawriter_interviews",
                    url="https://www.chinawriter.com.cn/n1/2026/1005/c405057-40808385.html")
@@ -71,16 +85,16 @@ class SnapshotTest(unittest.TestCase):
         assert result["articles"][0]["summary_only"] is False
         assert "feed_paragraphs" not in result["articles"][0]
 
-    def test_interviews_cannot_use_discovery_time_or_survive_the_week_in_a_cached_edition(self):
+    def test_interviews_cannot_use_discovery_time_or_survive_six_months_in_a_cached_edition(self):
         row = item("media_lifeweek_interviews", url="https://www.lifeweek.com.cn/article/273320")
         row.update(group="人物与访谈", category="访谈与对话", kind="访谈",
-                   published_at=(NOW - timedelta(days=6, hours=23)).isoformat(),
+                   published_at=(daily.media.interview_cutoff(NOW) + timedelta(hours=1)).isoformat(),
                    time_basis="published")
         payload = snapshot(source_feed=feed([row, item()]))
         result = daily.feed_from_daily_snapshot(payload, now=NOW + timedelta(hours=2))
         assert [article["source_id"] for article in result["articles"]] == ["media_solidot"]
         assert payload["article_count"] == 2
-        for published in ("", (NOW - timedelta(days=8)).isoformat()):
+        for published in ("", (NOW - timedelta(days=184)).isoformat()):
             invalid = {**row, "published_at": published, "discovered_at": NOW.isoformat()}
             assert snapshot(source_feed=feed([invalid]))["articles"] == []
 

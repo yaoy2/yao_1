@@ -65,6 +65,49 @@ def session_with(*gets, put=None):
 
 
 class SchemaTest(unittest.TestCase):
+    def interview_document(self):
+        value = document()
+        article = deepcopy(value["library"]["lastArticle"])
+        article.update(category="访谈与对话", group="人物与访谈", kind="访谈")
+        value["library"]["interviews"] = {
+            "version": 1,
+            "batch": {"edition_date": "2026-10-06", "generated_at": "2026-10-06T09:00:00+08:00", "articles": [article]},
+            "seen": [{"edition_date": "2026-10-06", "keys": ["id:" + "a"*64, "url:" + "b"*64, "title:" + "c"*64]}],
+        }
+        return value
+
+    def test_daily_interview_state_round_trip_keeps_history_without_changing_read_status(self):
+        value = self.interview_document()
+        self.assertEqual(value, reader.validate_reader_document(value))
+        self.assertEqual(value, reader._decode_document(reader._encode_document(value)))
+        value["library"]["interviews"] = {"version": 1, "batch": None, "seen": []}
+        self.assertEqual(value, reader.validate_reader_document(value))
+
+    def test_bad_daily_interview_state_is_rejected_without_touching_personal_material(self):
+        changes = [lambda i: i.update(version=True), lambda i: i.update(extra=True),
+                   lambda i: i["batch"].update(edition_date="2026-02-30"),
+                   lambda i: i["batch"].update(generated_at="2026-10-06T09:00:00"),
+                   lambda i: i["batch"].update(edition_date="2026-10-05"),
+                   lambda i: i["batch"].update(articles=i["batch"]["articles"] * 11),
+                   lambda i: i["batch"]["articles"][0].update(summary_only=True),
+                   lambda i: i["batch"]["articles"][0].update(kind="视频访谈"),
+                   lambda i: i["batch"]["articles"][0].update(published_at=None),
+                   lambda i: i["batch"]["articles"][0].update(time_basis="updated"),
+                   lambda i: i["batch"]["articles"][0].update(published_at="2020-01-01T00:00:00+08:00"),
+                   lambda i: i["batch"]["articles"][0].update(published_at="2027-01-01T00:00:00+08:00"),
+                   lambda i: i["batch"]["articles"][0].update(url="javascript:alert(1)"),
+                   lambda i: i.update(seen=i["seen"] * 2401),
+                   lambda i: i["seen"][0].update(keys=["id:" + "a"*64, "id:" + "b"*64]),
+                   lambda i: i["seen"][0].update(keys=["url:raw-private-url"]),
+                   lambda i: i["seen"][0].update(edition_date="2026-02-30")]
+        for change in changes:
+            value = self.interview_document()
+            change(value["library"]["interviews"])
+            before = deepcopy(value)
+            with self.subTest(change=change), self.assertRaises(ValueError):
+                reader.validate_reader_document(value)
+            self.assertEqual(value, before)
+
     def test_document_round_trip_preserves_all_text_and_is_detached(self):
         original = document()
         validated = reader.validate_reader_document(original)

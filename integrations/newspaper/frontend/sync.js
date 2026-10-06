@@ -1,9 +1,10 @@
 /* Pure three-way reader-state merge and an ordered Streamlit request channel. */
 (function (root, factory) {
-  const api = factory();
+  const interviews = typeof module === 'object' && module.exports ? require('./interviews.js') : root?.NewspaperInterviews;
+  const api = factory(interviews);
   if (typeof module === 'object' && module.exports) module.exports = api;
   if (root) root.NewspaperSync = api;
-})(typeof globalThis === 'object' ? globalThis : this, function () {
+})(typeof globalThis === 'object' ? globalThis : this, function (interviews) {
   'use strict';
   const absent = Symbol('absent');
   const own = (object, key) => Object.prototype.hasOwnProperty.call(object || {}, key);
@@ -30,6 +31,7 @@
   function documentOf(library, recommendations) {
     const result = {version: 1, library: {}, recommendations: {}};
     for (const key of ['version', 'records', 'pins', 'pinsCustomized', 'following', 'lastArticle', 'lastRead', 'design']) result.library[key] = copy(library[key]);
+    if (own(library, 'interviews')) result.library.interviews = copy(library.interviews);
     for (const key of ['version', 'personalized', 'strength', 'diversity', 'profile']) result.recommendations[key] = copy(recommendations[key]);
     safe(result); return result;
   }
@@ -66,7 +68,7 @@
     return result.sort((a, b) => b.at - a.at || a.id.localeCompare(b.id) || a.type.localeCompare(b.type)).slice(0, 600);
   }
   const recordDefaults = {saved: false, hidden: false, read: false, mark: '', note: '', tags: '', folder: '未分类', saved_at: null, detail: null};
-  function mergeDocuments(base, local, remote, unresolved = []) {
+  function mergeDocuments(base, local, remote, unresolved = [], options = {}) {
     [base, local, remote, unresolved].forEach(safe);
     base = copy(base);
     // Keep the original common ancestor for unresolved fields across reloads/polls.
@@ -74,6 +76,10 @@
       setAt(base, item.path, item.baseExists ? item.base : absent);
     const conflicts = [];
     function merge(b, l, r, path) {
+      if (path.join('.') === 'library.interviews') {
+        if (!interviews) throw new Error('访谈记录模块暂未载入，原有收藏保留。');
+        return interviews.mergeStates([b, l, r].map(value => value === absent ? undefined : value), options);
+      }
       if (equal(l, r)) return copy(l);
       if (equal(l, b)) return copy(r);
       if (equal(r, b)) return copy(l);
@@ -105,7 +111,13 @@
       }
       conflicts.push(conflict(path, b, l, r)); return copy(l);
     }
-    return {document: merge(base, local, remote, []), conflicts};
+    const document = merge(base, local, remote, []);
+    // Union is also required when an unchanged whole document takes an early merge return.
+    if ([base, local, remote].some(value => own(value.library, 'interviews'))) {
+      if (!interviews) throw new Error('访谈记录模块暂未载入，原有收藏保留。');
+      document.library.interviews = interviews.mergeStates([base.library.interviews, local.library.interviews, remote.library.interviews], options);
+    }
+    return {document, conflicts: conflicts.filter(item => item.path.slice(0, 2).join('.') !== 'library.interviews')};
   }
   function resolveConflict(document, item, side) {
     safe(item); if (!['local', 'remote'].includes(side)) throw new Error('invalid conflict choice');

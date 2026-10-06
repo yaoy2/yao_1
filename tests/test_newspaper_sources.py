@@ -220,7 +220,7 @@ class PublicRequestsTest(unittest.TestCase):
         def load(source, now):
             if source == BBC:
                 raise requests.Timeout("private connection details")
-            return media._parse_feed(rss({}), source, now), "public, max-age=600"
+            return media._parse_feed(rss({}), source, now), "public, max-age=600", ""
         with patch.object(media, "PUBLIC_SOURCES", (IT, BBC)), patch.object(media, "_load_source", side_effect=load), patch.object(media, "_now", return_value=NOW):
             result = media.load_extended_news_feed()
         self.assertEqual(1, len(result["articles"]))
@@ -229,7 +229,7 @@ class PublicRequestsTest(unittest.TestCase):
         self.assertEqual(["excluded", "excluded"], [s["status"] for s in result["sources"][2:]])
         data = rss(*({"link": URL + "?article=" + str(i), "pubDate": "2026-10-%02dT00:00:00Z" % (1 + i % 4)} for i in range(25)))
         with patch.object(media, "_request", return_value=(data, "public")):
-            rows, _ = media._load_source(IT, NOW)
+            rows, _, _ = media._load_source(IT, NOW)
         self.assertEqual(20, len(rows))
         self.assertEqual("2026-10-04T08:00:00+08:00", rows[0]["published_at"])
 

@@ -1,6 +1,7 @@
 """Exercise the component event bridge without network or a Streamlit server."""
 
 from copy import deepcopy
+from datetime import datetime, timezone
 import importlib
 import hashlib
 import json
@@ -224,7 +225,7 @@ def test_page_refreshes_a_retained_legacy_service_only_once(service, monkeypatch
 
     def upgrade(module):
         assert module is component
-        module.NEWSPAPER_SERVICE_VERSION = 6
+        module.NEWSPAPER_SERVICE_VERSION = 7
         return module
 
     reload_service = Mock(side_effect=upgrade)
@@ -489,6 +490,7 @@ def test_short_publisher_expiry_cannot_be_extended_by_a_one_hour_article_cache(m
 
 def test_page_prefers_valid_daily_edition_and_reports_real_completion(service, monkeypatch):
     daily = {**deepcopy(FEED), "delivery": "daily", "edition_date": "2026-10-05",
+             "interview_window_months": 6,
              "sources": [{"id": sid, "status": "ok", "count": 0} for sid in component.INTERVIEW_SOURCE_IDS],
              "expires_at": "2099-10-06T01:00:00+00:00"}
     monkeypatch.setattr(component, "_read_daily_feed", Mock(return_value=daily))
@@ -517,6 +519,7 @@ def test_private_snapshot_failure_does_not_break_public_news(service, monkeypatc
 
 def test_manual_refresh_bypasses_daily_snapshot(service, monkeypatch):
     read_daily = Mock(return_value={**deepcopy(FEED), "delivery": "daily",
+                                   "interview_window_months": 6,
                                    "sources": [{"id": sid, "status": "ok", "count": 0} for sid in component.INTERVIEW_SOURCE_IDS],
                                    "expires_at": "2099-10-06T01:00:00+00:00"})
     monkeypatch.setattr(component, "_read_daily_feed", read_daily)
@@ -534,6 +537,36 @@ def test_edition_from_before_interview_sources_does_not_hide_new_column(service,
     monkeypatch.setattr(component, "_read_daily_feed", Mock(return_value=daily))
     assert component.newspaper_feed_for_page() == FEED
     service[0].assert_called_once()
+
+
+def test_seven_day_snapshot_cannot_hide_the_new_six_month_pool(service, monkeypatch):
+    daily = {**deepcopy(FEED), "delivery": "daily", "expires_at": "2099-10-06T01:00:00+00:00",
+             "sources": [{"id": sid, "status": "ok", "count": 0} for sid in component.INTERVIEW_SOURCE_IDS]}
+    monkeypatch.setattr(component, "_read_daily_feed", Mock(return_value=daily))
+    assert component.newspaper_feed_for_page() == FEED
+    service[0].assert_called_once()
+
+
+def test_valid_daily_snapshot_is_supplemented_with_live_blog_interviews(service, monkeypatch):
+    source = "media_thetalks_interviews"
+    daily = {**deepcopy(FEED), "delivery": "daily", "interview_window_months": 6,
+             "expires_at": "2099-10-06T01:00:00+00:00",
+             "sources": [{"id": sid, "name": sid, "status": "excluded", "count": 0} for sid in component.INTERVIEW_SOURCE_IDS],
+             "cache_policy": {"store": True, "reuse": True}}
+    blog = {**ARTICLE, "id": "blog", "source_id": source, "category": "访谈与对话",
+            "published_at": datetime.now(timezone.utc).isoformat(), "url": "https://the-talks.com/interview/guest/"}
+    live = {"articles": [blog], "sources": [{"id": source, "name": "The Talks", "status": "ok", "count": 1}],
+            "cache_policy": {"store": True, "reuse": False, "max_age_seconds": 0}, "fetched_at": blog["published_at"]}
+    monkeypatch.setattr(component, "_read_daily_feed", Mock(return_value=daily))
+    load = Mock(return_value=live)
+    monkeypatch.setattr(component, "load_extended_news_feed", load)
+    result = component.newspaper_feed_for_page()
+    assert [row["id"] for row in result["articles"]] == [ARTICLE["id"], "blog"]
+    assert result["cache_policy"]["reuse"] is False
+    assert result["live_interviews_checked_at"] == live["fetched_at"]
+    assert next(s for s in result["sources"] if s["id"] == source)["status"] == "ok"
+    assert len(daily["articles"]) == 1  # No mutation of the stored daily payload.
+    load.assert_called_once_with(source_ids=component.LIVE_INTERVIEW_SOURCE_IDS)
 
 
 def test_retained_session_acquires_new_sources_after_service_upgrade(service):

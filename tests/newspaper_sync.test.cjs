@@ -8,6 +8,10 @@ const {spawnSync} = require('node:child_process');
 const Sync = require('../integrations/newspaper/frontend/sync.js');
 const Recommendation = require('../integrations/newspaper/frontend/recommendation.js');
 const Library = require('../integrations/newspaper/frontend/library.js');
+const Interviews = require('../integrations/newspaper/frontend/interviews.js');
+const DAY = 86400000;
+const interview = (id, now) => ({id, title: `Interview ${id}`, category: Interviews.CATEGORY, kind: '访谈', source: 'Source',
+  published_at: new Date(now - 3 * DAY).toISOString(), time_basis: 'published', summary_only: false, url: `https://example.org/${id}`});
 const clone = value => JSON.parse(JSON.stringify(value));
 const article = id => ({id, title: `Article ${id}`, category: '教育校园', source: 'Source'});
 const record = (id, patch = {}) => ({article: article(id), saved: false, hidden: false, read: false,
@@ -116,6 +120,39 @@ test('wire serialization excludes local revisions and unsafe keys fail closed', 
   assert.throws(() => Sync.mergeDocuments(base, unsafe, base), /不安全/);
 });
 
+test('offline interview batches converge by edition and first generation while history unions without preference conflicts', () => {
+  const now = Date.parse('2026-10-06T12:00:00+08:00'), base = documentOf({a: record('a', {note: 'Base'})}), left = clone(base), right = clone(base);
+  left.library.interviews = Interviews.planDailyBatch([interview('local', now)], undefined, {now});
+  right.library.interviews = Interviews.planDailyBatch([interview('remote', now)], undefined, {now: now + 1000});
+  left.library.records.a.tags = 'Local tag'; right.library.records.a.note = 'Remote note';
+  const original = JSON.stringify([base, left, right]);
+  const result = Sync.mergeDocuments(base, left, right, [], {now: now + 1000});
+  assert.deepEqual(result.conflicts, []);
+  assert.deepEqual(result.document.library.interviews.batch, left.library.interviews.batch);
+  assert.equal(result.document.library.interviews.seen.length, 2);
+  assert.equal(result.document.library.records.a.note, 'Remote note');
+  assert.equal(result.document.library.records.a.tags, 'Local tag');
+  assert.deepEqual(Sync.mergeDocuments(base, right, left, [], {now: now + 1000}).document.library.interviews, result.document.library.interviews);
+  assert.equal(JSON.stringify([base, left, right]), original);
+  right.library.interviews = Interviews.planDailyBatch([interview('next', now)], right.library.interviews, {now: now + DAY});
+  const next = Sync.mergeDocuments(base, left, right, [], {now: now + DAY});
+  assert.equal(next.document.library.interviews.batch.articles[0].id, 'next');
+  assert.equal(next.document.library.interviews.seen.length, 3);
+});
+
+test('old clients lacking the optional field cannot erase interview history through a whole-document shortcut', () => {
+  const now = Date.parse('2026-10-06T12:00:00+08:00'), base = documentOf({});
+  base.library.interviews = Interviews.planDailyBatch([interview('retained', now)], undefined, {now});
+  const oldClient = clone(base); delete oldClient.library.interviews;
+  for (const [local, remote] of [[base, oldClient], [oldClient, base], [oldClient, oldClient]]) {
+    const result = Sync.mergeDocuments(base, local, remote, [], {now});
+    assert.deepEqual(result.document.library.interviews, base.library.interviews);
+    assert.deepEqual(result.conflicts, []);
+  }
+  assert.deepEqual(Sync.documentOf(base.library, base.recommendations).library.interviews, base.library.interviews);
+  assert.equal(Object.hasOwn(Sync.documentOf(oldClient.library, oldClient.recommendations).library, 'interviews'), false);
+});
+
 function queueHarness() {
   const sent = [], scheduled = [], timers = new Map(); let sequence = 0;
   const queue = Sync.createRequestQueue({send: value => sent.push(value), schedule: fn => scheduled.push(fn),
@@ -149,6 +186,7 @@ function pageHarness(sharedStorage = new Map(), options = {}) {
     edit:(id,patch)=>commit(()=>{if(!data.records[id])data.records[id]=(${record.toString()})(id);Object.assign(data.records[id],patch);}),
     setLocal:wire=>{data=normalizeStore(wire.library);recommendationPreferences=normalizeRecommendations(wire.recommendations);localStorage.setItem(STORE_KEY,JSON.stringify(data));localStorage.setItem(RECOMMEND_KEY,JSON.stringify(recommendationPreferences));},
     feed:raw=>{articles=raw.map(normalizeArticle);articleIndex=new Map(articles.map(a=>[a.id,a]));},
+    interviewFeed:raw=>{articles=raw.map(normalizeArticle);articleIndex=new Map(articles.map(a=>[a.id,a]));receivedFeed=true;render();},
     draft:(id,values)=>{state.current=id;state.screen='reader';state.notesOpen=true;beginNoteEdit(id);drafts[id]=values;},
     inspect:()=>({cloud,syncRequest,data,drafts,draftBases,noteConflicts})};})();`);
   // A record constructor injected above references only this test helper's article function.
@@ -161,7 +199,7 @@ function pageHarness(sharedStorage = new Map(), options = {}) {
   const localStorage = {getItem: key => sharedStorage.get(key) ?? null, setItem(key, value) {if (key === failedKey) throw new Error('synthetic quota failure'); sharedStorage.set(key, value); writes.push(key);}};
   const testSync = {...Sync, createRequestQueue: settings => Sync.createRequestQueue({...settings, schedule: fn => micros.push(fn),
     setTimer(fn, delay = 0) {const id = ++timerId; tasks.set(id, {fn, at: now + delay}); return id;}, clearTimer: id => tasks.delete(id)})};
-  const window = {parent, NewspaperSync: options.noSync ? null : testSync, NewspaperRecommendation: Recommendation, NewspaperLibrary: Library,
+  const window = {parent, NewspaperSync: options.noSync ? null : testSync, NewspaperRecommendation: Recommendation, NewspaperLibrary: Library, NewspaperInterviews: Interviews,
     addEventListener(name, fn) {windows[name] = fn;}};
   const context = vm.createContext({window, document: {getElementById: () => root, activeElement: null, hidden: false, hasFocus: () => true,
     addEventListener(name, fn) {docEvents[name] = fn;}}, localStorage, navigator: {onLine: true}, console, URL, Intl, Date, Math, performance: {now: () => now},
@@ -197,6 +235,26 @@ test('page migrates an existing local library only after unlock and merges a dif
   const save = h.lastRequest(); assert.equal(save.operation, 'save');
   assert.deepEqual(Object.keys(save.document.library.records).sort(), ['local', 'remote']);
   saved(h); assert.equal(h.api.inspect().cloud.status, 'synced');
+});
+
+test('page waits for its first cloud load before generating a batch and excludes the remote displayed history', () => {
+  const h = pageHarness(), now = Date.now(), input = Array.from({length: 20}, (_, index) => interview(`daily${String(index).padStart(2, '0')}`, now));
+  const remote = h.api.defaultSyncDocument();
+  remote.library.interviews = Interviews.planDailyBatch(input.slice(0, 10), undefined, {now: now - DAY});
+  remote.library.records.kept = record('kept', {note: 'Cloud note', saved: true});
+  h.unlock(); h.api.interviewFeed(input); h.flush();
+  assert.equal(Object.hasOwn(h.api.inspect().data, 'interviews'), false);
+  assert.match(h.root.innerHTML, /正在同步已有访谈记录/);
+  loaded(h, remote);
+  const result = h.api.inspect().data.interviews;
+  assert.equal(result.batch.edition_date, Interviews.editionDate(now));
+  assert.deepEqual(Array.from(result.batch.articles, row => row.id), input.slice(10).map(row => row.id));
+  assert.equal(result.seen.length, 20);
+  assert.equal(h.api.inspect().data.records.kept.note, 'Cloud note');
+  assert.equal(h.api.inspect().data.records.kept.saved, true);
+  h.flush(1000); loaded(h, remote);
+  assert.equal(h.lastRequest().operation, 'save');
+  assert.equal(h.lastRequest().document.library.interviews.seen.length, 20);
 });
 
 test('page retains new local edits while a save is in flight and submits them next', () => {
@@ -295,6 +353,8 @@ test('actual normalized browser documents, snapshots and resume positions satisf
       canonical: 'https://example.org/article', summary: 'Synthetic summary'},
     detail: {id: 'a', status: 'full', paragraphs: ['第一段。', 'Second paragraph.'], source: 'Source', url: 'https://example.org/article'}});
   raw.library.lastRead = 'a'; raw.library.lastArticle = raw.library.records.a.article;
+  const now = Date.now();
+  raw.library.interviews = Interviews.planDailyBatch([interview('synced-interview', now)], undefined, {now});
   raw.recommendations.profile.events = [event('a')];
   const docs = [base, h.api.normalizeSyncDocument(raw)];
   const result = spawnSync(process.env.PYTHON || 'python', ['-X', 'utf8', '-c',

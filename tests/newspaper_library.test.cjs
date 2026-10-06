@@ -2,6 +2,11 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const Library = require('../integrations/newspaper/frontend/library.js');
+const Interviews = require('../integrations/newspaper/frontend/interviews.js');
+const NOW = Date.parse('2026-10-06T12:00:00+08:00'), DAY = 86400000;
+const interview = id => ({id, title: `Interview ${id}`, category: Interviews.CATEGORY, kind: '访谈', source: 'Source',
+  published_at: new Date(NOW - 3 * DAY).toISOString(), time_basis: 'published', summary_only: false, url: `https://example.org/${id}`});
+const interviewState = (id, now = NOW) => Interviews.planDailyBatch([interview(id)], undefined, {now});
 const article = id => ({id, title: `Article ${id}`, source: 'Source'});
 const record = (id, patch = {}) => ({article: article(id), saved: false, hidden: false, read: false,
   note: '', tags: '', folder: '未分类', mark: '', detail: null, ...patch});
@@ -62,4 +67,37 @@ test('three-way notes detect real concurrent conflicts and accept identical reso
   const base = {note: 'Original', tags: '', folder: '未分类'};
   assert.deepEqual(Library.mergeNoteDraft(base, {...base, note: 'Mine'}, {...base, note: 'Latest'}).conflicts, ['note']);
   assert.deepEqual(Library.mergeNoteDraft(base, {...base, note: 'Same'}, {...base, note: 'Same'}).conflicts, []);
+});
+
+test('optional interview state round trips with backups while old exports remain unchanged', () => {
+  const old = backup({a: record('a', {note: 'Keep note'})});
+  assert.equal(Object.hasOwn(Library.parseBackup(JSON.stringify(old)), 'interviews'), false);
+  const fresh = {...old, interviews: interviewState('first')};
+  assert.deepEqual(Library.parseBackup(JSON.stringify(fresh)), fresh);
+  assert.deepEqual(Library.mergeLibraries(fresh, old, {now: NOW}).library.interviews, fresh.interviews);
+  assert.equal(Object.hasOwn(Library.mergeLibraries(old, old, {now: NOW}).library, 'interviews'), false);
+});
+
+test('import unions displayed interview history and keeps current notes and pin settings', () => {
+  const current = {...store({a: record('a', {note: 'Current note'})}), interviews: interviewState('today')};
+  const incoming = {...backup({a: record('a', {note: 'Older note'})}), interviews: interviewState('yesterday', NOW - DAY)};
+  incoming.pins = ['访谈与对话'];
+  const original = JSON.stringify([current, incoming]), result = Library.mergeLibraries(current, incoming, {now: NOW});
+  assert.equal(result.library.interviews.seen.length, 2);
+  assert.equal(result.library.interviews.batch.articles[0].id, 'today');
+  assert.equal(result.library.records.a.note, 'Current note');
+  assert.deepEqual(result.library.pins, current.pins);
+  assert.equal(result.stats.added, 0);
+  assert.equal(JSON.stringify([current, incoming]), original);
+});
+
+test('backup validation rejects malformed, nontext and duplicate interview batches', () => {
+  const valid = interviewState('first');
+  const variants = [null, {...valid, version: 2}, {...valid, seen: [{edition_date: '2026-10-06', keys: ['https://example.org']}]},
+    {...valid, seen: [...valid.seen, {...valid.seen[0], title: 'Unbounded history text'}]}];
+  for (const change of [{summary_only: true}, {kind: '视频访谈'}, {kind: '音频访谈'}, {url: 'javascript:alert(1)'}]) {
+    const invalid = JSON.parse(JSON.stringify(valid)); Object.assign(invalid.batch.articles[0], change); variants.push(invalid);
+  }
+  const duplicate = JSON.parse(JSON.stringify(valid)); duplicate.batch.articles.push({...duplicate.batch.articles[0], id: 'other'}); variants.push(duplicate);
+  for (const interviews of variants) assert.throws(() => Library.parseBackup(JSON.stringify({...backup({}), interviews})), /访谈/);
 });

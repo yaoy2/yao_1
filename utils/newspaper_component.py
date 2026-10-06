@@ -8,29 +8,29 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 from utils import newspaper_interviews as _newspaper_interviews
-if getattr(_newspaper_interviews, "NEWSPAPER_INTERVIEWS_VERSION", 0) < 2:
+if getattr(_newspaper_interviews, "NEWSPAPER_INTERVIEWS_VERSION", 0) < 3:
     _newspaper_interviews = importlib.reload(_newspaper_interviews)
 
 from utils import newspaper_data as _newspaper_data
-if getattr(_newspaper_data, "NEWSPAPER_SOURCE_VERSION", 0) < 4:
+if getattr(_newspaper_data, "NEWSPAPER_SOURCE_VERSION", 0) < 5:
     _newspaper_data = importlib.reload(_newspaper_data)
 
 from utils import newspaper_sources as _newspaper_sources
-if getattr(_newspaper_sources, "NEWSPAPER_MEDIA_VERSION", 0) < 3:
+if getattr(_newspaper_sources, "NEWSPAPER_MEDIA_VERSION", 0) < 4:
     _newspaper_sources = importlib.reload(_newspaper_sources)
 
 from utils import newspaper_daily as _newspaper_daily
-if getattr(_newspaper_daily, "NEWSPAPER_DAILY_VERSION", 0) < 3:
+if getattr(_newspaper_daily, "NEWSPAPER_DAILY_VERSION", 0) < 4:
     _newspaper_daily = importlib.reload(_newspaper_daily)
 
 from utils.newspaper_data import fetch_newspaper_article, load_newspaper_feed
 from utils.newspaper_ai_sources import fetch_ai_official_article, load_ai_official_feed
-from utils.newspaper_sources import INTERVIEW_SOURCE_IDS, fetch_extended_article, load_extended_news_feed
+from utils.newspaper_sources import INTERVIEW_SOURCE_IDS, LIVE_INTERVIEW_SOURCE_IDS, fetch_extended_article, load_extended_news_feed
 from utils.newspaper_daily import read_daily_feed
-from utils.newspaper_interviews import INTERVIEW_CATEGORY, without_expired_interviews
+from utils.newspaper_interviews import INTERVIEW_CATEGORY, INTERVIEW_MONTHS, without_expired_interviews
 
 
-NEWSPAPER_SERVICE_VERSION = 6
+NEWSPAPER_SERVICE_VERSION = 7
 
 
 @st.cache_data(ttl=60, max_entries=1, show_spinner=False)
@@ -48,13 +48,38 @@ def newspaper_feed_for_page(force_live=False):
                 expires_at = datetime.fromisoformat(daily["expires_at"])
                 checked_sources = {source.get("id") for source in daily.get("sources", [])}
                 if (expires_at.tzinfo and expires_at > datetime.now(timezone.utc)
-                        and INTERVIEW_SOURCE_IDS <= checked_sources):
-                    return daily
+                        and INTERVIEW_SOURCE_IDS <= checked_sources
+                        and daily.get("interview_window_months") == INTERVIEW_MONTHS):
+                    return _daily_with_live_interviews(daily)
         except Exception:
             # A missing private snapshot must never break public news reading.
             pass
     feed = cached_newspaper_feed()
     return {**feed, "articles": without_expired_interviews(feed.get("articles", []))}
+
+
+def _daily_with_live_interviews(daily):
+    """Refresh short-lived interview lists without persisting them in the daily file."""
+    try:
+        extra = load_extended_news_feed(source_ids=LIVE_INTERVIEW_SOURCE_IDS)
+    except Exception:
+        return {**daily, "errors": [*daily.get("errors", []), "实时访谈来源暂时不可用，保留日报访谈。"]}
+    rows = {row["url"]: row for row in daily.get("articles", [])}
+    for row in extra.get("articles", []):
+        if row.get("category") == INTERVIEW_CATEGORY:
+            rows[row["url"]] = row
+    articles = without_expired_interviews(list(rows.values()))
+    states = {source["id"]: dict(source) for source in daily.get("sources", [])}
+    for source in extra.get("sources", []):
+        states[source["id"]] = dict(source)
+    for source in states.values():
+        source["count"] = sum(row.get("source_id") == source["id"] for row in articles)
+    return {**daily, "articles": articles, "sources": list(states.values()),
+            "errors": [source.get("name", "") + "：" + source.get("error", "")
+                       for source in states.values() if source.get("status") == "error"],
+            "cache_policy": _newspaper_sources._combine_cache_policies(daily.get("cache_policy"), extra.get("cache_policy")),
+            "live_interviews_checked_at": extra.get("fetched_at", ""),
+            "delivery_note": "定时日报加实时访谈列表；短期缓存来源在页面读取时重新核对，不写入日报。"}
 
 
 class _IncompleteFeed(Exception):

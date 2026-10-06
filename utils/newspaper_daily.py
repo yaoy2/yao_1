@@ -19,10 +19,10 @@ from utils import github_backup_sync as sync
 from utils import newspaper_ai_sources as ai
 from utils import newspaper_data as base
 from utils import newspaper_sources as media
-from utils.newspaper_interviews import INTERVIEW_CATEGORY, is_recent_interview, without_expired_interviews
+from utils.newspaper_interviews import INTERVIEW_CATEGORY, INTERVIEW_MONTHS, is_recent_interview, without_expired_interviews
 
 
-NEWSPAPER_DAILY_VERSION = 3
+NEWSPAPER_DAILY_VERSION = 4
 SNAPSHOT_PATH = "data/newspaper_daily.json"
 PRIVATE_REPO = "yaoy2/yao_1-data"
 PRIVATE_BRANCH = "main"
@@ -121,9 +121,11 @@ def _list_article(article, state, feed, now):
     dates = [_date(article.get(key)) for key in ("published_at", "updated_at", "discovered_at")]
     actual_date = next((value for value in dates if value is not None), None)
     max_days = getattr(SOURCE_MAP[source_id], "max_age_days", ai.MAX_AGE_DAYS)
-    if not url or actual_date is None or not now - timedelta(days=max_days) <= actual_date <= now + timedelta(days=1):
-        return None
     category = article.get("category")
+    if not url or actual_date is None:
+        return None
+    if category != INTERVIEW_CATEGORY and not now - timedelta(days=max_days) <= actual_date <= now + timedelta(days=1):
+        return None
     if category not in base.CATEGORY_GROUP or not _text(article.get("title")):
         return None
     if category == INTERVIEW_CATEGORY and not is_recent_interview(article, now):
@@ -216,7 +218,8 @@ def build_daily_snapshot(now=None):
     completed = (now or _now()).astimezone(SHANGHAI)
     articles.sort(key=lambda row: row.get("published_at") or row.get("updated_at") or row.get("discovered_at") or "", reverse=True)
     errors = [state["name"] + "：" + state["error"] for state in sources if state["status"] == "error"]
-    snapshot = {"schema_version": 1, "edition_date": started.date().isoformat(), "started_at": started.isoformat(),
+    snapshot = {"schema_version": 1, "interview_window_months": INTERVIEW_MONTHS,
+            "edition_date": started.date().isoformat(), "started_at": started.isoformat(),
             "completed_at": completed.isoformat(), "generated_at": completed.isoformat(),
             "expires_at": (completed + MAX_AGE).isoformat(), "status": ("partial" if errors else "ok") if articles else "failed",
             "article_count": len(articles), "articles": articles, "sources": sources, "errors": errors}
@@ -249,8 +252,12 @@ def validate_daily_snapshot(payload):
             payload = json.loads(payload)
         except (ValueError, UnicodeError) as error:
             raise ValueError("日报快照不是有效 JSON") from error
-    if not isinstance(payload, dict) or set(payload) != TOP_FIELDS or type(payload.get("schema_version")) is not int or payload["schema_version"] != 1:
+    if (not isinstance(payload, dict) or not TOP_FIELDS <= set(payload) <= TOP_FIELDS | {"interview_window_months"}
+            or type(payload.get("schema_version")) is not int or payload["schema_version"] != 1):
         raise ValueError("日报快照结构无效")
+    if "interview_window_months" in payload and (type(payload["interview_window_months"]) is not int
+                                               or payload["interview_window_months"] != INTERVIEW_MONTHS):
+        raise ValueError("日报访谈时间范围无效")
     try:
         if len(_snapshot_text(payload).encode("utf-8")) > MAX_CONTENT_BYTES:
             raise ValueError("日报快照过大")
@@ -340,6 +347,7 @@ def feed_from_daily_snapshot(snapshot, now=None):
             "fetched_at": snapshot["completed_at"], "generated_at": snapshot["generated_at"],
             "started_at": snapshot["started_at"], "completed_at": snapshot["completed_at"],
             "delivery": "daily", "edition_date": snapshot["edition_date"], "expires_at": snapshot["expires_at"],
+            "interview_window_months": snapshot.get("interview_window_months", 0),
             "daily_status": snapshot["status"], "cache_policy": {"store": True, "reuse": True},
             "delivery_note": "定时快照仅含可保存的列表摘要；手动更新可读取全部实时来源。"}
 

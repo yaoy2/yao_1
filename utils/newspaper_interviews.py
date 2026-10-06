@@ -1,12 +1,13 @@
-"""The shared publication window for M28's weekly interview column."""
+"""The shared six-calendar-month publication window for M28 interviews."""
 
+from calendar import monthrange
 from datetime import datetime, timedelta, timezone
 import re
 
 
-NEWSPAPER_INTERVIEWS_VERSION = 2
+NEWSPAPER_INTERVIEWS_VERSION = 3
 INTERVIEW_CATEGORY = "访谈与对话"
-INTERVIEW_WINDOW = timedelta(days=7)
+INTERVIEW_MONTHS = 6
 SHANGHAI = timezone(timedelta(hours=8))
 
 
@@ -29,8 +30,16 @@ def retain_interviews(articles, limit):
     return [article for _, article in sorted(selected, key=lambda pair: pair[0])]
 
 
+def interview_cutoff(now):
+    """Subtract six calendar months in Beijing, clamping month-end dates."""
+    local = now.astimezone(SHANGHAI)
+    year, month = divmod(local.year * 12 + local.month - 1 - INTERVIEW_MONTHS, 12)
+    month += 1
+    return local.replace(year=year, month=month, day=min(local.day, monthrange(year, month)[1]))
+
+
 def is_recent_interview(article, now=None):
-    """Require a real, timezone-aware publication within the past seven days."""
+    """Require a real, timezone-aware publication within the past six months."""
     if not isinstance(article, dict) or article.get("category") != INTERVIEW_CATEGORY:
         return False
     value = article.get("published_at")
@@ -42,7 +51,7 @@ def is_recent_interview(article, now=None):
         return False
     current = now or datetime.now(SHANGHAI)
     return (published.tzinfo is not None and current.tzinfo is not None
-            and current - INTERVIEW_WINDOW <= published <= current)
+            and interview_cutoff(current) <= published <= current)
 
 
 def without_expired_interviews(articles, now=None):
