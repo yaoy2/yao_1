@@ -14,6 +14,17 @@ from utils.home_theme import apply_home_theme
 
 TOOLS = [
     {
+        "title": "人生指南",
+        "desc": "翻阅《高性价比人生指南》PDF，按关键词、章节和条件检索；输入具体问题定位相关条目，查看原文与出处。",
+        "tag": "阅读 · 检索 · 决策",
+        "created": "2026_10_06",
+        "page": "pages/28_29_life_decision_guide.py",
+        "code": "M29",
+        "icon": "📖",
+        "accent": "green",
+        "section": "个人",
+    },
+    {
         "title": "Newspaper",
         "desc": "汇集公开新闻、官方 AI 资讯与文艺副刊；推荐逐步适应阅读兴趣，同时保留跨领域与探索内容，支持全屏阅读、收藏和笔记，个人记录仅保存在当前浏览器。",
         "tag": "新闻 · AI · 推荐",

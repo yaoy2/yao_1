@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; worker-src 'self' blob:; font-src 'self' blob: data:; connect-src 'self'; img-src 'self' data: blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>高性价比人生指南 · M29</title>
+  <link rel="stylesheet" href="style.css">
+  <script defer src="search.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+<main id="guide-app" class="guide-app">
+  <header class="masthead">
+    <div class="masthead-title">
+      <span class="edition">M29 / 生活决策书架</span>
+      <h1>高性价比人生指南</h1>
+      <p class="subtitle">按问题找原文，按条件挑几条，也可以安静地翻书。</p>
+    </div>
+    <div class="book-facts">
+      <span id="book-count">正在整理书目</span>
+      <a href="guide.pdf" target="_blank" rel="noopener noreferrer" download="高性价比人生指南.pdf">下载 PDF ↗</a>
+    </div>
+  </header>
+
+  <nav class="mode-tabs" role="tablist" aria-label="使用方式">
+    <button id="tab-ask" class="mode-tab" role="tab" aria-selected="true" aria-controls="retrieval-pane" data-view="ask" type="button"><span>01</span> 按问题查</button>
+    <button id="tab-search" class="mode-tab" role="tab" aria-selected="false" aria-controls="retrieval-pane" tabindex="-1" data-view="search" type="button"><span>02</span> 关键词检索</button>
+    <button id="tab-pdf" class="mode-tab" role="tab" aria-selected="false" aria-controls="pdf-pane" tabindex="-1" data-view="pdf" type="button"><span>03</span> PDF 阅读</button>
+    <span class="mode-note">直接查原文 · 按需翻阅</span>
+  </nav>
+
+  <div id="load-status" class="notice" role="status" aria-live="polite">正在载入本书的检索目录…</div>
+  <div id="load-actions" class="inline-actions" hidden><button id="retry-load" type="button">重新载入</button><a href="guide.pdf" target="_blank" rel="noopener noreferrer">先打开 PDF ↗</a></div>
+  <p id="app-status" class="app-status" role="status" aria-live="polite"></p>
+
+  <div class="book-layout">
+    <aside class="sidebar" aria-label="全书目录">
+      <details id="toc-disclosure" class="toc-disclosure" open>
+        <summary>全书目录 <span id="toc-count"></span></summary>
+        <div class="toc-inner">
+          <button id="browse-all" class="toc-all" data-action="browse-all" type="button">全部条目 <span id="all-count"></span></button>
+          <div id="toc-list" class="toc-list"></div>
+          <details class="appendix-list">
+            <summary>延伸阅读与附录 <span id="appendix-count"></span></summary>
+            <div id="document-list"></div>
+          </details>
+        </div>
+      </details>
+    </aside>
+
+    <div class="workspace">
+      <section id="retrieval-pane" role="tabpanel" aria-labelledby="tab-ask">
+        <div id="ask-controls">
+          <form id="ask-form" class="question-form">
+            <label for="question">你正在犹豫什么？</label>
+            <div class="question-row"><textarea id="question" rows="2" maxlength="800" autocomplete="off" spellcheck="false" placeholder="例如：朋友让我替他担保，我该注意什么？"></textarea><button class="primary" type="submit">查相关原文 <span aria-hidden="true">→</span></button></div>
+            <div class="example-row"><span>试一试</span><button type="button" data-example="朋友让我替他担保，签不签？">替朋友担保</button><button type="button" data-example="每天通勤两小时值不值？">通勤两小时</button><button type="button" data-example="总是熬夜，怎样改善睡眠？">睡眠与熬夜</button><button type="button" data-example="租房押金退不回来怎么办？">租房押金</button></div>
+          </form>
+          <p class="search-explainer">查出相关条目后，按原书的收益口径分别展示；页面不生成答案，不补写书里没有的建议。</p>
+        </div>
+
+        <div id="keyword-controls" hidden>
+          <form id="keyword-form" class="keyword-form">
+            <label for="keyword">在全书条目中找关键词</label>
+            <div class="keyword-row"><input id="keyword" type="search" maxlength="800" autocomplete="off" spellcheck="false" placeholder="输入关键词；多个词用空格分开"><button class="primary" type="submit">检索 <span aria-hidden="true">→</span></button><button id="clear-search" class="quiet" type="button">清空</button></div>
+            <div class="keyword-options"><fieldset class="inline-field"><legend class="sr-only">多词匹配方式</legend><label><input type="radio" name="keyword-mode" value="all" checked> 同时命中所有词</label><label><input type="radio" name="keyword-mode" value="any"> 命中任一词</label></fieldset><span>检索标题、原话、成本、收益、来源与备注</span></div>
+          </form>
+        </div>
+
+        <details id="filter-panel" class="filter-panel">
+          <summary><span>叠加筛选</span><span id="filter-summary" class="fine">未限定条件</span></summary>
+          <div class="filter-body">
+            <p class="fine filter-hint">不同条件同时满足；同一项内可多选。未勾选表示不限。</p>
+            <div id="filter-fields" class="filter-fields"></div>
+            <fieldset class="check-row"><legend class="sr-only">条目标记</legend><label><input id="exclude-disputed" type="checkbox" data-flag="excludeDisputed"> 排除有争议条目</label><label><input id="exclude-unverified" type="checkbox" data-flag="excludeUnverified"> 排除待核实条目</label></fieldset>
+            <div class="filter-bottom"><button type="button" id="reset-filters" class="quiet">重置全部筛选</button><span class="fine">证据等级与成本分类沿用原书。</span></div>
+          </div>
+        </details>
+        <div id="active-filters" class="active-filters" aria-label="当前筛选条件"></div>
+
+        <div id="section-context" class="section-context" hidden></div>
+        <div class="results-bar">
+          <div><h2 id="results-title">从一个具体问题开始</h2><p id="results-meta" class="fine"></p></div>
+          <div id="result-options" class="result-options" hidden><label>排序 <select id="sort-order"><option value="book">原书顺序</option><option value="relevance">相关程度</option><option value="value">性价比优先</option></select></label><label>每页 <select id="page-size"><option value="12">12 条</option><option value="20">20 条</option></select></label></div>
+        </div>
+        <div id="search-context" class="search-context" hidden></div>
+        <div id="results" class="result-scroller" tabindex="0" aria-label="检索结果">
+          <div class="empty-state"><span class="empty-number">READ / FIND / DECIDE</span><h3>不必从头读到尾</h3><p>写下眼前的问题，或者从左边目录进入一节。关键词与筛选条件可以一起使用。</p></div>
+        </div>
+        <form id="pagination" class="pagination" hidden aria-label="结果翻页"><button id="previous-page" type="button">← 上一页</button><label>第 <input id="result-page" type="number" min="1" value="1" inputmode="numeric" aria-label="结果页码"> / <span id="page-count">1</span> 页</label><button type="submit" class="quiet">跳转</button><button id="next-page" type="button">下一页 →</button><span id="page-range" class="fine"></span></form>
+
+        <section id="ai-panel" class="ai-panel" aria-label="把原文交给 AI">
+          <div class="ai-toolbar"><div><strong>带着原文继续问</strong> <span id="selected-count" class="fine">已选 0 / 7 条</span></div><div class="inline-actions"><button id="select-page" class="quiet" type="button" disabled>选本页前 7 条</button><button id="clear-selection" class="quiet" type="button" disabled>清空选择</button><button id="copy-ai" type="button" disabled>复制 AI 提问</button><button id="download-ai" class="quiet" type="button" disabled>下载提问文本</button></div></div>
+          <details id="selection-options" class="selection-options"><summary>查看所选条目与提问内容</summary><div id="selected-items" class="selected-items"></div><label for="ai-question">希望 AI 回答的问题</label><textarea id="ai-question" rows="2" maxlength="2000" autocomplete="off" spellcheck="false" placeholder="选好原文后，可在这里补充你的具体问题。"></textarea><p class="fine">通常选 3—7 条；不足 3 条按实际带出。提问文本包含完整 Skill、所选原文及出处，由你自行粘贴给 AI。本页不会代为发送。</p></details>
+          <p id="export-status" class="fine" role="status" aria-live="polite"></p>
+          <details id="copy-fallback" class="copy-fallback" hidden><summary>手动复制完整提问文本</summary><label class="sr-only" for="prompt-text">完整 AI 提问文本</label><textarea id="prompt-text" rows="9" readonly spellcheck="false"></textarea><p class="fine">复制功能受浏览器限制时，可在上方全选复制，或点击“下载提问文本”。</p></details>
+        </section>
+      </section>
+
+      <section id="pdf-pane" role="tabpanel" aria-labelledby="tab-pdf" hidden>
+        <div class="pdf-heading"><div><h2>原版 PDF</h2><p id="pdf-position" class="fine"></p></div><button id="return-to-search" type="button" class="quiet">← 返回检索</button></div>
+        <div class="pdf-controls">
+          <form id="pdf-jump" class="pdf-jump"><button id="pdf-previous" type="button" aria-label="PDF 上一物理页">←</button><label>PDF 页 <input id="pdf-page" type="number" min="1" max="414" value="1" inputmode="numeric" aria-label="PDF 物理页码"></label><span>/ <span id="pdf-total">414</span></span><button type="submit">跳转</button><button id="pdf-next" type="button" aria-label="PDF 下一物理页">→</button></form>
+          <label class="pdf-chapter-label"><span class="sr-only">跳到章节</span><select id="pdf-chapter"><option value="">跳到章节…</option><option value="1">封面与前言</option></select></label>
+          <label class="pdf-zoom-label">缩放 <select id="pdf-zoom"><option value="fit">适合宽度</option><option value="0.75">75%</option><option value="1">100%</option><option value="1.25">125%</option><option value="1.5">150%</option><option value="2">200%</option></select></label>
+          <div class="inline-actions"><a id="pdf-open" href="guide.pdf#page=1" target="_blank" rel="noopener noreferrer">独立打开 ↗</a><a href="guide.pdf" target="_blank" rel="noopener noreferrer" download="高性价比人生指南.pdf">下载 PDF</a></div>
+        </div>
+        <p id="pdf-status" class="pdf-status" role="status">正在准备本地 PDF 阅读器。</p>
+        <div id="pdf-viewport" class="pdf-viewport" tabindex="0" aria-label="PDF 阅读区域" aria-busy="false"><p id="pdf-placeholder" class="pdf-placeholder">选择页码后即可阅读原版 PDF。</p><canvas id="pdf-canvas" role="img" aria-label="PDF 当前页" hidden></canvas></div>
+        <div class="pdf-bottom"><p class="fine pdf-footnote">PDF 页指文件的物理页。可用上方页码、左右箭头或目录翻页；放大后可在阅读区内滚动。</p><button id="pdf-retry" type="button" class="quiet" hidden>重试阅读器</button></div>
+        <details id="pdf-text-panel" class="pdf-text-panel"><summary>当前页文字 · 方便复制</summary><div id="pdf-text" class="pdf-text"></div></details>
+      </section>
+    </div>
+  </div>
+
+  <footer class="book-footer"><div id="attribution">《高性价比人生指南》 · 正在载入来源</div><details id="about" class="about"><summary>版本、来源与使用说明</summary><div id="about-body"></div><p>本页保留原书条目，新增检索、筛选、PDF 定位与提问资料导出。收益、证据等级与性价比标签沿用作者；数字的适用条件请展开备注查看。</p><p>搜索和筛选在此页完成。浏览器仅尝试记住阅读页码与当前视图，不保存你的问题；关闭页面后，选择与检索条件不会保留。</p><div class="inline-actions"><a href="skill.md" target="_blank" rel="noopener noreferrer" download="life-decision-guide-SKILL.md">下载原始 Skill</a><a id="skill-source" target="_blank" rel="noopener noreferrer">查看 Skill 来源 ↗</a></div></details></footer>
+</main>
+
+<dialog id="reader-dialog" class="reader-dialog" aria-labelledby="reader-title">
+  <div class="reader-toolbar"><button id="reader-back" class="quiet" type="button" hidden>← 返回上条</button><span class="fine">原检索条件已保留</span><button id="reader-close" class="quiet" type="button">返回检索 ×</button></div>
+  <div class="reader-heading"><p id="reader-kicker" class="edition"></p><h2 id="reader-title"></h2><div id="reader-actions" class="inline-actions"></div></div>
+  <div id="reader-content" class="reader-content" tabindex="0"></div>
+</dialog>
+<noscript><p class="noscript">检索功能需要 JavaScript。你仍可<a href="guide.pdf" target="_blank" rel="noopener noreferrer">打开原版 PDF</a>。</p></noscript>
+</body>
+</html>

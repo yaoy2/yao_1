@@ -1,0 +1,14 @@
+# Keep original PDF/Skill/vendor bytes stable across Windows and Linux checkouts.
+frontend/guide.pdf binary
+frontend/skill.md -text -whitespace
+frontend/LICENSE-*.txt -text -whitespace
+frontend/vendor/** -text -whitespace linguist-vendored
+frontend/vendor/**/*.bcmap binary
+frontend/vendor/**/*.pfb binary
+frontend/vendor/**/*.ttf binary
+frontend/vendor/**/*.wasm binary
+
+frontend/guide.json text eol=lf linguist-generated
+frontend/*.js text eol=lf
+frontend/*.html text eol=lf
+frontend/*.css text eol=lf

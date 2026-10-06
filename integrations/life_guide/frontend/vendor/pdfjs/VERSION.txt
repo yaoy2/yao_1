@@ -1,0 +1,9 @@
+Mozilla PDF.js / pdfjs-dist 5.6.205
+https://github.com/mozilla/pdf.js
+https://mozilla.github.io/pdf.js/
+
+Copied without modification from the Codex bundled dependency runtime 26.1005.12141.
+Included legacy/build/pdf.mjs, legacy/build/pdf.worker.mjs, cmaps/, standard_fonts/ and wasm/.
+The legacy build includes compatibility support for browsers without newer Map methods.
+Core license: Apache-2.0 (LICENSE.txt).
+Font and WebAssembly notices are preserved in their respective subdirectories.
