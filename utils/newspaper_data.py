@@ -19,8 +19,10 @@ import xml.etree.ElementTree as ET
 from bs4 import BeautifulSoup
 import requests
 
+from utils.newspaper_interviews import INTERVIEW_CATEGORY, has_interview_label, is_recent_interview, retain_interviews
 
-NEWSPAPER_SOURCE_VERSION = 3
+
+NEWSPAPER_SOURCE_VERSION = 4
 SHANGHAI = timezone(timedelta(hours=8))
 REQUEST_TIMEOUT = (3.5, 7)
 MAX_RESPONSE_BYTES = 2_000_000
@@ -44,8 +46,9 @@ CATALOG = (
     ("社会与民生", ("地方城市", "教育校园", "就业职场", "医疗健康", "社保养老", "消费维权")),
     ("生活与人文", ("旅行地理", "美食与饮食", "居家生活", "历史文博", "艺术展览", "环境自然")),
     ("体育与运动", ("足球", "篮球", "乒羽网球", "综合竞技", "电竞", "全民健身与户外")),
-    ("阅读与文学", ("小说推荐", "网络文学", "散文随笔", "诗歌", "文学评论", "新书与综合书单", "访谈与对话")),
+    ("阅读与文学", ("小说推荐", "网络文学", "散文随笔", "诗歌", "文学评论", "新书与综合书单")),
     ("电影与电视", ("电影资讯与片单", "电视剧与网剧", "纪录片", "动画动漫", "综艺音乐", "影评与主创访谈")),
+    ("人物与访谈", ("访谈与对话",)),
 )
 CATEGORY_GROUP = {category: group for group, categories in CATALOG for category in categories}
 
@@ -293,6 +296,8 @@ def _article(source, title, url, published, summary="", *, precision="minute"):
         kind = "评论"
     elif re.search(r"深读|深度|调查报道|独家调查|专访", title):
         kind = "深读"
+    if source.parser != "books" and has_interview_label(title):
+        category, kind = INTERVIEW_CATEGORY, "访谈"
     return {
         "id": "news_" + hashlib.sha256(url.encode("utf-8")).hexdigest()[:24],
         "title": title, "group": CATEGORY_GROUP[category], "category": category,
@@ -384,12 +389,13 @@ def _load_source(source, now):
     if not articles:
         raise ValueError("来源未返回含有效标题、日期和链接的新闻")
     cutoff = now - timedelta(days=source.max_age_days)
-    articles = [a for a in articles if cutoff <= _publication(a["published_at"]) <= now + timedelta(days=1)]
+    articles = [a for a in articles if cutoff <= _publication(a["published_at"]) <= now + timedelta(days=1)
+                and (a["category"] != INTERVIEW_CATEGORY or is_recent_interview(a, now))]
     if not articles:
         raise ValueError("来源没有近期有效内容，暂不收入报纸")
     for article in articles:
         article.update(cache_control=cache_control, cache_policy=dict(policy))
-    return sorted(_deduplicate(articles), key=lambda a: a["published_at"], reverse=True)[:source.limit]
+    return retain_interviews(sorted(_deduplicate(articles), key=lambda a: a["published_at"], reverse=True), source.limit)
 
 
 def _error_message(error):
@@ -431,7 +437,7 @@ def load_newspaper_feed():
     articles = _deduplicate([a for source in SOURCES for a in by_source.get(source.id, [])])
     articles.sort(key=lambda article: article["published_at"], reverse=True)
     sources = [statuses[source.id] for source in SOURCES]
-    return {"articles": articles[:MAX_ARTICLES], "sources": sources,
+    return {"articles": retain_interviews(articles, MAX_ARTICLES), "sources": sources,
             "fetched_at": _now().isoformat(),
             "cache_policy": _combine_cache_policies(*(s["cache_policy"] for s in sources)),
             "errors": ["%s · %s：%s" % (s["name"], s["scope"], s["error"])

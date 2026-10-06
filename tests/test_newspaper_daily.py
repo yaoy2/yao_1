@@ -64,7 +64,7 @@ class SnapshotTest(unittest.TestCase):
     def test_interview_snapshot_keeps_column_and_on_demand_reading(self):
         row = item("media_chinawriter_interviews",
                    url="https://www.chinawriter.com.cn/n1/2026/1005/c405057-40808385.html")
-        row.update(group="阅读与文学", category="访谈与对话", kind="访谈",
+        row.update(group="人物与访谈", category="访谈与对话", kind="访谈",
                    summary_only=False, content_origin="source_summary")
         result = daily.validate_daily_snapshot(snapshot(source_feed=feed([row])))
         assert result["articles"][0]["category"] == "访谈与对话"
@@ -73,7 +73,7 @@ class SnapshotTest(unittest.TestCase):
 
     def test_interviews_cannot_use_discovery_time_or_survive_the_week_in_a_cached_edition(self):
         row = item("media_lifeweek_interviews", url="https://www.lifeweek.com.cn/article/273320")
-        row.update(group="阅读与文学", category="访谈与对话", kind="访谈",
+        row.update(group="人物与访谈", category="访谈与对话", kind="访谈",
                    published_at=(NOW - timedelta(days=6, hours=23)).isoformat(),
                    time_basis="published")
         payload = snapshot(source_feed=feed([row, item()]))
@@ -88,7 +88,7 @@ class SnapshotTest(unittest.TestCase):
         url = "https://www.chinawriter.com.cn/n1/2026/1005/c405057-40808385.html"
         book, interview = item("chinawriter_books", url=url), item("media_chinawriter_interviews", url=url)
         book.update(category="新书与综合书单", group="阅读与文学")
-        interview.update(category="访谈与对话", group="阅读与文学", summary_only=False)
+        interview.update(category="访谈与对话", group="人物与访谈", summary_only=False)
         with patch.object(daily.base, "load_newspaper_feed", return_value=feed([book])), \
              patch.object(daily.ai, "load_ai_official_feed", return_value={"articles": [], "sources": []}), \
              patch.object(daily.media, "load_extended_news_feed", return_value=feed([interview])):

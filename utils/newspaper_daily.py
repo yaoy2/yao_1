@@ -22,7 +22,7 @@ from utils import newspaper_sources as media
 from utils.newspaper_interviews import INTERVIEW_CATEGORY, is_recent_interview, without_expired_interviews
 
 
-NEWSPAPER_DAILY_VERSION = 2
+NEWSPAPER_DAILY_VERSION = 3
 SNAPSHOT_PATH = "data/newspaper_daily.json"
 PRIVATE_REPO = "yaoy2/yao_1-data"
 PRIVATE_BRANCH = "main"

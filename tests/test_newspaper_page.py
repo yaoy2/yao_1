@@ -224,7 +224,7 @@ def test_page_refreshes_a_retained_legacy_service_only_once(service, monkeypatch
 
     def upgrade(module):
         assert module is component
-        module.NEWSPAPER_SERVICE_VERSION = 5
+        module.NEWSPAPER_SERVICE_VERSION = 6
         return module
 
     reload_service = Mock(side_effect=upgrade)

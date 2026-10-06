@@ -1,13 +1,15 @@
 """Publication boundaries apply equally to live and previously cached interviews."""
 
 from datetime import datetime, timedelta, timezone
+import json
 from unittest.mock import patch
 
 import pytest
 
 from utils import newspaper_sources as media
+from utils import newspaper_data as news
 from utils.newspaper_interviews import (
-    INTERVIEW_CATEGORY, SHANGHAI, is_recent_interview, without_expired_interviews,
+    INTERVIEW_CATEGORY, SHANGHAI, has_interview_label, is_recent_interview, retain_interviews, without_expired_interviews,
 )
 
 
@@ -135,3 +137,99 @@ def test_writer_full_text_is_only_fetched_on_demand_and_paywall_is_respected():
         restricted = media.fetch_extended_article({**row, "restricted": True})
     request.assert_not_called()
     assert restricted["status"] == "summary"
+
+
+@pytest.mark.parametrize("title", [
+    "专访企业创始人：制造业的新机会", "科学家访谈：量子实验室的一天", "对谈｜运动员与教练",
+    "独家对话航天员：再赴太空", "对话工程师：让桥梁更安全", "对话丨从医生到公益发起人",
+    "Interview: A robotics pioneer", "An interview with an Olympic champion",
+])
+def test_explicit_interview_labels_have_no_industry_or_fame_filter(title):
+    assert has_interview_label(title)
+
+
+@pytest.mark.parametrize("title", [
+    "伊朗表示愿推动也门胡塞武装与沙特对话", "中美举行新一轮战略对话", "文明对话会在京举行",
+    "科学家：人工智能的新前沿", "企业家年度人物评选启动", "双方同意建立对话机制",
+])
+def test_generic_person_news_and_diplomatic_dialogue_do_not_become_interviews(title):
+    assert not has_interview_label(title)
+
+
+def test_general_publishers_classify_recent_interviews_in_the_independent_group():
+    source = media.SOURCE_BY_ID["media_yicai"]
+    row = media._article(source, "专访科学家：芯片突破", "https://www.yicai.com/news/123.html",
+                         NOW.isoformat(), "原站摘要", NOW)
+    assert row["group"] == "人物与访谈"
+    assert row["kind"] == "访谈"
+    assert media._article(source, "专访企业家", row["url"], "", "", NOW) is None
+    assert media._article(source, "专访企业家", row["url"], (NOW-timedelta(days=8)).isoformat(), "", NOW) is None
+    assert media._article(source, "专访企业家", row["url"], NOW.isoformat(), "", NOW, time_basis="updated") is None
+    base = news._article(news.SOURCES[5], "专访运动员：备战新赛季",
+                         "https://www.chinanews.com.cn/ty/2026/10-06/123456.shtml", NOW.isoformat())
+    assert base["category"] == INTERVIEW_CATEGORY
+    assert base["group"] == "人物与访谈"
+
+
+def test_recent_interviews_are_retained_before_the_general_feed_limit_without_reordering_dates():
+    articles = [{"id": str(i), "category": "宏观经济"} for i in range(30)]
+    articles.extend({"id": str(i), "category": INTERVIEW_CATEGORY} for i in range(30, 33))
+    result = retain_interviews(articles, 20)
+    assert [a["id"] for a in result] == [str(i) for i in (*range(17), 30, 31, 32)]
+    assert len(articles) == 33
+
+
+def dxw_page(*rows):
+    return ('<div id="newlist"><ul class="news_list_ul">' + ''.join(
+        f'<li><div class="news_title"><a href="{url}">{title}</a></div>'
+        f'<div class="news_content"><a>{summary}</a><p class="time">{date}</p></div></li>'
+        for url, title, summary, date in rows) + '</ul></div>').encode("utf-8")
+
+
+def test_chinanews_uses_list_date_and_explicit_interview_evidence_not_just_a_person_name():
+    source = media.SOURCE_BY_ID["media_chinanews_interviews"]
+    url = "https://www.chinanews.com.cn/dxw/2026/09-20/12345.shtml"
+    page = dxw_page((url, "跨文化教育如何创新？", "——专访某大学校长", "2026-10-5 20:48"),
+                    (url.replace("12345", "12346"), "AI伦理困局何解？", "作者评论", "2026-10-5 18:53"),
+                    (url.replace("12345", "12347"), "企业家怎么看未来？", "——访某企业创始人", "2026-10-4 19:45"),
+                    (url.replace("/dxw/", "/cul/shipin/"), "同题视频", "专访科学家", "2026-10-5 19:00"),
+                    (url.replace("12345", "12348"), "旧采访", "专访运动员", "2026-9-28 18:00"))
+    rows = media._parse_chinanews_interviews(page, source, NOW)
+    assert len(rows) == 2
+    assert rows[0]["published_at"] == "2026-10-05T20:48:00+08:00"
+    assert all(row["group"] == "人物与访谈" and not row["summary_only"] for row in rows)
+    with patch.object(media, "_request", return_value=(page, "max-age=120")):
+        loaded, _ = media._load_source(source, NOW)
+    assert loaded[0]["cache_policy"]["max_age_seconds"] == 120
+
+
+def test_cctv_full_programs_use_web_release_stamp_and_never_fetch_video_or_claim_full_text():
+    source = media.SOURCE_BY_ID["media_cctv_dialogue"]
+    url = "https://tv.cctv.com/2026/10/05/VIDEexample261005.shtml"
+    row = {"mode": 0, "title": "《对话》企业家的创新探索", "brief": "本期节目对话企业创始人。", "url": url,
+           "time": "2026-09-20 21:30:00", "focus_date": int((NOW-timedelta(days=1)).timestamp()*1000)}
+    payload = {"data": {"list": [row, {**row, "mode": 1}, {**row, "title": "精彩预告"},
+                                   {**row, "focus_date": int((NOW-timedelta(days=8)).timestamp()*1000)},
+                                   {**row, "focus_date": None, "time": NOW.isoformat()},
+                                   {**row, "url": "https://other.test/video.shtml"}]}}
+    rows = media._parse_cctv_interviews(json.dumps(payload).encode(), source, NOW)
+    assert len(rows) == 1
+    assert rows[0]["published_at"] == (NOW-timedelta(days=1)).isoformat()
+    assert rows[0]["kind"] == "视频访谈" and rows[0]["summary_only"]
+    assert rows[0]["group"] == "人物与访谈"
+    with patch.object(media, "_request") as request:
+        detail = media.fetch_extended_article(rows[0])
+    request.assert_not_called()
+    assert detail["status"] == "summary"
+    with pytest.raises(ValueError):
+        media._parse_cctv_interviews(b'{"data":{}}', source, NOW)
+
+
+def test_general_feeds_reject_expired_interviews_before_taking_the_display_limit():
+    source = news.SOURCES[2]
+    recent = news._article(source, "专访企业家：新市场",
+                          "https://www.chinanews.com.cn/cj/2026/10-05/12345.shtml", NOW.isoformat())
+    expired = {**recent, "id": "expired", "url": recent["url"].replace("12345", "12346"),
+               "published_at": (NOW-timedelta(days=8)).isoformat()}
+    with patch.object(news, "_fetch_bytes", return_value=b"unused"), patch.object(news, "_parse_rss", return_value=[expired, recent]):
+        assert [row["id"] for row in news._load_source(source, NOW)] == [recent["id"]]

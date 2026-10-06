@@ -7,16 +7,20 @@ import importlib
 import streamlit as st
 import streamlit.components.v1 as components
 
+from utils import newspaper_interviews as _newspaper_interviews
+if getattr(_newspaper_interviews, "NEWSPAPER_INTERVIEWS_VERSION", 0) < 2:
+    _newspaper_interviews = importlib.reload(_newspaper_interviews)
+
 from utils import newspaper_data as _newspaper_data
-if getattr(_newspaper_data, "NEWSPAPER_SOURCE_VERSION", 0) < 3:
+if getattr(_newspaper_data, "NEWSPAPER_SOURCE_VERSION", 0) < 4:
     _newspaper_data = importlib.reload(_newspaper_data)
 
 from utils import newspaper_sources as _newspaper_sources
-if getattr(_newspaper_sources, "NEWSPAPER_MEDIA_VERSION", 0) < 2:
+if getattr(_newspaper_sources, "NEWSPAPER_MEDIA_VERSION", 0) < 3:
     _newspaper_sources = importlib.reload(_newspaper_sources)
 
 from utils import newspaper_daily as _newspaper_daily
-if getattr(_newspaper_daily, "NEWSPAPER_DAILY_VERSION", 0) < 2:
+if getattr(_newspaper_daily, "NEWSPAPER_DAILY_VERSION", 0) < 3:
     _newspaper_daily = importlib.reload(_newspaper_daily)
 
 from utils.newspaper_data import fetch_newspaper_article, load_newspaper_feed
@@ -26,7 +30,7 @@ from utils.newspaper_daily import read_daily_feed
 from utils.newspaper_interviews import INTERVIEW_CATEGORY, without_expired_interviews
 
 
-NEWSPAPER_SERVICE_VERSION = 5
+NEWSPAPER_SERVICE_VERSION = 6
 
 
 @st.cache_data(ttl=60, max_entries=1, show_spinner=False)

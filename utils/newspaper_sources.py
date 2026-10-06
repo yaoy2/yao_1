@@ -20,10 +20,10 @@ from bs4 import BeautifulSoup
 import requests
 
 from utils.newspaper_data import CATEGORY_GROUP
-from utils.newspaper_interviews import INTERVIEW_CATEGORY, is_recent_interview
+from utils.newspaper_interviews import INTERVIEW_CATEGORY, has_interview_label, is_recent_interview, retain_interviews
 
 
-NEWSPAPER_MEDIA_VERSION = 2
+NEWSPAPER_MEDIA_VERSION = 3
 SHANGHAI = timezone(timedelta(hours=8))
 MAX_WORKERS = 4
 MAX_ITEMS_PER_SOURCE = 20
@@ -66,6 +66,14 @@ PUBLIC_SOURCES = (
                  ("www.lifeweek.com.cn",), INTERVIEW_CATEGORY, "lifeweek_interviews", 7),
     PublicSource("media_chinawriter_interviews", "中国作家网", "https://www.chinawriter.com.cn/403997/405057/index.html",
                  ("www.chinawriter.com.cn",), INTERVIEW_CATEGORY, "chinawriter_interviews", 7),
+    PublicSource("media_chinanews_interviews", "中新网·东西问", "https://www.chinanews.com.cn/dxw/",
+                 ("www.chinanews.com.cn",), INTERVIEW_CATEGORY, "chinanews_interviews", 7),
+    PublicSource("media_cctv_dialogue", "央视《对话》",
+                 "https://api.cntv.cn/NewVideo/getVideoListByColumn?id=TOPC1451530382483536&sort=desc&serviceId=tvcctv&mode=0&n=20&p=1&t=json",
+                 ("api.cntv.cn", "tv.cctv.com"), INTERVIEW_CATEGORY, "cctv_interviews", 7),
+    PublicSource("media_cctv_face_to_face", "央视《面对面》",
+                 "https://api.cntv.cn/NewVideo/getVideoListByColumn?id=TOPC1451559038345600&n=20&sort=desc&p=1&mode=0&serviceId=tvcctv&t=json",
+                 ("api.cntv.cn", "tv.cctv.com"), INTERVIEW_CATEGORY, "cctv_interviews", 7),
     PublicSource("media_bbc", "BBC News", "https://feeds.bbci.co.uk/news/world/rss.xml", ("feeds.bbci.co.uk", "www.bbc.co.uk", "www.bbc.com", "bbc.com"), "国际要闻"),
     PublicSource("media_guardian", "The Guardian", "https://www.theguardian.com/world/rss", ("www.theguardian.com",), "国际要闻"),
     PublicSource("media_france24", "France 24", "https://www.france24.com/en/rss", ("www.france24.com",), "国际要闻"),
@@ -77,7 +85,7 @@ PUBLIC_SOURCES = (
 )
 SOURCE_BY_ID = {source.id: source for source in PUBLIC_SOURCES}
 INTERVIEW_SOURCE_IDS = frozenset(source.id for source in PUBLIC_SOURCES if source.category == INTERVIEW_CATEGORY)
-PUBLIC_ARTICLE_SOURCES = frozenset({"media_yicai", "media_chinawriter_interviews"})
+PUBLIC_ARTICLE_SOURCES = frozenset({"media_yicai", "media_chinawriter_interviews", "media_chinanews_interviews"})
 ALLOWED_FEEDS = frozenset(source.url for source in PUBLIC_SOURCES)
 INACTIVE_SOURCES = (
     {"id": "media_xiaohongshu", "name": "小红书", "scope": "社区内容",
@@ -234,7 +242,11 @@ def _article(source, title, url, raw_date, summary, now, *, local=False,
     date, precision = _date(raw_date, local=local)
     if date and (date < now - timedelta(days=source.max_age_days) or date > now + timedelta(minutes=5)):
         return None
-    category = source.category if source.category == INTERVIEW_CATEGORY else _category(title, source.category)
+    is_interview = source.category == INTERVIEW_CATEGORY or has_interview_label(title)
+    category = INTERVIEW_CATEGORY if is_interview else _category(title, source.category)
+    if is_interview and not is_recent_interview({"category": category, "published_at": date.isoformat() if date else "",
+                                               "time_basis": time_basis}, now):
+        return None
     paragraphs = [] if restricted else _body_paragraphs(body)
     time_basis = time_basis if date else "collected"
     return {
@@ -525,6 +537,77 @@ def _parse_chinawriter_interviews(content, source, now):
     return articles
 
 
+def _parse_chinanews_interviews(content, source, now):
+    soup = BeautifulSoup(content, "html.parser", from_encoding="utf-8")
+    listing = soup.select_one("#newlist > ul.news_list_ul")
+    if listing is None:
+        raise ValueError("中新网人物访谈列表格式已变化")
+    articles, verified = [], 0
+    rows = listing.select(":scope > li")
+    for row in rows[:100]:
+        link, date_node = row.select_one(".news_title a[href]"), row.select_one(".news_content p.time")
+        if link is None or date_node is None:
+            continue
+        try:
+            published = datetime.strptime(date_node.get_text(strip=True), "%Y-%m-%d %H:%M").replace(tzinfo=SHANGHAI)
+        except ValueError:
+            continue
+        url = _safe_url(urljoin(source.url, link.get("href", "")), source)
+        if not url or not link.get_text(strip=True):
+            continue
+        verified += 1
+        # The general column also publishes commentary and same-topic videos.
+        if not re.fullmatch(r"https://www\.chinanews\.com\.cn/dxw/\d{4}/\d{2}-\d{2}/\d+\.shtml", url):
+            continue
+        title = link.get_text(" ", strip=True)
+        summary_node = row.select_one(".news_content a")
+        summary = summary_node.get_text(" ", strip=True) if summary_node else ""
+        if not (has_interview_label(title + " " + summary) or re.search(r"——\s*访[^问]", summary)):
+            continue
+        article = _article(source, title, url, published.isoformat(), summary, now)
+        if article:
+            article["summary_only"] = False
+            articles.append(article)
+    if rows and not verified:
+        raise ValueError("中新网人物访谈列表未提供可验证的文章与发布日期")
+    return articles
+
+
+def _parse_cctv_interviews(content, source, now):
+    payload = json.loads(content)
+    data = payload.get("data") if isinstance(payload, dict) else None
+    rows = data.get("list") if isinstance(data, dict) else None
+    if not isinstance(rows, list):
+        raise ValueError("央视访谈节目列表格式已变化")
+    articles, verified = [], 0
+    for row in rows[:100]:
+        if not isinstance(row, dict) or type(row.get("mode")) is not int or row["mode"] != 0:
+            continue
+        stamp = row.get("focus_date")
+        if type(stamp) is not int or stamp <= 0:
+            continue
+        try:
+            published = datetime.fromtimestamp(stamp / 1000, tz=SHANGHAI)
+        except (ValueError, OverflowError, OSError):
+            continue
+        url, title = _safe_url(row.get("url"), source), _plain(row.get("title"), 300)
+        if not re.fullmatch(r"https://tv\.cctv\.com/\d{4}/\d{2}/\d{2}/VIDE[A-Za-z0-9]+\.shtml", url) or not title:
+            continue
+        verified += 1
+        if re.search(r"预告|宣传片|花絮|精彩片段", title):
+            continue
+        # focus_date matches the official page's release stamp; time is the
+        # earlier broadcast time. Neither the title nor URL substitutes for it.
+        article = _article(source, title, url, published.isoformat(), row.get("brief"), now)
+        if article:
+            article["kind"] = "视频访谈"
+            article["summary_origin"] = "来源公开节目简介（完整访谈视频请访问原站）"
+            articles.append(article)
+    if rows and not verified:
+        raise ValueError("央视访谈列表未提供可验证的完整节目与发布时间")
+    return articles
+
+
 def _request(url, source, *, article=False):
     if _safe_url(url, source, canonical=False) != url or (not article and url not in ALLOWED_FEEDS):
         raise ValueError("请求网址不在对应公开来源范围内")
@@ -567,11 +650,13 @@ def _load_source(source, now):
     parser = {"rss": _parse_feed, "yicai": _parse_yicai,
               "toutiao": _parse_toutiao, "lifeweek": _parse_lifeweek,
               "lifeweek_interviews": _parse_lifeweek_interviews,
-              "chinawriter_interviews": _parse_chinawriter_interviews}[source.parser]
+              "chinawriter_interviews": _parse_chinawriter_interviews,
+              "chinanews_interviews": _parse_chinanews_interviews,
+              "cctv_interviews": _parse_cctv_interviews}[source.parser]
     articles = _deduplicate(parser(content, source, now))
     articles.sort(key=lambda row: row["published_at"] or row["updated_at"] or row["discovered_at"], reverse=True)
     policy = _cache_policy(cache_control)
-    articles = articles[:MAX_ITEMS_PER_SOURCE]
+    articles = retain_interviews(articles, MAX_ITEMS_PER_SOURCE)
     for article in articles:
         article["cache_policy"] = dict(policy)
     return articles, cache_control
@@ -648,13 +733,17 @@ def fetch_extended_article(article_dict):
         return result
     readable = ((source.id == "media_yicai" and re.fullmatch(r"https://www\.yicai\.com/news/\d+\.html", url))
                 or (source.id == "media_chinawriter_interviews"
-                    and re.fullmatch(r"https://www\.chinawriter\.com\.cn/n1/\d{4}/\d{4}/c405057-\d+\.html", url)))
+                    and re.fullmatch(r"https://www\.chinawriter\.com\.cn/n1/\d{4}/\d{4}/c405057-\d+\.html", url))
+                or (source.id == "media_chinanews_interviews"
+                    and re.fullmatch(r"https://www\.chinanews\.com\.cn/dxw/\d{4}/\d{2}-\d{2}/\d+\.shtml", url)))
     if readable and not article.get("restricted"):
         try:
             content, cache_control = _request(url, source, article=True)
             result["cache_policy"] = _combine_cache_policies(result["cache_policy"], _cache_policy(cache_control))
             soup = BeautifulSoup(content, "html.parser", from_encoding="utf-8")
-            container = soup.select_one("#multi-text" if source.id == "media_yicai" else ".end_article")
+            selector = {"media_yicai": "#multi-text", "media_chinawriter_interviews": ".end_article",
+                        "media_chinanews_interviews": ".left_zw"}[source.id]
+            container = soup.select_one(selector)
             restricted = RESTRICTED_TEXT.search(soup.get_text(" ", strip=True))
             minimum_count, minimum_length = (1, 60) if source.id == "media_yicai" else (2, 160)
             paragraphs = _body_paragraphs(str(container), min_paragraphs=minimum_count,

@@ -79,7 +79,7 @@ test('selection limits the category, combines source and all query words, and re
 function pageHarness() {
   const html = fs.readFileSync(path.join(__dirname, '../integrations/newspaper/frontend/index.html'), 'utf8');
   let code = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].at(-1)[1];
-  code = code.replace(/\}\)\(\);\s*$/, `window.testAPI={front,chrome,catalogPage,interviewsPage,interviewPreview,interviewRows,render,snapshot,
+  code = code.replace(/\}\)\(\);\s*$/, `window.testAPI={front,chrome,catalogPage,catalog,arts,interviewsPage,interviewPreview,interviewRows,render,snapshot,
     setState:patch=>Object.assign(state,patch),
     setPins:pins=>{data.pins=pins;data.pinsCustomized=true;},
     inspect:()=>JSON.parse(JSON.stringify({state,data})),
@@ -123,7 +123,7 @@ test('main navigation, home preview and catalog expose the new section without w
   const before = h.api.inspect().data;
   assert.match(h.api.chrome(), /data-id="interviews"[^>]*>访谈与阅读/);
   assert.match(h.api.front(), /近 7 天 · 1 篇 · 进入专栏/);
-  assert.match(h.api.catalogPage(), /10 个版组 · 61 个栏目/);
+  assert.match(h.api.catalogPage(), /11 个版组 · 61 个栏目/);
   assert.match(h.api.chrome(), /61 个栏目/);
   assert.match(h.api.catalogPage(), /访谈与对话 · 1/);
   assert.deepEqual(h.api.inspect().data, before);
@@ -208,6 +208,27 @@ test('normalization does not relabel an explicit unknown or collected time basis
   h.click('nav', 'interviews');
   assert.match(h.root.innerHTML, /作家访谈 valid/);
   assert.doesNotMatch(h.root.innerHTML, /作家访谈 unknown-basis|作家访谈 collected/);
+});
+
+test('cross-industry interviews use an independent group without moving existing literature or film topics', () => {
+  const h = pageHarness();
+  h.api.feed([article('science', DAY, {title: '科学人物访谈', group: '科技与科学', source_id: 'media_general', source: '综合媒体'}),
+    article('essay', DAY, {title: '原有文学栏目', category: '散文随笔', kind: '散文'})], [
+    {id: 'media_general', name: '综合媒体', scope: '综合公开新闻', status: 'ok', count: 1},
+    {id: 'future_interviews', name: '后续访谈来源', scope: '公开媒体 · 访谈与对话', status: 'ok', count: 0},
+  ]);
+  assert.equal(h.api.catalog[8][0], '阅读与文学');
+  assert.equal(h.api.catalog[9][0], '电影与电视');
+  assert.equal(h.api.catalog[10][0], '人物与访谈');
+  assert.deepEqual(Array.from(h.api.catalog[10][1]), ['访谈与对话']);
+  assert.doesNotMatch(h.api.arts(), /科学人物访谈/);
+  assert.match(h.api.arts(), /原有文学栏目/);
+  h.click('nav', 'interviews');
+  assert.match(h.root.innerHTML, /各行业、各领域人物访谈与名人对话/);
+  assert.match(h.root.innerHTML, /科学人物访谈/);
+  assert.match(h.root.innerHTML, /综合媒体 · 近 7 天 1 篇/);
+  assert.match(h.root.innerHTML, /后续访谈来源 · 近 7 天 0 篇/);
+  assert.match(h.root.innerHTML, /data-action="interview-source" data-id="后续访谈来源"/);
 });
 
 test('retained snapshots and home previews discard interviews as their publication dates age out', () => {
