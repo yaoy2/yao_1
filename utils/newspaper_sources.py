@@ -20,8 +20,10 @@ from bs4 import BeautifulSoup
 import requests
 
 from utils.newspaper_data import CATEGORY_GROUP
+from utils.newspaper_interviews import INTERVIEW_CATEGORY, is_recent_interview
 
 
+NEWSPAPER_MEDIA_VERSION = 2
 SHANGHAI = timezone(timedelta(hours=8))
 MAX_WORKERS = 4
 MAX_ITEMS_PER_SOURCE = 20
@@ -60,6 +62,10 @@ PUBLIC_SOURCES = (
     PublicSource("media_yicai", "第一财经", "https://www.yicai.com/", ("www.yicai.com", "m.yicai.com"), "宏观经济", "yicai"),
     PublicSource("media_toutiao", "今日头条热榜", "https://www.toutiao.com/hot-event/hot-board/?origin=toutiao_pc", ("www.toutiao.com",), "地方城市", "toutiao", 7),
     PublicSource("media_lifeweek", "三联生活周刊", "https://www.lifeweek.com.cn/", ("www.lifeweek.com.cn",), "散文随笔", "lifeweek", 60),
+    PublicSource("media_lifeweek_interviews", "三联生活周刊", "https://www.lifeweek.com.cn/column/79",
+                 ("www.lifeweek.com.cn",), INTERVIEW_CATEGORY, "lifeweek_interviews", 7),
+    PublicSource("media_chinawriter_interviews", "中国作家网", "https://www.chinawriter.com.cn/403997/405057/index.html",
+                 ("www.chinawriter.com.cn",), INTERVIEW_CATEGORY, "chinawriter_interviews", 7),
     PublicSource("media_bbc", "BBC News", "https://feeds.bbci.co.uk/news/world/rss.xml", ("feeds.bbci.co.uk", "www.bbc.co.uk", "www.bbc.com", "bbc.com"), "国际要闻"),
     PublicSource("media_guardian", "The Guardian", "https://www.theguardian.com/world/rss", ("www.theguardian.com",), "国际要闻"),
     PublicSource("media_france24", "France 24", "https://www.france24.com/en/rss", ("www.france24.com",), "国际要闻"),
@@ -70,6 +76,8 @@ PUBLIC_SOURCES = (
     PublicSource("media_sciencenews", "Science News", "https://www.sciencenews.org/feed", ("www.sciencenews.org", "sciencenews.org"), "科学前沿", max_age_days=60),
 )
 SOURCE_BY_ID = {source.id: source for source in PUBLIC_SOURCES}
+INTERVIEW_SOURCE_IDS = frozenset(source.id for source in PUBLIC_SOURCES if source.category == INTERVIEW_CATEGORY)
+PUBLIC_ARTICLE_SOURCES = frozenset({"media_yicai", "media_chinawriter_interviews"})
 ALLOWED_FEEDS = frozenset(source.url for source in PUBLIC_SOURCES)
 INACTIVE_SOURCES = (
     {"id": "media_xiaohongshu", "name": "小红书", "scope": "社区内容",
@@ -226,7 +234,7 @@ def _article(source, title, url, raw_date, summary, now, *, local=False,
     date, precision = _date(raw_date, local=local)
     if date and (date < now - timedelta(days=source.max_age_days) or date > now + timedelta(minutes=5)):
         return None
-    category = _category(title, source.category)
+    category = source.category if source.category == INTERVIEW_CATEGORY else _category(title, source.category)
     paragraphs = [] if restricted else _body_paragraphs(body)
     time_basis = time_basis if date else "collected"
     return {
@@ -235,7 +243,7 @@ def _article(source, title, url, raw_date, summary, now, *, local=False,
         "publisher": _plain(publisher, 100) or source.name,
         "source_id": source.id, "source_family": "public_media",
         "group": CATEGORY_GROUP[category], "category": category,
-        "kind": "深读" if source.id in ("media_lifeweek", "media_aeon") else "报道",
+        "kind": "访谈" if category == INTERVIEW_CATEGORY else "深读" if source.id in ("media_lifeweek", "media_aeon") else "报道",
         "url": url, "original_url": url, "summary": _plain(summary),
         "summary_origin": SUMMARY_ORIGIN,
         "content_origin": "feed_full" if paragraphs else "source_summary",
@@ -463,6 +471,60 @@ def _parse_lifeweek(content, source, now):
     return articles
 
 
+def _parse_lifeweek_interviews(content, source, now):
+    # This is the publisher's Culture / Interviews column. Recommendations
+    # elsewhere in the Nuxt state do not establish membership of this column.
+    data = _nuxt_data(content).get("data")
+    rows = data[0].get("articleList") if isinstance(data, list) and data and isinstance(data[0], dict) else None
+    if not isinstance(rows, list):
+        raise ValueError("三联专访列表格式已变化")
+    articles, verified = [], 0
+    for row in rows[:100]:
+        if not isinstance(row, dict):
+            continue
+        article_id = row.get("id")
+        published, _ = _date(row.get("pubTime"), local=True)
+        if (type(article_id) is not int or article_id <= 0 or row.get("contentType") not in (4, 44, 54)
+                or not _plain(row.get("title")) or published is None):
+            continue
+        verified += 1
+        article = _article(source, row["title"], "https://www.lifeweek.com.cn/article/" + str(article_id),
+                           row["pubTime"], row.get("summary") or row.get("daodu"), now, local=True)
+        if article and is_recent_interview(article, now):
+            articles.append(article)
+    if rows and not verified:
+        raise ValueError("三联专访列表未提供可验证的文章与发布日期")
+    return articles
+
+
+def _parse_chinawriter_interviews(content, source, now):
+    soup = BeautifulSoup(content, "html.parser", from_encoding="utf-8")
+    listing = soup.select_one("ul.previous_list")
+    if listing is None:
+        raise ValueError("中国作家网访谈列表格式已变化")
+    articles, verified = [], 0
+    rows = listing.select(":scope > li")
+    for row in rows[:100]:
+        link, date_node = row.select_one("span > a[href]"), row.select_one("em")
+        if link is None or date_node is None:
+            continue
+        url = _safe_url(urljoin(source.url, link.get("href", "")), source)
+        date = date_node.get_text(strip=True)
+        if (not re.fullmatch(r"https://www\.chinawriter\.com\.cn/n1/\d{4}/\d{4}/c405057-\d+\.html", url)
+                or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", date) or _date(date, local=True)[0] is None
+                or not link.get_text(strip=True)):
+            continue
+        # The list's date is evidence; the date-like URL path is not a fallback.
+        verified += 1
+        article = _article(source, link.get_text(" ", strip=True), url, date, "", now, local=True)
+        if article and is_recent_interview(article, now):
+            article["summary_only"] = False  # Public text is fetched only when opened.
+            articles.append(article)
+    if rows and not verified:
+        raise ValueError("中国作家网访谈列表未提供可验证的文章与发布日期")
+    return articles
+
+
 def _request(url, source, *, article=False):
     if _safe_url(url, source, canonical=False) != url or (not article and url not in ALLOWED_FEEDS):
         raise ValueError("请求网址不在对应公开来源范围内")
@@ -492,7 +554,10 @@ def _deduplicate(articles):
     by_url = {}
     for row in articles:
         previous = by_url.get(row["url"])
-        if previous is None or (not previous.get("summary") and row.get("summary")):
+        if (previous is None
+                or (row.get("category") == INTERVIEW_CATEGORY and previous.get("category") != INTERVIEW_CATEGORY)
+                or ((previous.get("category") != INTERVIEW_CATEGORY or row.get("category") == INTERVIEW_CATEGORY)
+                    and not previous.get("summary") and row.get("summary"))):
             by_url[row["url"]] = row
     return list(by_url.values())
 
@@ -500,7 +565,9 @@ def _deduplicate(articles):
 def _load_source(source, now):
     content, cache_control = _request(source.url, source)
     parser = {"rss": _parse_feed, "yicai": _parse_yicai,
-              "toutiao": _parse_toutiao, "lifeweek": _parse_lifeweek}[source.parser]
+              "toutiao": _parse_toutiao, "lifeweek": _parse_lifeweek,
+              "lifeweek_interviews": _parse_lifeweek_interviews,
+              "chinawriter_interviews": _parse_chinawriter_interviews}[source.parser]
     articles = _deduplicate(parser(content, source, now))
     articles.sort(key=lambda row: row["published_at"] or row["updated_at"] or row["discovered_at"], reverse=True)
     policy = _cache_policy(cache_control)
@@ -538,7 +605,7 @@ def load_extended_news_feed():
                 by_source[source.id] = rows
                 policy = _cache_policy(cache_control)
                 state.update(count=len(rows), cache_control=cache_control, cache_policy=policy,
-                             note=_cache_note(policy) or ("" if rows else "近期无有效条目"))
+                             note=_cache_note(policy) or ("" if rows else "近 7 天暂无新访谈" if source.id in INTERVIEW_SOURCE_IDS else "近期无有效条目"))
             except Exception as error:
                 state.update(status="error", error=_error_message(error))
             states[source.id] = state
@@ -579,15 +646,19 @@ def fetch_extended_article(article_dict):
                       summary_only=False, content_origin="feed_full",
                       message="显示来源订阅提供的正文，保留原始语言与原文链接。")
         return result
-    if (source.id == "media_yicai" and not article.get("restricted")
-            and re.fullmatch(r"https://www\.yicai\.com/news/\d+\.html", url)):
+    readable = ((source.id == "media_yicai" and re.fullmatch(r"https://www\.yicai\.com/news/\d+\.html", url))
+                or (source.id == "media_chinawriter_interviews"
+                    and re.fullmatch(r"https://www\.chinawriter\.com\.cn/n1/\d{4}/\d{4}/c405057-\d+\.html", url)))
+    if readable and not article.get("restricted"):
         try:
             content, cache_control = _request(url, source, article=True)
             result["cache_policy"] = _combine_cache_policies(result["cache_policy"], _cache_policy(cache_control))
             soup = BeautifulSoup(content, "html.parser", from_encoding="utf-8")
-            container = soup.select_one("#multi-text")
+            container = soup.select_one("#multi-text" if source.id == "media_yicai" else ".end_article")
             restricted = RESTRICTED_TEXT.search(soup.get_text(" ", strip=True))
-            paragraphs = _body_paragraphs(str(container), min_paragraphs=1, min_characters=60) if container and not restricted else []
+            minimum_count, minimum_length = (1, 60) if source.id == "media_yicai" else (2, 160)
+            paragraphs = _body_paragraphs(str(container), min_paragraphs=minimum_count,
+                                         min_characters=minimum_length) if container and not restricted else []
             if paragraphs:
                 result.update(status="full", paragraphs=paragraphs, summary_only=False,
                               content_origin="public_article",

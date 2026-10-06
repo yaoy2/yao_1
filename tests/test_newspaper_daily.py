@@ -61,6 +61,43 @@ def snapshot(at=NOW, *, source_feed=None):
 
 
 class SnapshotTest(unittest.TestCase):
+    def test_interview_snapshot_keeps_column_and_on_demand_reading(self):
+        row = item("media_chinawriter_interviews",
+                   url="https://www.chinawriter.com.cn/n1/2026/1005/c405057-40808385.html")
+        row.update(group="阅读与文学", category="访谈与对话", kind="访谈",
+                   summary_only=False, content_origin="source_summary")
+        result = daily.validate_daily_snapshot(snapshot(source_feed=feed([row])))
+        assert result["articles"][0]["category"] == "访谈与对话"
+        assert result["articles"][0]["summary_only"] is False
+        assert "feed_paragraphs" not in result["articles"][0]
+
+    def test_interviews_cannot_use_discovery_time_or_survive_the_week_in_a_cached_edition(self):
+        row = item("media_lifeweek_interviews", url="https://www.lifeweek.com.cn/article/273320")
+        row.update(group="阅读与文学", category="访谈与对话", kind="访谈",
+                   published_at=(NOW - timedelta(days=6, hours=23)).isoformat(),
+                   time_basis="published")
+        payload = snapshot(source_feed=feed([row, item()]))
+        result = daily.feed_from_daily_snapshot(payload, now=NOW + timedelta(hours=2))
+        assert [article["source_id"] for article in result["articles"]] == ["media_solidot"]
+        assert payload["article_count"] == 2
+        for published in ("", (NOW - timedelta(days=8)).isoformat()):
+            invalid = {**row, "published_at": published, "discovered_at": NOW.isoformat()}
+            assert snapshot(source_feed=feed([invalid]))["articles"] == []
+
+    def test_duplicate_in_book_and_interview_sources_keeps_column_and_correct_counts(self):
+        url = "https://www.chinawriter.com.cn/n1/2026/1005/c405057-40808385.html"
+        book, interview = item("chinawriter_books", url=url), item("media_chinawriter_interviews", url=url)
+        book.update(category="新书与综合书单", group="阅读与文学")
+        interview.update(category="访谈与对话", group="阅读与文学", summary_only=False)
+        with patch.object(daily.base, "load_newspaper_feed", return_value=feed([book])), \
+             patch.object(daily.ai, "load_ai_official_feed", return_value={"articles": [], "sources": []}), \
+             patch.object(daily.media, "load_extended_news_feed", return_value=feed([interview])):
+            result = daily.validate_daily_snapshot(daily.build_daily_snapshot(now=NOW))
+        assert result["article_count"] == 1
+        assert result["articles"][0]["source_id"] == "media_chinawriter_interviews"
+        assert {s["id"]: s["count"] for s in result["sources"]} == {
+            "chinawriter_books": 0, "media_chinawriter_interviews": 1}
+
     def test_list_only_preserves_live_identity_and_provenance(self):
         result = daily.validate_daily_snapshot(snapshot())
         row = result["articles"][0]

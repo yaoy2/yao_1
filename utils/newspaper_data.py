@@ -20,7 +20,7 @@ from bs4 import BeautifulSoup
 import requests
 
 
-NEWSPAPER_SOURCE_VERSION = 2
+NEWSPAPER_SOURCE_VERSION = 3
 SHANGHAI = timezone(timedelta(hours=8))
 REQUEST_TIMEOUT = (3.5, 7)
 MAX_RESPONSE_BYTES = 2_000_000
@@ -44,7 +44,7 @@ CATALOG = (
     ("社会与民生", ("地方城市", "教育校园", "就业职场", "医疗健康", "社保养老", "消费维权")),
     ("生活与人文", ("旅行地理", "美食与饮食", "居家生活", "历史文博", "艺术展览", "环境自然")),
     ("体育与运动", ("足球", "篮球", "乒羽网球", "综合竞技", "电竞", "全民健身与户外")),
-    ("阅读与文学", ("小说推荐", "网络文学", "散文随笔", "诗歌", "文学评论", "新书与综合书单")),
+    ("阅读与文学", ("小说推荐", "网络文学", "散文随笔", "诗歌", "文学评论", "新书与综合书单", "访谈与对话")),
     ("电影与电视", ("电影资讯与片单", "电视剧与网剧", "纪录片", "动画动漫", "综艺音乐", "影评与主创访谈")),
 )
 CATEGORY_GROUP = {category: group for group, categories in CATALOG for category in categories}

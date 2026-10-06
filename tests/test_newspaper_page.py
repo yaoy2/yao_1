@@ -224,7 +224,7 @@ def test_page_refreshes_a_retained_legacy_service_only_once(service, monkeypatch
 
     def upgrade(module):
         assert module is component
-        module.NEWSPAPER_SERVICE_VERSION = 4
+        module.NEWSPAPER_SERVICE_VERSION = 5
         return module
 
     reload_service = Mock(side_effect=upgrade)
@@ -489,6 +489,7 @@ def test_short_publisher_expiry_cannot_be_extended_by_a_one_hour_article_cache(m
 
 def test_page_prefers_valid_daily_edition_and_reports_real_completion(service, monkeypatch):
     daily = {**deepcopy(FEED), "delivery": "daily", "edition_date": "2026-10-05",
+             "sources": [{"id": sid, "status": "ok", "count": 0} for sid in component.INTERVIEW_SOURCE_IDS],
              "expires_at": "2099-10-06T01:00:00+00:00"}
     monkeypatch.setattr(component, "_read_daily_feed", Mock(return_value=daily))
     live, _ = service
@@ -516,6 +517,7 @@ def test_private_snapshot_failure_does_not_break_public_news(service, monkeypatc
 
 def test_manual_refresh_bypasses_daily_snapshot(service, monkeypatch):
     read_daily = Mock(return_value={**deepcopy(FEED), "delivery": "daily",
+                                   "sources": [{"id": sid, "status": "ok", "count": 0} for sid in component.INTERVIEW_SOURCE_IDS],
                                    "expires_at": "2099-10-06T01:00:00+00:00"})
     monkeypatch.setattr(component, "_read_daily_feed", read_daily)
     app = AppTest.from_file(str(PAGE)).run()
@@ -525,3 +527,41 @@ def test_manual_refresh_bypasses_daily_snapshot(service, monkeypatch):
     assert "delivery" not in component_args(app)["feed"]
     assert read_daily.call_count == 1
     service[0].assert_called_once()
+
+
+def test_edition_from_before_interview_sources_does_not_hide_new_column(service, monkeypatch):
+    daily = {**deepcopy(FEED), "delivery": "daily", "expires_at": "2099-10-06T01:00:00+00:00"}
+    monkeypatch.setattr(component, "_read_daily_feed", Mock(return_value=daily))
+    assert component.newspaper_feed_for_page() == FEED
+    service[0].assert_called_once()
+
+
+def test_retained_session_acquires_new_sources_after_service_upgrade(service):
+    app = AppTest.from_file(str(PAGE)).run()
+    app.session_state["_newspaper_display_version"] = 4
+    app.session_state["_newspaper_display_feed"] = {**FEED, "articles": []}
+    app.run()
+    assert not app.exception
+    assert component_args(app)["feed"]["articles"] == FEED["articles"]
+    assert service[0].call_count == 2
+
+
+def test_source_version_invalidates_both_real_shared_cache_layers(monkeypatch):
+    fetch = Mock(side_effect=[deepcopy(FEED), {**FEED, "articles": [{**ARTICLE, "id": "new-sources"}]}])
+    monkeypatch.setattr(component, "load_newspaper_feed", fetch)
+    monkeypatch.setattr(component, "cached_ai_official_feed", Mock(return_value={"articles": [], "sources": []}))
+    monkeypatch.setattr(component, "NEWSPAPER_SERVICE_VERSION", 4)
+    assert component.cached_newspaper_feed()["articles"][0]["id"] == ARTICLE["id"]
+    monkeypatch.setattr(component, "NEWSPAPER_SERVICE_VERSION", 5)
+    assert component.cached_newspaper_feed()["articles"][0]["id"] == "new-sources"
+    assert fetch.call_count == 2
+
+
+def test_cross_source_duplicate_keeps_verified_interview_membership(monkeypatch):
+    older = {**ARTICLE, "source_id": "chinawriter_books", "category": "新书与综合书单"}
+    preferred = {**older, "id": "media_interview", "source_id": "media_chinawriter_interviews",
+                 "category": "访谈与对话", "source_family": "public_media"}
+    monkeypatch.setattr(component, "load_newspaper_feed", Mock(return_value={**FEED, "articles": [older]}))
+    monkeypatch.setattr(component, "cached_ai_official_feed", Mock(return_value={"articles": [], "sources": []}))
+    monkeypatch.setattr(component, "load_extended_news_feed", Mock(return_value={**FEED, "articles": [preferred]}))
+    assert component.cached_newspaper_feed()["articles"] == [preferred]

@@ -13,7 +13,7 @@ import streamlit as st
 from utils import newspaper_component
 # Cloud can replace the page while retaining its previously imported services.
 # Refresh an older service after a source or cache contract changes.
-if getattr(newspaper_component, "NEWSPAPER_SERVICE_VERSION", 0) < 4:
+if getattr(newspaper_component, "NEWSPAPER_SERVICE_VERSION", 0) < 5:
     newspaper_component = importlib.reload(newspaper_component)
 
 from utils.newspaper_component import (
@@ -88,9 +88,16 @@ render_home_link()
 st.markdown("### 📰 M28·Newspaper")
 st.caption(
     "个人 · 多来源公开新闻与 AI 专版｜优先读取已完成的有效日报；尚无日报时即时获取，手动更新可检查全部来源。"
+    "访谈与阅读专栏收录近 7 天文学文艺访谈与对话。"
     "解锁跨设备同步后，收藏、笔记和推荐偏好会自动合并到私有仓库；未解锁时继续保存在当前浏览器。"
 )
 sync_enabled = render_sync_access()
+
+if st.session_state.get("_newspaper_display_version") != newspaper_component.NEWSPAPER_SERVICE_VERSION:
+    # A page retained in an existing Cloud session must also acquire new sources.
+    st.session_state.pop(DISPLAY_FEED_KEY, None)
+    st.session_state.pop(LAST_FEED_KEY, None)
+    st.session_state["_newspaper_display_version"] = newspaper_component.NEWSPAPER_SERVICE_VERSION
 
 # Streamlit exposes the latest component value before the script reruns. Handle
 # it before rendering to return the result without a second, recursive rerun.

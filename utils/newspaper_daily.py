@@ -19,8 +19,10 @@ from utils import github_backup_sync as sync
 from utils import newspaper_ai_sources as ai
 from utils import newspaper_data as base
 from utils import newspaper_sources as media
+from utils.newspaper_interviews import INTERVIEW_CATEGORY, is_recent_interview, without_expired_interviews
 
 
+NEWSPAPER_DAILY_VERSION = 2
 SNAPSHOT_PATH = "data/newspaper_daily.json"
 PRIVATE_REPO = "yaoy2/yao_1-data"
 PRIVATE_BRANCH = "main"
@@ -124,6 +126,8 @@ def _list_article(article, state, feed, now):
     category = article.get("category")
     if category not in base.CATEGORY_GROUP or not _text(article.get("title")):
         return None
+    if category == INTERVIEW_CATEGORY and not is_recent_interview(article, now):
+        return None
     result = {key: deepcopy(value) for key, value in article.items() if key in ARTICLE_FIELDS}
     for key, value in list(result.items()):
         if isinstance(value, str) and key not in {"url", "original_url"}:
@@ -140,7 +144,7 @@ def _list_article(article, state, feed, now):
                   cache_policy={"store": True, "reuse": True})
     if "original_url" in result:
         result["original_url"] = _safe_article_url(result["original_url"], source_id) or url
-    if family == "ai_official" or (family == "public_media" and source_id != "media_yicai"):
+    if family == "ai_official" or (family == "public_media" and source_id not in media.PUBLIC_ARTICLE_SOURCES):
         result["summary_only"] = True
     if result.get("content_origin") == "feed_full":
         result["content_origin"] = "source_summary"
@@ -153,7 +157,7 @@ def build_daily_snapshot(now=None):
     if started.tzinfo is None:
         raise ValueError("日报时间必须包含时区")
     started = started.astimezone(SHANGHAI)
-    articles, sources, seen_ids, seen_urls = [], [], set(), set()
+    articles, sources, seen_ids, seen_urls = [], [], set(), {}
     loaders = (("public_news", base.load_newspaper_feed), ("ai_official", ai.load_ai_official_feed),
                ("public_media", media.load_extended_news_feed))
     for family, loader in loaders:
@@ -180,10 +184,17 @@ def build_daily_snapshot(now=None):
             if row is None:
                 excluded[source_id] += 1
             elif row["id"] not in seen_ids and row["url"] not in seen_urls and len(articles) < MAX_ARTICLES:
+                seen_urls[row["url"]] = len(articles)
                 articles.append(row)
                 seen_ids.add(row["id"])
-                seen_urls.add(row["url"])
                 accepted[source_id] += 1
+            elif row["url"] in seen_urls and row.get("category") == INTERVIEW_CATEGORY:
+                index = seen_urls[row["url"]]
+                if articles[index].get("category") != INTERVIEW_CATEGORY:
+                    seen_ids.discard(articles[index]["id"])
+                    articles[index] = row
+                    seen_ids.add(row["id"])
+                    accepted[source_id] += 1
         for source_id, state in states.items():
             if source_id not in SOURCE_MAP and source_id not in INACTIVE_MAP:
                 continue
@@ -198,6 +209,10 @@ def build_daily_snapshot(now=None):
                             "error": "本次来源读取失败" if status == "error" else "",
                             "note": "仅保存缓存条件已确认且无需到期重验的列表摘要；其余内容可手动实时读取。"
                                     if excluded[source_id] else _text(state.get("note"))})
+    # A dedicated interview may replace a duplicate from an earlier source group.
+    final_counts = Counter(article["source_id"] for article in articles)
+    for state in sources:
+        state["count"] = final_counts[state["id"]]
     completed = (now or _now()).astimezone(SHANGHAI)
     articles.sort(key=lambda row: row.get("published_at") or row.get("updated_at") or row.get("discovered_at") or "", reverse=True)
     errors = [state["name"] + "：" + state["error"] for state in sources if state["status"] == "error"]
@@ -320,7 +335,8 @@ def feed_from_daily_snapshot(snapshot, now=None):
     if (not snapshot["articles"] or _date(snapshot["expires_at"]) <= current
             or _date(snapshot["completed_at"]) > current + timedelta(minutes=5)):
         return None
-    return {"articles": snapshot["articles"], "sources": snapshot["sources"], "errors": snapshot["errors"],
+    articles = without_expired_interviews(snapshot["articles"], current)
+    return {"articles": articles, "sources": snapshot["sources"], "errors": snapshot["errors"],
             "fetched_at": snapshot["completed_at"], "generated_at": snapshot["generated_at"],
             "started_at": snapshot["started_at"], "completed_at": snapshot["completed_at"],
             "delivery": "daily", "edition_date": snapshot["edition_date"], "expires_at": snapshot["expires_at"],

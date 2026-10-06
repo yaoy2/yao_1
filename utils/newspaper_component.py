@@ -8,16 +8,25 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 from utils import newspaper_data as _newspaper_data
-if getattr(_newspaper_data, "NEWSPAPER_SOURCE_VERSION", 0) < 2:
+if getattr(_newspaper_data, "NEWSPAPER_SOURCE_VERSION", 0) < 3:
     _newspaper_data = importlib.reload(_newspaper_data)
+
+from utils import newspaper_sources as _newspaper_sources
+if getattr(_newspaper_sources, "NEWSPAPER_MEDIA_VERSION", 0) < 2:
+    _newspaper_sources = importlib.reload(_newspaper_sources)
+
+from utils import newspaper_daily as _newspaper_daily
+if getattr(_newspaper_daily, "NEWSPAPER_DAILY_VERSION", 0) < 2:
+    _newspaper_daily = importlib.reload(_newspaper_daily)
 
 from utils.newspaper_data import fetch_newspaper_article, load_newspaper_feed
 from utils.newspaper_ai_sources import fetch_ai_official_article, load_ai_official_feed
-from utils.newspaper_sources import fetch_extended_article, load_extended_news_feed
+from utils.newspaper_sources import INTERVIEW_SOURCE_IDS, fetch_extended_article, load_extended_news_feed
 from utils.newspaper_daily import read_daily_feed
+from utils.newspaper_interviews import INTERVIEW_CATEGORY, without_expired_interviews
 
 
-NEWSPAPER_SERVICE_VERSION = 4
+NEWSPAPER_SERVICE_VERSION = 5
 
 
 @st.cache_data(ttl=60, max_entries=1, show_spinner=False)
@@ -33,12 +42,15 @@ def newspaper_feed_for_page(force_live=False):
             daily = _read_daily_feed()
             if daily:
                 expires_at = datetime.fromisoformat(daily["expires_at"])
-                if expires_at.tzinfo and expires_at > datetime.now(timezone.utc):
+                checked_sources = {source.get("id") for source in daily.get("sources", [])}
+                if (expires_at.tzinfo and expires_at > datetime.now(timezone.utc)
+                        and INTERVIEW_SOURCE_IDS <= checked_sources):
                     return daily
         except Exception:
             # A missing private snapshot must never break public news reading.
             pass
-    return cached_newspaper_feed()
+    feed = cached_newspaper_feed()
+    return {**feed, "articles": without_expired_interviews(feed.get("articles", []))}
 
 
 class _IncompleteFeed(Exception):
@@ -88,12 +100,12 @@ def cached_ai_official_feed():
 
 
 @st.cache_data(ttl=60, max_entries=1, show_spinner=False)
-def _recent_newspaper_feed():
+def _recent_newspaper_feed(source_version):
     """Share the retry window, including partial results, across viewers."""
     result = {"articles": [], "sources": [], "errors": [],
               "cache_policy": {"store": True, "reuse": True},
               "fetched_at": datetime.now(timezone.utc).isoformat()}
-    seen_urls = set()
+    seen_urls = {}
     for label, loader in (("综合新闻", load_newspaper_feed),
                           ("官方 AI 信源", cached_ai_official_feed),
                           ("扩展媒体", load_extended_news_feed)):
@@ -116,20 +128,26 @@ def _recent_newspaper_feed():
         for article in feed.get("articles", []):
             identity = article.get("url") or article.get("id")
             if identity and identity not in seen_urls:
-                seen_urls.add(identity)
+                seen_urls[identity] = len(result["articles"])
                 result["articles"].append(article)
+            elif (identity and article.get("category") == INTERVIEW_CATEGORY
+                  and result["articles"][seen_urls[identity]].get("category") != INTERVIEW_CATEGORY):
+                # A link also appearing on a general book page keeps its verified
+                # interview membership when the dedicated source is available.
+                result["articles"][seen_urls[identity]] = article
     return _require_reusable(result, 60)
 
 
 @st.cache_data(ttl=900, max_entries=1, show_spinner=False)
-def _complete_newspaper_feed():
-    return _require_complete(_require_reusable(_recent_newspaper_feed(), 900))
+def _complete_newspaper_feed(source_version):
+    return _require_complete(_require_reusable(_recent_newspaper_feed(source_version), 900))
 
 
 def cached_newspaper_feed():
     """Never turn a temporary source outage into a fifteen-minute empty feed."""
     try:
-        return _complete_newspaper_feed()
+        # Include the source contract in both shared cache keys on Cloud upgrades.
+        return _complete_newspaper_feed(NEWSPAPER_SERVICE_VERSION)
     except _IncompleteFeed as error:
         return error.feed
 
