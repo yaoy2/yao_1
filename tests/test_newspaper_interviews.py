@@ -209,7 +209,7 @@ def test_chinanews_uses_list_date_and_explicit_interview_evidence_not_just_a_per
     assert rows[0]["published_at"] == "2026-10-05T20:48:00+08:00"
     assert all(row["group"] == "人物与访谈" and not row["summary_only"] for row in rows)
     with patch.object(media, "_request", return_value=(page, "max-age=120")):
-        loaded, _, _ = media._load_source(source, NOW)
+        loaded, _, _, _ = media._load_source(source, NOW)
     assert loaded[0]["cache_policy"]["max_age_seconds"] == 120
 
 
@@ -251,7 +251,7 @@ def test_writer_history_follows_public_links_and_keeps_more_than_twenty_articles
     second = writer_page((WRITER_URL, "半年前访谈", "2026-04-07"),
                          (WRITER_URL.replace("40808385", "40808386"), "过期访谈", "2026-04-01")) + b'<a href="index3.html">next</a>'
     with patch.object(media, "_request", side_effect=[(first, "max-age=600"), (second, "max-age=60")]) as request:
-        rows, control, note = media._load_source(WRITER, NOW)
+        rows, control, note, _ = media._load_source(WRITER, NOW)
     assert len(rows) == 41 and note == ""
     assert [call.args[0] for call in request.call_args_list] == [WRITER.url, WRITER.url.replace("index.html", "index2.html")]
     assert all(row["cache_policy"]["max_age_seconds"] == 60 for row in rows)
@@ -329,3 +329,81 @@ def test_transcript_limits_reject_oversize_bodies_instead_of_truncating_them():
     rows = media._parse_feed(interview_rss("https://www.dwarkesh.com/p/guest", body), source, NOW)
     assert rows[0]["summary_only"] and rows[0]["feed_paragraphs"] == []
     assert media._dwarkesh_transcript(body + '<p>' + 'x'*240000 + '</p>') == ""
+
+
+NEW_INTERVIEW_URLS = {
+    "media_thepaper_interviews": "https://www.thepaper.cn/newsDetail_forward_34095826",
+    "media_jiemian_interviews": "https://www.jiemian.com/article/15086667.html",
+    "media_bjnews_interviews": "https://www.bjnews.com.cn/detail/1780394939168462.html",
+    "media_creativeindependent_interviews": "https://thecreativeindependent.com/people/chef-mehreen-karim-on-keeping-the-playful-part-of-you-alive/",
+    "media_interviewmagazine_interviews": "https://www.interviewmagazine.com/film/pierce-brosnan-is-relishing-playing-the-anti-bond",
+    "media_quanta_interviews": "https://www.quantamagazine.org/in-an-age-of-ai-a-physicist-seeks-what-endures-20260903/",
+    "media_lexfridman_interviews": "https://lexfridman.com/andrew-scull-transcript",
+}
+
+
+@pytest.mark.parametrize("source_id,url", NEW_INTERVIEW_URLS.items())
+def test_new_adapters_join_live_interviews_and_preserve_all_response_cache_restrictions(source_id, url):
+    source = media.SOURCE_BY_ID[source_id]
+    adapter = media.INTERVIEW_ADAPTERS[source_id]
+    article = media._article(source, "公开人物访谈", url, NOW.isoformat(), "来源摘要", NOW)
+    article["summary_only"] = False
+    with patch.object(media, "_request", return_value=(b"public list", "max-age=600")), \
+            patch.object(adapter, "load_source", return_value=([article], ["private, no-store"], "部分历史已读取", True)) as load:
+        rows, controls, note, incomplete = media._load_source(source, NOW)
+    load.assert_called_once_with(b"public list", source, NOW)
+    assert len(rows) == 1 and rows[0]["summary_only"] is False
+    assert rows[0]["cache_policy"]["store"] is False
+    assert rows[0]["cache_policy"]["reuse"] is False
+    assert "private" in controls and note == "部分历史已读取"
+    assert incomplete is True
+    assert source_id in media.LIVE_INTERVIEW_SOURCE_IDS
+    assert source_id in media.PUBLIC_ARTICLE_SOURCES
+
+
+def test_partial_interview_fetch_keeps_verified_rows_and_explicit_incomplete_state():
+    source = media.SOURCE_BY_ID["media_thepaper_interviews"]
+    article = media._article(source, "公开人物访谈", NEW_INTERVIEW_URLS[source.id], NOW.isoformat(), "来源摘要", NOW)
+    article["summary_only"] = False
+    with patch.object(media, "_load_source", return_value=([article], "", "部分页面未完成读取", True)):
+        feed = media.load_extended_news_feed(source_ids={source.id})
+    assert feed["articles"] == [article]
+    assert feed["sources"][0]["status"] == "ok"
+    assert feed["sources"][0]["count"] == 1
+    assert feed["sources"][0]["incomplete"] is True
+
+
+@pytest.mark.parametrize("source_id,url", NEW_INTERVIEW_URLS.items())
+def test_new_interview_list_metadata_can_open_real_body_but_not_arbitrary_source_paths(source_id, url):
+    source = media.SOURCE_BY_ID[source_id]
+    adapter = media.INTERVIEW_ADAPTERS[source_id]
+    article = media._article(source, "公开人物访谈", url, NOW.isoformat(), "来源摘要", NOW)
+    article.update(summary_only=False, content_origin="source_summary")
+    paragraphs = ["采访者：公开提问。", "受访者：完整回答。"]
+    with patch.object(media, "_request", return_value=(b"public article", "no-cache")) as request, \
+            patch.object(adapter, "extract_article", return_value=paragraphs):
+        detail = media.fetch_extended_article(article)
+    request.assert_called_once_with(url, source, article=True)
+    assert detail["status"] == "full" and detail["paragraphs"] == paragraphs
+    assert detail["content_origin"] == "public_article" and detail["cache_policy"]["reuse"] is False
+    arbitrary = "https://" + source.hosts[0] + "/account/settings"
+    with patch.object(media.requests, "get") as request:
+        with pytest.raises(ValueError, match="范围"):
+            media._request(arbitrary, source, article=True)
+    request.assert_not_called()
+
+
+def test_complete_lex_transcript_can_be_reused_without_shortening_and_invalid_body_is_not_full():
+    source = media.SOURCE_BY_ID["media_lexfridman_interviews"]
+    article = media._article(source, "Andrew Scull 访谈", NEW_INTERVIEW_URLS[source.id], NOW.isoformat(), "访谈介绍", NOW)
+    paragraphs = [f"{'Lex Fridman' if i % 2 == 0 else 'Andrew Scull'}: The complete exchange {i}." for i in range(431)]
+    article.update(summary_only=False, content_origin="public_article", feed_paragraphs=paragraphs)
+    with patch.object(media, "_request") as request:
+        detail = media.fetch_extended_article(article)
+    request.assert_not_called()
+    assert detail["status"] == "full" and detail["paragraphs"] == paragraphs
+    article["feed_paragraphs"] = []
+    for invalid in ([], ["too long " * 1000], ["paragraph"] * 801):
+        with patch.object(media, "_request", return_value=(b"public article", "")), \
+                patch.object(media.INTERVIEW_ADAPTERS[source.id], "extract_article", return_value=invalid):
+            assert media.fetch_extended_article(article)["status"] != "full"

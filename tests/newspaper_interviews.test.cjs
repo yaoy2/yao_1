@@ -438,3 +438,37 @@ test('previously displayed candidates cannot freeze an empty next edition while 
   h.api.feed([old, recovered, article('later')], [{...source, count: 3}]);
   assert.equal(JSON.stringify(h.api.inspect().data.interviews.batch), fixed);
 });
+
+test('partial source results retain good articles but cannot freeze an empty next edition before same-day recovery', () => {
+  const h = pageHarness(), source = {id: 'media_jiemian_interviews', name: '界面新闻·文化', scope: '公开媒体 · 访谈与对话', status: 'ok', count: 1};
+  const old = article('old-partial', DAY, {source: source.name, source_id: source.id});
+  h.api.feed([old], [{...source, incomplete: true}]); h.click('nav', 'interviews');
+  assert.deepEqual(ids(h.api.inspect().data.interviews.batch.articles), ['old-partial']);
+  const previous = JSON.stringify(h.api.inspect().data.interviews), writesBefore = h.writes.length;
+  h.advance(DAY);
+  h.api.feed([old], [{...source, incomplete: true, note: '部分候选暂未完成读取。'}]);
+  assert.equal(h.api.interviewRows().length, 0);
+  assert.equal(JSON.stringify(h.api.inspect().data.interviews), previous);
+  assert.equal(h.writes.length, writesBefore);
+  assert.match(h.root.innerHTML, /界面新闻·文化 · 半年内 1 篇文字访谈 · 部分取得/);
+  assert.match(h.root.innerHTML, /访谈来源仅部分取得，请更新来源后重试；尚未固定本期批次/);
+  assert.doesNotMatch(h.root.innerHTML, /本次读取失败/);
+  const recovered = article('new-recovered', 0, {source: source.name, source_id: source.id});
+  h.api.feed([old, recovered], [{...source, incomplete: false, count: 2}]);
+  assert.equal(h.api.inspect().data.interviews.batch.edition_date, '2026-10-07');
+  assert.deepEqual(ids(h.api.inspect().data.interviews.batch.articles), ['new-recovered']);
+  assert.equal(h.api.inspect().data.interviews.seen.length, 2);
+  const fixed = JSON.stringify(h.api.inspect().data.interviews.batch);
+  h.api.feed([old, recovered, article('later-partial')], [{...source, incomplete: true, count: 3}]);
+  assert.equal(JSON.stringify(h.api.inspect().data.interviews.batch), fixed);
+});
+
+test('only a strict boolean incomplete flag prevents an otherwise successful empty edition', () => {
+  const source = {id: 'media_jiemian_interviews', name: '界面新闻·文化', scope: '公开媒体 · 访谈与对话', status: 'ok', count: 0};
+  const partial = pageHarness(); partial.api.feed([], [{...source, incomplete: true}]);
+  assert.equal(Object.hasOwn(partial.api.inspect().data, 'interviews'), false);
+  for (const incomplete of [undefined, false, 0, 1, 'false', 'true']) {
+    const h = pageHarness(); h.api.feed([], [{...source, incomplete}]);
+    assert.equal(h.api.inspect().data.interviews.batch.articles.length, 0, String(incomplete));
+  }
+});

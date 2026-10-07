@@ -61,6 +61,19 @@ def snapshot(at=NOW, *, source_feed=None):
 
 
 class SnapshotTest(unittest.TestCase):
+    def test_partial_source_flag_survives_snapshot_without_invalidating_older_documents(self):
+        source_feed = feed()
+        source_feed["sources"][0]["incomplete"] = True
+        payload = daily.validate_daily_snapshot(snapshot(source_feed=source_feed))
+        assert payload["sources"][0]["incomplete"] is True
+        assert daily.feed_from_daily_snapshot(payload, now=NOW)["sources"][0]["incomplete"] is True
+        invalid = deepcopy(payload)
+        invalid["sources"][0]["incomplete"] = "true"
+        with self.assertRaises(ValueError):
+            daily.validate_daily_snapshot(invalid)
+        del payload["sources"][0]["incomplete"]
+        assert daily.validate_daily_snapshot(payload)["article_count"] == 1
+
     def test_six_month_marker_is_retained_but_old_snapshots_remain_readable(self):
         payload = snapshot()
         assert payload["interview_window_months"] == 6
@@ -84,6 +97,23 @@ class SnapshotTest(unittest.TestCase):
         assert result["articles"][0]["category"] == "访谈与对话"
         assert result["articles"][0]["summary_only"] is False
         assert "feed_paragraphs" not in result["articles"][0]
+
+    def test_new_interview_sources_remain_readable_when_daily_snapshot_removes_bodies(self):
+        examples = {
+            "media_thepaper_interviews": "https://www.thepaper.cn/newsDetail_forward_34095826",
+            "media_creativeindependent_interviews": "https://thecreativeindependent.com/people/chef-mehreen-karim-on-keeping-the-playful-part-of-you-alive/",
+            "media_lexfridman_interviews": "https://lexfridman.com/andrew-scull-transcript",
+        }
+        rows = []
+        for source_id, url in examples.items():
+            row = item(source_id, url=url)
+            row.update(group="人物与访谈", category="访谈与对话", kind="访谈",
+                       summary_only=False, time_basis="published", content_origin="public_article")
+            rows.append(row)
+        result = daily.validate_daily_snapshot(snapshot(source_feed=feed(rows)))
+        assert result["article_count"] == 3
+        assert {row["source_id"] for row in result["articles"]} == set(examples)
+        assert all(row["summary_only"] is False and "feed_paragraphs" not in row for row in result["articles"])
 
     def test_interviews_cannot_use_discovery_time_or_survive_six_months_in_a_cached_edition(self):
         row = item("media_lifeweek_interviews", url="https://www.lifeweek.com.cn/article/273320")

@@ -22,7 +22,7 @@ from utils import newspaper_sources as media
 from utils.newspaper_interviews import INTERVIEW_CATEGORY, INTERVIEW_MONTHS, is_recent_interview, without_expired_interviews
 
 
-NEWSPAPER_DAILY_VERSION = 4
+NEWSPAPER_DAILY_VERSION = 5
 SNAPSHOT_PATH = "data/newspaper_daily.json"
 PRIVATE_REPO = "yaoy2/yao_1-data"
 PRIVATE_BRANCH = "main"
@@ -209,6 +209,7 @@ def build_daily_snapshot(now=None):
                             "excluded_count": excluded[source_id],
                             "checked_at": checked.isoformat() if checked else "",
                             "error": "本次来源读取失败" if status == "error" else "",
+                            **({"incomplete": True} if state.get("incomplete") is True else {}),
                             "note": "仅保存缓存条件已确认且无需到期重验的列表摘要；其余内容可手动实时读取。"
                                     if excluded[source_id] else _text(state.get("note"))})
     # A dedicated interview may replace a duplicate from an earlier source group.
@@ -275,7 +276,8 @@ def validate_daily_snapshot(payload):
         raise ValueError("日报计数或状态无效")
     source_ids, counts = set(), Counter()
     for state in sources:
-        if not isinstance(state, dict) or set(state) != SOURCE_FIELDS:
+        if (not isinstance(state, dict) or set(state) - {"incomplete"} != SOURCE_FIELDS
+                or "incomplete" in state and type(state["incomplete"]) is not bool):
             raise ValueError("日报来源结构无效")
         source_id = state["id"]
         if (not isinstance(source_id, str) or source_id in source_ids or source_id not in SOURCE_MAP and source_id not in INACTIVE_MAP
@@ -283,7 +285,7 @@ def validate_daily_snapshot(payload):
                 or any(type(state[key]) is not int or state[key] < 0 for key in ("count", "fetched_count", "excluded_count"))
                 or state["count"] + state["excluded_count"] > state["fetched_count"]
                 or any(not isinstance(value, str) or len(value) > 500 for key, value in state.items()
-                       if key not in {"count", "fetched_count", "excluded_count"})):
+                       if key not in {"count", "fetched_count", "excluded_count", "incomplete"})):
             raise ValueError("日报来源内容无效")
         checked = _date(state["checked_at"])
         if state["checked_at"] and (checked is None or checked > complete + timedelta(minutes=5)):

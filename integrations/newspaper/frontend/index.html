@@ -495,7 +495,7 @@ button:disabled { cursor:not-allowed; }
   if(pendingReads.has(id)||!requests)return;const requestNonce=nonce();
   pendingReads.set(id,{nonce:requestNonce});requests.enqueue({action:'read',id,nonce:requestNonce},{timeout:50000,onTimeout:()=>{if(pendingReads.get(id)?.nonce!==requestNonce)return;pendingReads.delete(id);details.set(id,{id,status:'error',paragraphs:[],message:'正文请求暂未返回，可重试或前往原文。'});if(state.current===id)backgroundRender();}});
  }
- function normalizeSources(raw){return Array.isArray(raw)?raw.filter(source=>source&&typeof source==='object').map(source=>({id:text(source.id),name:text(source.name)||'未命名来源',scope:text(source.scope),status:['ok','excluded','skipped'].includes(source.status)?source.status:'error',count:Number.isFinite(Number(source.count))?Math.max(0,Number(source.count)):0,checked_at:validDate(source.checked_at),error:text(source.error),note:text(source.note)})):[];}
+ function normalizeSources(raw){return Array.isArray(raw)?raw.filter(source=>source&&typeof source==='object').map(source=>({id:text(source.id),name:text(source.name)||'未命名来源',scope:text(source.scope),status:['ok','excluded','skipped'].includes(source.status)?source.status:'error',incomplete:source.incomplete===true,count:Number.isFinite(Number(source.count))?Math.max(0,Number(source.count)):0,checked_at:validDate(source.checked_at),error:text(source.error),note:text(source.note)})):[];}
  function sourceErrors(raw){return Array.isArray(raw)?raw.map(error=>typeof error==='string'?error:text(error?.message)||text(error?.error)).filter(Boolean):[];}
  function requestRefresh(){
   if(pendingRefresh||!requests)return;const requestNonce=nonce();
@@ -543,7 +543,7 @@ button:disabled { cursor:not-allowed; }
    const now=Date.now(),planned=interviewEngine.planDailyBatch(articles,data.interviews,{now,...interviewExclusions()});
    if(!planned.batch.articles.length&&data.interviews?.batch?.edition_date!==planned.batch.edition_date){
     const checked=interviewSources();
-    if(!checked.length||!checked.some(source=>source.status==='ok')||checked.some(source=>!['ok','excluded'].includes(source.status)))return;
+    if(!checked.length||!checked.some(source=>source.status==='ok')||checked.some(source=>source.incomplete||!['ok','excluded'].includes(source.status)))return;
    }
    if(JSON.stringify(planned)!==JSON.stringify(data.interviews)){const notice=state.notice;if(commit(()=>{data.interviews=planned;}))state.notice=notice;}
   }
@@ -560,9 +560,10 @@ button:disabled { cursor:not-allowed; }
   const pool=interviewEngine?interviewEngine.selectRecentInterviews(articles,{now}):[],batch=data.interviews?.batch,current=!!batch&&!!interviewEngine&&batch.edition_date===interviewEngine.editionDate(now);
   const sourceRows=interviewSources();
   const publishers=[...new Set([...available.map(publisher),...pool.map(publisher),...sourceRows.map(source=>source.name),...(state.interviewSource!=='全部'?[state.interviewSource]:[])])].sort((a,b)=>a.localeCompare(b,'zh-CN'));
-  const sourceStatus=sourceRows.map(source=>{const count=pool.filter(a=>a.source_id===source.id||publisher(a)===source.name).length,label=source.status==='ok'?`半年内 ${count} 篇文字访谈`:source.status==='excluded'?'当前未纳入':source.status==='skipped'?'本次未采集':'本次读取失败';return `<span class="${source.status==='error'?'accent':''}" title="${esc(source.error||source.note)}">${esc(source.name)} · ${esc(label)}</span>`;}).join('');
+  const sourceStatus=sourceRows.map(source=>{const count=pool.filter(a=>a.source_id===source.id||publisher(a)===source.name).length,label=source.status==='ok'?`半年内 ${count} 篇文字访谈${source.incomplete?' · 部分取得':''}`:source.status==='excluded'?'当前未纳入':source.status==='skipped'?'本次未采集':'本次读取失败';return `<span class="${source.status==='error'?'accent':''}" title="${esc(source.error||source.note)}">${esc(source.name)} · ${esc(label)}</span>`;}).join('');
   const hasFailure=sourceRows.some(source=>source.status==='error'&&(state.interviewSource==='全部'||source.name===state.interviewSource));
-  const empty=!interviewEngine?'访谈筛选模块暂未载入，请重新载入页面。':!current?(cloud.enabled&&!interviewSyncReady?'正在同步已有访谈记录，完成后准备本期推荐。':hasFailure?'访谈来源暂未取得可用文字内容，请更新来源后重试；尚未固定本期批次。':'正在等待文字访谈来源，尚未固定本期批次。'):batch.articles.length?'本期暂无符合当前来源或搜索条件的未读访谈。已读、隐藏的条目不再显示，也不会另换一批。':hasFailure?'本期未取得可推荐的文字访谈，部分来源读取失败；今天的批次保持不变。':'半年内符合条件且此前未推荐的文字访谈不足，本期不以旧内容或重复内容凑数。';
+  const hasIncomplete=sourceRows.some(source=>source.incomplete&&(state.interviewSource==='全部'||source.name===state.interviewSource));
+  const empty=!interviewEngine?'访谈筛选模块暂未载入，请重新载入页面。':!current?(cloud.enabled&&!interviewSyncReady?'正在同步已有访谈记录，完成后准备本期推荐。':hasFailure?'访谈来源暂未取得可用文字内容，请更新来源后重试；尚未固定本期批次。':hasIncomplete?'访谈来源仅部分取得，请更新来源后重试；尚未固定本期批次。':'正在等待文字访谈来源，尚未固定本期批次。'):batch.articles.length?'本期暂无符合当前来源或搜索条件的未读访谈。已读、隐藏的条目不再显示，也不会另换一批。':hasFailure?'本期未取得可推荐的文字访谈，部分来源读取失败；今天的批次保持不变。':'半年内符合条件且此前未推荐的文字访谈不足，本期不以旧内容或重复内容凑数。';
   const batchLabel=current?`${batch.edition_date} 期 · 固定 ${batch.articles.length}/10 篇 · 当前 ${rows.length} 篇未读`:'本期批次尚未生成';
   return `<h2 class="page-title">访谈与阅读</h2><div class="fine">收录最近六个自然月的各行业、各领域人物与名人文字访谈。按发布方轮流选取较新的内容，每天北京时间 09:00 换期，最多 10 篇。</div><div class="fine">同日刷新、搜索和来源筛选沿用同一批；此前推荐、已读及隐藏的访谈不再推荐，数量不足时如实显示。</div>${sourceStatus?`<div class="interview-status" aria-label="访谈来源状态">${sourceStatus}</div>`:''}<form class="search-row" data-search-form><input name="q" aria-label="搜索访谈与阅读" placeholder="在本期搜索人物、话题、来源、摘要…" value="${esc(state.query)}">${button('搜索','search')}${button('清除筛选','clear-interview-filters')}${button(pendingRefresh?'更新中…':'更新来源','refresh','',false,'',!!pendingRefresh)}</form><div class="filter-row" aria-label="访谈来源筛选">${button('全部来源','interview-source','全部',state.interviewSource==='全部')}${publishers.map(source=>button(source,'interview-source',source,state.interviewSource===source)).join('')}</div><div class="section-label"><span>${esc(batchLabel)}</span><span>发布时间均按北京时间展示</span></div><div class="interview-news-grid">${rows.length?rows.map(a=>item(a,true)).join(''):`<div class="empty">${esc(empty)}</div>`}</div>`;
  }

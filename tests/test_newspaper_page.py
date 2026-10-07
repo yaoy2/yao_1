@@ -225,7 +225,7 @@ def test_page_refreshes_a_retained_legacy_service_only_once(service, monkeypatch
 
     def upgrade(module):
         assert module is component
-        module.NEWSPAPER_SERVICE_VERSION = 7
+        module.NEWSPAPER_SERVICE_VERSION = 8
         return module
 
     reload_service = Mock(side_effect=upgrade)
@@ -419,6 +419,20 @@ def test_partial_ai_failure_is_also_retried(monkeypatch):
     assert component.cached_ai_official_feed() == partial
     component.cached_newspaper_feed.clear()
     assert component.cached_ai_official_feed() == complete
+    assert fetch.call_count == 2
+
+
+def test_partial_interview_source_does_not_enter_the_long_complete_cache(monkeypatch):
+    partial = {**deepcopy(FEED), "sources": [{"id": "media_thepaper_interviews", "status": "ok", "incomplete": True}]}
+    recovered = {**deepcopy(FEED), "articles": [{**ARTICLE, "id": "recovered"}],
+                 "sources": [{"id": "media_thepaper_interviews", "status": "ok", "incomplete": False}]}
+    fetch = Mock(side_effect=[partial, recovered])
+    monkeypatch.setattr(component, "load_newspaper_feed", Mock(return_value={"articles": [], "sources": []}))
+    monkeypatch.setattr(component, "cached_ai_official_feed", Mock(return_value={"articles": [], "sources": []}))
+    monkeypatch.setattr(component, "load_extended_news_feed", fetch)
+    assert component.cached_newspaper_feed()["sources"][0]["incomplete"] is True
+    component._recent_newspaper_feed.clear()
+    assert component.cached_newspaper_feed()["articles"][0]["id"] == "recovered"
     assert fetch.call_count == 2
 
 

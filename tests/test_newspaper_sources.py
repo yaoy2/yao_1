@@ -211,6 +211,19 @@ class PublicRequestsTest(unittest.TestCase):
             with self.assertRaises(TimeoutError):
                 media._request(IT.url, IT)
 
+    def test_lex_larger_subscription_does_not_relax_article_or_other_source_limits(self):
+        source = media.SOURCE_BY_ID["media_lexfridman_interviews"]
+        body = b"x" * 2_100_000
+        with patch.object(media.requests, "get", return_value=response(body)):
+            self.assertEqual(body, media._request(source.url, source)[0])
+            with self.assertRaisesRegex(ValueError, "过大"):
+                media._request("https://lexfridman.com/andrew-scull-transcript", source, article=True)
+            with self.assertRaisesRegex(ValueError, "过大"):
+                media._request(IT.url, IT)
+        with patch.object(media.requests, "get", return_value=response(b"x" * 3_000_001)):
+            with self.assertRaisesRegex(ValueError, "过大"):
+                media._request(source.url, source)
+
     def test_arbitrary_feed_paths_are_not_requested(self):
         with patch.object(media.requests, "get") as get, self.assertRaisesRegex(ValueError, "范围"):
             media._request("https://www.ithome.com/arbitrary", IT)
@@ -220,16 +233,16 @@ class PublicRequestsTest(unittest.TestCase):
         def load(source, now):
             if source == BBC:
                 raise requests.Timeout("private connection details")
-            return media._parse_feed(rss({}), source, now), "public, max-age=600", ""
+            return media._parse_feed(rss({}), source, now), "public, max-age=600", "", False
         with patch.object(media, "PUBLIC_SOURCES", (IT, BBC)), patch.object(media, "_load_source", side_effect=load), patch.object(media, "_now", return_value=NOW):
             result = media.load_extended_news_feed()
         self.assertEqual(1, len(result["articles"]))
         self.assertEqual(["ok", "error"], [s["status"] for s in result["sources"][:2]])
         self.assertNotIn("private connection", str(result))
-        self.assertEqual(["excluded", "excluded"], [s["status"] for s in result["sources"][2:]])
+        self.assertEqual(["excluded"], [s["status"] for s in result["sources"][2:]])
         data = rss(*({"link": URL + "?article=" + str(i), "pubDate": "2026-10-%02dT00:00:00Z" % (1 + i % 4)} for i in range(25)))
         with patch.object(media, "_request", return_value=(data, "public")):
-            rows, _, _ = media._load_source(IT, NOW)
+            rows, _, _, _ = media._load_source(IT, NOW)
         self.assertEqual(20, len(rows))
         self.assertEqual("2026-10-04T08:00:00+08:00", rows[0]["published_at"])
 

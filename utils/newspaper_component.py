@@ -16,11 +16,11 @@ if getattr(_newspaper_data, "NEWSPAPER_SOURCE_VERSION", 0) < 5:
     _newspaper_data = importlib.reload(_newspaper_data)
 
 from utils import newspaper_sources as _newspaper_sources
-if getattr(_newspaper_sources, "NEWSPAPER_MEDIA_VERSION", 0) < 4:
+if getattr(_newspaper_sources, "NEWSPAPER_MEDIA_VERSION", 0) < 5:
     _newspaper_sources = importlib.reload(_newspaper_sources)
 
 from utils import newspaper_daily as _newspaper_daily
-if getattr(_newspaper_daily, "NEWSPAPER_DAILY_VERSION", 0) < 4:
+if getattr(_newspaper_daily, "NEWSPAPER_DAILY_VERSION", 0) < 5:
     _newspaper_daily = importlib.reload(_newspaper_daily)
 
 from utils.newspaper_data import fetch_newspaper_article, load_newspaper_feed
@@ -30,7 +30,7 @@ from utils.newspaper_daily import read_daily_feed
 from utils.newspaper_interviews import INTERVIEW_CATEGORY, INTERVIEW_MONTHS, without_expired_interviews
 
 
-NEWSPAPER_SERVICE_VERSION = 7
+NEWSPAPER_SERVICE_VERSION = 8
 
 
 @st.cache_data(ttl=60, max_entries=1, show_spinner=False)
@@ -92,6 +92,7 @@ class _IncompleteFeed(Exception):
 
 def _require_complete(feed):
     if feed.get("errors") or any(source.get("status") == "error"
+                                 or source.get("incomplete") is True
                                  for source in feed.get("sources", [])):
         raise _IncompleteFeed(feed)
     return feed

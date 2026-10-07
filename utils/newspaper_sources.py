@@ -21,9 +21,11 @@ import requests
 
 from utils.newspaper_data import CATEGORY_GROUP
 from utils.newspaper_interviews import INTERVIEW_CATEGORY, has_interview_label, interview_cutoff, is_recent_interview, retain_interviews
+from utils import newspaper_interview_chinese as chinese_interviews
+from utils import newspaper_interview_english as english_interviews
 
 
-NEWSPAPER_MEDIA_VERSION = 4
+NEWSPAPER_MEDIA_VERSION = 5
 SHANGHAI = timezone(timedelta(hours=8))
 MAX_WORKERS = 4
 MAX_ITEMS_PER_SOURCE = 20
@@ -75,6 +77,20 @@ PUBLIC_SOURCES = (
                  ("the-talks.com",), INTERVIEW_CATEGORY, "rss", 184),
     PublicSource("media_dwarkesh_interviews", "Dwarkesh Patel 博客", "https://www.dwarkesh.com/feed",
                  ("www.dwarkesh.com",), INTERVIEW_CATEGORY, "rss", 184),
+    PublicSource("media_thepaper_interviews", "澎湃新闻·思想市场", "https://www.thepaper.cn/list_25483",
+                 ("www.thepaper.cn",), INTERVIEW_CATEGORY, "chinese_interviews", 184),
+    PublicSource("media_jiemian_interviews", "界面新闻·文化", "https://m.jiemian.com/lists/130_1.html",
+                 ("m.jiemian.com", "www.jiemian.com"), INTERVIEW_CATEGORY, "chinese_interviews", 184),
+    PublicSource("media_bjnews_interviews", "新京报·书评周刊", "https://www.bjnews.com.cn/culture",
+                 ("www.bjnews.com.cn", "m.bjnews.com.cn"), INTERVIEW_CATEGORY, "chinese_interviews", 184),
+    PublicSource("media_creativeindependent_interviews", "The Creative Independent", "https://thecreativeindependent.com/feed.xml",
+                 ("thecreativeindependent.com",), INTERVIEW_CATEGORY, "english_interviews", 184),
+    PublicSource("media_interviewmagazine_interviews", "Interview Magazine", "https://www.interviewmagazine.com/culture",
+                 ("www.interviewmagazine.com",), INTERVIEW_CATEGORY, "english_interviews", 184),
+    PublicSource("media_quanta_interviews", "Quanta · Q&A", "https://www.quantamagazine.org/tag/qa/feed/",
+                 ("www.quantamagazine.org",), INTERVIEW_CATEGORY, "english_interviews", 184),
+    PublicSource("media_lexfridman_interviews", "Lex Fridman", "https://lexfridman.com/feed/podcast/",
+                 ("lexfridman.com",), INTERVIEW_CATEGORY, "english_interviews", 184),
     PublicSource("media_cctv_dialogue", "央视《对话》",
                  "https://api.cntv.cn/NewVideo/getVideoListByColumn?id=TOPC1451530382483536&sort=desc&serviceId=tvcctv&mode=0&n=20&p=1&t=json",
                  ("api.cntv.cn", "tv.cctv.com"), INTERVIEW_CATEGORY, "cctv_interviews", 184),
@@ -92,17 +108,18 @@ PUBLIC_SOURCES = (
 )
 SOURCE_BY_ID = {source.id: source for source in PUBLIC_SOURCES}
 INTERVIEW_SOURCE_IDS = frozenset(source.id for source in PUBLIC_SOURCES if source.category == INTERVIEW_CATEGORY)
+INTERVIEW_ADAPTERS = {**dict.fromkeys(chinese_interviews.SOURCE_IDS, chinese_interviews),
+                      **dict.fromkeys(english_interviews.SOURCE_IDS, english_interviews)}
 LIVE_INTERVIEW_SOURCE_IDS = frozenset({"media_yicai", "media_chinanews_interviews", "media_thetalks_interviews",
-                                      "media_dwarkesh_interviews"})
-PUBLIC_ARTICLE_SOURCES = frozenset({"media_yicai", "media_chinawriter_interviews", "media_chinanews_interviews"})
+                                      "media_dwarkesh_interviews", *INTERVIEW_ADAPTERS})
+PUBLIC_ARTICLE_SOURCES = frozenset({"media_yicai", "media_chinawriter_interviews", "media_chinanews_interviews", *INTERVIEW_ADAPTERS})
 WRITER_HISTORY_URLS = frozenset(
     f"https://www.chinawriter.com.cn/403997/405057/index{page}.html" for page in range(2, MAX_HISTORY_PAGES + 1))
-ALLOWED_FEEDS = frozenset(source.url for source in PUBLIC_SOURCES) | WRITER_HISTORY_URLS
+ALLOWED_FEEDS = (frozenset(source.url for source in PUBLIC_SOURCES) | WRITER_HISTORY_URLS
+                 | chinese_interviews.EXTRA_FEED_URLS | english_interviews.EXTRA_FEED_URLS)
 INACTIVE_SOURCES = (
     {"id": "media_xiaohongshu", "name": "小红书", "scope": "社区内容",
      "note": "公开浏览需要登录，尚无已核实可用的公开新闻订阅；暂未接入。"},
-    {"id": "media_thepaper", "name": "澎湃新闻", "scope": "综合新闻",
-     "note": "已核实公开页面，独立列表适配尚未完成；暂未接入。"},
 )
 
 
@@ -244,6 +261,14 @@ def _body_paragraphs(value, *, min_paragraphs=2, min_characters=160, max_html_ch
     return paragraphs
 
 
+def _article_body_limits(source):
+    if source.id == "media_lexfridman_interviews":
+        return {"max_html_characters": 1_200_000, "max_paragraphs": 800}
+    if source.id == "media_dwarkesh_interviews":
+        return {"max_html_characters": 240000, "max_paragraphs": 800}
+    return {}
+
+
 def _article(source, title, url, raw_date, summary, now, *, local=False,
              time_basis="published", body="", publisher="", restricted=False):
     title, url = _plain(title, 300), _safe_url(url, source)
@@ -257,8 +282,7 @@ def _article(source, title, url, raw_date, summary, now, *, local=False,
     if is_interview and not is_recent_interview({"category": category, "published_at": date.isoformat() if date else "",
                                                "time_basis": time_basis}, now):
         return None
-    limits = {"max_html_characters": 240000, "max_paragraphs": 800} if source.id == "media_dwarkesh_interviews" else {}
-    paragraphs = [] if restricted else _body_paragraphs(body, **limits)
+    paragraphs = [] if restricted else _body_paragraphs(body, **_article_body_limits(source))
     time_basis = time_basis if date else "collected"
     return {
         "id": "media_" + hashlib.sha256(url.encode("utf-8")).hexdigest()[:24],
@@ -651,6 +675,10 @@ def _parse_cctv_interviews(content, source, now):
 def _request(url, source, *, article=False):
     if _safe_url(url, source, canonical=False) != url or (not article and url not in ALLOWED_FEEDS):
         raise ValueError("请求网址不在对应公开来源范围内")
+    adapter = INTERVIEW_ADAPTERS.get(source.id)
+    if article and adapter and not adapter.allows_article_url(source, url):
+        raise ValueError("正文网址不在对应访谈来源范围内")
+    maximum_bytes = 3_000_000 if source.id == "media_lexfridman_interviews" and not article else MAX_RESPONSE_BYTES
     deadline = time.monotonic() + MAX_REQUEST_SECONDS
     with requests.get(url, headers={"User-Agent": USER_AGENT}, timeout=REQUEST_TIMEOUT,
                       allow_redirects=False, stream=True) as response:
@@ -661,14 +689,14 @@ def _request(url, source, *, article=False):
             raise ValueError("公开来源暂不可用")
         cache_control = response.headers.get("Cache-Control", "")
         length = response.headers.get("Content-Length", "")
-        if length.isdigit() and int(length) > MAX_RESPONSE_BYTES:
+        if length.isdigit() and int(length) > maximum_bytes:
             raise ValueError("公开来源响应过大")
         content = bytearray()
         for chunk in response.iter_content(chunk_size=32768):
             if time.monotonic() >= deadline:
                 raise TimeoutError("读取公开来源超时")
             content.extend(chunk)
-            if len(content) > MAX_RESPONSE_BYTES:
+            if len(content) > maximum_bytes:
                 raise ValueError("公开来源响应过大")
         return bytes(content), cache_control
 
@@ -717,14 +745,20 @@ def _writer_history(content, source, now, started):
 def _load_source(source, now):
     started = time.monotonic()
     content, cache_control = _request(source.url, source)
-    parser = {"rss": _parse_feed, "yicai": _parse_yicai,
-              "toutiao": _parse_toutiao, "lifeweek": _parse_lifeweek,
-              "lifeweek_interviews": _parse_lifeweek_interviews,
-              "chinawriter_interviews": _parse_chinawriter_interviews,
-              "chinanews_interviews": _parse_chinanews_interviews,
-              "cctv_interviews": _parse_cctv_interviews}[source.parser]
-    articles = parser(content, source, now)
-    note = ""
+    adapter = INTERVIEW_ADAPTERS.get(source.id)
+    incomplete = False
+    if adapter:
+        articles, controls, note, incomplete = adapter.load_source(content, source, now)
+        cache_control = ", ".join(control for control in [cache_control, *controls] if control)
+    else:
+        parser = {"rss": _parse_feed, "yicai": _parse_yicai,
+                  "toutiao": _parse_toutiao, "lifeweek": _parse_lifeweek,
+                  "lifeweek_interviews": _parse_lifeweek_interviews,
+                  "chinawriter_interviews": _parse_chinawriter_interviews,
+                  "chinanews_interviews": _parse_chinanews_interviews,
+                  "cctv_interviews": _parse_cctv_interviews}[source.parser]
+        articles = parser(content, source, now)
+        note = ""
     if source.parser == "chinawriter_interviews":
         older, controls, note = _writer_history(content, source, now, started)
         articles.extend(older)
@@ -736,7 +770,7 @@ def _load_source(source, now):
     articles = retain_interviews(articles, limit)
     for article in articles:
         article["cache_policy"] = dict(policy)
-    return articles, cache_control, note
+    return articles, cache_control, note, incomplete
 
 
 def _error_message(error):
@@ -764,12 +798,14 @@ def load_extended_news_feed(*, source_ids=None):
                      "status": "ok", "count": 0, "checked_at": _now().isoformat(),
                      "source_family": "public_media", "error": "", "note": ""}
             try:
-                rows, cache_control, history_note = future.result()
+                rows, cache_control, history_note, incomplete = future.result()
                 by_source[source.id] = rows
                 policy = _cache_policy(cache_control)
                 state.update(count=len(rows), cache_control=cache_control, cache_policy=policy,
+                             incomplete=incomplete,
                              note="；".join(filter(None, [_cache_note(policy), history_note,
-                                  "" if rows else "近半年暂无新访谈" if source.id in INTERVIEW_SOURCE_IDS else "近期无有效条目"])))
+                                  "" if rows else "本次来源尚未完整读取" if incomplete else
+                                  "近半年暂无新访谈" if source.id in INTERVIEW_SOURCE_IDS else "近期无有效条目"])))
             except Exception as error:
                 state.update(status="error", error=_error_message(error))
             states[source.id] = state
@@ -804,31 +840,38 @@ def fetch_extended_article(article_dict):
         result.update(status="error", paragraphs=[], message="文章网址不在对应公开来源范围内")
         return result
     paragraphs = article.get("feed_paragraphs")
-    maximum_paragraphs = 800 if source.id == "media_dwarkesh_interviews" else 150
-    if (not article.get("restricted") and article.get("content_origin") == "feed_full" and isinstance(paragraphs, list)
+    maximum_paragraphs = _article_body_limits(source).get("max_paragraphs", 150)
+    if (not article.get("restricted") and article.get("content_origin") in ("feed_full", "public_article") and isinstance(paragraphs, list)
             and 1 < len(paragraphs) <= maximum_paragraphs and all(isinstance(p, str) and len(p) <= 6000 for p in paragraphs)):
         result.update(status="full", paragraphs=[_plain(p, 6000) for p in paragraphs],
-                      summary_only=False, content_origin="feed_full",
-                      message="显示来源订阅提供的正文，保留原始语言与原文链接。")
+                      summary_only=False, content_origin=article["content_origin"],
+                      message="显示来源订阅提供的正文，保留原始语言与原文链接。" if article["content_origin"] == "feed_full"
+                      else "已读取来源公开正文，保留原始语言与原文链接。")
         return result
+    adapter = INTERVIEW_ADAPTERS.get(source.id)
     readable = ((source.id == "media_yicai" and re.fullmatch(r"https://www\.yicai\.com/news/\d+\.html", url))
                 or (source.id == "media_chinawriter_interviews"
                     and re.fullmatch(r"https://www\.chinawriter\.com\.cn/n1/\d{4}/\d{4}/c405057-\d+\.html", url))
                 or (source.id == "media_chinanews_interviews"
-                    and re.fullmatch(r"https://www\.chinanews\.com\.cn/dxw/\d{4}/\d{2}-\d{2}/\d+\.shtml", url)))
+                    and re.fullmatch(r"https://www\.chinanews\.com\.cn/dxw/\d{4}/\d{2}-\d{2}/\d+\.shtml", url))
+                or (adapter and adapter.allows_article_url(source, url)))
     if readable and not article.get("restricted"):
         try:
             content, cache_control = _request(url, source, article=True)
             result["cache_policy"] = _combine_cache_policies(result["cache_policy"], _cache_policy(cache_control))
-            soup = BeautifulSoup(content, "html.parser", from_encoding="utf-8")
-            selector = {"media_yicai": "#multi-text", "media_chinawriter_interviews": ".end_article",
-                        "media_chinanews_interviews": ".left_zw"}[source.id]
-            container = soup.select_one(selector)
-            restricted = RESTRICTED_TEXT.search(soup.get_text(" ", strip=True))
-            minimum_count, minimum_length = (1, 60) if source.id == "media_yicai" else (2, 160)
-            paragraphs = _body_paragraphs(str(container), min_paragraphs=minimum_count,
-                                         min_characters=minimum_length) if container and not restricted else []
-            if paragraphs:
+            if adapter:
+                paragraphs = adapter.extract_article(content, source)
+            else:
+                soup = BeautifulSoup(content, "html.parser", from_encoding="utf-8")
+                selector = {"media_yicai": "#multi-text", "media_chinawriter_interviews": ".end_article",
+                            "media_chinanews_interviews": ".left_zw"}[source.id]
+                container = soup.select_one(selector)
+                restricted = RESTRICTED_TEXT.search(soup.get_text(" ", strip=True))
+                minimum_count, minimum_length = (1, 60) if source.id == "media_yicai" else (2, 160)
+                paragraphs = _body_paragraphs(str(container), min_paragraphs=minimum_count,
+                                             min_characters=minimum_length) if container and not restricted else []
+            if (isinstance(paragraphs, list) and 0 < len(paragraphs) <= maximum_paragraphs
+                    and all(isinstance(p, str) and 0 < len(p) <= 6000 for p in paragraphs)):
                 result.update(status="full", paragraphs=paragraphs, summary_only=False,
                               content_origin="public_article",
                               message="已读取来源公开正文，保留原文链接。")

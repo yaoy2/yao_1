@@ -13,7 +13,7 @@ import streamlit as st
 from utils import newspaper_component
 # Cloud can replace the page while retaining its previously imported services.
 # Refresh an older service after a source or cache contract changes.
-if getattr(newspaper_component, "NEWSPAPER_SERVICE_VERSION", 0) < 7:
+if getattr(newspaper_component, "NEWSPAPER_SERVICE_VERSION", 0) < 8:
     newspaper_component = importlib.reload(newspaper_component)
 
 from utils.newspaper_component import (
