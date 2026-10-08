@@ -75,7 +75,9 @@ def test_homepage_uses_same_shell_and_scopes_its_layout(monkeypatch):
     monkeypatch.setattr(home_theme, "st", SimpleNamespace(markdown=lambda body, **kw: calls.append(body)))
     home_theme.apply_home_theme()
     assert ui_theme.load_theme_css() in calls[0]
-    css = home_theme._home_css()
+    css_path = Path(home_theme.__file__).with_name("home_theme.css")
+    css_stat = css_path.stat()
+    css = home_theme._home_css(css_path, css_stat.st_mtime_ns, css_stat.st_size)
     for selector in re.findall(r"([^{}]+)\{", css):
         if selector.strip().startswith("@"):
             continue
