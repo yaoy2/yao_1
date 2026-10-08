@@ -131,7 +131,7 @@ with left:
 with right:
     st.subheader("文件和数据在哪里")
     st.code(
-        "项目代码：E:\\github\\yao_1\n"
+        "项目代码：E:\\gh\\yao_1\n"
         "正式页面：pages\\16_17_grade_workbench.py\n"
         "本机任务数据：data\\grade_workbench\\tasks\n"
         "审核导出：每个任务目录下的 outputs",

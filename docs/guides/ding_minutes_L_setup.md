@@ -101,7 +101,7 @@ Ding minutes scan finished: found=1, processed=1, skipped=0, failed=0
 
 先检查任务计划程序是否已有同类任务，避免重复扫描。确认迁移数据、路径和凭据都已就绪，再创建或调整任务；本文不表示任务已经设置完成。
 
-需要扫描并同步 GitHub 时，根目录 [`每日Recorder扫描.bat`](../../每日Recorder扫描.bat) 已包含“检查 main 分支 → 拉取远端 → 扫描 → 导出 → 有变化时提交推送”的流程。它会写日志、调用模型并访问 GitHub。目前脚本仍固定项目路径 `E:\github\yao_1` 和 `C:\Users\Yao\AppData\Local\Programs\Python\Python314\python.exe`，迁移时须另行确认并适配，不能直接假定新电脑可用；该批处理也不会代替第二节的数据合并核对。
+需要扫描并同步 GitHub 时，根目录 [`每日Recorder扫描.bat`](../../每日Recorder扫描.bat) 已包含“检查 main 分支 → 拉取远端 → 扫描 → 导出 → 有变化时提交推送”的流程。它会写日志、调用模型并访问 GitHub。目前脚本仍固定项目路径 `E:\gh\yao_1` 和 `C:\Users\Yao\AppData\Local\Programs\Python\Python314\python.exe`，迁移时须另行确认并适配，不能直接假定新电脑可用；该批处理也不会代替第二节的数据合并核对。
 
 当前批处理会在扫描或导出返回非零状态后继续尝试后续导出、提交和推送，末尾才返回扫描或导出的状态。因此“已拉取远端”或任务最终退出状态都不能保证失败时没有写入或推送；启用定时任务前应先核对日志及实际记录。本次只补充说明，未修改该批处理的运行逻辑。
 
@@ -113,8 +113,8 @@ Ding minutes scan finished: found=1, processed=1, skipped=0, failed=0
 | 触发器 | 每天 19:00，与 `daily_run_time` 一致 |
 | 操作 | 启动程序 |
 | 程序或脚本 | Windows 的 `cmd.exe`，通常为 `C:\Windows\System32\cmd.exe` |
-| 添加参数 | `/c ""E:\github\yao_1\每日Recorder扫描.bat""`；换成已确认的项目路径 |
-| 起始于 | 项目目录，例如 `E:\github\yao_1` |
+| 添加参数 | `/c ""E:\gh\yao_1\每日Recorder扫描.bat""`；换成已确认的项目路径 |
+| 起始于 | 项目目录，例如 `E:\gh\yao_1` |
 | 运行账号 | 已配置 DeepSeek 用户变量和 GitHub 访问权限的本人账号 |
 
 如果只需要本地扫描，可把“程序”设为项目 `.venv\Scripts\python.exe` 的绝对路径，参数设为 `scripts\scan_ding_minutes.py`，起始目录仍为项目根目录；这种设置不包含远端同步和提交，不能当作完整线上同步方案。

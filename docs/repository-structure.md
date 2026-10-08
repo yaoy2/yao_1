@@ -19,7 +19,7 @@
 ## 主结构
 
 ```text
-yao_1\
+E:\gh\yao_1\
 ├── hello.py                         # 首页、模块元数据与分区导航唯一来源
 ├── pages\                           # Streamlit 页面；文件名前缀只控制原生侧栏顺序
 │   ├── 18_19_concept_fables.py     # M19 概念寓言馆

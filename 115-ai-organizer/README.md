@@ -142,10 +142,10 @@ OpenList 是一个网盘挂载工具。它能用官方 115 开放平台方式登
 | OpenList 数据库 | `E:\OpenList\data\data.db` |
 | OpenList 日志 | `E:\OpenList\data\log\log.log` |
 | OpenList 管理员密码 | `E:\OpenList\ADMIN_PASSWORD.txt` |
-| 本整理程序 | `E:\github\yao_1\115-ai-organizer` |
-| 文件索引数据库 | `E:\github\yao_1\115-ai-organizer\data\115_index.sqlite` |
-| 本程序日志 | `E:\github\yao_1\115-ai-organizer\logs\organizer.log` |
-| 账号配置 | `E:\github\yao_1\115-ai-organizer\.env` |
+| 本整理程序 | `E:\gh\yao_1\115-ai-organizer` |
+| 文件索引数据库 | `E:\gh\yao_1\115-ai-organizer\data\115_index.sqlite` |
+| 本程序日志 | `E:\gh\yao_1\115-ai-organizer\logs\organizer.log` |
+| 账号配置 | `E:\gh\yao_1\115-ai-organizer\.env` |
 
 OpenList 只监听本机：`http://127.0.0.1:5244`
 
@@ -184,7 +184,7 @@ OpenList 只监听本机：`http://127.0.0.1:5244`
 双击：
 
 ```text
-E:\github\yao_1\115-ai-organizer\scripts\start_openlist.bat
+E:\gh\yao_1\115-ai-organizer\scripts\start_openlist.bat
 ```
 
 或在 PowerShell 中执行：
@@ -286,13 +286,13 @@ Client ID 和 App Secret 继续留空。
 1. 复制：
 
 ```text
-E:\github\yao_1\115-ai-organizer\.env.example
+E:\gh\yao_1\115-ai-organizer\.env.example
 ```
 
 另存为：
 
 ```text
-E:\github\yao_1\115-ai-organizer\.env
+E:\gh\yao_1\115-ai-organizer\.env
 ```
 
 2. 把 `OPENLIST_PASSWORD` 改成刚才那个只读账号的密码。
@@ -303,13 +303,13 @@ E:\github\yao_1\115-ai-organizer\.env
 双击：
 
 ```text
-E:\github\yao_1\115-ai-organizer\scripts\check_status.bat
+E:\gh\yao_1\115-ai-organizer\scripts\check_status.bat
 ```
 
 或执行：
 
 ```powershell
-cd E:\github\yao_1\115-ai-organizer
+cd E:\gh\yao_1\115-ai-organizer
 python -m app status
 ```
 
@@ -324,13 +324,13 @@ python -m app status
 双击：
 
 ```text
-E:\github\yao_1\115-ai-organizer\scripts\scan_50.bat
+E:\gh\yao_1\115-ai-organizer\scripts\scan_50.bat
 ```
 
 或：
 
 ```powershell
-cd E:\github\yao_1\115-ai-organizer
+cd E:\gh\yao_1\115-ai-organizer
 python -m app scan --dir "/云下载" --depth 8 --max-files 50
 ```
 
@@ -339,7 +339,7 @@ python -m app scan --dir "/云下载" --depth 8 --max-files 50
 确认 50 个没问题后：
 
 ```text
-E:\github\yao_1\115-ai-organizer\scripts\scan_500.bat
+E:\gh\yao_1\115-ai-organizer\scripts\scan_500.bat
 ```
 
 ```powershell
@@ -349,7 +349,7 @@ python -m app scan --dir "/云下载" --depth 12 --max-files 500
 ### 再扫 5000 个文件
 
 ```text
-E:\github\yao_1\115-ai-organizer\scripts\scan_5000.bat
+E:\gh\yao_1\115-ai-organizer\scripts\scan_5000.bat
 ```
 
 ```powershell
@@ -373,13 +373,13 @@ python -m app full-workflow --root-folder-id "小文件夹CID" --dir "/云下载
 双击：
 
 ```text
-E:\github\yao_1\115-ai-organizer\scripts\start_web.bat
+E:\gh\yao_1\115-ai-organizer\scripts\start_web.bat
 ```
 
 或：
 
 ```powershell
-cd E:\github\yao_1\115-ai-organizer
+cd E:\gh\yao_1\115-ai-organizer
 python -m streamlit run app/web.py --server.port 8502
 ```
 
@@ -416,7 +416,7 @@ python -m streamlit run app/web.py --server.port 8502
 双击：
 
 ```text
-E:\github\yao_1\115-ai-organizer\scripts\stop_openlist.bat
+E:\gh\yao_1\115-ai-organizer\scripts\stop_openlist.bat
 ```
 
 或：
@@ -444,7 +444,7 @@ cd E:\OpenList
 
 ## 常用命令
 
-在 `E:\github\yao_1\115-ai-organizer` 目录下：
+在 `E:\gh\yao_1\115-ai-organizer` 目录下：
 
 ```powershell
 python -m app status
