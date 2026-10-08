@@ -8,9 +8,12 @@ __pycache__/
 node_modules/
 .next/
 .next-build/
+tsconfig.tsbuildinfo
 
 # IDE / Agent
 .claude/
+.grok/
+.zcode/
 .agents/*
 !.agents/skills/
 .agents/skills/*
