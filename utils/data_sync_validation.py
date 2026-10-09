@@ -9,6 +9,7 @@ MANAGED_FILES = (
     "data/ding_minutes_cloud.json", "data/llm_budget_accounts.json", "data/llm_budget_records.json",
     "data/schedule_cache.json", "data/schedule_metadata.json", "data/teacher_category_cache.json",
     "data/todo_items_backup.md", "data/web_memos_backup.md",
+    "data/title_review_rules.json", "data/title_review_cases.json",
 )
 
 
@@ -43,6 +44,9 @@ def validate_backup(repo_path, content):
             raise ValueError("备份金额无效，已停止同步。")
         return records
     data = json.loads(content, parse_constant=lambda value: (_ for _ in ()).throw(ValueError("JSON 含无效数值")))
+    if repo_path in {"data/title_review_rules.json", "data/title_review_cases.json"}:
+        from utils.title_review import validate_document
+        return validate_document(data, repo_path)
     if repo_path == "data/department_activity_budget_2026.json":
         from utils.department_activity import validate_budget
         validate_budget(data, 2026)
@@ -68,6 +72,10 @@ def validate_backup(repo_path, content):
 
 
 def would_drop_records(repo_path, before, after):
+    if repo_path == "data/title_review_cases.json":
+        return not {case["id"] for case in before["cases"]} <= {case["id"] for case in after["cases"]}
+    if repo_path == "data/title_review_rules.json":
+        return not {rule["id"] for rule in before["rules"]} <= {rule["id"] for rule in after["rules"]}
     if repo_path == "data/ding_minutes_cloud.json":
         before, after = before["records"], after["records"]
     if isinstance(before, list):

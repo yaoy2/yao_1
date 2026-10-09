@@ -26,7 +26,9 @@ def test_sidebar_pins_frequent_tools_before_other_modules():
     tools = _get_sidebar_tools(_load_homepage_tools())
     codes = [tool["code"] for tool in tools]
     assert codes[:4] == ["M15", "M14", "M08", "M06"]
-    assert codes[4:14] == ["M29", "M28", "M27", "M26", "M25", "M23", "M22", "M21", "M19", "M18"]
+    assert codes[4:15] == ["M30", "M29", "M28", "M27", "M26", "M25", "M23", "M22", "M21", "M19", "M18"]
+    assert tools[codes.index("M30")]["page"] == "pages/29_30_title_review.py"
+    assert tools[codes.index("M30")]["section"] == "行政"
     assert tools[codes.index("M29")]["page"] == "pages/28_29_life_decision_guide.py"
     assert tools[codes.index("M29")]["section"] == "个人"
     assert tools[codes.index("M28")]["page"] == "pages/27_28_newspaper.py"

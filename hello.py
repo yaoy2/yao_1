@@ -14,6 +14,18 @@ from utils.home_theme import apply_home_theme
 
 TOOLS = [
     {
+        "title": "职称评审",
+        "desc": "查阅已确认的评审要求，登记收件，按材料出处保存逐人初审、待补问题与学院汇总。需解锁工具箱访问密码。",
+        "tag": "收件 · 初审 · 汇总",
+        "created": "2026_10_09",
+        "page": "pages/29_30_title_review.py",
+        "code": "M30",
+        "icon": "📋",
+        "accent": "cyan",
+        "section": "行政",
+        "locked": True,
+    },
+    {
         "title": "人生指南",
         "desc": "翻阅《高性价比人生指南》PDF，按关键词、章节和条件检索；输入具体问题定位相关条目，查看原文与出处。",
         "tag": "阅读 · 检索 · 决策",
