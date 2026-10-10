@@ -3,60 +3,13 @@
 from copy import deepcopy
 from datetime import date
 import hashlib
-import hmac
 import json
-import os
-import time
 
 import streamlit as st
 
-from utils import budget_auth
 from utils import title_review as review
 from utils import title_review_sync as private_sync
 from utils.ui_theme import render_home_link
-
-
-AUTH_KEY = "_m30_auth"
-
-
-def clear_private_session():
-    for key in list(st.session_state):
-        if key.startswith("m30_") or key == AUTH_KEY:
-            del st.session_state[key]
-
-
-def require_access():
-    password = budget_auth.get_budget_password(st.secrets, os.environ)
-    fingerprint = hashlib.sha256(password.encode()).hexdigest() if password else ""
-    previous = st.session_state.get(AUTH_KEY)
-    authenticated = bool(fingerprint and isinstance(previous, str) and hmac.compare_digest(previous, fingerprint))
-    if not authenticated:
-        clear_private_session()
-    if not password:
-        st.info("请先配置工具箱访问密码，再使用职称评审。")
-        st.stop()
-    if authenticated:
-        if st.button("锁定评审资料", key="_m30_lock"):
-            clear_private_session()
-            st.rerun()
-        return
-    st.caption("使用预算台账的工具箱访问密码。解锁后才能读取规则、姓名及评审记录。")
-    with st.form("_m30_login", clear_on_submit=True):
-        candidate = st.text_input("工具箱访问密码", type="password")
-        submitted = st.form_submit_button("解锁职称评审")
-    if submitted:
-        current = time.monotonic()
-        failures = [at for at in st.session_state.get("_m30_auth_failures", []) if current - at < 60]
-        if len(failures) >= 5:
-            st.error("尝试次数较多，请一分钟后再试。")
-        elif budget_auth.is_budget_password_valid(candidate, password):
-            st.session_state[AUTH_KEY] = fingerprint
-            st.session_state.pop("_m30_auth_failures", None)
-            st.rerun()
-        else:
-            st.session_state["_m30_auth_failures"] = [*failures, current]
-            st.error("访问密码不正确。")
-    st.stop()
 
 
 def persist(document):
@@ -79,7 +32,6 @@ def choice(label, options, current, key):
 st.set_page_config(page_title="M30·职称评审", page_icon="📋", layout="wide")
 render_home_link()
 st.markdown("### 📋 M30·职称评审")
-require_access()
 
 if "m30_rules" not in st.session_state or "m30_cases" not in st.session_state:
     with st.spinner("正在读取规则和收件记录…"):

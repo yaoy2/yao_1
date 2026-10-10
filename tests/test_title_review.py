@@ -1,4 +1,5 @@
 from copy import deepcopy
+from contextlib import nullcontext
 from io import BytesIO
 import base64
 import json
@@ -6,9 +7,8 @@ from zipfile import ZipFile
 from types import SimpleNamespace
 from pathlib import Path
 import ast
-import hashlib
-import hmac
-import time
+import runpy
+import sys
 
 import pytest
 
@@ -181,30 +181,46 @@ class FakePage:
 
 
 def page_functions(fake):
-    from utils import budget_auth
     page = Path(__file__).resolve().parents[1] / "pages" / "29_30_title_review.py"
     module = ast.parse(page.read_text(encoding="utf-8"))
     functions = [node for node in module.body if isinstance(node, ast.FunctionDef)]
-    namespace = {"st": fake, "AUTH_KEY": "_m30_auth", "budget_auth": budget_auth,
-                 "hashlib": hashlib, "hmac": hmac, "time": time, "os": SimpleNamespace(environ={}),
+    namespace = {"st": fake,
                  "review": review, "private_sync": SimpleNamespace(save_document=lambda *a, **k: {"ok": False, "message": "冲突"})}
     exec(compile(ast.Module(body=functions, type_ignores=[]), str(page), "exec"), namespace)
-    # The actual page gates every top-level private read, not just its forms.
-    gate_line = next(node.lineno for node in module.body if isinstance(node, ast.Expr)
-                     and isinstance(node.value, ast.Call) and isinstance(node.value.func, ast.Name)
-                     and node.value.func.id == "require_access")
-    reads = [node.lineno for node in ast.walk(module) if isinstance(node, ast.Call)
-             and isinstance(node.func, ast.Attribute) and node.func.attr == "load_document"]
-    assert reads and all(line > gate_line for line in reads)
     return namespace
 
 
-def test_locked_page_discards_sensitive_session_state_before_reading():
-    fake = FakePage()
-    namespace = page_functions(fake)
+def test_page_loads_rules_and_cases_without_access_password(monkeypatch):
+    from utils import ui_theme
+
+    documents = {review.RULES_PATH: {"year": 2026, "version": "test-1"},
+                 review.CASES_PATH: sample_document()}
+    reads = []
+
+    def load_document(path, **kwargs):
+        reads.append(path)
+        return {"ok": True, "document": documents[path], "sha": "a" * 40}
+
+    def stop_after_loading(*args, **kwargs):
+        raise StopPage()
+
+    fake = SimpleNamespace(
+        session_state={}, secrets={},
+        set_page_config=lambda **kwargs: None,
+        markdown=lambda *args, **kwargs: None,
+        spinner=lambda *args, **kwargs: nullcontext(),
+        caption=stop_after_loading,
+    )
+    monkeypatch.setitem(sys.modules, "streamlit", fake)
+    monkeypatch.setattr(ui_theme, "render_home_link", lambda: None)
+    monkeypatch.setattr(cloud, "load_document", load_document)
+    page = Path(__file__).resolve().parents[1] / "pages" / "29_30_title_review.py"
     with pytest.raises(StopPage):
-        namespace["require_access"]()
-    assert not any(key.startswith("m30_") for key in fake.session_state)
+        runpy.run_path(str(page))
+    assert reads == [review.RULES_PATH, review.CASES_PATH]
+    assert fake.session_state["m30_rules"] == documents[review.RULES_PATH]
+    assert fake.session_state["m30_cases"] == documents[review.CASES_PATH]
+    assert fake.session_state["m30_cases_sha"] == "a" * 40
 
 
 def test_failed_page_save_retains_a_downloadable_draft():

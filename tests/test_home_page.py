@@ -76,7 +76,7 @@ class HomePageTest(unittest.TestCase):
         self.assertEqual(["M30", "M29", "M28", "M27", "M26", "M25", "M23", "M22", "M21", "M19", "M18"], codes[:11])
         self.assertEqual("pages/29_30_title_review.py", by_code["M30"]["page"])
         self.assertEqual("职称评审", by_code["M30"]["title"])
-        self.assertTrue(by_code["M30"]["locked"])
+        self.assertFalse(by_code["M30"].get("locked", False))
         self.assertEqual("pages/28_29_life_decision_guide.py", by_code["M29"]["page"])
         self.assertEqual("人生指南", by_code["M29"]["title"])
         self.assertEqual("📖", by_code["M29"]["icon"])
