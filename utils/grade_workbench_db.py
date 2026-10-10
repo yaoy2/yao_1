@@ -6,7 +6,6 @@ import sqlite3
 from contextlib import contextmanager, closing
 from datetime import datetime
 from pathlib import Path
-from typing import Any
 
 import pandas as pd
 

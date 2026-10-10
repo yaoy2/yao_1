@@ -2,17 +2,18 @@
 
 [Project home](../../README.md) · [Repository map](../repository-structure.md) · [Getting started](getting-started.md)
 
-The registry in [hello.py](../../hello.py) is authoritative. There are **28 entries: 17 in current sections and 11 archived**. Some current entries are documentation or read-only showcases; each row states its actual boundary.
+The registry in [hello.py](../../hello.py) is authoritative. There are **29 entries: 18 in current sections and 11 archived**. Some current entries are documentation or read-only showcases; each row states its actual boundary.
 
 | Section | Entries |
 | --- | --- |
-| Administration | 5 |
+| Administration | 6 |
 | Teaching | 1 |
 | Personal | 11 |
 | Archived | 11 |
 
 | ID | Section | Status | Entry point | Behavior and requirements |
 | --- | --- | --- | --- | --- |
+| M30 | Administration | Current | [职称评审](../../pages/29_30_title_review.py) | Reads confirmed review requirements, records electronic and paper receipts separately, and saves source-linked preliminary reviews, outstanding questions, and college summaries to the configured private data repository. |
 | M29 | Personal | Current | [人生指南](../../pages/28_29_life_decision_guide.py) | Reads the High-Value Life Guide PDF, searches entries by keyword, chapter and conditions, and locates relevant entries from a specific question with original text and source references. |
 | M28 | Personal | Current | [Newspaper](../../pages/27_28_newspaper.py) | Aggregates public news, official AI RSS and literary/film coverage with original source links and publication dates. Browser-local recommendations learn from reading and explicit feedback while reserving cross-topic and discovery slots. Public articles use extracted text where available; official AI feeds remain attributed summaries with original links. Clippings, notes and recommendation preferences stay in the current browser; cross-device synchronization is not connected. |
 | M27 | Personal | Current | [问山集](../../pages/26_27_ai_discussion_room.py) | Opens the [Wenshanji](../../wenshanji/README.md) local parallel chat workbench for GPT, Grok and Gemini. A shared input at the top sends one prompt to selected models concurrently, each with independent conversation history. Claude has a reserved column and is not connected. Requires the local launcher and signed-in CLI tools. The hosted page does not run CLI tools or hold chat sessions. |
@@ -44,4 +45,4 @@ The registry in [hello.py](../../hello.py) is authoritative. There are **28 entr
 
 M12 was removed. Module numbers preserve introduction order and are intentionally discontinuous. Independent subprojects are described separately in the [project overview](../../README.md).
 
-中文：行政 5、教学 1、个人 11、归档 11；M11、M16、M17、M20、M24 已停用，M29 支持《高性价比人生指南》PDF 翻阅、关键词与条件检索及按问题定位条目；M28 聚合公开新闻并在浏览器保存剪报，尚无跨设备同步；M27 问山集为本机三模型并行对话入口，Claude 仅预留、暂未接入；M25 需要本地组件，M26 查看仓库内地图图片，M23 当前只介绍三项任务。展示页不代表主库已经运行对应的外部系统。
+中文：行政 6、教学 1、个人 11、归档 11；M30 支持查阅已确认评审要求、分别登记电子版与纸质版收件、保存带材料出处的初审、待补问题及学院汇总，动态数据同步到配置的私有仓库；M11、M16、M17、M20、M24 已停用，M29 支持《高性价比人生指南》PDF 翻阅、关键词与条件检索及按问题定位条目；M28 聚合公开新闻并在浏览器保存剪报，尚无跨设备同步；M27 问山集为本机三模型并行对话入口，Claude 仅预留、暂未接入；M25 需要本地组件，M26 查看仓库内地图图片，M23 当前只介绍三项任务。展示页不代表主库已经运行对应的外部系统。

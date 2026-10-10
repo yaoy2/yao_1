@@ -1,4 +1,3 @@
-import base64
 import importlib.util
 import json
 import tempfile

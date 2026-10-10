@@ -524,7 +524,7 @@ def render_todo_record(record):
         )
         with check_col:
             checkbox_key = f"todo_done_{record['id']}_{record.get('status')}"
-            checked = st.checkbox(
+            st.checkbox(
                 "完成",
                 value=done,
                 key=checkbox_key,
@@ -547,7 +547,7 @@ def render_todo_record(record):
         with spacer_col:
             st.empty()
         with due_date_col:
-            new_due_date = st.text_input(
+            st.text_input(
                 "截止日期",
                 value=stored_due_date,
                 key=f"todo_due_date_{record['id']}",
@@ -555,7 +555,7 @@ def render_todo_record(record):
             )
         with due_time_col:
             due_time_options = _due_time_options(stored_due_time)
-            new_due_time = st.selectbox(
+            st.selectbox(
                 "截止时间",
                 options=due_time_options,
                 index=_due_time_index(stored_due_time, due_time_options),
@@ -595,7 +595,7 @@ archived_count = len(
 )
 
 st.markdown(
-    f"""
+    """
     <div>
       <div class="todo-title">✓ 待办清单</div>
       <div class="todo-subtitle">新增在上，勾选即完成；完成项自动沉到未完成待办下面。</div>

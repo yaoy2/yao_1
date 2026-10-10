@@ -9,7 +9,6 @@ from scripts import mail_manual_collect as worker
 from scripts import mail_collection_request as jobs
 from scripts import mail_workbench_sync as sync
 from utils import mail_workspace as workspace
-from utils.mail_collection_state import new_request, claim_collection
 from tests.test_mail_workbench_sync import fixture
 
 

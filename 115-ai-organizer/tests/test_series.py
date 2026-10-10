@@ -110,7 +110,6 @@ class TestImageSeriesMatching(unittest.TestCase):
         import tempfile
         from pathlib import Path
         from app.config import load_settings
-        from app.db import connect, init_db
 
         self.tmpdir = tempfile.TemporaryDirectory()
         root = Path(self.tmpdir.name)

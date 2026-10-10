@@ -5,7 +5,7 @@ import subprocess
 import sys
 import time
 from urllib.error import URLError
-from urllib.request import urlopen, build_opener, ProxyHandler
+from urllib.request import build_opener, ProxyHandler
 import webbrowser
 
 ROOT = Path(__file__).resolve().parent

@@ -1,7 +1,5 @@
-import copy
 import hashlib
 import json
-import os
 import stat
 import tempfile
 import unittest

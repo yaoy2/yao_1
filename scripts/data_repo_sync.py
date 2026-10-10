@@ -13,7 +13,7 @@ sys.path.insert(0, str(ROOT))
 from utils import github_backup_sync as sync
 from utils.data_sync_validation import MANAGED_FILES, equivalent_backup, validate_backup, would_drop_records
 from utils.todo_chat import local_secrets
-from utils.local_data_store import SQLITE_BACKUPS, database_backup
+from utils.local_data_store import database_backup
 
 
 def checked_path(repo_path):

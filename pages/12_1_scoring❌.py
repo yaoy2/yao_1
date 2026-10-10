@@ -7,11 +7,9 @@ SOVO 课程作业评分与成绩合成系统 - 高级美化版
 # --- 导入所有依赖库 ---
 import streamlit as st
 import pandas as pd
-import numpy as np
 import io
 import re
 from io import BytesIO
-import time
 from datetime import datetime
 import warnings
 from utils.ui_theme import render_home_link
@@ -323,7 +321,6 @@ def create_download_excel(df_final):
     output = BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         df_final.to_excel(writer, index=False, sheet_name='成绩单')
-        workbook = writer.book
         worksheet = writer.sheets['成绩单']
         for i, col in enumerate(df_final.columns):
             column_width = max(df_final[col].astype(str).map(len).max(), len(col)) + 2

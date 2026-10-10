@@ -27,7 +27,6 @@ st.stop()
 from utils.grade_workbench_export import build_review_workbook
 from utils.grade_workbench import (
     GROUP_COLUMNS,
-    STUDENT_COLUMNS,
     ScoreSettings,
     calculate_results,
     has_errors,

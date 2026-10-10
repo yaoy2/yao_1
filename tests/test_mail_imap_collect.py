@@ -7,7 +7,7 @@ import unittest
 from contextlib import redirect_stdout
 from email.message import EmailMessage
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 from scripts import mail_imap_collect as cli
 from scripts.mail_imap_setup import SetupError

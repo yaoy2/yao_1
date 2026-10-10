@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 
 from app.config import load_settings
-from app.db import connect, file_stats, init_db, list_plans, set_plan_approved, upsert_plan, set_plan_execute_status
+from app.db import connect, file_stats, list_plans, set_plan_approved, upsert_plan, set_plan_execute_status
 from app.openlist_client import extract_native_id
 from app.scanner import scan
 

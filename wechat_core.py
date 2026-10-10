@@ -10,10 +10,9 @@ from __future__ import annotations
 import datetime as dt
 import re
 import shutil
-import sys
 import time
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 from urllib.parse import parse_qs, urlparse
 
 import requests
