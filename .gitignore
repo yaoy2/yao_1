@@ -35,6 +35,7 @@ CONVERSATION_LOG.md
 # Local scratch artifacts
 .local-backups/
 .local/newspaper/
+.local/whale_companion/
 .sync-state/
 .pytest_cache/
 *.tmp

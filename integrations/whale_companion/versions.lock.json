@@ -1,0 +1,13 @@
+{
+  "verified_date": "2026-10-26",
+  "python": "3.12",
+  "sources": [
+    {"id": "astrbot", "version": "4.29.3", "commit": "f61a7f42696da6df25dc7a249ec9b8d54ed9da18", "url": "https://codeload.github.com/AstrBotDevs/AstrBot/zip/refs/tags/v4.29.3", "sha256": "4f7187273a3fa3e9bea327e1338dcff7567af5ab095c4847da12452ad22d8508", "strip_root": true, "destination": "app/AstrBot-4.29.3"},
+    {"id": "dashboard", "version": "4.29.3", "url": "https://github.com/AstrBotDevs/AstrBot/releases/download/v4.29.3/AstrBot-v4.29.3-dashboard.zip", "sha256": "a09f560c4140b930180f63a4929c885da80e24fb9bbda56619727bd25e985a11", "strip_root": true, "destination": "state/data/dist"},
+    {"id": "companion", "version": "6.7.0", "commit": "f2f87183993a0667800056f73bcf12df298cdbcb", "url": "https://codeload.github.com/menglimi/astrbot_plugin_private_companion/zip/refs/tags/v6.7.0", "sha256": "82e26d0bc99eaE2dce7f5328b1197d801bf0b2e2df193f408300df6015155fe7", "strip_root": true, "destination": "state/data/plugins/astrbot_plugin_private_companion"},
+    {"id": "memory", "version": "2.3.2", "commit": "8cff40d217438d5c0ac1b9a1fe6f935d1f46a5c1", "url": "https://codeload.github.com/menglimi/astrbot_plugin_memory_companion/zip/refs/tags/v2.3.2", "sha256": "8a15ff9abd5dd2dd04c8a911a07bd3f21f138af35ba05d622276fb3256c07300", "strip_root": true, "destination": "state/data/plugins/astrbot_plugin_memory_companion"},
+    {"id": "bilibili", "version": "1.7.2", "commit": "1d12480b147b8aa43e7f39e455b23a7818d3e157", "url": "https://codeload.github.com/chenluQwQ/astrbot_plugin_bilibili_ai_bot/zip/1d12480b147b8aa43e7f39e455b23a7818d3e157", "sha256": "628966909934b5bba8dfe4717e2bfd39baee8f7f89580d2a1326a66e52fd454a", "strip_root": true, "destination": "state/data/plugins/astrbot_plugin_bilibili_ai_bot"},
+    {"id": "napcat", "version": "4.18.41", "url": "https://github.com/NapNeko/NapCatQQ/releases/download/v4.18.41/NapCat.Shell.Windows.Node.zip", "sha256": "51fbb10e7bcd56b0c2a6de86c37811e7518330e48a137ac689ab1e4d8627d3f0", "strip_root": false, "destination": "napcat"},
+    {"id": "ffmpeg", "version": "9.0.2", "url": "https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-9.0.2-essentials_build.zip", "sha256": "60f467265b1e312373dbcd92200c2618a74850f98d3d078e94296bb3fa2047ba", "strip_root": true, "destination": "ffmpeg"}
+  ]
+}
