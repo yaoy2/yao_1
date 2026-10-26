@@ -14,6 +14,17 @@ from utils.home_theme import apply_home_theme
 
 TOOLS = [
     {
+        "title": "QQ 归档机器人",
+        "desc": "介绍 QQ 群消息与附件归档、按需 AI 整理、保存位置和验收进度；接收与处理由 L 电脑运行。",
+        "tag": "群归档 · AI 整理",
+        "created": "2026_10_26",
+        "page": "pages/30_31_qq_archive.py",
+        "code": "M31",
+        "icon": "🤖",
+        "accent": "cyan",
+        "section": "行政",
+    },
+    {
         "title": "职称评审",
         "desc": "查阅已确认的评审要求，登记收件，按材料出处保存逐人初审、待补问题与学院汇总。",
         "tag": "收件 · 初审 · 汇总",
