@@ -1,3 +1,3 @@
 @echo off
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0manage.ps1" -Action stop
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0manage.ps1" -Action stop-all
 if errorlevel 1 pause

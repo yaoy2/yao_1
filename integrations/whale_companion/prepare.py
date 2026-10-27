@@ -88,6 +88,8 @@ def initial_config(password, bridge_token):
 
 def prepare(root):
     root = Path(root).resolve()
+    from patches import apply_patches
+    apply_patches(root)
     state = root / "state"
     app = root / "app/AstrBot-4.29.3"
     cfg_path = state / "data/cmd_config.json"
