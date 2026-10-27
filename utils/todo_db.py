@@ -300,11 +300,15 @@ def get_todos(keyword=None, view="active"):
         values.extend([like, like, like, like, like])
 
     where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+    order_by = "is_archived ASC, datetime(created_at) DESC, id DESC"
+    if view != "all":
+        # Display deadlines farthest first; keep the canonical backup/import order.
+        order_by = "due_date DESC, due_time DESC, " + order_by
     rows = conn.execute(
         f"""
         SELECT * FROM todo_items
         {where}
-        ORDER BY is_archived ASC, datetime(created_at) DESC, id DESC
+        ORDER BY {order_by}
         """,
         values,
     ).fetchall()

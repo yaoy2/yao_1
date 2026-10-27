@@ -172,6 +172,41 @@ class TodoDbTest(unittest.TestCase):
         self.assertIn(parent_id, [record["id"] for record in all_records])
         self.assertNotIn(parent_id, [record["id"] for record in list_records])
 
+    def test_display_views_sort_deadlines_descending_without_changing_records(self):
+        with tempfile.TemporaryDirectory() as tmpdir, patched_todo_storage(tmpdir) as tmp_path:
+            todo_db.init_db()
+            for content, due_date, due_time, done in (
+                ("年末报送", "2026-12-31", "", False),
+                ("上午报送", "2026-10-27", "09:00", False),
+                ("往年已办", "2025-12-31", "", True),
+                ("下午报送", "2026-10-27", "17:00", False),
+                ("无日期事项", "", "", False),
+                ("跨年已办", "2027-01-01", "", True),
+                ("只有日期", "2026-10-27", "", False),
+                ("下午另一事项", "2026-10-27", "17:00", False),
+                ("往年未办", "2025-11-30", "", False),
+                ("无日期已办", "", "", True),
+            ):
+                record_id = todo_db.add_todo(content, due_date=due_date, due_time=due_time)
+                if done:
+                    todo_db.complete_todo(record_id)
+            before = todo_db.get_todos(view="all")
+            backup_before = (tmp_path / "todo_items_backup.md").read_bytes()
+
+            for view, expected in {
+                "active": ["年末报送", "下午另一事项", "下午报送", "上午报送", "只有日期", "往年未办", "无日期事项"],
+                "list": ["跨年已办", "年末报送", "下午另一事项", "下午报送", "上午报送", "只有日期", "往年已办", "往年未办", "无日期事项", "无日期已办"],
+                "archived": ["跨年已办", "往年已办", "无日期已办"],
+            }.items():
+                with self.subTest(view=view):
+                    self.assertEqual(expected, [record["content"] for record in todo_db.get_todos(view=view)])
+            self.assertEqual(
+                ["年末报送", "下午报送", "上午报送"],
+                [record["content"] for record in todo_db.get_todos(keyword="报送", view="list")],
+            )
+            self.assertEqual(before, todo_db.get_todos(view="all"))
+            self.assertEqual(backup_before, (tmp_path / "todo_items_backup.md").read_bytes())
+
     def test_add_todos_from_text_splits_markdown_list_and_skips_heading(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             with patched_todo_storage(tmpdir):
