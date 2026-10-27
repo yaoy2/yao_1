@@ -1,11 +1,11 @@
 {
   "astrbot_plugin_private_companion": {
-    "bot_name": "小鲸",
+    "bot_name": "呆小鲸",
     "plugin_specific_persona_id": "小鲸",
     "LLM_PROVIDER_ID": "deepseek-whale",
     "daily_token_limit": 100000,
     "daily_token_soft_limit": 60000,
-    "default_nickname": "Sir",
+    "default_nickname": "爸",
     "quiet_hours": "23:00-08:30",
     "max_daily_messages": 4,
     "min_interval_minutes": 120,
@@ -56,7 +56,7 @@
   },
   "astrbot_plugin_bilibili_ai_bot": {
     "USE_ASTRBOT_PERSONA": true,
-    "OWNER_NAME": "Sir",
+    "OWNER_NAME": "爸",
     "LLM_PROVIDER_ID": "deepseek-whale",
     "VIDEO_VISION_PROVIDER_ID": "deepseek-whale",
     "IMAGE_VISION_PROVIDER_ID": "deepseek-whale",
