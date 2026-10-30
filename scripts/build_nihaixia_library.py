@@ -145,7 +145,7 @@ def embedded_observations(note):
                 visit(child, trail, semantic)
         elif isinstance(value, str) and semantic and len(value) >= 12 and re.search(r"[\u4e00-\u9fff]", value):
             observations.append({"说明类别": "/".join(trail), "理解与校正": value})
-    for key in PROCESS_FIELDS - {"rules", "reviewed_chunks", "reviewed_transcripts", "sources", "source_ids"}:
+    for key in sorted(PROCESS_FIELDS - {"rules", "reviewed_chunks", "reviewed_transcripts", "sources", "source_ids"}):
         if key in note:
             visit(note[key], [key])
     return observations
@@ -253,7 +253,7 @@ def build(source_root, output, publication_date):
     os.environ["NIHAIXIA_PROJECT_ROOT"] = str(source_root)
     sys.path.insert(0, str(source_root / "src"))
     from nihaixia_kb.learning import read_accepted_notes
-    accepted = read_accepted_notes()
+    accepted = read_accepted_notes(db_path=source_root / "data" / "kb.sqlite")
     if accepted["stale_notes"]:
         raise ValueError("存在失效的正式笔记；先复核，再发布。")
     connection = sqlite3.connect((source_root / "data" / "kb.sqlite").as_uri() + "?mode=ro", uri=True)

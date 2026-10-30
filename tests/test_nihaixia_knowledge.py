@@ -4,7 +4,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from scripts.build_nihaixia_library import clean_markdown, domain_for
+from scripts.build_nihaixia_library import clean_markdown, domain_for, embedded_observations
 from utils import nihaixia_knowledge as kb
 
 
@@ -87,6 +87,14 @@ def test_report_title_and_mixed_boundary_heading_cannot_hide_theory():
 def test_supplementary_authors_are_not_classified_as_ni_school_rules():
     assert domain_for("白宝全四柱六神用法", hint="minggua") == "supplements"
     assert domain_for("罗经透解", hint="dimaidao") == "supplements"
+
+
+def test_observations_inside_receipts_survive_in_stable_order():
+    first = {"visual_reviews": [{"interpretation": "同名术语仍须按作者和适用条件分别判断。"}],
+             "frame_reviews": [{"finding": "原图与文字不一致，不能把缺项补作确定值。"}]}
+    second = dict(reversed(list(first.items())))
+    assert embedded_observations(first) == embedded_observations(second)
+    assert len(embedded_observations(first)) == 2
 
 
 def test_public_repository_is_rejected_before_content_read():
