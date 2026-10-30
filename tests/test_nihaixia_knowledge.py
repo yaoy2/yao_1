@@ -4,7 +4,8 @@ from unittest.mock import Mock
 
 import pytest
 
-from scripts.build_nihaixia_library import clean_markdown, domain_for, embedded_observations
+from scripts.build_nihaixia_library import clean_markdown, domain_for, embedded_observations, verify_remote_part
+from scripts import build_nihaixia_library as builder
 from utils import nihaixia_knowledge as kb
 
 
@@ -108,6 +109,21 @@ def test_public_repository_is_rejected_before_content_read():
     with pytest.raises(ValueError):
         kb.private_connection(environ={"GITHUB_BACKUP_TOKEN": "test-only"}, session=session)
     assert session.get.call_count == 1
+
+
+def test_new_volume_retries_only_temporary_missing_reads(monkeypatch):
+    _library, payload = example_library()
+    part = {"path": "data/nihaixia/example.json", "sha256": kb.digest(payload)}
+    read = Mock(side_effect=[{"ok": False, "reason": "missing_remote_file"},
+                             {"ok": True, "content": payload}])
+    monkeypatch.setattr(builder.sync, "read_file_from_github", read)
+    monkeypatch.setattr(builder.time, "sleep", lambda _: None)
+    verify_remote_part(part, {}, None)
+    assert read.call_count == 2
+    read.side_effect = None
+    read.return_value = {"ok": True, "content": "wrong body"}
+    with pytest.raises(ValueError):
+        verify_remote_part(part, {}, None)
 
 
 def test_page_password_gate_precedes_loading_and_logout_removes_content(monkeypatch):

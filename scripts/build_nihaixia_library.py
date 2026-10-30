@@ -13,6 +13,7 @@ from pathlib import Path
 import re
 import sqlite3
 import sys
+import time
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -441,6 +442,22 @@ def local_secrets():
     return tomllib.loads(path.read_text(encoding="utf-8-sig")) if path.exists() else {}
 
 
+def verify_remote_part(part, secrets, transport):
+    # A just-created GitHub object can briefly return 404. Retry that state only;
+    # never accept a mismatching body or switch the manifest before verification.
+    for attempt in range(3):
+        result = sync.read_file_from_github(part["path"], secrets=secrets, session=transport)
+        if result.get("ok"):
+            if kb.digest(result["content"]) == part["sha256"]:
+                return
+            break
+        if result.get("reason") != "missing_remote_file":
+            break
+        if attempt < 2:
+            time.sleep(attempt + 1)
+    raise ValueError("知识库分卷回读不一致；现有目录保持不变。")
+
+
 def publish(output):
     library = read_json(output / "library.json")
     manifest = kb.validate_manifest(library["manifest"])
@@ -473,11 +490,9 @@ def publish(output):
                                             secrets=secrets, session=transport, expected_sha=None)
             if not result.get("ok"):
                 raise ValueError("知识库分卷未上传。")
+            verify_remote_part(part, secrets, transport)
         else:
             raise ValueError("知识库分卷状态未确认。")
-        verified = sync.read_file_from_github(part["path"], secrets=secrets, session=transport)
-        if not verified.get("ok") or kb.digest(verified["content"]) != part["sha256"]:
-            raise ValueError("知识库分卷回读不一致；现有目录保持不变。")
     # Atomic switch only after every immutable volume is uploaded and read back.
     result = sync.sync_file_to_github(output / kb.MANIFEST_PATH, kb.MANIFEST_PATH,
                                      "data: update manually curated Ni Haixia knowledge library",
