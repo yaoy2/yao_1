@@ -14,6 +14,18 @@ from utils.home_theme import apply_home_theme
 
 TOOLS = [
     {
+        "title": "倪海厦知识库",
+        "desc": "按体系查阅紫微、命卦、易经人间道与阳宅地脉，完整保留规则、条件、例外、专题推导及出处。手动指令更新。",
+        "tag": "知识积累 · 全文检索",
+        "created": "2026_10_30",
+        "page": "pages/31_32_nihaixia_knowledge.py",
+        "code": "M32",
+        "icon": "☯",
+        "accent": "amber",
+        "locked": True,
+        "section": "个人",
+    },
+    {
         "title": "QQ 归档机器人",
         "desc": "介绍 QQ 群消息与附件归档、按需 AI 整理、保存位置和验收进度；接收与处理由 L 电脑运行。",
         "tag": "群归档 · AI 整理",
