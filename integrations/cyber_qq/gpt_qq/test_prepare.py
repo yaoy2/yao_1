@@ -1,6 +1,6 @@
 import unittest
 
-from integrations.gpt_qq.prepare import initial_config, isolate_napcat
+from integrations.cyber_qq.gpt_qq.prepare import initial_config, isolate_napcat
 
 
 class PrepareTests(unittest.TestCase):

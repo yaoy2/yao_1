@@ -1,0 +1,19 @@
+{
+  "name": "赛博QQ",
+  "instances": [
+    {
+      "id": "whale",
+      "name": "呆小鲸",
+      "entry": "whale_companion/manage.ps1",
+      "runtime": ".local/whale_companion",
+      "actions": ["status", "start", "stop", "start-all", "stop-all", "qq-start", "qq-stop", "open", "backup", "autostart-enable", "autostart-disable"]
+    },
+    {
+      "id": "gpt",
+      "name": "GPT 小号",
+      "entry": "gpt_qq/manage.ps1",
+      "runtime": ".local/gpt_qq",
+      "actions": ["status", "start", "stop", "start-all", "stop-all", "qq-start", "qq-stop", "autostart-enable", "autostart-disable"]
+    }
+  ]
+}
