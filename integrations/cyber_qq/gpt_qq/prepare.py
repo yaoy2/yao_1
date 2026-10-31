@@ -67,7 +67,7 @@ def initial_config(owner_qq: str, api_key: str, password: str, bridge_token: str
         "provider": [{
             "id": "gpt-qq-model", "provider_source_id": "openai",
             "type": "openai_chat_completion", "provider_type": "chat_completion",
-            "enable": True, "model": model, "modalities": ["text", "image", "tool_use"],
+            "enable": True, "model": model, "modalities": ["text", "image"],
             "custom_extra_body": {
                 "max_completion_tokens": 2048, "reasoning_effort": "low", "store": False,
             },
