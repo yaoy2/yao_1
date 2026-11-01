@@ -61,7 +61,7 @@ class GroupScope(filter.CustomFilter):
             event.message_obj.message = [p for p in event.get_messages() if p.type in keep]
             return True
         except Exception as exc:
-            logger.error("小G群助手准入检查失败：%s", type(exc).__name__)
+            logger.error("小屁群助手准入检查失败：%s", type(exc).__name__)
             event.stop_event()
             return False
 
@@ -119,7 +119,7 @@ class CyberGAssistant(Star):
                 self.store.record, group, data["message_id"], data["time"], data["sender_id"],
                 data["name"], data["content"], is_request=owner_request)
         except Exception as exc:
-            logger.error("小G群记录写入失败：%s", type(exc).__name__)
+            logger.error("小屁群记录写入失败：%s", type(exc).__name__)
             if owner_request:
                 await event.send(event.plain_result("这条消息暂未成功写入记录，请稍后重试。"))
             return
@@ -158,7 +158,7 @@ class CyberGAssistant(Star):
                 if await asyncio.to_thread(self.store.enabled, group):
                     await event.send(event.plain_result(str(exc) if "日期" in str(exc) or "90天" in str(exc) else "这次未得到有效整理结果，请稍后重试。"))
             except Exception as exc:
-                logger.error("小G群分析失败：%s", type(exc).__name__)
+                logger.error("小屁群分析失败：%s", type(exc).__name__)
                 if await asyncio.to_thread(self.store.enabled, group):
                     await event.send(event.plain_result("消息记录已保留，但这次分析暂未完成，请稍后重试。"))
 

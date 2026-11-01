@@ -84,7 +84,8 @@ class GroupStoreTests(unittest.TestCase):
 
 class InputTests(unittest.TestCase):
     def test_exact_enable_command(self):
-        for text in ("小G 开始记录", "小Ｇ，开始记录", "/乖小g: 开始记录"):
+        for text in ("小屁 开始记录", "乖小屁，开始记录", "/小屁: 开始记录",
+                     "小G 开始记录", "小Ｇ，开始记录", "/乖小g: 开始记录"):
             query, addressed = command_text(text)
             self.assertTrue(addressed)
             self.assertIn(query, ENABLE_COMMANDS)
