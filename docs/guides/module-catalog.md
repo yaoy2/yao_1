@@ -2,17 +2,18 @@
 
 [Project home](../../README.md) · [Repository map](../repository-structure.md) · [Getting started](getting-started.md)
 
-The registry in [hello.py](../../hello.py) is authoritative. There are **30 entries: 19 in current sections and 11 archived**. Some current entries are documentation or read-only showcases; each row states its actual boundary.
+The registry in [hello.py](../../hello.py) is authoritative. There are **31 entries: 21 in current sections and 10 archived**. Some current entries are documentation or read-only showcases; each row states its actual boundary.
 
 | Section | Entries |
 | --- | --- |
-| Administration | 7 |
+| Administration | 8 |
 | Teaching | 1 |
-| Personal | 11 |
-| Archived | 11 |
+| Personal | 12 |
+| Archived | 10 |
 
 | ID | Section | Status | Entry point | Behavior and requirements |
 | --- | --- | --- | --- | --- |
+| M32 | Personal | Current | [倪海厦知识库](../../pages/31_32_nihaixia_knowledge.py) | Reads the repository knowledge library with rules, conditions, exceptions and source references; updates are requested manually. |
 | M31 | Administration | Current | [QQ 归档机器人](../../pages/30_31_qq_archive.py) | Read-only overview of authorized QQ group archiving on L and on-demand DeepSeek Flash summaries. Explains commands, storage, processing and recorded acceptance limits; does not read private group data, hold credentials or control the receiver. |
 | M30 | Administration | Current | [职称评审](../../pages/29_30_title_review.py) | Reads confirmed review requirements, records electronic and paper receipts separately, and saves source-linked preliminary reviews, outstanding questions, and college summaries to the configured private data repository. |
 | M29 | Personal | Current | [人生指南](../../pages/28_29_life_decision_guide.py) | Reads the High-Value Life Guide PDF, searches entries by keyword, chapter and conditions, and locates relevant entries from a specific question with original text and source references. |
@@ -24,7 +25,7 @@ The registry in [hello.py](../../hello.py) is authoritative. There are **30 entr
 | M23 | Personal | Current | [docker-monitor](../../pages/22_23_docker_monitor.py) | Read-only showcase of three independent tasks: TrendRadar, AIHOT, and Amazon.de GPU quotes. Does not run containers or fetch live prices. |
 | M22 | Personal | Current | [Planner-Executor](../../pages/21_22_gpt_planner_luna_executor.py) | Explains development-assistant routes and recorded evaluations; does not create agents or call models. |
 | M21 | Personal | Current | [Awesome Design MD](../../pages/20_21_awesome_design_md.py) | Browses 74 pinned design references with retained source attribution and third-party licensing. |
-| M20 | Archived | Archived | [Ding2026 文件中转发放系统](../../pages/19_20_ding2026.py) | Retired. Former functionality and statistics are no longer active; the page only shows retirement information. |
+| M20 | Administration | Current | [文件分发](../../pages/19_20_ding2026.py) | Shares monthly-report and department meeting/attendance rules with the desktop program in Ding2026. Preview, selection and manual moves happen in that program; the hosted page does not access local files. The folder and entry can be synced to L through Drive. |
 | M19 | Personal | Current | [概念寓言馆](../../pages/18_19_concept_fables.py) | Searches and reads stored fables and concept mappings; the page does not write entries. |
 | M18 | Teaching | Current | [评分工作台使用说明](../../pages/17_18_grade_workbench_guide.py) | Historical guide for the retired M16/M17 workflows and retained data locations. |
 | M17 | Archived | Archived | [教学评分工作台](../../pages/16_17_grade_workbench.py) | Retired. The page only shows retirement information; task creation, data editing, scoring, and export are disabled. Source code, tasks, inputs, and outputs are retained. |
@@ -46,4 +47,4 @@ The registry in [hello.py](../../hello.py) is authoritative. There are **30 entr
 
 M12 was removed. Module numbers preserve introduction order and are intentionally discontinuous. Independent subprojects are described separately in the [project overview](../../README.md).
 
-中文：行政 7、教学 1、个人 11、归档 11；M31 介绍 L 上的 QQ 群归档、按需 AI 理解、指令、保存位置与验收进度，页面不读取群资料或控制接收服务；M30 支持查阅已确认评审要求、分别登记电子版与纸质版收件、保存带材料出处的初审、待补问题及学院汇总，动态数据同步到配置的私有仓库；M11、M16、M17、M20、M24 已停用，M29 支持《高性价比人生指南》PDF 翻阅、关键词与条件检索及按问题定位条目；M28 聚合公开新闻并在浏览器保存剪报，尚无跨设备同步；M27 问山集为本机三模型并行对话入口，Claude 仅预留、暂未接入；M25 需要本地组件，M26 查看仓库内地图图片，M23 当前只介绍三项任务。展示页不代表主库已经运行对应的外部系统。
+中文：行政 8、教学 1、个人 12、归档 10；M31 介绍 L 上的 QQ 群归档、按需 AI 理解、指令、保存位置与验收进度，页面不读取群资料或控制接收服务；M30 支持查阅已确认评审要求、分别登记电子版与纸质版收件、保存带材料出处的初审、待补问题及学院汇总，动态数据同步到配置的私有仓库；M20 页面与 Ding2026 内的双击程序共用月报、系部例会纪要和考勤规则，文件预览与手动分发由程序完成，入口可随 Drive 同步到 L；M11、M16、M17、M24 已停用，M29 支持《高性价比人生指南》PDF 翻阅、关键词与条件检索及按问题定位条目；M28 聚合公开新闻并在浏览器保存剪报，尚无跨设备同步；M27 问山集为本机三模型并行对话入口，Claude 仅预留、暂未接入；M25 需要本地组件，M26 查看仓库内地图图片，M23 当前只介绍三项任务。展示页不代表主库已经运行对应的外部系统。

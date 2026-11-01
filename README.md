@@ -40,14 +40,14 @@ For the full toolbox, use `首次安装.bat`, then `启动YaoYao工具箱.bat`. 
 
 ## What is in the repository?
 
-The current catalog has **30 entries: Administration 7, Teaching 1, Personal 11, and archived 11**. Nineteen entries are in current sections. Some are read-only guides or showcases; this is not a count of independent applications.
+The current catalog has **31 entries: Administration 8, Teaching 1, Personal 12, and archived 10**. Twenty-one entries are in current sections. Some are read-only guides or showcases; this is not a count of independent applications.
 
 | Area | Examples | Boundary |
 | --- | --- | --- |
-| Administration | Notice editor, schedule browser, todos, budget ledger, phone transfer | Some modules require local workers, credentials, or a paired receiver. |
+| Administration | Notice editor, schedule browser, todos, budget ledger, phone transfer, file distribution | M20 shares its rules with the desktop program in Ding2026; preview and manual distribution run on the computer. Other modules may require credentials or a paired receiver. |
 | Teaching | Historical assessment-workbench guide | M16/M17 pages are retired; workflow and data-location guidance is retained. |
 | Personal | Notes, palettes, concept fables, development showcases, PUBG secret-room maps | Features have distinct storage and backup rules. |
-| Archived | Recorder, mail workbench, Ding2026, and grading workflows | Retained for history; not recommended entry points. |
+| Archived | Recorder, mail workbench, and grading workflows | Retained for history; not recommended entry points. |
 
 See the [complete module catalog](docs/guides/module-catalog.md) for every ID, entry point, and status. [`hello.py`](hello.py) is the registration source; the documentation check compares the catalog against it.
 

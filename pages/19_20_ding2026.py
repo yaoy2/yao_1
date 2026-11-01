@@ -1,4 +1,4 @@
-"""M20: retirement notice for the legacy Ding2026 system."""
+"""M20: shared rules and entry instructions for the local distribution tool."""
 
 import sys
 from pathlib import Path
@@ -10,10 +10,35 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from utils.ui_theme import render_home_link
+from integrations.file_distribution.rules import (
+    ENTRY_FILENAME,
+    RULE_ROWS,
+    USER_GUIDE,
+    VERSION,
+)
 
-st.set_page_config(page_title="Ding2026 · 已停用", page_icon="❌", layout="wide")
+st.set_page_config(page_title="M20 · 文件分发", page_icon="📂", layout="wide")
 render_home_link()
-st.title("M20 · Ding2026 文件中转发放系统 ❌")
-st.warning("旧版已停用：原有功能说明、统计及执行逻辑全部作废。")
-st.write("后续使用本机双击执行的会议纪要分发工具，仅处理 Ding2026 根目录直属会议纪要。")
-st.caption("archived · 2026-09-07")
+st.title("M20 · 文件分发")
+st.caption("月报与系部周例会、考勤，共用一套规则，手动预览后分发。")
+st.markdown(
+    f"在 **Ding2026** 文件夹内双击 **{ENTRY_FILENAME}**，选择 **月报** 或 **纪要、考勤**。"
+    "查看文件去向，勾选需要处理的文件，再点击分发。"
+)
+st.table(RULE_ROWS)
+st.info("本页展示与本地程序共用的规则；文件预览和分发在双击程序中完成。")
+
+with st.expander("使用与 Drive 同步说明"):
+    st.markdown(USER_GUIDE)
+    st.write(
+        "Drive 同步完成后，可以在办公电脑 L 的 Ding2026 文件夹中双击同一入口。"
+        "程序按所在位置定位文件夹，无需使用家庭电脑 D 的盘符。"
+        "分发时只在一台电脑操作，完成后等待 Drive 同步。"
+    )
+    st.caption("首次在 L 使用时，先核对根目录、预览去向与分发结果。")
+
+st.link_button(
+    "使用与维护说明",
+    "https://github.com/yaoy2/yao_1/blob/main/integrations/file_distribution/README.md",
+)
+st.caption(f"M20 · 规则与程序版本 {VERSION}")

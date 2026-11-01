@@ -26,7 +26,7 @@ def test_sidebar_pins_frequent_tools_before_other_modules():
     tools = _get_sidebar_tools(_load_homepage_tools())
     codes = [tool["code"] for tool in tools]
     assert codes[:4] == ["M15", "M14", "M08", "M06"]
-    assert codes[4:17] == ["M32", "M31", "M30", "M29", "M28", "M27", "M26", "M25", "M23", "M22", "M21", "M19", "M18"]
+    assert codes[4:18] == ["M32", "M31", "M30", "M29", "M28", "M27", "M26", "M25", "M23", "M22", "M21", "M20", "M19", "M18"]
     assert tools[codes.index("M32")]["page"] == "pages/31_32_nihaixia_knowledge.py"
     assert tools[codes.index("M32")]["locked"] is True
     assert tools[codes.index("M31")]["page"] == "pages/30_31_qq_archive.py"
@@ -39,11 +39,12 @@ def test_sidebar_pins_frequent_tools_before_other_modules():
     assert tools[codes.index("M28")]["section"] == "个人"
     assert tools[codes.index("M27")]["page"] == "pages/26_27_ai_discussion_room.py"
     assert tools[codes.index("M27")]["section"] == "个人"
-    assert codes[codes.index("M07") : codes.index("M07") + 6] == ["M07", "M24", "M20", "M17", "M16", "M13"]
+    assert codes[codes.index("M07") : codes.index("M07") + 6] == ["M07", "M24", "M17", "M16", "M13", "M11"]
     assert tools[codes.index("M24")]["blocked"] is True
     assert tools[codes.index("M16")]["blocked"] is True
     assert tools[codes.index("M17")]["blocked"] is True
-    assert tools[codes.index("M20")]["blocked"] is True
+    assert tools[codes.index("M20")].get("blocked", False) is False
+    assert tools[codes.index("M20")]["section"] == "行政"
     assert tools[codes.index("M11")]["blocked"] is True
     assert codes[codes.index("M13") + 1] == "M11"
 
