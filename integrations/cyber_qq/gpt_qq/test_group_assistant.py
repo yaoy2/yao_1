@@ -127,6 +127,28 @@ class InputTests(unittest.TestCase):
         self.assertFalse(group["platform_settings"]["enable_id_white_list"])
         self.assertEqual(base["platform_settings"]["id_whitelist"], ["gpt-qq:FriendMessage:12345678"])
 
+    def test_chinese_dates_do_not_silently_fall_back_to_today(self):
+        now = datetime(2026, 11, 1, 17, 0, tzinfo=TZ)
+        for query, expected in (
+            ("你看一下我10月24日发在群里的跟论文有关的内容", "2026-10-24"),
+            ("10月24号的记录", "2026-10-24"),
+            ("2025年10月24日的记录", "2025-10-24"),
+            ("去年10月24日的记录", "2025-10-24"),
+            ("前年的记录：前年10月24日", "2024-10-24"),
+        ):
+            with self.subTest(query=query):
+                window = query_window(query, now)
+                self.assertEqual(window.label, expected)
+                self.assertEqual(window.end - window.start, 86400)
+        self.assertEqual(query_window("2025年10月24日到10月26日", now).label,
+                         "2025-10-24 至 2025-10-26")
+        self.assertEqual(query_window("去年12月31日至今年1月2日", now).label,
+                         "2025-12-31 至 2026-01-02")
+        self.assertEqual(query_window("2026-10-24到10月26日", now).end
+                         - query_window("2026-10-24到10月26日", now).start, 3 * 86400)
+        with self.assertRaisesRegex(ValueError, "日期无效"):
+            query_window("10月32日", now)
+
     def test_config_dictionary_with_runtime_lock(self):
         class RuntimeConfig(dict):
             pass

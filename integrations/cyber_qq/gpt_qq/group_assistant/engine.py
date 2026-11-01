@@ -80,10 +80,27 @@ class Window:
 def query_window(query: str, now: datetime | None = None) -> Window:
     now = (now or datetime.now(TZ)).astimezone(TZ)
     today = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    dates = re.findall(r"(?<!\d)(20\d{2}[-/]\d{1,2}[-/]\d{1,2})(?!\d)", query)
+    dates = list(re.finditer(
+        r"(?<!\d)(?:(?P<iso>20\d{2}[-/]\d{1,2}[-/]\d{1,2})|"
+        r"(?:(?P<year>20\d{2})年|(?P<relative>今年|去年|前年|明年))?"
+        r"(?P<month>\d{1,2})月(?P<day>\d{1,2})(?:日|号)?)(?!\d)", query))
     limit = 600
     if dates:
-        parsed = [datetime.strptime(x.replace("/", "-"), "%Y-%m-%d").replace(tzinfo=TZ) for x in dates[:2]]
+        parsed, year = [], now.year
+        try:
+            for match in dates[:2]:
+                if match["iso"]:
+                    day = datetime.strptime(match["iso"].replace("/", "-"), "%Y-%m-%d").replace(tzinfo=TZ)
+                    year = day.year
+                else:
+                    if match["year"]:
+                        year = int(match["year"])
+                    elif match["relative"]:
+                        year = now.year + {"今年": 0, "去年": -1, "前年": -2, "明年": 1}[match["relative"]]
+                    day = datetime(year, int(match["month"]), int(match["day"]), tzinfo=TZ)
+                parsed.append(day)
+        except ValueError as exc:
+            raise ValueError("日期无效，请检查年月日。") from exc
         start, final_day = parsed[0], parsed[-1]
         if final_day < start:
             raise ValueError("结束日期不能早于开始日期。")
