@@ -1,0 +1,9 @@
+name: cyber_g_assistant
+display_name: 小G群助手
+desc: 由主人按群启停记录，只响应主人，整理本群文字、纪要和待办。
+author: Codex
+version: 1.0.0
+repo: https://github.com/yaoy2/yao_1
+support_platforms:
+  - aiocqhttp
+astrbot_version: '>=4.29.3,<4.30.0'

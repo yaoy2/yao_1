@@ -52,6 +52,8 @@ def install(source: Path, root: Path, python: str, uv: str, owner: str, bot: str
     subprocess.run([uv, "pip", "check", "--python", env_python], check=True)
     subprocess.run([env_python, "-B", str(Path(__file__).with_name("prepare.py")),
                     "--root", str(root), "--bot-qq", bot, "--owner-qq", owner, "--model", model], check=True)
+    subprocess.run([env_python, "-B", str(Path(__file__).with_name("configure_assistant.py")),
+                    "--root", str(root)], check=True)
     copied = {"sources": [item for item in manifest["sources"]
                            if item["id"] in {"astrbot", "dashboard", "napcat"}],
               "copied_program_files_from_verified_installation": True}
