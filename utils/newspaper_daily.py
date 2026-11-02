@@ -22,12 +22,14 @@ from utils import newspaper_sources as media
 from utils.newspaper_interviews import INTERVIEW_CATEGORY, INTERVIEW_MONTHS, is_recent_interview, without_expired_interviews
 
 
-NEWSPAPER_DAILY_VERSION = 5
+NEWSPAPER_DAILY_VERSION = 6
 SNAPSHOT_PATH = "data/newspaper_daily.json"
 PRIVATE_REPO = "yaoy2/yao_1-data"
 PRIVATE_BRANCH = "main"
 SHANGHAI = timezone(timedelta(hours=8))
 ROOT = Path(__file__).resolve().parents[1]
+PAUSE_CONFIG = ROOT / "config" / "newspaper_status.json"
+PAUSE_MESSAGE = "每日新闻项目已暂停。自动更新、即时采集及阅读同步均已暂停，历史资料保留。"
 LOCAL_DIR = ROOT / ".local" / "newspaper"
 MAX_AGE = timedelta(hours=48)
 MAX_CONTENT_BYTES = 900_000  # Contents API base64 read-back stays below 1 MB.
@@ -45,6 +47,16 @@ SOURCE_FIELDS = frozenset({"id", "name", "scope", "status", "count", "fetched_co
                            "error", "note", "source_family", "excluded_count"})
 TOP_FIELDS = frozenset({"schema_version", "edition_date", "started_at", "completed_at", "generated_at",
                        "expires_at", "status", "article_count", "articles", "sources", "errors"})
+
+
+def is_paused():
+    """Read on each invocation so retained page sessions observe the project state."""
+    try:
+        status = json.loads(PAUSE_CONFIG.read_text(encoding="utf-8-sig"))
+        return status.get("paused") is not False
+    except (OSError, ValueError, AttributeError):
+        # An incomplete checkout must not silently resume a paused publisher.
+        return True
 
 
 def _now():
@@ -452,6 +464,9 @@ def _reported_run_lock(directory, report):
 
 def run_daily(dry_run=True, secrets=None, environ=None, force=False):
     """Default is no remote write. Publish uses a fresh SHA and read-back proof."""
+    if is_paused():
+        return {"ok": True, "status": "paused", "reason": "user_requested_pause",
+                "mode": "dry_run" if dry_run else "publish", "message": PAUSE_MESSAGE}
     started = _now().astimezone(SHANGHAI)
     cycle_start = started.replace(hour=9, minute=0, second=0, microsecond=0)
     if started < cycle_start:

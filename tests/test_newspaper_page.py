@@ -12,7 +12,7 @@ import pytest
 from streamlit.testing.v1 import AppTest
 
 import utils.newspaper_component as component
-from utils import budget_auth, newspaper_reader_sync
+from utils import budget_auth, newspaper_daily, newspaper_reader_sync
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -40,6 +40,8 @@ FEED = {
 
 @pytest.fixture(autouse=True)
 def isolate_public_source_caches(monkeypatch):
+    # Keep testing the retained reading behavior under an explicitly resumed fixture.
+    monkeypatch.setattr(newspaper_daily, "is_paused", Mock(return_value=False))
     monkeypatch.setattr(budget_auth, "get_budget_password", Mock(return_value=None))
     def clear():
         component._complete_newspaper_feed.clear()
@@ -76,6 +78,19 @@ def test_newspaper_page_passes_real_source_metadata(service):
     assert any("公开新闻与 AI 专版" in item.value for item in app.caption)
     assert component_args(app)["feed"]["articles"][0]["url"] == ARTICLE["url"]
     assert (ROOT / "integrations" / "newspaper" / "frontend" / "index.html").is_file()
+
+
+def test_paused_page_does_not_fetch_news_or_sync_private_reading_data(service, monkeypatch):
+    monkeypatch.setattr(newspaper_daily, "is_paused", Mock(return_value=True))
+    load, save = Mock(), Mock()
+    monkeypatch.setattr(newspaper_reader_sync, "load_reader_state", load)
+    monkeypatch.setattr(newspaper_reader_sync, "save_reader_state", save)
+    app = AppTest.from_file(str(PAGE)).run()
+    assert not app.exception
+    assert any("已暂停" in item.value for item in app.info)
+    assert not app.get("component_instance")
+    for operation in (*service, load, save):
+        operation.assert_not_called()
 
 
 def test_locked_reader_sync_does_not_read_write_or_disclose_private_data(service, monkeypatch):

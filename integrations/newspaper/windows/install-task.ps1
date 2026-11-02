@@ -112,6 +112,16 @@ function Assert-NewspaperTaskDefinition {
     }
 }
 
+$repositoryRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..\..')).Path
+$statusPath = Join-Path $repositoryRoot 'config\newspaper_status.json'
+if (-not (Test-Path -LiteralPath $statusPath -PathType Leaf)) {
+    throw 'The newspaper project status is missing. No task was installed.'
+}
+$projectStatus = Get-Content -LiteralPath $statusPath -Raw -Encoding UTF8 | ConvertFrom-Json
+if ($projectStatus.paused -ne $false) {
+    Write-Output 'M28 Newspaper is paused by user request. No task was installed or enabled.'
+    return
+}
 $actualComputer = [Environment]::MachineName
 if ($ComputerName -ine $actualComputer) {
     throw "Computer mismatch. Explicitly pass this computer's actual name '$actualComputer'; received '$ComputerName'."

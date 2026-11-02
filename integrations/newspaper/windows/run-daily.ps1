@@ -63,6 +63,15 @@ function Get-NewspaperPython {
 }
 
 $repositoryRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..\..')).Path
+$statusPath = Join-Path $repositoryRoot 'config\newspaper_status.json'
+if (-not (Test-Path -LiteralPath $statusPath -PathType Leaf)) {
+    throw 'The newspaper project status is missing. Collection was not started.'
+}
+$projectStatus = Get-Content -LiteralPath $statusPath -Raw -Encoding UTF8 | ConvertFrom-Json
+if ($projectStatus.paused -ne $false) {
+    Write-Output 'M28 Newspaper is paused by user request. No collection or publication was started.'
+    return
+}
 $dailyScript = Join-Path $repositoryRoot 'scripts\newspaper_daily.py'
 if (-not (Test-Path -LiteralPath $dailyScript -PathType Leaf)) {
     throw "The daily entry point is missing. Pull the complete repository first: $dailyScript"

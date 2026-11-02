@@ -23,7 +23,10 @@ from utils.newspaper_component import (
     declare_newspaper_component,
 )
 from utils.ui_theme import render_home_link
-from utils import budget_auth, newspaper_reader_sync
+from utils import budget_auth, newspaper_daily, newspaper_reader_sync
+
+if getattr(newspaper_daily, "NEWSPAPER_DAILY_VERSION", 0) < 6:
+    newspaper_daily = importlib.reload(newspaper_daily)
 
 if getattr(newspaper_reader_sync, "NEWSPAPER_READER_VERSION", 0) < 2:
     newspaper_reader_sync = importlib.reload(newspaper_reader_sync)
@@ -89,6 +92,10 @@ def render_sync_access():
 st.set_page_config(page_title="M28·Newspaper", page_icon="📰", layout="wide")
 render_home_link()
 st.markdown("### 📰 M28·Newspaper")
+if newspaper_daily.is_paused():
+    st.info(newspaper_daily.PAUSE_MESSAGE)
+    st.caption("2026-11-02 起暂停；恢复须明确指令。已有日报、收藏和笔记均保留。")
+    st.stop()
 st.caption(
     "个人 · 多来源公开新闻与 AI 专版｜优先读取已完成的有效日报；尚无日报时即时获取，手动更新可检查全部来源。"
     "访谈与阅读收录近半年各领域文字访谈，每天北京时间 09:00 换一组，最多 10 篇，跨天不重复。"

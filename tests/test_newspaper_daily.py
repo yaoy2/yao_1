@@ -257,7 +257,8 @@ class DeliveryTest(unittest.TestCase):
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory()
         self.addCleanup(self.directory.cleanup)
-        for patcher in (patch.object(daily, "LOCAL_DIR", Path(self.directory.name)), patch.object(daily, "_now", return_value=NOW),
+        for patcher in (patch.object(daily, "is_paused", return_value=False),
+                        patch.object(daily, "LOCAL_DIR", Path(self.directory.name)), patch.object(daily, "_now", return_value=NOW),
                         patch.object(daily, "_verify_private_repository")):
             patcher.start()
             self.addCleanup(patcher.stop)
@@ -410,6 +411,31 @@ class DeliveryTest(unittest.TestCase):
                 self.assertIsNone(daily.read_daily_feed(environ=ENV))
         with patch.object(daily.sync, "read_file_from_github", return_value={"ok": True, "content": json.dumps(self.payload)}):
             self.assertEqual("daily", daily.read_daily_feed(environ=ENV)["delivery"])
+
+
+class PausedProjectTest(unittest.TestCase):
+    def test_paused_run_never_collects_writes_or_changes_run_history(self):
+        with patch.object(daily, "is_paused", return_value=True), \
+             patch.object(daily, "build_daily_snapshot") as collect, \
+             patch.object(daily, "_reported_run_lock") as history, \
+             patch.object(daily.sync, "read_file_from_github") as read, \
+             patch.object(daily.sync, "sync_file_to_github") as write:
+            for dry_run in (True, False):
+                result = daily.run_daily(dry_run=dry_run, force=True)
+                self.assertTrue(result["ok"])
+                self.assertEqual("paused", result["status"])
+            for operation in (collect, history, read, write):
+                operation.assert_not_called()
+
+    def test_status_is_reread_and_incomplete_status_does_not_resume(self):
+        with tempfile.TemporaryDirectory(suffix="-可删") as directory:
+            path = Path(directory) / "status.json"
+            with patch.object(daily, "PAUSE_CONFIG", path):
+                self.assertTrue(daily.is_paused())
+                for content, expected in (("{}", True), ("invalid", True),
+                                          ('{"paused": true}', True), ('{"paused": false}', False)):
+                    path.write_text(content, encoding="utf-8")
+                    self.assertEqual(expected, daily.is_paused())
 
 
 class PrivateTargetAndCliTest(unittest.TestCase):

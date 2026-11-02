@@ -64,6 +64,9 @@ class WindowsTaskPlanningTest(unittest.TestCase):
         cls.repo = Path(cls.temp.name) / "日报 测试 & O'Neil"
         cls.scripts = cls.repo / "integrations" / "newspaper" / "windows"
         cls.scripts.mkdir(parents=True)
+        (cls.repo / "config").mkdir()
+        cls.status = cls.repo / "config" / "newspaper_status.json"
+        cls.status.write_text('{"paused": false}', encoding="utf-8")
         (cls.repo / "scripts").mkdir()
         (cls.repo / "scripts" / "newspaper_daily.py").write_text(
             "raise RuntimeError('THE_DAILY_CLI_MUST_NOT_RUN_DURING_WINDOWS_TESTS')\n", encoding="utf-8")
@@ -90,6 +93,21 @@ class WindowsTaskPlanningTest(unittest.TestCase):
             with self.subTest(path=path.name):
                 self.assertEqual(0, result.returncode, result.stderr)
                 self.assertIn("parsed", result.stdout)
+
+    def test_paused_project_does_not_plan_tasks_or_execute_collection(self):
+        self.status.write_text('{"paused": true}', encoding="utf-8")
+        try:
+            commands = (
+                "& " + ps_string(self.installer) + " -ComputerName ([Environment]::MachineName) -Preview",
+                "& " + ps_string(self.runner) + " -DryRun",
+            )
+            for command in commands:
+                result = ps_run(command)
+                self.assertEqual(0, result.returncode, result.stderr)
+                self.assertIn("paused by user request", result.stdout)
+            self.assertFalse((self.repo / ".local").exists())
+        finally:
+            self.status.write_text('{"paused": false}', encoding="utf-8")
 
     def test_preview_preserves_unicode_space_and_ampersand_paths_without_writing(self):
         self.assertEqual("Preview", self.plan["Mode"])
