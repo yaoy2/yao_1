@@ -1,6 +1,7 @@
 """Desktop authorization boundaries; no test distributes real user files."""
 
 from dataclasses import replace
+from datetime import date, datetime, timedelta
 import gc
 import os
 from pathlib import Path
@@ -75,7 +76,7 @@ def test_preview_never_executes_and_only_ready_rows_can_be_selected(make_window)
     app, scanner, executor, _ = make_window()
     app.preview()
     wait_idle(app)
-    scanner.assert_called_once_with(app.source_var.get(), ("monthly",), calendar_period="2026-2027-1", on_progress=ANY)
+    scanner.assert_called_once_with(app.source_var.get(), ("monthly",), calendar_period="2026-2027-1", start_date="", on_progress=ANY)
     executor.assert_not_called()
     assert app._selected == {"月报甲.xlsx", "月报乙.xlsx"}
     app._toggle("file-2")
@@ -181,7 +182,8 @@ def test_busy_preview_disables_context_changes_and_never_moves_files(make_window
     app, _, executor, _ = make_window(scan_fn=blocked_scan)
     try:
         app.preview()
-        for control in (app.browse_button, app.preview_button, app.calendar_button, *app.rule_buttons, app.execute_button):
+        for control in (app.browse_button, app.preview_button, app.calendar_button, app.date_filter_button,
+                        app.start_date_entry, app.date_picker_button, *app.rule_buttons, app.execute_button):
             assert "disabled" in control.state()
         app.distribute()
         executor.assert_not_called()
@@ -204,7 +206,7 @@ def test_rule_changes_clear_old_selection_and_scan_only_checked_rules(make_windo
     executor.assert_not_called()
     app.preview()
     wait_idle(app)
-    scanner.assert_called_with(app.source_var.get(), ('minutes', 'attendance'), calendar_period="2026-2027-1", on_progress=ANY)
+    scanner.assert_called_with(app.source_var.get(), ('minutes', 'attendance'), calendar_period="2026-2027-1", start_date="", on_progress=ANY)
     for value in app.rule_vars.values():
         value.set(False)
     app.change_rules()
@@ -335,3 +337,69 @@ def test_reveal_during_execution_and_missing_folders_never_launch(make_window, m
     app.open_file_location()
     error.assert_called_once()
     launch.assert_not_called()
+
+
+def test_date_controls_invalidate_preview_and_toggle_back_to_all_dates(make_window, monkeypatch):
+    app, scanner, executor, plan = make_window()
+    assert not app.date_filter_var.get()
+    app.preview()
+    wait_idle(app)
+    app.date_filter_button.invoke()
+    assert app._plan is None and not app._selected
+    assert 'disabled' not in app.start_date_entry.state()
+    start = (date.today() - timedelta(days=32)).isoformat()
+    app.start_date_var.set(start)
+    scanner.return_value = replace(plan, start_date=start, end_time=datetime.now().astimezone().isoformat(), date_excluded_count=3)
+    app.preview()
+    wait_idle(app)
+    assert scanner.call_args.kwargs['start_date'] == start
+    assert start in app.notice_var.get() and '日期范围外 3' in app.summary_var.get()
+    confirm = Mock(return_value=False)
+    monkeypatch.setattr('integrations.file_distribution.gui.messagebox.askokcancel', confirm)
+    app.distribute()
+    assert start in confirm.call_args.args[1]
+    app.start_date_var.set(date.today().isoformat())
+    assert app._plan is None and not app._selected
+    app.distribute()
+    executor.assert_not_called()
+    app.date_filter_button.invoke()
+    app.preview()
+    wait_idle(app)
+    assert scanner.call_args.kwargs['start_date'] == ''
+    assert 'disabled' in app.start_date_entry.state()
+
+
+@pytest.mark.parametrize('value', ['', '2026-02-30', '10月1日', '2999-01-01'])
+def test_invalid_date_never_scans_or_reuses_previous_selection(make_window, monkeypatch, value):
+    app, scanner, executor, _ = make_window()
+    app.preview()
+    wait_idle(app)
+    scanner.reset_mock()
+    app.date_filter_button.invoke()
+    app.start_date_var.set(value)
+    error = Mock()
+    monkeypatch.setattr('integrations.file_distribution.gui.messagebox.showerror', error)
+    app.preview()
+    error.assert_called_once()
+    scanner.assert_not_called()
+    assert app._plan is None and not app._selected
+    app.distribute()
+    executor.assert_not_called()
+
+
+def test_calendar_picker_can_choose_day_and_clear_previous_preview(make_window):
+    app, scanner, _, _ = make_window()
+    app.date_filter_button.invoke()
+    app.preview()
+    wait_idle(app)
+    app.pick_start_date()
+    picker = next(child for child in app.window.winfo_children() if isinstance(child, tk.Toplevel))
+    days = [child for child in picker.winfo_children() if child.winfo_class() == 'TFrame'][1]
+    first = next(child for child in days.winfo_children() if child.winfo_class() == 'TButton' and child.cget('text') == '1')
+    first.invoke()
+    assert app.start_date_var.get() == date.today().replace(day=1).isoformat()
+    assert app._plan is None
+    assert not picker.winfo_exists()
+    app.preview()
+    wait_idle(app)
+    assert scanner.call_args.kwargs['start_date'] == app.start_date_var.get()

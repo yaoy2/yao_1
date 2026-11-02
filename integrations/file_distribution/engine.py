@@ -13,6 +13,7 @@ from typing import Callable, Iterable
 import uuid
 
 from .models import Decision, ExecutionResult, Plan, PlanItem, ProgressEvent, selected_rules
+from .file_dates import creation_date_bounds, creation_time_ns, validate_start_date
 from .invoices import INVOICE_HINT, classify_invoice
 from .monthly import MONTHLY_HINT, classify_monthly
 from .readers import read_document_text
@@ -169,14 +170,19 @@ def _duplicate(target: Path, digest: str, size: int) -> tuple[str, str]:
 
 def scan(root: str | Path, mode: str | Iterable[str], *,
          calendar_period: str = CALENDAR_PERIOD,
+         start_date: str = "",
          on_progress: Callable[[ProgressEvent], None] | None = None) -> Plan:
     """Preview leaves source/archive directories unchanged; temporary reading copies are discarded."""
     rules = selected_rules(mode)
     if calendar_period not in ("", CALENDAR_PERIOD):
         raise ValueError("尚未配置该学期校历")
+    end_time = datetime.now().astimezone().isoformat() if start_date else ""
+    if start_date:
+        start_date = validate_start_date(start_date)
+    bounds = creation_date_bounds(start_date, end_time) if start_date else None
     root = _root(root)
     plan = Plan(str(root), mode if isinstance(mode, str) else "selected", _now(), uuid.uuid4().hex,
-                rules=list(rules), calendar_period=calendar_period)
+                rules=list(rules), calendar_period=calendar_period, start_date=start_date, end_time=end_time)
     planned_hashes = {}
     paths = sorted((path for path in root.iterdir() if path.is_file() or path.is_symlink()),
                    key=lambda p: p.name.casefold())
@@ -190,6 +196,11 @@ def scan(root: str | Path, mode: str | Iterable[str], *,
             _normal_path(path, root=root)
             with _read_locked(path) as stream:
                 before = os.fstat(stream.fileno())
+                if bounds:
+                    item.creation_time_ns = creation_time_ns(before)
+                    if not bounds[0] <= item.creation_time_ns <= bounds[1]:
+                        plan.date_excluded_count += 1
+                        continue
                 decision = _classify(path, root, rules, calendar_period=calendar_period)
                 if decision.status == "ignored":
                     continue
@@ -201,6 +212,8 @@ def scan(root: str | Path, mode: str | Iterable[str], *,
                     current = path.stat()
                     if (current.st_dev, current.st_ino, current.st_size, current.st_mtime_ns) != (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns):
                         raise ValueError("扫描时文件发生变化，请重新预览")
+                    if bounds and creation_time_ns(current) != item.creation_time_ns:
+                        raise ValueError("扫描时文件创建时间发生变化，请重新预览")
                     target = _target(root, decision, path.name)
                     item.destination = str(target)
                     status, reason = _duplicate(target, item.sha256, item.size)
@@ -300,6 +313,7 @@ def execute(plan: Plan, selected_names: Iterable[str], *,
     rules = selected_rules(plan.rules or plan.mode)
     if plan.calendar_period not in ("", CALENDAR_PERIOD):
         raise ValueError("预览的校历无效，请重新预览")
+    bounds = creation_date_bounds(plan.start_date, plan.end_time) if plan.start_date else None
     selected = set(selected_names)
     if not selected:
         raise ValueError("请先勾选可分发文件")
@@ -314,6 +328,8 @@ def execute(plan: Plan, selected_names: Iterable[str], *,
     with _run_lock(lock_path), log_path.open("x", encoding="utf-8", newline="\n") as log:
         _write_record(log, "run", version=VERSION, release_date=RELEASE_DATE,
                       mode=plan.mode, rules=list(rules), calendar_period=plan.calendar_period,
+                      date_basis="local_creation_time" if bounds else "all",
+                      start_date=plan.start_date, end_time=plan.end_time,
                       root=str(root), plan_id=plan.plan_id, preview_at=plan.created_at)
         completed = 0
         for item in items:
@@ -329,6 +345,11 @@ def execute(plan: Plan, selected_names: Iterable[str], *,
                     continue
                 with _read_locked(source) as stream:
                     info = os.fstat(stream.fileno())
+                    if bounds and (creation_time_ns(info) != item.creation_time_ns
+                                   or not bounds[0] <= creation_time_ns(info) <= bounds[1]):
+                        item.status, item.reason = "changed", "文件创建时间或筛选范围已变化，请重新预览；本次未移动"
+                        _write_record(log, "result", file=asdict(item))
+                        continue
                     current_digest = _hash_stream(stream)
                     if (info.st_size, info.st_mtime_ns, current_digest) != (item.size, item.mtime_ns, item.sha256):
                         item.status, item.reason = "changed", "预览后文件已变化，请重新预览；本次未移动"
@@ -356,6 +377,8 @@ def execute(plan: Plan, selected_names: Iterable[str], *,
                         locked = os.fstat(move_stream.fileno())
                         if (locked.st_dev, locked.st_ino) != (info.st_dev, info.st_ino) or _hash_stream(move_stream) != item.sha256:
                             raise ValueError("执行前源文件已替换，请重新预览")
+                        if bounds and creation_time_ns(locked) != item.creation_time_ns:
+                            raise ValueError("执行前文件创建时间已变化，请重新预览")
                         _write_record(log, "planned", file=asdict(item))
                         target.parent.mkdir(parents=True, exist_ok=True)
                         _target(root, decision, source.name)

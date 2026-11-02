@@ -43,6 +43,7 @@ class PlanItem:
     sha256: str = ""
     size: int = 0
     mtime_ns: int = 0
+    creation_time_ns: int = 0
 
 
 @dataclass
@@ -55,6 +56,9 @@ class Plan:
     items: list[PlanItem] = field(default_factory=list)
     rules: list[str] = field(default_factory=list)
     calendar_period: str = ""
+    start_date: str = ""
+    end_time: str = ""
+    date_excluded_count: int = 0
 
     def to_dict(self) -> dict:
         return asdict(self)

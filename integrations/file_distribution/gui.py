@@ -3,17 +3,19 @@
 from __future__ import annotations
 
 import os
+import calendar
 import queue
 import subprocess
 import threading
 import tkinter as tk
 from collections import Counter
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 from typing import Callable, Iterable
 
 from .models import ExecutionResult, Plan, PlanItem, ProgressEvent, RULE_LABELS, STATUS_LABELS, selected_rules
+from .file_dates import validate_start_date
 from .rules import RELEASE_DATE, VERSION
 from .school_calendar import CALENDAR_LABEL, CALENDAR_PERIOD
 
@@ -31,6 +33,7 @@ class DistributionWindow:
         execute_fn: Callable[..., ExecutionResult],
         auto_preview: bool = True,
         calendar_period: str = CALENDAR_PERIOD,
+        start_date: str = "",
     ) -> None:
         initial_rules = selected_rules(mode)
         if calendar_period not in ("", CALENDAR_PERIOD):
@@ -53,11 +56,14 @@ class DistributionWindow:
         self.source_var = tk.StringVar(window, str(Path(root).absolute()))
         self.rule_vars = {key: tk.BooleanVar(window, key in initial_rules) for key in RULE_LABELS}
         self.calendar_var = tk.BooleanVar(window, bool(calendar_period))
+        self.date_filter_var = tk.BooleanVar(window, bool(start_date))
+        self.start_date_var = tk.StringVar(window, validate_start_date(start_date) if start_date else date.today().isoformat())
         self.summary_var = tk.StringVar(window, "正在准备预览。")
         self.notice_var = tk.StringVar(window, "打开窗口只预览；点击“分发已选”后才移动文件。")
         self.log_var = tk.StringVar(window, "")
         self.progress_var = tk.StringVar(window, "尚未执行分发")
         self._build()
+        self.start_date_var.trace_add("write", self._date_input_changed)
         self.window.protocol("WM_DELETE_WINDOW", self.close)
         self._poll_id = self.window.after(80, self._poll_messages)
         if auto_preview:
@@ -68,7 +74,7 @@ class DistributionWindow:
         width = min(1250, max(1000, self.window.winfo_screenwidth() - 100))
         height = min(760, max(620, self.window.winfo_screenheight() - 100))
         self.window.geometry(f"{width}x{height}")
-        self.window.minsize(960, 580)
+        self.window.minsize(960, 620)
         self.window.configure(background="#F5F6F8")
         style = ttk.Style(self.window)
         if "clam" in style.theme_names():
@@ -108,6 +114,20 @@ class DistributionWindow:
         self.calendar_button = ttk.Checkbutton(calendar_row, text="仅有周次或月日时，按本批校历补全学期",
                                                variable=self.calendar_var, command=self.change_rules)
         self.calendar_button.pack(side="left", padx=(15, 0))
+
+        date_row = ttk.Frame(source)
+        date_row.grid(row=2, column=0, columnspan=3, sticky="w", pady=(7, 0))
+        self.date_filter_button = ttk.Checkbutton(
+            date_row, text="限定检索日期", variable=self.date_filter_var, command=self.change_date_filter,
+        )
+        self.date_filter_button.pack(side="left")
+        ttk.Label(date_row, text="从").pack(side="left", padx=(10, 5))
+        self.start_date_entry = ttk.Entry(date_row, textvariable=self.start_date_var, width=12)
+        self.start_date_entry.pack(side="left")
+        self.date_picker_button = ttk.Button(date_row, text="选日期", command=self.pick_start_date)
+        self.date_picker_button.pack(side="left", padx=5)
+        ttk.Label(date_row, text="至今（含起始日） · 按本机创建日期；不勾选则检索全部日期",
+                  style="Muted.TLabel").pack(side="left")
 
         controls = ttk.Frame(frame)
         controls.grid(row=2, column=0, sticky="ew", pady=(0, 8))
@@ -205,8 +225,10 @@ class DistributionWindow:
 
     def _update_controls(self) -> None:
         idle = not self._busy
-        for widget in [self.browse_button, self.calendar_button, *self.rule_buttons]:
+        for widget in [self.browse_button, self.calendar_button, self.date_filter_button, *self.rule_buttons]:
             widget.configure(state="normal" if idle else "disabled")
+        for widget in [self.start_date_entry, self.date_picker_button]:
+            widget.configure(state="normal" if idle and self.date_filter_var.get() else "disabled")
         self.preview_button.configure(state="normal" if idle and self._chosen_rules() else "disabled")
         selectable = idle and self._plan is not None and not self._consumed
         ready = {item.name for item in self._items if item.status == "ready"}
@@ -255,16 +277,94 @@ class DistributionWindow:
             self.notice_var.set("只处理已勾选的规则；未选规则不会参与分发。")
             self.progress_var.set("等待预览")
 
+    def _date_input_changed(self, *_args) -> None:
+        if self.date_filter_var.get():
+            self.change_date_filter()
+
+    def change_date_filter(self) -> None:
+        if not self._busy and not self._closed:
+            self._invalidate()
+            self.summary_var.set("已更改检索日期，请点击“预览所选规则”。")
+            self.notice_var.set("按本机创建日期筛选，起始日包含在内；不勾选则检索全部日期。")
+            self.progress_var.set("等待预览")
+
+    def pick_start_date(self) -> None:
+        if self._busy or not self.date_filter_var.get():
+            return
+        today = date.today()
+        try:
+            selected = date.fromisoformat(validate_start_date(self.start_date_var.get()))
+        except ValueError:
+            selected = today
+        picker = tk.Toplevel(self.window)
+        picker.title("选择检索起始日期")
+        picker.transient(self.window)
+        picker.resizable(False, False)
+        header = ttk.Frame(picker, padding=8)
+        header.pack(fill="x")
+        year = tk.StringVar(picker, str(selected.year))
+        month = tk.StringVar(picker, str(selected.month))
+        year_choice = ttk.Combobox(header, textvariable=year, width=6, state="readonly",
+                                  values=list(range(min(today.year - 30, selected.year), today.year + 1)))
+        year_choice.pack(side="left")
+        ttk.Label(header, text="年").pack(side="left", padx=3)
+        month_choice = ttk.Combobox(header, textvariable=month, width=4, state="readonly", values=list(range(1, 13)))
+        month_choice.pack(side="left")
+        ttk.Label(header, text="月").pack(side="left", padx=3)
+        days = ttk.Frame(picker, padding=8)
+        days.pack()
+
+        def choose(day: date) -> None:
+            self.start_date_var.set(day.isoformat())
+            picker.destroy()
+
+        def render(_event=None) -> None:
+            for widget in days.winfo_children():
+                widget.destroy()
+            for column, label in enumerate("一二三四五六日"):
+                ttk.Label(days, text=label, anchor="center", width=4).grid(row=0, column=column)
+            for row, week in enumerate(calendar.monthcalendar(int(year.get()), int(month.get())), 1):
+                for column, number in enumerate(week):
+                    if number:
+                        day = date(int(year.get()), int(month.get()), number)
+                        ttk.Button(days, text=str(number), width=3,
+                                   style="Accent.TButton" if day == selected else "TButton",
+                                   state="normal" if day <= today else "disabled",
+                                   command=lambda value=day: choose(value)).grid(row=row, column=column, padx=1, pady=1)
+
+        year_choice.bind("<<ComboboxSelected>>", render)
+        month_choice.bind("<<ComboboxSelected>>", render)
+        render()
+        ttk.Button(picker, text="今天", command=lambda: choose(today)).pack(pady=(0, 8))
+        picker.bind("<Escape>", lambda _event: picker.destroy())
+        picker.grab_set()
+
+    @staticmethod
+    def _date_scope(plan: Plan) -> str:
+        if not plan.start_date:
+            return "创建日期：全部"
+        end = datetime.fromisoformat(plan.end_time).astimezone()
+        return f"创建日期：{plan.start_date} 00:00 至 {end:%Y-%m-%d %H:%M:%S}"
+
     def preview(self) -> None:
         if self._busy or self._closed or not self._chosen_rules():
             return
         self._invalidate()
+        try:
+            start_date = validate_start_date(self.start_date_var.get()) if self.date_filter_var.get() else ""
+        except ValueError as error:
+            self.summary_var.set("日期无效，尚未检索。")
+            self.notice_var.set(str(error))
+            self.progress_var.set("等待选择有效日期")
+            messagebox.showerror("请检查检索日期", str(error), parent=self.window)
+            return
         root, rules = self.source_var.get(), self._chosen_rules()
         calendar_period = CALENDAR_PERIOD if self.calendar_var.get() else ""
         self.summary_var.set("正在读取根目录文件并核对归档位置……")
         self.notice_var.set("预览只读取文件，不移动材料。")
         self._append_activity("开始预览：" + "、".join(RULE_LABELS[key] for key in rules))
-        self._start_job("scan", lambda progress: self._scan_fn(root, rules, calendar_period=calendar_period, on_progress=progress))
+        self._start_job("scan", lambda progress: self._scan_fn(
+            root, rules, calendar_period=calendar_period, start_date=start_date, on_progress=progress))
 
     def _start_job(self, operation: str, action: Callable) -> None:
         self._busy = operation
@@ -326,10 +426,10 @@ class DistributionWindow:
         self._selected = {item.name for item in self._items if item.status == "ready"}
         self._render_rows()
         self._update_summary()
-        self.notice_var.set("仅列出所选规则的材料。已勾选可分发文件；核对目标后点击“分发已选”。")
+        self.notice_var.set(self._date_scope(plan) + "。已勾选可分发文件；核对目标后点击“分发已选”。")
         self.progress.configure(maximum=1, value=1)
         self.progress_var.set("预览完成，等待点击分发")
-        self._append_activity(self.summary_var.get())
+        self._append_activity(self._date_scope(plan) + "；" + self.summary_var.get())
         self._update_controls()
 
     def _append_activity(self, message: str) -> None:
@@ -393,7 +493,7 @@ class DistributionWindow:
             self.tree.focus(first)
             self._show_details()
         else:
-            self._set_details("没有找到属于本项分发的文件。原始材料请放在所选目录的第一层。")
+            self._set_details("没有找到符合所选规则和日期范围的文件。可调整起始日期或取消日期筛选；原始材料请放在所选目录的第一层。")
 
     def _update_summary(self) -> None:
         counts = Counter(item.status for item in self._items)
@@ -403,6 +503,8 @@ class DistributionWindow:
                  f"重复或同名 {counts['duplicate'] + counts['collision']}", f"跳过 {counts['skip']}"]
         if self._consumed:
             parts[1] = f"本次已分发 {counts['moved']}"
+        if self._plan and self._plan.start_date:
+            parts.append(f"日期范围外 {self._plan.date_excluded_count}")
         self.summary_var.set("    ".join(parts))
 
     def _refresh_checks(self) -> None:
@@ -494,9 +596,11 @@ class DistributionWindow:
         selected = self.tree.selection()
         item = self._rows.get(selected[0]) if selected else None
         if item is not None:
+            created = (f"本机创建时间：{datetime.fromtimestamp(item.creation_time_ns / 1_000_000_000):%Y-%m-%d %H:%M:%S}\n"
+                       if item.creation_time_ns else "")
             self._set_details(
                 f"文件：{item.name}\n来源：{item.source}\n目标：{item.destination or '尚不能确定'}\n"
-                f"状态：{STATUS_LABELS.get(item.status, item.status)}    说明：{item.reason}"
+                f"{created}状态：{STATUS_LABELS.get(item.status, item.status)}    说明：{item.reason}"
             )
 
     def distribute(self) -> None:
@@ -507,7 +611,8 @@ class DistributionWindow:
             return
         if not messagebox.askokcancel(
             "确认分发", f"将移动已勾选的 {len(names)} 个文件。\n\n"
-            f"材料目录：{self._plan.root}\n分发规则：{'、'.join(RULE_LABELS[key] for key in selected_rules(self._plan.rules or self._plan.mode))}\n\n"
+            f"材料目录：{self._plan.root}\n分发规则：{'、'.join(RULE_LABELS[key] for key in selected_rules(self._plan.rules or self._plan.mode))}\n"
+            f"{self._date_scope(self._plan)}\n\n"
             "文件将移到预览目标，原位置不保留副本。确认后开始分发。", parent=self.window,
         ):
             return
@@ -583,7 +688,7 @@ class DistributionWindow:
         self.window.destroy()
 
 
-def run_gui(root: str, mode: str, *, calendar_period: str = CALENDAR_PERIOD) -> None:
+def run_gui(root: str, mode: str, *, calendar_period: str = CALENDAR_PERIOD, start_date: str = "") -> None:
     """Open the shared M20 local interface; it performs no automatic moves."""
     from .engine import execute, scan
 
@@ -595,5 +700,6 @@ def run_gui(root: str, mode: str, *, calendar_period: str = CALENDAR_PERIOD) -> 
         except (AttributeError, OSError):
             pass
     window = tk.Tk()
-    DistributionWindow(window, root, mode, scan_fn=scan, execute_fn=execute, calendar_period=calendar_period)
+    DistributionWindow(window, root, mode, scan_fn=scan, execute_fn=execute,
+                       calendar_period=calendar_period, start_date=start_date)
     window.mainloop()

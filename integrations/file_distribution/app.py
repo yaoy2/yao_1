@@ -23,17 +23,18 @@ def main(argv=None) -> int:
     parser.add_argument("--mode", choices=("monthly", "weekly", "invoice"), default="weekly")
     parser.add_argument("--preview-report", type=Path, help="仅预览并写入一个新的JSON报告；绝不分发")
     parser.add_argument("--no-calendar-context", action="store_true", help="缺少年份的月日或周次不套用本批校历")
+    parser.add_argument("--start-date", default="", help="按本机创建日期，从 YYYY-MM-DD（含）检索至本次预览时刻；不填则不限日期")
     args = parser.parse_args(argv)
     root = args.root or default_root()
     calendar_period = "" if args.no_calendar_context else CALENDAR_PERIOD
     try:
         if args.preview_report:
-            plan = scan(root, args.mode, calendar_period=calendar_period)
+            plan = scan(root, args.mode, calendar_period=calendar_period, start_date=args.start_date)
             with args.preview_report.open("x", encoding="utf-8") as output:
                 json.dump({"version": VERSION, "release_date": RELEASE_DATE, "entry": ENTRY_FILENAME,
                            **plan.to_dict()}, output, ensure_ascii=False, indent=2)
             return 0
-        run_gui(str(root), args.mode, calendar_period=calendar_period)
+        run_gui(str(root), args.mode, calendar_period=calendar_period, start_date=args.start_date)
         return 0
     except Exception as exc:
         if args.preview_report:
