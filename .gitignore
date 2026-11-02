@@ -36,6 +36,7 @@ CONVERSATION_LOG.md
 .local-backups/
 .local/newspaper/
 .local/whale_companion/
+.local/grok_qq_bridge/
 .sync-state/
 .pytest_cache/
 *.tmp
