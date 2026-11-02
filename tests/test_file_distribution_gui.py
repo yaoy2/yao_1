@@ -2,6 +2,9 @@
 
 from dataclasses import replace
 import gc
+import os
+from pathlib import Path
+from types import SimpleNamespace
 import threading
 import time
 import tkinter as tk
@@ -255,3 +258,80 @@ def test_disabling_calendar_context_invalidates_previous_plan(make_window):
     app.preview()
     wait_idle(app)
     assert scanner.call_args.kwargs['calendar_period'] == ''
+
+
+@pytest.mark.skipif(os.name != 'nt', reason='Windows Explorer selection')
+@pytest.mark.parametrize('status', ['ready', 'review', 'duplicate', 'moved'])
+def test_reveal_uses_source_until_moved_then_prefers_archive(make_window, monkeypatch, status):
+    app, _, executor, plan = make_window()
+    item = plan.items[0]
+    source, target = Path(item.source), Path(item.destination)
+    source.write_bytes(b'original or a newly received same-name file')
+    target.parent.mkdir(parents=True)
+    target.write_bytes(b'archived file')
+    item.status = status
+    app._show_plan(plan)
+    app._context_row = 'file-0'
+    launch = Mock()
+    monkeypatch.setattr('integrations.file_distribution.gui.subprocess.Popen', launch)
+    app.open_file_location()
+    launch.assert_called_once()
+    expected = target if status == 'moved' else source
+    assert f'/select,"{expected}"' in launch.call_args.args[0]
+    assert source.exists() and target.exists()
+    executor.assert_not_called()
+
+
+def test_original_folder_and_missing_file_open_folder_without_launching_file(make_window, monkeypatch):
+    app, _, executor, plan = make_window()
+    app._show_plan(plan)
+    app._context_row = 'file-0'
+    open_folder, launch = Mock(), Mock()
+    monkeypatch.setattr('integrations.file_distribution.gui.os.startfile', open_folder, raising=False)
+    monkeypatch.setattr('integrations.file_distribution.gui.subprocess.Popen', launch)
+    app.open_file_location(original_folder=True)
+    open_folder.assert_called_once_with(str(Path(plan.items[0].source).parent))
+    open_folder.reset_mock()
+    app.open_file_location()
+    open_folder.assert_called_once_with(str(Path(plan.items[0].source).parent))
+    assert '文件不在记录的位置' in app.notice_var.get()
+    launch.assert_not_called()
+    executor.assert_not_called()
+
+
+def test_right_click_targets_clicked_row_without_changing_distribution_checks(make_window, monkeypatch):
+    app, _, executor, plan = make_window()
+    app._show_plan(plan)
+    checked = app._selected.copy()
+    monkeypatch.setattr(app.tree, 'identify_row', lambda y: 'file-1')
+    monkeypatch.setattr(app.tree, 'identify_region', lambda x, y: 'cell')
+    popup = Mock()
+    monkeypatch.setattr(app.file_menu, 'tk_popup', popup)
+    event = SimpleNamespace(x=100, y=50, x_root=200, y_root=150)
+    app._show_file_menu(event)
+    popup.assert_called_once_with(200, 150)
+    assert app.tree.selection() == ('file-1',)
+    assert app._context_row == 'file-1' and app._selected == checked
+    popup.reset_mock()
+    monkeypatch.setattr(app.tree, 'identify_row', lambda y: '')
+    app._show_file_menu(event)
+    assert app._context_row == ''
+    popup.assert_not_called()
+    executor.assert_not_called()
+
+
+def test_reveal_during_execution_and_missing_folders_never_launch(make_window, monkeypatch, tmp_path):
+    app, _, _, plan = make_window()
+    plan.items[0].source = str(tmp_path / '不存在的目录/文件.pdf')
+    app._show_plan(plan)
+    app._context_row = 'file-0'
+    launch, error = Mock(), Mock()
+    monkeypatch.setattr('integrations.file_distribution.gui.subprocess.Popen', launch)
+    monkeypatch.setattr('integrations.file_distribution.gui.messagebox.showerror', error)
+    app._busy = 'execute'
+    app.open_file_location()
+    error.assert_not_called()
+    app._busy = ''
+    app.open_file_location()
+    error.assert_called_once()
+    launch.assert_not_called()

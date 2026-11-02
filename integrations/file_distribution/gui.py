@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import queue
+import subprocess
 import threading
 import tkinter as tk
 from collections import Counter
@@ -40,6 +41,7 @@ class DistributionWindow:
         self._plan: Plan | None = None
         self._items: list[PlanItem] = []
         self._rows: dict[str, PlanItem] = {}
+        self._context_row = ""
         self._selected: set[str] = set()
         self._consumed = False
         self._busy = ""
@@ -166,6 +168,10 @@ class DistributionWindow:
         self.tree.bind("<Button-1>", self._click_row)
         self.tree.bind("<space>", self._space_row)
         self.tree.bind("<<TreeviewSelect>>", self._show_details)
+        self.file_menu = tk.Menu(self.window, tearoff=False, font=("Microsoft YaHei UI", 10))
+        self.file_menu.add_command(label="打开文件所在位置", command=self.open_file_location)
+        self.file_menu.add_command(label="打开原始文件夹", command=lambda: self.open_file_location(original_folder=True))
+        self.tree.bind("<Button-3>", self._show_file_menu)
 
         self.tabs = ttk.Notebook(frame)
         self.tabs.grid(row=6, column=0, sticky="ew", pady=(8, 0))
@@ -214,6 +220,8 @@ class DistributionWindow:
         self.log_button.configure(state="normal" if self._log_path and idle else "disabled")
 
     def _invalidate(self) -> None:
+        self.file_menu.unpost()
+        self._context_row = ""
         self._plan = None
         self._items = []
         self._rows = {}
@@ -419,6 +427,52 @@ class DistributionWindow:
     def _space_row(self, _event) -> str:
         self._toggle(self.tree.focus())
         return "break"
+
+    def _show_file_menu(self, event) -> str:
+        self.file_menu.unpost()
+        self._context_row = ""
+        if self._busy or self._closed:
+            return "break"
+        row_id = self.tree.identify_row(event.y)
+        if row_id not in self._rows or self.tree.identify_region(event.x, event.y) != "cell":
+            return "break"
+        self._context_row = row_id
+        self.tree.selection_set(row_id)
+        self.tree.focus(row_id)
+        self._show_details()
+        try:
+            self.file_menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            self.file_menu.grab_release()
+        return "break"
+
+    def open_file_location(self, *, original_folder: bool = False) -> None:
+        item = self._rows.get(self._context_row)
+        if self._busy or self._closed or item is None:
+            return
+        # A new file with the same name may already be back in the source folder.
+        # Completed rows must still reveal the archived file from this run.
+        path = Path(item.destination if item.status == "moved" and item.destination else item.source)
+        if original_folder:
+            path = Path(item.source).parent
+        try:
+            select_file = not original_folder and path.is_file()
+            folder = path.parent if not original_folder else path
+            if not folder.is_dir():
+                raise FileNotFoundError(f"文件夹已不存在：{folder}\n请重新预览核对文件位置。")
+            if select_file and os.name == "nt":
+                explorer = Path(os.environ.get("SystemRoot", r"C:\Windows")) / "explorer.exe"
+                # No command shell; quote the complete filename for Explorer's /select syntax.
+                command = subprocess.list2cmdline([str(explorer)]) + f' /select,"{path}"'
+                subprocess.Popen(command)
+            elif hasattr(os, "startfile"):
+                os.startfile(str(folder))
+            else:
+                messagebox.showinfo("文件所在位置", str(folder), parent=self.window)
+            if not original_folder and not select_file:
+                self.notice_var.set("文件不在记录的位置，已打开所在文件夹；请重新预览核对。")
+        except OSError as error:
+            messagebox.showerror("无法打开文件位置", str(error), parent=self.window)
 
     def select_all(self) -> None:
         if not self._busy and not self._consumed and self._plan is not None:
