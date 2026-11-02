@@ -74,7 +74,7 @@ def test_date_filter_includes_start_and_end_excludes_old_and_future_before_readi
     files = []
     for label, created in [('早于范围', start - timedelta(microseconds=1)), ('起始零点', start),
                            ('截止时刻', cutoff), ('晚于截止', cutoff + timedelta(microseconds=1))]:
-        path = write_minutes(tmp_path, label)
+        path = write_minutes(tmp_path, label, week=len(files) + 1)
         set_creation_time(path, created)
         # Modified time intentionally contradicts the creation-time selection.
         os.utime(path, (start.timestamp() - 86400, start.timestamp() - 86400))

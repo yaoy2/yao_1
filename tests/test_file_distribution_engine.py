@@ -24,9 +24,9 @@ def root(tmp_path):
     return directory
 
 
-def write_minutes(root, label="甲", *, name=None, text=None):
-    path = root / (name or f"医学信息工程系2026-2027-1第7周会议纪要-{label}.docx")
-    paragraphs = text or ["医学信息工程系会议纪要", "2026-2027学年第一学期第7周",
+def write_minutes(root, label="甲", *, name=None, text=None, week=7):
+    path = root / (name or f"医学信息工程系2026-2027-1第{week}周会议纪要-{label}.docx")
+    paragraphs = text or ["医学信息工程系会议纪要", f"2026-2027学年第一学期第{week}周",
                           "一、工作安排", f"完成样例事项{label}，记录后续安排。"]
     body = "".join(f"<w:p><w:r><w:t>{escape(value)}</w:t></w:r></w:p>" for value in paragraphs)
     with ZipFile(path, "w", ZIP_DEFLATED) as archive:
@@ -117,7 +117,7 @@ def test_preview_makes_no_writes_and_never_recurses_into_subfolders(root):
 
 
 @pytest.mark.parametrize("mode", ["monthly", "weekly"])
-def test_real_move_preserves_filename_bytes_and_unrelated_material(root, mode):
+def test_real_move_uses_expected_filename_and_preserves_bytes_and_unrelated_material(root, mode):
     source = write_monthly(root) if mode == "monthly" else write_minutes(root)
     other = root / "无关材料.bin"
     other.write_bytes(b"do not modify")
@@ -133,7 +133,7 @@ def test_real_move_preserves_filename_bytes_and_unrelated_material(root, mode):
     assert result.moved == 1
     assert result_item(result, source.name).status == "moved"
     assert not source.exists()
-    assert target.name == source.name
+    assert target.name == (source.name if mode == 'monthly' else '医学信息工程系-会议纪要-第7周.docx')
     assert target.read_bytes() == original
     assert digest(target) == item.sha256
     assert (inventory(previous), digest(other), other.stat().st_mtime_ns) == unrelated_before
@@ -142,7 +142,7 @@ def test_real_move_preserves_filename_bytes_and_unrelated_material(root, mode):
 
 def test_execute_only_moves_selected_ready_item(root):
     first = write_minutes(root, "甲")
-    second = write_minutes(root, "乙")
+    second = write_minutes(root, "乙", week=8)
     unresolved = write_minutes(root, name="医学影像系考勤记录.docx", text=["医学影像系考勤记录", "第七周"])
     plan, _ = ready_plan(root)
     assert next(item for item in plan.items if item.name == unresolved.name).status == "review"
@@ -189,7 +189,7 @@ def test_rule_selection_moves_only_requested_categories(root, rules, expected):
 
 
 def test_progress_reports_changed_files_and_survives_display_errors(root):
-    first, second = write_minutes(root, '甲'), write_minutes(root, '乙')
+    first, second = write_minutes(root, '甲'), write_minutes(root, '乙', week=8)
     plan, _ = ready_plan(root)
     first.write_bytes(b'changed after preview')
     events = []

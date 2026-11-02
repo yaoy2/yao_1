@@ -135,6 +135,12 @@ def _notify(callback, stage: str, completed: int, total: int, message: str, item
 
 
 def _target(root: Path, decision: Decision, filename: str) -> Path:
+    if decision.kind in {"会议纪要", "考勤记录"} and "党政联席会" not in filename:
+        if not decision.target_name:
+            raise ValueError("无法确定统一文件名，请核对单位和周次")
+        filename = decision.target_name
+    if (not filename or Path(filename).name != filename or re.search(r'[<>:"/\\|?*\x00-\x1f]', filename)):
+        raise ValueError("归档文件名无效")
     relative = Path(decision.relative_dir)
     if not decision.relative_dir or relative.is_absolute() or ".." in relative.parts:
         raise ValueError("归档目标不正确")
@@ -206,6 +212,7 @@ def scan(root: str | Path, mode: str | Iterable[str], *,
                     continue
                 item.status, item.kind, item.period = decision.status, decision.kind, decision.period
                 item.department, item.reason = decision.department, decision.reason
+                item.week_label = decision.week_label
                 item.size, item.mtime_ns = before.st_size, before.st_mtime_ns
                 if decision.status == "ready":
                     item.sha256 = _hash_stream(stream)
@@ -216,6 +223,8 @@ def scan(root: str | Path, mode: str | Iterable[str], *,
                         raise ValueError("扫描时文件创建时间发生变化，请重新预览")
                     target = _target(root, decision, path.name)
                     item.destination = str(target)
+                    if target.name != path.name:
+                        item.reason += f"；分发后统一命名为：{target.name}"
                     status, reason = _duplicate(target, item.sha256, item.size)
                     key = (str(target.parent).casefold(), item.sha256)
                     if not status and key in planned_hashes:
@@ -229,6 +238,16 @@ def scan(root: str | Path, mode: str | Iterable[str], *,
             item.reason = f"无法安全预览：{exc}"
         plan.items.append(item)
         _notify(on_progress, "scan", index, len(paths), f"已核对：{path.name}", item)
+    destinations: dict[str, list[PlanItem]] = {}
+    for item in plan.items:
+        if item.destination and item.sha256 and item.status in {"ready", "duplicate"}:
+            destinations.setdefault(item.destination.casefold(), []).append(item)
+    for group in destinations.values():
+        if len({item.sha256 for item in group}) > 1:
+            for item in group:
+                item.status = "collision"
+                item.reason = f"本批不同内容将同名为：{Path(item.destination).name}；请核对版本，源文件保留原处"
+                _notify(on_progress, "scan", len(paths), len(paths), item.reason, item)
     _notify(on_progress, "scan", len(paths), len(paths), "预览完成")
     return plan
 
@@ -386,7 +405,9 @@ def execute(plan: Plan, selected_names: Iterable[str], *,
                         moved = True
                         if _hash_file(target) != item.sha256:
                             raise ValueError("已移至预览目标，但内容核验未通过，请根据记录检查目标文件")
-                        item.status, item.reason = "moved", "已分发，内容校验一致"
+                        item.status = "moved"
+                        item.reason = (f"已分发并统一命名为：{target.name}，内容校验一致" if target.name != item.name
+                                       else "已分发，原文件名保留，内容校验一致")
             except Exception as exc:
                 item.status = "error"
                 item.reason = ("文件已移动，请检查记录：" if moved else "未移动：") + str(exc)

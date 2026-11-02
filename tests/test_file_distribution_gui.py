@@ -403,3 +403,19 @@ def test_calendar_picker_can_choose_day_and_clear_previous_preview(make_window):
     app.preview()
     wait_idle(app)
     assert scanner.call_args.kwargs['start_date'] == app.start_date_var.get()
+
+
+def test_preview_shows_original_and_final_names_before_distribution(make_window, monkeypatch):
+    app, _, executor, plan = make_window()
+    item = plan.items[0]
+    item.name = '医学信息工程系第七周会议纪要.docx'
+    item.destination = str(Path(item.source).parent / '归档' / '医学信息工程系-会议纪要-第7周.docx')
+    app._show_plan(plan)
+    values = app.tree.item('file-0', 'values')
+    assert values[2] == item.name and values[3] == Path(item.destination).name
+    assert app.tree.heading('new_name')['text'] == '分发后文件名'
+    confirm = Mock(return_value=False)
+    monkeypatch.setattr('integrations.file_distribution.gui.messagebox.askokcancel', confirm)
+    app.distribute()
+    assert '党政联席会纪要保留原名' in confirm.call_args.args[1]
+    executor.assert_not_called()

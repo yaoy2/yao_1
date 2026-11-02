@@ -164,13 +164,13 @@ class DistributionWindow:
         table.columnconfigure(0, weight=1)
         table.rowconfigure(0, weight=1)
         self.tree = ttk.Treeview(
-            table, columns=("select", "status", "name", "target", "reason"),
+            table, columns=("select", "status", "name", "new_name", "target", "reason"),
             show="headings", selectmode="browse", height=13,
         )
         for key, label, size, stretch in (
             ("select", "选择", 48, False), ("status", "状态", 90, False),
-            ("name", "文件名", 350, True), ("target", "目标文件夹", 380, True),
-            ("reason", "说明", 270, True),
+            ("name", "原文件名", 280, True), ("new_name", "分发后文件名", 240, True),
+            ("target", "目标文件夹", 280, True), ("reason", "说明", 240, True),
         ):
             self.tree.heading(key, text=label)
             self.tree.column(key, width=size, minwidth=45 if key == "select" else 75,
@@ -478,7 +478,8 @@ class DistributionWindow:
         label = STATUS_LABELS.get(item.status, item.status)
         if self._consumed and item.status == "ready":
             label = "未处理"
-        return (checked if enabled else "", label, item.name, self._target_label(item), item.reason)
+        new_name = Path(item.destination).name if item.destination else "—"
+        return (checked if enabled else "", label, item.name, new_name, self._target_label(item), item.reason)
 
     def _render_rows(self) -> None:
         self.tree.delete(*self.tree.get_children())
@@ -613,6 +614,7 @@ class DistributionWindow:
             "确认分发", f"将移动已勾选的 {len(names)} 个文件。\n\n"
             f"材料目录：{self._plan.root}\n分发规则：{'、'.join(RULE_LABELS[key] for key in selected_rules(self._plan.rules or self._plan.mode))}\n"
             f"{self._date_scope(self._plan)}\n\n"
+            "系部纪要、考勤按预览名称统一命名；党政联席会纪要保留原名。\n"
             "文件将移到预览目标，原位置不保留副本。确认后开始分发。", parent=self.window,
         ):
             return

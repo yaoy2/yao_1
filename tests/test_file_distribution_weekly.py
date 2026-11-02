@@ -39,7 +39,7 @@ class WeeklyClassificationTests(unittest.TestCase):
     def test_minutes_title_variants(self):
         for title in ("会议纪要", "系部例会", "周工作例会", "第1周例会", "例会纪要"):
             with self.subTest(title=title):
-                result = classify_weekly(f"健康体育部2026-2027-1{title}.doc")
+                result = classify_weekly(f"健康体育部2026-2027-1{title}.doc", "会议时间：2026年9月16日")
                 self.assertEqual((result.status, result.kind), ("ready", "会议纪要"))
 
     def test_attendance_and_cross_week_labels(self):
@@ -50,10 +50,11 @@ class WeeklyClassificationTests(unittest.TestCase):
                 self.assertTrue(result.relative_dir.endswith("考勤记录/健康服务与管理系"))
                 self.assertNotIn("未识别周次", result.reason)
 
-    def test_no_week_does_not_block_known_term_and_department(self):
+    def test_no_week_requires_review_for_standard_filename(self):
         result = classify_weekly("医学信息工程系2026-2027-1会议纪要.pdf")
-        self.assertEqual(result.status, "ready")
-        self.assertIn("未识别周次", result.reason)
+        self.assertEqual(result.status, "review")
+        self.assertIn("周次", result.reason)
+        self.assertEqual(result.target_name, "")
 
     def test_explicit_scanned_pdf_name_needs_no_body(self):
         result = classify_weekly("医学影像系26-27-1第2周考勤情况.pdf", "")
@@ -74,13 +75,13 @@ class WeeklyClassificationTests(unittest.TestCase):
         self.assertEqual((result.status, result.period), ("ready", "2026-2027-1"))
 
     def test_unlabelled_narrative_does_not_become_metadata(self):
-        text = "医学信息工程系会议纪要\n2026-2027学年第一学期\n计划与医学影像系开展交流，筹备2026-2027学年第三学期工作。"
+        text = "医学信息工程系第一周会议纪要\n2026-2027学年第一学期\n计划与医学影像系开展交流，筹备2026-2027学年第三学期工作。"
         self.assertEqual(classify_weekly("医学信息工程系会议纪要.docx", text).status, "ready")
 
     def test_meeting_location_and_participants_do_not_change_department(self):
         for separator in ("：", " ", ""):
             with self.subTest(separator=separator):
-                text = f"医学信息工程系2026-2027学年第一学期会议纪要\n会议地点{separator}医学影像系会议室\n参会人员{separator}医学影像系教师"
+                text = f"医学信息工程系2026-2027学年第一学期第1周会议纪要\n会议地点{separator}医学影像系会议室\n参会人员{separator}医学影像系教师"
                 self.assertEqual(classify_weekly("医学信息工程系会议纪要.docx", text).status, "ready")
 
     def test_plain_body_sentence_does_not_supply_missing_semester(self):
@@ -91,7 +92,7 @@ class WeeklyClassificationTests(unittest.TestCase):
         self.assertIn("缺少", result.reason)
 
     def test_discussion_subject_is_not_a_period_or_department_header(self):
-        text = "医学信息工程系会议纪要\n2026-2027学年第一学期\n会议主题：医学影像系2026-2027学年第三学期教学活动"
+        text = "医学信息工程系第一周会议纪要\n2026-2027学年第一学期\n会议主题：医学影像系2026-2027学年第三学期教学活动"
         result = classify_weekly("医学信息工程系会议纪要.docx", text)
         self.assertEqual((result.status, result.period), ("ready", "2026-2027-1"))
 
@@ -145,7 +146,7 @@ class WeeklyClassificationTests(unittest.TestCase):
     def test_short_year_pair_requires_academic_label_or_complete_numeric_period(self):
         for title in ("26-27学年第一学期", "26-27-1"):
             with self.subTest(title=title):
-                result = classify_weekly(f"医学影像系{title}会议纪要.pdf")
+                result = classify_weekly(f"医学影像系{title}第1周会议纪要.pdf")
                 self.assertEqual((result.status, result.period), ("ready", "2026-2027-1"))
         self.assertEqual(classify_weekly("医学影像系26-27第一学期会议纪要.pdf").status, "review")
 

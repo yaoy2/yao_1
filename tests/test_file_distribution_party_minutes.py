@@ -18,6 +18,7 @@ def test_standard_college_pdf_routes_to_existing_joint_meeting_folder(name):
     result = classify_weekly(name, HEADING)
     assert (result.status, result.kind, result.period) == ('ready', '学院党政联席会纪要', '2026-2027-1')
     assert result.relative_dir == '02_学期工作/2026-2027-1/03_会议_考勤/党政联席会_系部例会/党政联席会'
+    assert result.target_name == ''
 
 
 @pytest.mark.parametrize('name', [
@@ -54,6 +55,7 @@ def test_actual_pdf_move_obeys_minutes_selection_and_preserves_other_files(tmp_p
     assert len(plan.items) == 1 and plan.items[0].status == 'ready'
     result = engine.execute(plan, [source.name])
     assert result.moved == 1
+    assert Path(result.items[0].destination).name == source.name
     assert Path(result.items[0].destination).read_bytes() == original
     assert word_draft.read_bytes() == b'word draft not selected by this rule'
     assert not source.exists()

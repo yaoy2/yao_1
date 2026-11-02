@@ -4,7 +4,7 @@ import re
 import unicodedata
 
 from .models import Decision
-from .school_calendar import CALENDAR_PERIOD, WEEK_PATTERN, is_date_heading, resolve_calendar
+from .school_calendar import CALENDAR_PERIOD, WEEK_PATTERN, is_date_heading, naming_week_label, resolve_calendar
 
 
 _DEPARTMENTS = {
@@ -175,7 +175,8 @@ def _period(evidence: list[str], calendar_period: str) -> tuple[str, str, str]:
 
 def classify_weekly(name: str, text: str = "", *, calendar_period: str = CALENDAR_PERIOD) -> Decision:
     """Route department records and the explicitly approved college joint-meeting PDFs."""
-    filename = _normalize(re.split(r"[\\/]", name)[-1])
+    original_filename = re.split(r"[\\/]", name)[-1]
+    filename = _normalize(original_filename)
     if filename.startswith("~$"):
         return Decision("skip", reason="Office 临时文件")
     extension = "." + filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
@@ -216,6 +217,10 @@ def classify_weekly(name: str, text: str = "", *, calendar_period: str = CALENDA
     period, calendar_note, error = _period(evidence, calendar_period)
     if error:
         return Decision("review", kind=kind, department=department, reason=error)
+    week_label = naming_week_label(evidence, period)
+    if not week_label:
+        return Decision("review", kind=kind, period=period, department=department,
+                        reason="无法确定统一命名所需的周次或周次信息冲突，请核对；不猜测周次")
 
     group = "党政联席会_系部例会" if kind == "会议纪要" else "考勤记录"
     relative_dir = f"02_学期工作/{period}/03_会议_考勤/{group}/{department}"
@@ -225,7 +230,11 @@ def classify_weekly(name: str, text: str = "", *, calendar_period: str = CALENDA
         reason = "部门和材料类型明确"
     if calendar_note:
         reason += "；" + calendar_note
-    return Decision("ready", kind, period, department, relative_dir, reason)
+    original_extension = "." + original_filename.rsplit(".", 1)[-1]
+    target_name = (f"{department}-会议纪要-{week_label}{original_extension}" if kind == "会议纪要"
+                   else f"考勤表-{department}-{week_label}{original_extension}")
+    return Decision("ready", kind, period, department, relative_dir, reason,
+                    target_name=target_name, week_label=week_label)
 
 
 def _classify_party(evidence: list[str], headings: list[str], calendar_period: str) -> Decision:

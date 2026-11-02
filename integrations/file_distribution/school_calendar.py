@@ -80,7 +80,7 @@ def _date_evidence(evidence: list[str]) -> tuple[list[date], list[tuple[int, int
     return full, short, ""
 
 
-def _week_evidence(evidence: list[str]) -> tuple[list[set[str]], str]:
+def _week_evidence(evidence: list[str], *, max_week: int = 16) -> tuple[list[set[str]], str]:
     groups = []
     for line in evidence:
         value = _ACADEMIC_PERIOD.sub(" ", line)
@@ -91,11 +91,43 @@ def _week_evidence(evidence: list[str]) -> tuple[list[set[str]], str]:
                 continue
             start = _number(match.group(1))
             end = _number(match.group(3)) if match.group(3) else start
-            if not (1 <= start <= end <= 16):
-                return [], f"校历仅编号第1—16周，之后为考试周、总结周；请核对“{match.group()}”"
+            if not (1 <= start <= end <= max_week):
+                note = "校历仅编号第1—16周，之后为考试周、总结周" if max_week == 16 else "材料周次无效"
+                return [], f"{note}；请核对“{match.group()}”"
             numbers = (start, end) if match.group(2) == "、" else range(start, end + 1)
             groups.append({f"第{number}周" for number in numbers})
     return groups, ""
+
+
+def naming_week_label(evidence: list[str], period: str) -> str:
+    """Called after calendar validation; retain the full explicit multi-week range."""
+    groups, error = _week_evidence(evidence, max_week=16 if period == CALENDAR_PERIOD else 60)
+    if error or len({frozenset(group) for group in groups}) > 1:
+        return ""
+    weeks = set().union(*groups) if groups else set()
+    if not weeks and period == CALENDAR_PERIOD:
+        full, short, error = _date_evidence(evidence)
+        if error:
+            return ""
+        for month, day in short:
+            for year in (2026, 2027):
+                try:
+                    value = date(year, month, day)
+                except ValueError:
+                    continue
+                if TERM_START <= value <= TERM_END:
+                    full.append(value)
+        weeks = {week_for_date(value) for value in full}
+    if not weeks or "" in weeks:
+        return ""
+    if len(weeks) == 1:
+        return next(iter(weeks))
+    if not all(re.fullmatch(r"第\d+周", label) for label in weeks):
+        return ""
+    numbers = sorted(int(label[1:-1]) for label in weeks)
+    value = (f"{numbers[0]}—{numbers[-1]}" if numbers == list(range(numbers[0], numbers[-1] + 1))
+             else "、".join(map(str, numbers)))
+    return f"第{value}周"
 
 
 def resolve_calendar(evidence: list[str], explicit_period: str, *,

@@ -28,6 +28,8 @@ class Decision:
     department: str = ""
     relative_dir: str = ""
     reason: str = ""
+    target_name: str = ""
+    week_label: str = ""
 
 
 @dataclass
@@ -44,6 +46,7 @@ class PlanItem:
     size: int = 0
     mtime_ns: int = 0
     creation_time_ns: int = 0
+    week_label: str = ""
 
 
 @dataclass
