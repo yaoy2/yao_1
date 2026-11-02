@@ -43,7 +43,7 @@ class WeeklyClassificationTests(unittest.TestCase):
                 self.assertEqual((result.status, result.kind), ("ready", "会议纪要"))
 
     def test_attendance_and_cross_week_labels(self):
-        for week in ("准备周", "第一至二周", "第1周至第2周", "第1-2周", "第一、二周"):
+        for week in ("第一至二周", "第1周至第2周", "第1-2周", "第一、二周"):
             with self.subTest(week=week):
                 result = classify_weekly(f"健服系26-27-1{week}考勤表.xlsx")
                 self.assertEqual((result.status, result.kind), ("ready", "考勤记录"))
@@ -114,12 +114,13 @@ class WeeklyClassificationTests(unittest.TestCase):
         self.assertEqual(result.status, "review")
         self.assertIn("多个部门", result.reason)
 
-    def test_calendar_date_never_infers_semester(self):
-        for filename in ("医学影像系会议纪要20260916.pdf", "医学影像系2026-11-1会议纪要.pdf", "医学影像系第一周会议纪要.pdf"):
+    def test_calendar_date_and_week_infer_approved_semester(self):
+        for filename in ("医学影像系会议纪要20260916.pdf", "医学影像系第一周会议纪要.pdf"):
             with self.subTest(filename=filename):
                 result = classify_weekly(filename, "会议时间：2026年9月16日")
-                self.assertEqual(result.status, "review")
-                self.assertEqual(result.relative_dir, "")
+                self.assertEqual((result.status, result.period), ("ready", "2026-2027-1"))
+        conflict = classify_weekly("医学影像系2026-11-1会议纪要.pdf", "会议时间：2026年9月16日")
+        self.assertEqual(conflict.status, "review")
 
     def test_month_day_suffix_cannot_supply_a_short_academic_year(self):
         for suffix in ("10-11", "10_11"):

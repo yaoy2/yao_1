@@ -54,6 +54,7 @@ class Plan:
     scanned_count: int = 0
     items: list[PlanItem] = field(default_factory=list)
     rules: list[str] = field(default_factory=list)
+    calendar_period: str = ""
 
     def to_dict(self) -> dict:
         return asdict(self)

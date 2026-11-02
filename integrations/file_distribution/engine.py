@@ -17,6 +17,7 @@ from .invoices import INVOICE_HINT, classify_invoice
 from .monthly import MONTHLY_HINT, classify_monthly
 from .readers import read_document_text
 from .rules import RELEASE_DATE, VERSION
+from .school_calendar import CALENDAR_PERIOD
 from .weekly import classify_weekly
 
 
@@ -92,7 +93,7 @@ def _hash_file(path: Path) -> str:
         return _hash_stream(stream)
 
 
-def _classify(path: Path, root: Path, mode: str | Iterable[str]) -> Decision:
+def _classify(path: Path, root: Path, mode: str | Iterable[str], *, calendar_period: str = CALENDAR_PERIOD) -> Decision:
     rules = selected_rules(mode)
     if INVOICE_HINT.search(path.name):
         return classify_invoice(path, root) if "invoice" in rules else Decision("ignored")
@@ -100,16 +101,18 @@ def _classify(path: Path, root: Path, mode: str | Iterable[str]) -> Decision:
         return classify_monthly(path, root)
     if not _matches_rules(path.name, rules):
         return Decision("ignored")
-    initial = classify_weekly(path.name)
+    initial = classify_weekly(path.name, calendar_period=calendar_period)
     if initial.status in {"skip", "ignored"}:
         return initial
     text, limitation = read_document_text(path)
-    decision = classify_weekly(path.name, text)
-    if (decision.kind == "会议纪要" and "minutes" not in rules
+    decision = classify_weekly(path.name, text, calendar_period=calendar_period)
+    if (decision.kind in {"会议纪要", "学院党政联席会纪要"} and "minutes" not in rules
             or decision.kind == "考勤记录" and "attendance" not in rules):
         return Decision("ignored")
     if limitation and decision.status == "review":
         decision = replace(decision, reason=f"{decision.reason}；{limitation}")
+    elif limitation and not text.strip() and decision.status == "ready":
+        decision = replace(decision, reason=f"{decision.reason}；正文未提取，依据文件名及校历核对")
     return decision
 
 
@@ -165,12 +168,15 @@ def _duplicate(target: Path, digest: str, size: int) -> tuple[str, str]:
 
 
 def scan(root: str | Path, mode: str | Iterable[str], *,
+         calendar_period: str = CALENDAR_PERIOD,
          on_progress: Callable[[ProgressEvent], None] | None = None) -> Plan:
     """Preview leaves source/archive directories unchanged; temporary reading copies are discarded."""
     rules = selected_rules(mode)
+    if calendar_period not in ("", CALENDAR_PERIOD):
+        raise ValueError("尚未配置该学期校历")
     root = _root(root)
     plan = Plan(str(root), mode if isinstance(mode, str) else "selected", _now(), uuid.uuid4().hex,
-                rules=list(rules))
+                rules=list(rules), calendar_period=calendar_period)
     planned_hashes = {}
     paths = sorted((path for path in root.iterdir() if path.is_file() or path.is_symlink()),
                    key=lambda p: p.name.casefold())
@@ -184,7 +190,7 @@ def scan(root: str | Path, mode: str | Iterable[str], *,
             _normal_path(path, root=root)
             with _read_locked(path) as stream:
                 before = os.fstat(stream.fileno())
-                decision = _classify(path, root, rules)
+                decision = _classify(path, root, rules, calendar_period=calendar_period)
                 if decision.status == "ignored":
                     continue
                 item.status, item.kind, item.period = decision.status, decision.kind, decision.period
@@ -292,6 +298,8 @@ def execute(plan: Plan, selected_names: Iterable[str], *,
     """Only selected ready items from this in-memory preview can be moved."""
     root = _root(plan.root)
     rules = selected_rules(plan.rules or plan.mode)
+    if plan.calendar_period not in ("", CALENDAR_PERIOD):
+        raise ValueError("预览的校历无效，请重新预览")
     selected = set(selected_names)
     if not selected:
         raise ValueError("请先勾选可分发文件")
@@ -305,7 +313,8 @@ def execute(plan: Plan, selected_names: Iterable[str], *,
     log_path = log_dir / f"{datetime.now():%Y%m%d_%H%M%S}_{uuid.uuid4().hex[:12]}.jsonl"
     with _run_lock(lock_path), log_path.open("x", encoding="utf-8", newline="\n") as log:
         _write_record(log, "run", version=VERSION, release_date=RELEASE_DATE,
-                      mode=plan.mode, rules=list(rules), root=str(root), plan_id=plan.plan_id, preview_at=plan.created_at)
+                      mode=plan.mode, rules=list(rules), calendar_period=plan.calendar_period,
+                      root=str(root), plan_id=plan.plan_id, preview_at=plan.created_at)
         completed = 0
         for item in items:
             if item.name not in selected:
@@ -325,7 +334,7 @@ def execute(plan: Plan, selected_names: Iterable[str], *,
                         item.status, item.reason = "changed", "预览后文件已变化，请重新预览；本次未移动"
                         _write_record(log, "result", file=asdict(item))
                         continue
-                    decision = _classify(source, root, rules)
+                    decision = _classify(source, root, rules, calendar_period=plan.calendar_period)
                     if decision.status != "ready":
                         item.status, item.reason = "review", "执行前重新核对未通过：" + decision.reason
                         _write_record(log, "result", file=asdict(item))

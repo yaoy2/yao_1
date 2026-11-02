@@ -72,7 +72,7 @@ def test_preview_never_executes_and_only_ready_rows_can_be_selected(make_window)
     app, scanner, executor, _ = make_window()
     app.preview()
     wait_idle(app)
-    scanner.assert_called_once_with(app.source_var.get(), ("monthly",), on_progress=ANY)
+    scanner.assert_called_once_with(app.source_var.get(), ("monthly",), calendar_period="2026-2027-1", on_progress=ANY)
     executor.assert_not_called()
     assert app._selected == {"月报甲.xlsx", "月报乙.xlsx"}
     app._toggle("file-2")
@@ -178,7 +178,7 @@ def test_busy_preview_disables_context_changes_and_never_moves_files(make_window
     app, _, executor, _ = make_window(scan_fn=blocked_scan)
     try:
         app.preview()
-        for control in (app.browse_button, app.preview_button, *app.rule_buttons, app.execute_button):
+        for control in (app.browse_button, app.preview_button, app.calendar_button, *app.rule_buttons, app.execute_button):
             assert "disabled" in control.state()
         app.distribute()
         executor.assert_not_called()
@@ -201,7 +201,7 @@ def test_rule_changes_clear_old_selection_and_scan_only_checked_rules(make_windo
     executor.assert_not_called()
     app.preview()
     wait_idle(app)
-    scanner.assert_called_with(app.source_var.get(), ('minutes', 'attendance'), on_progress=ANY)
+    scanner.assert_called_with(app.source_var.get(), ('minutes', 'attendance'), calendar_period="2026-2027-1", on_progress=ANY)
     for value in app.rule_vars.values():
         value.set(False)
     app.change_rules()
@@ -241,3 +241,17 @@ def test_live_progress_is_visible_before_execution_returns(make_window, monkeypa
         release.set()
     wait_idle(app)
     assert '已移动 2' in app.progress_var.get()
+
+
+def test_disabling_calendar_context_invalidates_previous_plan(make_window):
+    app, scanner, executor, _ = make_window()
+    app.preview()
+    wait_idle(app)
+    app.calendar_var.set(False)
+    app.change_rules()
+    assert app._plan is None and not app._selected
+    app.distribute()
+    executor.assert_not_called()
+    app.preview()
+    wait_idle(app)
+    assert scanner.call_args.kwargs['calendar_period'] == ''

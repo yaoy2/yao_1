@@ -14,6 +14,7 @@ from typing import Callable, Iterable
 
 from .models import ExecutionResult, Plan, PlanItem, ProgressEvent, RULE_LABELS, STATUS_LABELS, selected_rules
 from .rules import RELEASE_DATE, VERSION
+from .school_calendar import CALENDAR_LABEL, CALENDAR_PERIOD
 
 
 class DistributionWindow:
@@ -28,8 +29,11 @@ class DistributionWindow:
         scan_fn: Callable[..., Plan],
         execute_fn: Callable[..., ExecutionResult],
         auto_preview: bool = True,
+        calendar_period: str = CALENDAR_PERIOD,
     ) -> None:
         initial_rules = selected_rules(mode)
+        if calendar_period not in ("", CALENDAR_PERIOD):
+            raise ValueError("尚未配置该学期校历")
         self.window = window
         self._scan_fn = scan_fn
         self._execute_fn = execute_fn
@@ -46,6 +50,7 @@ class DistributionWindow:
         self._log_path = ""
         self.source_var = tk.StringVar(window, str(Path(root).absolute()))
         self.rule_vars = {key: tk.BooleanVar(window, key in initial_rules) for key in RULE_LABELS}
+        self.calendar_var = tk.BooleanVar(window, bool(calendar_period))
         self.summary_var = tk.StringVar(window, "正在准备预览。")
         self.notice_var = tk.StringVar(window, "打开窗口只预览；点击“分发已选”后才移动文件。")
         self.log_var = tk.StringVar(window, "")
@@ -95,6 +100,12 @@ class DistributionWindow:
         self.source_entry.grid(row=0, column=1, sticky="ew")
         self.browse_button = ttk.Button(source, text="选择文件夹", command=self.choose_root)
         self.browse_button.grid(row=0, column=2, padx=(8, 0))
+        calendar_row = ttk.Frame(source)
+        calendar_row.grid(row=1, column=0, columnspan=3, sticky="w", pady=(7, 0))
+        ttk.Label(calendar_row, text=f"本批校历：{CALENDAR_LABEL}", style="Muted.TLabel").pack(side="left")
+        self.calendar_button = ttk.Checkbutton(calendar_row, text="仅有周次或月日时，按本批校历补全学期",
+                                               variable=self.calendar_var, command=self.change_rules)
+        self.calendar_button.pack(side="left", padx=(15, 0))
 
         controls = ttk.Frame(frame)
         controls.grid(row=2, column=0, sticky="ew", pady=(0, 8))
@@ -188,7 +199,7 @@ class DistributionWindow:
 
     def _update_controls(self) -> None:
         idle = not self._busy
-        for widget in [self.browse_button, *self.rule_buttons]:
+        for widget in [self.browse_button, self.calendar_button, *self.rule_buttons]:
             widget.configure(state="normal" if idle else "disabled")
         self.preview_button.configure(state="normal" if idle and self._chosen_rules() else "disabled")
         selectable = idle and self._plan is not None and not self._consumed
@@ -241,10 +252,11 @@ class DistributionWindow:
             return
         self._invalidate()
         root, rules = self.source_var.get(), self._chosen_rules()
+        calendar_period = CALENDAR_PERIOD if self.calendar_var.get() else ""
         self.summary_var.set("正在读取根目录文件并核对归档位置……")
         self.notice_var.set("预览只读取文件，不移动材料。")
         self._append_activity("开始预览：" + "、".join(RULE_LABELS[key] for key in rules))
-        self._start_job("scan", lambda progress: self._scan_fn(root, rules, on_progress=progress))
+        self._start_job("scan", lambda progress: self._scan_fn(root, rules, calendar_period=calendar_period, on_progress=progress))
 
     def _start_job(self, operation: str, action: Callable) -> None:
         self._busy = operation
@@ -517,7 +529,7 @@ class DistributionWindow:
         self.window.destroy()
 
 
-def run_gui(root: str, mode: str) -> None:
+def run_gui(root: str, mode: str, *, calendar_period: str = CALENDAR_PERIOD) -> None:
     """Open the shared M20 local interface; it performs no automatic moves."""
     from .engine import execute, scan
 
@@ -529,5 +541,5 @@ def run_gui(root: str, mode: str) -> None:
         except (AttributeError, OSError):
             pass
     window = tk.Tk()
-    DistributionWindow(window, root, mode, scan_fn=scan, execute_fn=execute)
+    DistributionWindow(window, root, mode, scan_fn=scan, execute_fn=execute, calendar_period=calendar_period)
     window.mainloop()

@@ -21,7 +21,7 @@ from integrations.file_distribution.rules import (
 st.set_page_config(page_title="M20 · 文件分发", page_icon="📂", layout="wide")
 render_home_link()
 st.title("M20 · 文件分发")
-st.caption("月报、系部周例会、考勤和发票，共用一套规则，预览后分发。")
+st.caption("月报、系部及学院党政联席会纪要、考勤和发票，共用一套规则，预览后分发。")
 st.markdown(
     f"在 **Ding2026** 文件夹内双击 **{ENTRY_FILENAME}**，分别勾选 **会议纪要**、**考勤记录**、**月报**、**发票**。"
     "默认只选纪要和考勤；点击预览，核对文件去向后点击分发，界面显示实时过程与结果。未选规则不处理。"

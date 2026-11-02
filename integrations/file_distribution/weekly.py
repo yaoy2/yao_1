@@ -4,6 +4,7 @@ import re
 import unicodedata
 
 from .models import Decision
+from .school_calendar import CALENDAR_PERIOD, WEEK_PATTERN, is_date_heading, resolve_calendar
 
 
 _DEPARTMENTS = {
@@ -13,6 +14,11 @@ _DEPARTMENTS = {
     "健康体育部": ("健康体育部",),
 }
 _EXTENSIONS = {".doc", ".docx", ".pdf", ".xls", ".xlsx"}
+_PARTY_FILENAME = re.compile(
+    r"^健康(?:医疗科技)?学院党政联席会会议纪要[-_ ]+健康(?:医疗科技)?学院"
+    r"20\d{2}-20\d{2}学年(?:度)?第[一二三123]学期(?:教学|小学期)?"
+    r"第[0-9一二三四五六七八九十百零〇两]+周(?:\s*\(\d+\))?\.pdf$", re.I,
+)
 _TEMPLATE = re.compile(r"模板|范本|样例|示例")
 _OTHER_BUSINESS = re.compile(
     r"通知|会议议程|新闻稿|新闻报道|新闻报导|通讯稿|喜报|月报|"
@@ -49,16 +55,13 @@ _NARRATIVE = re.compile(
 )
 _HEADER_FIELD = re.compile(
     r"^(?:学年(?:学期)?|学期|部门|系部|单位|会议名称|材料名称|"
-    r"标题|会议时间|会议日期|日期|时间)\s*[:：]"
+    r"标题|会议时间|会议日期|考勤时间|考勤日期|日期|时间|周次)\s*[:：]"
 )
 _IRRELEVANT_FIELD = re.compile(
     r"^(?:会议地点|地点|会议主持|主持人|主持|记录人|记录|参会|出席|列席|"
     r"应到|实到|缺席|签字|签名|制表人|填表人|会议主题|会议议题)"
 )
-_WEEK = re.compile(
-    r"准备周|(?:教学|小学期)?第?\s*[0-9一二三四五六七八九十百零〇两]+\s*"
-    r"(?:周\s*)?(?:[-~～至到、]\s*第?\s*[0-9一二三四五六七八九十百零〇两]+\s*)?周"
-)
+_WEEK = WEEK_PATTERN
 
 
 def _normalize(value: str) -> str:
@@ -109,7 +112,7 @@ def _heading_lines(text: str) -> list[str]:
             continue
         if _HEADER_FIELD.match(line):
             result.append(line)
-        elif index < 6 and not re.search(r"[。;；]", line) and (_kinds(line) or _metadata_title(line)):
+        elif index < 6 and not re.search(r"[。;；]", line) and (_kinds(line) or _metadata_title(line) or is_date_heading(line)):
             result.append(line)
     return result
 
@@ -136,7 +139,7 @@ def _is_year_candidate(value: str, match: re.Match) -> bool:
     return bool(re.match(r"\s*[-_/]\s*[123](?!\d)", after) and _academic_year(match))
 
 
-def _period(evidence: list[str]) -> tuple[str, str]:
+def _period(evidence: list[str], calendar_period: str) -> tuple[str, str, str]:
     years = set()
     terms = set()
     invalid_year = False
@@ -158,17 +161,20 @@ def _period(evidence: list[str]) -> tuple[str, str]:
         if field:
             terms.add(_TERM_NUMBERS[field.group(1)])
     if invalid_year:
-        return "", "学年起止年份不连续，请核对"
+        return "", "", "学年起止年份不连续，请核对"
     if len(years) > 1 or len(terms) > 1:
-        return "", "文件名或正文题头中的学年、学期信息冲突"
-    if not years or not terms:
-        return "", "缺少明确学年或学期；不按文件日期或当前时间推定"
-    start, end = next(iter(years))
-    return f"{start}-{end}-{next(iter(terms))}", ""
+        return "", "", "文件名或正文题头中的学年、学期信息冲突"
+    explicit = ""
+    if years and terms:
+        start, end = next(iter(years))
+        explicit = f"{start}-{end}-{next(iter(terms))}"
+    elif (years and years != {(2026, 2027)}) or (terms and terms != {1}):
+        return "", "", "学年或学期未写完整，且与本批已配置校历不符，请核对"
+    return resolve_calendar(evidence, explicit, calendar_period=calendar_period)
 
 
-def classify_weekly(name: str, text: str = "") -> Decision:
-    """Return a route for the four departments, with uncertain files retained."""
+def classify_weekly(name: str, text: str = "", *, calendar_period: str = CALENDAR_PERIOD) -> Decision:
+    """Route department records and the explicitly approved college joint-meeting PDFs."""
     filename = _normalize(re.split(r"[\\/]", name)[-1])
     if filename.startswith("~$"):
         return Decision("skip", reason="Office 临时文件")
@@ -178,6 +184,8 @@ def classify_weekly(name: str, text: str = "") -> Decision:
     title = filename[:-len(extension)]
     headings = _heading_lines(text)
     evidence = [title, *headings]
+    if _PARTY_FILENAME.fullmatch(filename):
+        return _classify_party(evidence, headings, calendar_period)
     if _TEMPLATE.search(title):
         return Decision("skip", reason="模板或示例，不参与分发")
     if _OTHER_BUSINESS.search(title) or _OTHER_MEETINGS.search(title):
@@ -205,12 +213,34 @@ def classify_weekly(name: str, text: str = "") -> Decision:
     if not departments:
         return Decision("review", kind=kind, reason="无法确定三系一部中的具体部门")
     department = next(iter(departments))
-    period, error = _period(evidence)
+    period, calendar_note, error = _period(evidence, calendar_period)
     if error:
         return Decision("review", kind=kind, department=department, reason=error)
 
     group = "党政联席会_系部例会" if kind == "会议纪要" else "考勤记录"
     relative_dir = f"02_学期工作/{period}/03_会议_考勤/{group}/{department}"
-    week = next((match.group() for value in evidence if (match := _WEEK.search(value))), "")
+    week = next((match.group() for value in evidence if (match := _WEEK.search(_FULL_PERIOD.sub(" ", value)))), "")
     reason = f"学期、部门和材料类型明确；{week}" if week else "学期、部门和材料类型明确；未识别周次，按部门归档"
+    if calendar_note and "材料日期" in calendar_note and not week:
+        reason = "部门和材料类型明确"
+    if calendar_note:
+        reason += "；" + calendar_note
     return Decision("ready", kind, period, department, relative_dir, reason)
+
+
+def _classify_party(evidence: list[str], headings: list[str], calendar_period: str) -> Decision:
+    kind = "学院党政联席会纪要"
+    # The exact filename identifies this college's approved PDFs; other meetings stay excluded.
+    if any(_TEMPLATE.search(line) or _OTHER_BUSINESS.search(line)
+           or re.search(r"校党委|学校党委|党总支|党支部|支委会|委员会|校长办公会|考勤", line)
+           or any(department in line and _MINUTES.search(line) for department in _DEPARTMENTS)
+           for line in headings):
+        return Decision("review", kind=kind, department="健康医疗科技学院", reason="正文题头与学院党政联席会纪要的统一文件名不一致，请核对材料类型")
+    period, note, error = _period(evidence, calendar_period)
+    if error:
+        return Decision("review", kind=kind, department="健康医疗科技学院", reason=error)
+    return Decision(
+        "ready", kind, period, "健康医疗科技学院",
+        f"02_学期工作/{period}/03_会议_考勤/党政联席会_系部例会/党政联席会",
+        "学院党政联席会PDF统一命名已匹配；" + note,
+    )
