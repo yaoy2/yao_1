@@ -9,10 +9,10 @@ import os
 from pathlib import Path
 import re
 import stat
-from typing import Iterable
+from typing import Callable, Iterable
 import uuid
 
-from .models import Decision, ExecutionResult, Plan, PlanItem
+from .models import Decision, ExecutionResult, Plan, PlanItem, ProgressEvent, selected_rules
 from .invoices import INVOICE_HINT, classify_invoice
 from .monthly import MONTHLY_HINT, classify_monthly
 from .readers import read_document_text
@@ -92,21 +92,42 @@ def _hash_file(path: Path) -> str:
         return _hash_stream(stream)
 
 
-def _classify(path: Path, root: Path, mode: str) -> Decision:
+def _classify(path: Path, root: Path, mode: str | Iterable[str]) -> Decision:
+    rules = selected_rules(mode)
     if INVOICE_HINT.search(path.name):
-        return classify_invoice(path, root)
-    if mode == "invoice":
-        return Decision("ignored")
-    if mode == "monthly":
+        return classify_invoice(path, root) if "invoice" in rules else Decision("ignored")
+    if "monthly" in rules and MONTHLY_HINT.search(path.name):
         return classify_monthly(path, root)
+    if not _matches_rules(path.name, rules):
+        return Decision("ignored")
     initial = classify_weekly(path.name)
     if initial.status in {"skip", "ignored"}:
         return initial
     text, limitation = read_document_text(path)
     decision = classify_weekly(path.name, text)
+    if (decision.kind == "会议纪要" and "minutes" not in rules
+            or decision.kind == "考勤记录" and "attendance" not in rules):
+        return Decision("ignored")
     if limitation and decision.status == "review":
         decision = replace(decision, reason=f"{decision.reason}；{limitation}")
     return decision
+
+
+def _matches_rules(name: str, rules: Iterable[str]) -> bool:
+    if INVOICE_HINT.search(name):
+        return "invoice" in rules
+    return bool("monthly" in rules and MONTHLY_HINT.search(name)
+                or "minutes" in rules and re.search(r"纪要|例会", name)
+                or "attendance" in rules and "考勤" in name)
+
+
+def _notify(callback, stage: str, completed: int, total: int, message: str, item=None) -> None:
+    if callback is not None:
+        try:
+            callback(ProgressEvent(stage, completed, total, message, replace(item) if item else None))
+        except Exception:
+            # A display callback must never interrupt or change a file operation.
+            pass
 
 
 def _target(root: Path, decision: Decision, filename: str) -> Path:
@@ -143,30 +164,27 @@ def _duplicate(target: Path, digest: str, size: int) -> tuple[str, str]:
     return "", ""
 
 
-def scan(root: str | Path, mode: str) -> Plan:
+def scan(root: str | Path, mode: str | Iterable[str], *,
+         on_progress: Callable[[ProgressEvent], None] | None = None) -> Plan:
     """Preview leaves source/archive directories unchanged; temporary reading copies are discarded."""
-    if mode not in {"monthly", "weekly", "invoice"}:
-        raise ValueError("请选择月报、纪要考勤或发票")
+    rules = selected_rules(mode)
     root = _root(root)
-    plan = Plan(str(root), mode, _now(), uuid.uuid4().hex)
+    plan = Plan(str(root), mode if isinstance(mode, str) else "selected", _now(), uuid.uuid4().hex,
+                rules=list(rules))
     planned_hashes = {}
-    for path in sorted(root.iterdir(), key=lambda p: p.name.casefold()):
-        if not path.is_file() and not path.is_symlink():
-            continue
+    paths = sorted((path for path in root.iterdir() if path.is_file() or path.is_symlink()),
+                   key=lambda p: p.name.casefold())
+    for index, path in enumerate(paths, 1):
         plan.scanned_count += 1
-        hint = INVOICE_HINT.search(path.name)
-        if not hint and mode == "monthly":
-            hint = MONTHLY_HINT.search(path.name)
-        elif not hint and mode == "weekly":
-            hint = re.search(r"纪要|例会|考勤", path.name)
-        if not hint:
+        if not _matches_rules(path.name, rules):
             continue
+        _notify(on_progress, "scan", index - 1, len(paths), f"正在核对：{path.name}")
         item = PlanItem(path.name, str(path))
         try:
             _normal_path(path, root=root)
             with _read_locked(path) as stream:
                 before = os.fstat(stream.fileno())
-                decision = _classify(path, root, mode)
+                decision = _classify(path, root, rules)
                 if decision.status == "ignored":
                     continue
                 item.status, item.kind, item.period = decision.status, decision.kind, decision.period
@@ -191,6 +209,8 @@ def scan(root: str | Path, mode: str) -> Plan:
             item.status = "review"
             item.reason = f"无法安全预览：{exc}"
         plan.items.append(item)
+        _notify(on_progress, "scan", index, len(paths), f"已核对：{path.name}", item)
+    _notify(on_progress, "scan", len(paths), len(paths), "预览完成")
     return plan
 
 
@@ -267,11 +287,11 @@ def _move_no_replace(source: Path, target: Path, stream=None) -> None:
         source.unlink()
 
 
-def execute(plan: Plan, selected_names: Iterable[str]) -> ExecutionResult:
+def execute(plan: Plan, selected_names: Iterable[str], *,
+            on_progress: Callable[[ProgressEvent], None] | None = None) -> ExecutionResult:
     """Only selected ready items from this in-memory preview can be moved."""
     root = _root(plan.root)
-    if plan.mode not in {"monthly", "weekly", "invoice"}:
-        raise ValueError("预览类别无效，请重新预览")
+    rules = selected_rules(plan.rules or plan.mode)
     selected = set(selected_names)
     if not selected:
         raise ValueError("请先勾选可分发文件")
@@ -285,11 +305,13 @@ def execute(plan: Plan, selected_names: Iterable[str]) -> ExecutionResult:
     log_path = log_dir / f"{datetime.now():%Y%m%d_%H%M%S}_{uuid.uuid4().hex[:12]}.jsonl"
     with _run_lock(lock_path), log_path.open("x", encoding="utf-8", newline="\n") as log:
         _write_record(log, "run", version=VERSION, release_date=RELEASE_DATE,
-                      mode=plan.mode, root=str(root), plan_id=plan.plan_id, preview_at=plan.created_at)
+                      mode=plan.mode, rules=list(rules), root=str(root), plan_id=plan.plan_id, preview_at=plan.created_at)
+        completed = 0
         for item in items:
             if item.name not in selected:
                 continue
             moved = False
+            _notify(on_progress, "moving", completed, len(selected), f"正在分发：{item.name}", item)
             try:
                 source = _normal_path(Path(item.source), root=root)
                 if source.parent != root or source.name != item.name or not source.is_file():
@@ -303,7 +325,7 @@ def execute(plan: Plan, selected_names: Iterable[str]) -> ExecutionResult:
                         item.status, item.reason = "changed", "预览后文件已变化，请重新预览；本次未移动"
                         _write_record(log, "result", file=asdict(item))
                         continue
-                    decision = _classify(source, root, plan.mode)
+                    decision = _classify(source, root, rules)
                     if decision.status != "ready":
                         item.status, item.reason = "review", "执行前重新核对未通过：" + decision.reason
                         _write_record(log, "result", file=asdict(item))
@@ -336,6 +358,9 @@ def execute(plan: Plan, selected_names: Iterable[str]) -> ExecutionResult:
             except Exception as exc:
                 item.status = "error"
                 item.reason = ("文件已移动，请检查记录：" if moved else "未移动：") + str(exc)
+            finally:
+                completed += 1
+                _notify(on_progress, "result", completed, len(selected), item.reason, item)
             _write_record(log, "result", file=asdict(item))
         _write_record(log, "complete", moved=sum(item.status == "moved" for item in items), selected=len(selected))
     return ExecutionResult(items, str(log_path))

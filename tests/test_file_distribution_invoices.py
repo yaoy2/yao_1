@@ -45,8 +45,8 @@ def write_invoice(root, name="dzfp_26000000000000000001_测试.pdf", text=INVOIC
     return path
 
 
-@pytest.mark.parametrize("mode", ["monthly", "weekly", "invoice"])
-def test_every_mode_includes_verified_invoice_and_moves_original_bytes(root, mode):
+@pytest.mark.parametrize("mode", ["invoice", ("monthly", "invoice"), ("minutes", "attendance", "invoice")])
+def test_explicit_invoice_selection_moves_original_bytes(root, mode):
     source = write_invoice(root)
     original = source.read_bytes()
     plan = engine.scan(root, mode)
@@ -60,6 +60,16 @@ def test_every_mode_includes_verified_invoice_and_moves_original_bytes(root, mod
     assert result.moved == 1
     assert not source.exists()
     assert Path(item.destination).read_bytes() == original
+
+
+@pytest.mark.parametrize('mode', ['monthly', 'weekly', ('minutes',), ('attendance',)])
+def test_unselected_invoices_are_never_read_or_included(root, monkeypatch, mode):
+    source = write_invoice(root)
+    classifier = Mock(side_effect=AssertionError('Unselected invoice must not be read'))
+    monkeypatch.setattr(engine, 'classify_invoice', classifier)
+    assert not engine.scan(root, mode).items
+    classifier.assert_not_called()
+    assert source.exists()
 
 
 def test_name_alone_and_request_screenshot_are_not_enough(root, monkeypatch):

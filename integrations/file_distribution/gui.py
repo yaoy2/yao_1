@@ -7,11 +7,12 @@ import queue
 import threading
 import tkinter as tk
 from collections import Counter
+from datetime import datetime
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 from typing import Callable, Iterable
 
-from .models import ExecutionResult, MODE_LABELS, Plan, PlanItem, STATUS_LABELS
+from .models import ExecutionResult, Plan, PlanItem, ProgressEvent, RULE_LABELS, STATUS_LABELS, selected_rules
 from .rules import RELEASE_DATE, VERSION
 
 
@@ -24,12 +25,11 @@ class DistributionWindow:
         root: str,
         mode: str,
         *,
-        scan_fn: Callable[[str, str], Plan],
-        execute_fn: Callable[[Plan, Iterable[str]], ExecutionResult],
+        scan_fn: Callable[..., Plan],
+        execute_fn: Callable[..., ExecutionResult],
         auto_preview: bool = True,
     ) -> None:
-        if mode not in MODE_LABELS:
-            raise ValueError("请选择月报、纪要考勤或发票归档。")
+        initial_rules = selected_rules(mode)
         self.window = window
         self._scan_fn = scan_fn
         self._execute_fn = execute_fn
@@ -45,10 +45,11 @@ class DistributionWindow:
         self._messages: queue.Queue = queue.Queue()
         self._log_path = ""
         self.source_var = tk.StringVar(window, str(Path(root).absolute()))
-        self.mode_var = tk.StringVar(window, mode)
+        self.rule_vars = {key: tk.BooleanVar(window, key in initial_rules) for key in RULE_LABELS}
         self.summary_var = tk.StringVar(window, "正在准备预览。")
         self.notice_var = tk.StringVar(window, "打开窗口只预览；点击“分发已选”后才移动文件。")
         self.log_var = tk.StringVar(window, "")
+        self.progress_var = tk.StringVar(window, "尚未执行分发")
         self._build()
         self.window.protocol("WM_DELETE_WINDOW", self.close)
         self._poll_id = self.window.after(80, self._poll_messages)
@@ -68,7 +69,7 @@ class DistributionWindow:
         style.configure("TFrame", background="#F5F6F8")
         style.configure("TLabel", background="#F5F6F8", font=("Microsoft YaHei UI", 10))
         style.configure("TButton", font=("Microsoft YaHei UI", 10), padding=(9, 5))
-        style.configure("TRadiobutton", background="#F5F6F8", font=("Microsoft YaHei UI", 10))
+        style.configure("TCheckbutton", background="#F5F6F8", font=("Microsoft YaHei UI", 10))
         style.configure("Title.TLabel", font=("Microsoft YaHei UI", 16, "bold"))
         style.configure("Muted.TLabel", foreground="#5E6674", font=("Microsoft YaHei UI", 9))
         style.configure("Treeview", font=("Microsoft YaHei UI", 10), rowheight=29)
@@ -79,7 +80,7 @@ class DistributionWindow:
         frame = ttk.Frame(self.window, padding=14)
         frame.pack(fill="both", expand=True)
         frame.columnconfigure(0, weight=1)
-        frame.rowconfigure(4, weight=1)
+        frame.rowconfigure(5, weight=1)
         header = ttk.Frame(frame)
         header.grid(row=0, column=0, sticky="ew", pady=(0, 10))
         ttk.Label(header, text="M20 · 文件分发", style="Title.TLabel").pack(side="left")
@@ -97,15 +98,16 @@ class DistributionWindow:
 
         controls = ttk.Frame(frame)
         controls.grid(row=2, column=0, sticky="ew", pady=(0, 8))
-        self.mode_buttons: list[ttk.Radiobutton] = []
-        for key, label in MODE_LABELS.items():
-            button = ttk.Radiobutton(
-                controls, text=label, value=key, variable=self.mode_var,
-                command=self.change_mode,
+        ttk.Label(controls, text="分发规则：").pack(side="left")
+        self.rule_buttons: list[ttk.Checkbutton] = []
+        for key, label in RULE_LABELS.items():
+            button = ttk.Checkbutton(
+                controls, text=label, variable=self.rule_vars[key],
+                command=self.change_rules,
             )
             button.pack(side="left", padx=(0, 14))
-            self.mode_buttons.append(button)
-        self.preview_button = ttk.Button(controls, text="重新预览", command=self.preview)
+            self.rule_buttons.append(button)
+        self.preview_button = ttk.Button(controls, text="预览所选规则", command=self.preview)
         self.preview_button.pack(side="left", padx=(0, 8))
         self.all_button = ttk.Button(controls, text="全选可分发", command=self.select_all)
         self.all_button.pack(side="left", padx=(0, 6))
@@ -117,8 +119,15 @@ class DistributionWindow:
         self.execute_button.pack(side="right")
         ttk.Label(frame, textvariable=self.summary_var).grid(row=3, column=0, sticky="w", pady=(0, 6))
 
+        progress_frame = ttk.Frame(frame)
+        progress_frame.grid(row=4, column=0, sticky="ew", pady=(0, 8))
+        progress_frame.columnconfigure(1, weight=1)
+        self.progress = ttk.Progressbar(progress_frame, mode="determinate", length=185)
+        self.progress.grid(row=0, column=0, padx=(0, 10))
+        ttk.Label(progress_frame, textvariable=self.progress_var, style="Muted.TLabel").grid(row=0, column=1, sticky="w")
+
         table = ttk.Frame(frame)
-        table.grid(row=4, column=0, sticky="nsew")
+        table.grid(row=5, column=0, sticky="nsew")
         table.columnconfigure(0, weight=1)
         table.rowconfigure(0, weight=1)
         self.tree = ttk.Treeview(
@@ -147,9 +156,18 @@ class DistributionWindow:
         self.tree.bind("<space>", self._space_row)
         self.tree.bind("<<TreeviewSelect>>", self._show_details)
 
-        details_frame = ttk.Frame(frame)
-        details_frame.grid(row=5, column=0, sticky="ew", pady=(10, 0))
-        ttk.Label(details_frame, text="选中文件的完整信息", style="Muted.TLabel").pack(anchor="w")
+        self.tabs = ttk.Notebook(frame)
+        self.tabs.grid(row=6, column=0, sticky="ew", pady=(8, 0))
+        activity_frame = ttk.Frame(self.tabs)
+        details_frame = ttk.Frame(self.tabs)
+        self.tabs.add(activity_frame, text="处理过程")
+        self.tabs.add(details_frame, text="文件详情")
+        self.activity = tk.Text(activity_frame, height=5, wrap="word", relief="flat",
+                                font=("Microsoft YaHei UI", 9), state="disabled", padx=8, pady=5)
+        activity_scroll = ttk.Scrollbar(activity_frame, orient="vertical", command=self.activity.yview)
+        activity_scroll.pack(side="right", fill="y")
+        self.activity.configure(yscrollcommand=activity_scroll.set)
+        self.activity.pack(fill="x")
         self.details = tk.Text(
             details_frame, height=5, wrap="word", relief="flat", borderwidth=0,
             font=("Microsoft YaHei UI", 9), background="#FFFFFF", foreground="#303743",
@@ -160,7 +178,7 @@ class DistributionWindow:
         self.details.configure(yscrollcommand=detail_scroll.set)
         self.details.pack(fill="x", pady=(3, 0))
         footer = ttk.Frame(frame)
-        footer.grid(row=6, column=0, sticky="ew", pady=(8, 0))
+        footer.grid(row=7, column=0, sticky="ew", pady=(8, 0))
         footer.columnconfigure(0, weight=1)
         ttk.Label(footer, textvariable=self.notice_var, style="Muted.TLabel").grid(row=0, column=0, sticky="w")
         ttk.Label(footer, textvariable=self.log_var, style="Muted.TLabel").grid(row=1, column=0, sticky="w")
@@ -170,8 +188,9 @@ class DistributionWindow:
 
     def _update_controls(self) -> None:
         idle = not self._busy
-        for widget in [self.browse_button, self.preview_button, *self.mode_buttons]:
+        for widget in [self.browse_button, *self.rule_buttons]:
             widget.configure(state="normal" if idle else "disabled")
+        self.preview_button.configure(state="normal" if idle and self._chosen_rules() else "disabled")
         selectable = idle and self._plan is not None and not self._consumed
         ready = {item.name for item in self._items if item.status == "ready"}
         self._selected.intersection_update(ready)
@@ -193,6 +212,7 @@ class DistributionWindow:
         self.log_var.set("")
         self.tree.delete(*self.tree.get_children())
         self._set_details("")
+        self.progress.configure(value=0)
         self._update_controls()
 
     def choose_root(self) -> None:
@@ -206,18 +226,25 @@ class DistributionWindow:
             self.source_var.set(str(Path(chosen).absolute()))
             self.preview()
 
-    def change_mode(self) -> None:
+    def _chosen_rules(self) -> tuple[str, ...]:
+        return tuple(key for key, value in self.rule_vars.items() if value.get())
+
+    def change_rules(self) -> None:
         if not self._busy:
-            self.preview()
+            self._invalidate()
+            self.summary_var.set("已更改规则，请点击“预览所选规则”。" if self._chosen_rules() else "请至少勾选一项分发规则。")
+            self.notice_var.set("只处理已勾选的规则；未选规则不会参与分发。")
+            self.progress_var.set("等待预览")
 
     def preview(self) -> None:
-        if self._busy or self._closed:
+        if self._busy or self._closed or not self._chosen_rules():
             return
         self._invalidate()
-        root, mode = self.source_var.get(), self.mode_var.get()
+        root, rules = self.source_var.get(), self._chosen_rules()
         self.summary_var.set("正在读取根目录文件并核对归档位置……")
         self.notice_var.set("预览只读取文件，不移动材料。")
-        self._start_job("scan", lambda: self._scan_fn(root, mode))
+        self._append_activity("开始预览：" + "、".join(RULE_LABELS[key] for key in rules))
+        self._start_job("scan", lambda progress: self._scan_fn(root, rules, on_progress=progress))
 
     def _start_job(self, operation: str, action: Callable) -> None:
         self._busy = operation
@@ -225,9 +252,12 @@ class DistributionWindow:
         token = self._job_token
         self._update_controls()
 
+        def progress(event: ProgressEvent) -> None:
+            self._messages.put((token, "progress", event, None))
+
         def work() -> None:
             try:
-                self._messages.put((token, operation, action(), None))
+                self._messages.put((token, operation, action(progress), None))
             except Exception as error:
                 self._messages.put((token, operation, None, error))
 
@@ -241,9 +271,14 @@ class DistributionWindow:
                 token, operation, value, error = self._messages.get_nowait()
                 if token != self._job_token:
                     continue
+                if operation == "progress":
+                    self._show_progress(value)
+                    continue
                 self._busy = ""
                 if error is not None:
                     self._selected.clear()
+                    self.progress_var.set("处理已中断，请查看原因并重新预览")
+                    self._append_activity(f"处理失败：{error}")
                     if operation == "execute":
                         self.notice_var.set("分发中断，请重新预览核对文件的实际位置。")
                     else:
@@ -271,8 +306,42 @@ class DistributionWindow:
         self._selected = {item.name for item in self._items if item.status == "ready"}
         self._render_rows()
         self._update_summary()
-        self.notice_var.set("已自动勾选可分发文件；月报和纪要模式也会核对发票。核对目标后点击“分发已选”。")
+        self.notice_var.set("仅列出所选规则的材料。已勾选可分发文件；核对目标后点击“分发已选”。")
+        self.progress.configure(maximum=1, value=1)
+        self.progress_var.set("预览完成，等待点击分发")
+        self._append_activity(self.summary_var.get())
         self._update_controls()
+
+    def _append_activity(self, message: str) -> None:
+        self.activity.configure(state="normal")
+        self.activity.insert("end", f"{datetime.now():%H:%M:%S}  {message}\n")
+        self.activity.see("end")
+        self.activity.configure(state="disabled")
+
+    def _show_progress(self, event: ProgressEvent) -> None:
+        self.progress.configure(maximum=max(event.total, 1), value=event.completed)
+        self.progress_var.set(f"{event.completed}/{event.total}  {event.message}")
+        item = event.item
+        if event.stage == "moving":
+            self._append_activity(event.message)
+            for row_id, row_item in self._rows.items():
+                if item and row_item.name == item.name:
+                    values = list(self._row_values(row_item))
+                    values[1] = "处理中"
+                    self.tree.item(row_id, values=values)
+                    self.tree.see(row_id)
+                    break
+        elif item:
+            label = STATUS_LABELS.get(item.status, item.status)
+            self._append_activity(f"{label} · {item.name} · {item.reason}")
+            if event.stage == "result":
+                self._items = [item if previous.name == item.name else previous for previous in self._items]
+                for row_id, previous in self._rows.items():
+                    if previous.name == item.name:
+                        self._rows[row_id] = item
+                        self.tree.item(row_id, values=self._row_values(item), tags=(item.status,))
+                        break
+                self._update_summary()
 
     def _target_label(self, item: PlanItem) -> str:
         if not item.destination:
@@ -372,14 +441,18 @@ class DistributionWindow:
             return
         if not messagebox.askokcancel(
             "确认分发", f"将移动已勾选的 {len(names)} 个文件。\n\n"
-            f"材料目录：{self._plan.root}\n分发类别：{MODE_LABELS[self._plan.mode]}\n\n"
-            "目标位置见预览列表。确认后开始分发。", parent=self.window,
+            f"材料目录：{self._plan.root}\n分发规则：{'、'.join(RULE_LABELS[key] for key in selected_rules(self._plan.rules or self._plan.mode))}\n\n"
+            "文件将移到预览目标，原位置不保留副本。确认后开始分发。", parent=self.window,
         ):
             return
         plan = self._plan
         self._consumed = True
+        self.progress.configure(maximum=len(names), value=0)
+        self.progress_var.set(f"0/{len(names)}  准备分发")
+        self.tabs.select(0)
+        self._append_activity(f"开始分发 {len(names)} 个文件")
         self.notice_var.set("正在分发并核验文件，请等待结果。")
-        self._start_job("execute", lambda: self._execute_fn(plan, names))
+        self._start_job("execute", lambda progress: self._execute_fn(plan, names, on_progress=progress))
 
     def _show_result(self, result: ExecutionResult) -> None:
         outcomes = {item.name: item for item in result.items}
@@ -389,6 +462,13 @@ class DistributionWindow:
         self.log_var.set(f"分发记录：{Path(result.log_path).name}" if result.log_path else "")
         self._render_rows()
         self._update_summary()
+        counts = Counter(item.status for item in self._items)
+        summary = (f"分发完成：已移动 {counts['moved']}，失败 {counts['error']}，"
+                   f"待核对 {counts['review'] + counts['changed']}，"
+                   f"跳过/未处理 {sum(counts[key] for key in ('skip', 'ready', 'duplicate', 'collision'))}")
+        self.progress_var.set(summary)
+        self.progress.configure(maximum=1, value=1)
+        self._append_activity(summary)
         self.notice_var.set("本次分发已结束。需要继续处理时，请先重新预览。")
         self._update_controls()
 

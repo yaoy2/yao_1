@@ -153,6 +153,58 @@ def test_execute_only_moves_selected_ready_item(root):
     assert result_item(result, second.name).status == "ready"
 
 
+@pytest.mark.parametrize('rules, expected', [
+    (('minutes',), {'minutes'}),
+    (('attendance',), {'attendance'}),
+    (('minutes', 'attendance'), {'minutes', 'attendance'}),
+    (('monthly',), {'monthly'}),
+    (('minutes', 'attendance', 'monthly'), {'minutes', 'attendance', 'monthly'}),
+])
+def test_rule_selection_moves_only_requested_categories(root, rules, expected):
+    files = {
+        'minutes': write_minutes(root),
+        'attendance': write_minutes(root, name='医学影像系2026-2027-1第7周考勤记录.docx',
+                                    text=['医学影像系考勤记录', '2026-2027学年第一学期第7周', '考勤明细']),
+        'monthly': write_monthly(root),
+    }
+    original = {key: path.read_bytes() for key, path in files.items()}
+    scans, events = [], []
+    plan = engine.scan(root, rules, on_progress=scans.append)
+    assert {item.name for item in plan.items} == {files[key].name for key in expected}
+    assert all(item.status == 'ready' for item in plan.items)
+    assert scans[-1].completed == scans[-1].total == 3
+    result = engine.execute(plan, [item.name for item in plan.items], on_progress=events.append)
+    assert result.moved == len(expected)
+    assert [event.stage for event in events] == ['moving', 'result'] * len(expected)
+    assert [event.completed for event in events if event.stage == 'result'] == list(range(1, len(expected) + 1))
+    assert all(event.item.status == 'ready' for event in events if event.stage == 'moving')
+    assert all(event.item.status == 'moved' for event in events if event.stage == 'result')
+    for key, path in files.items():
+        if key not in expected:
+            assert path.read_bytes() == original[key]
+        else:
+            assert not path.exists()
+            assert Path(result_item(result, path.name).destination).read_bytes() == original[key]
+    assert read_events(result)[0]['rules'] == plan.rules
+
+
+def test_progress_reports_changed_files_and_survives_display_errors(root):
+    first, second = write_minutes(root, '甲'), write_minutes(root, '乙')
+    plan, _ = ready_plan(root)
+    first.write_bytes(b'changed after preview')
+    events = []
+
+    def progress(event):
+        events.append(event)
+        raise RuntimeError('display callback unavailable')
+
+    result = engine.execute(plan, [first.name, second.name], on_progress=progress)
+    assert result_item(result, first.name).status == 'changed'
+    assert result_item(result, second.name).status == 'moved'
+    assert [event.completed for event in events if event.stage == 'result'] == [1, 2]
+    assert first.exists() and not second.exists()
+
+
 @pytest.mark.parametrize("selection", ["empty", "unknown", "review"])
 def test_invalid_selection_fails_before_creating_logs_or_moving_any_file(root, selection):
     source = write_minutes(root)

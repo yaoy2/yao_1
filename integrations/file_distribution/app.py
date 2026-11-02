@@ -19,7 +19,7 @@ def default_root() -> Path:
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="M20 文件分发：先预览，再手动分发")
     parser.add_argument("--root", type=Path, help="源文件夹；打包程序默认使用自身所在目录")
-    parser.add_argument("--mode", choices=("monthly", "weekly", "invoice"), default="monthly")
+    parser.add_argument("--mode", choices=("monthly", "weekly", "invoice"), default="weekly")
     parser.add_argument("--preview-report", type=Path, help="仅预览并写入一个新的JSON报告；绝不分发")
     args = parser.parse_args(argv)
     root = args.root or default_root()

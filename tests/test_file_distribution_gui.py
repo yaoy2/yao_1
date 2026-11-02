@@ -1,15 +1,16 @@
 """Desktop authorization boundaries; no test distributes real user files."""
 
 from dataclasses import replace
+import gc
 import threading
 import time
 import tkinter as tk
-from unittest.mock import Mock
+from unittest.mock import ANY, Mock
 
 import pytest
 
 from integrations.file_distribution.gui import DistributionWindow
-from integrations.file_distribution.models import ExecutionResult, Plan, PlanItem
+from integrations.file_distribution.models import ExecutionResult, Plan, PlanItem, ProgressEvent
 
 
 def wait_idle(app):
@@ -60,13 +61,18 @@ def make_window(tmp_path, tk_root):
     for app in windows:
         if not app._closed:
             app._destroy()
+    windows.clear()
+    if 'app' in locals():
+        del app
+    # Tk variable finalizers must run on this thread, not a later AppTest worker.
+    gc.collect()
 
 
 def test_preview_never_executes_and_only_ready_rows_can_be_selected(make_window):
     app, scanner, executor, _ = make_window()
     app.preview()
     wait_idle(app)
-    scanner.assert_called_once_with(app.source_var.get(), "monthly")
+    scanner.assert_called_once_with(app.source_var.get(), ("monthly",), on_progress=ANY)
     executor.assert_not_called()
     assert app._selected == {"月报甲.xlsx", "月报乙.xlsx"}
     app._toggle("file-2")
@@ -105,7 +111,7 @@ def test_executes_selected_ready_files_once_and_requires_new_preview(make_window
     app._toggle("file-1")
     app.distribute()
     wait_idle(app)
-    executor.assert_called_once_with(plan, ["月报甲.xlsx"])
+    executor.assert_called_once_with(plan, ["月报甲.xlsx"], on_progress=ANY)
     assert app._items[0].status == "moved"
     assert app._items[1].status == "ready"
     assert app.tree.item("file-1", "values")[1] == "未处理"
@@ -124,7 +130,7 @@ def test_switching_source_invalidates_old_preview_before_scan_finishes(make_wind
     next_root = tmp_path / "另一批材料"
     next_root.mkdir()
 
-    def scan_new(root, mode):
+    def scan_new(root, mode, **kwargs):
         release.wait(3)
         return Plan(root=root, mode=mode, created_at="later", plan_id="second", scanned_count=0)
 
@@ -165,14 +171,14 @@ def test_execution_failure_cannot_reuse_previously_confirmed_plan(make_window, m
 def test_busy_preview_disables_context_changes_and_never_moves_files(make_window):
     release = threading.Event()
 
-    def blocked_scan(root, mode):
+    def blocked_scan(root, mode, **kwargs):
         release.wait(3)
         return Plan(root=root, mode=mode, created_at="test", plan_id="busy", scanned_count=0)
 
     app, _, executor, _ = make_window(scan_fn=blocked_scan)
     try:
         app.preview()
-        for control in (app.browse_button, app.preview_button, *app.mode_buttons, app.execute_button):
+        for control in (app.browse_button, app.preview_button, *app.rule_buttons, app.execute_button):
             assert "disabled" in control.state()
         app.distribute()
         executor.assert_not_called()
@@ -180,3 +186,58 @@ def test_busy_preview_disables_context_changes_and_never_moves_files(make_window
         release.set()
     wait_idle(app)
     assert "disabled" not in app.preview_button.state()
+
+
+def test_rule_changes_clear_old_selection_and_scan_only_checked_rules(make_window):
+    app, scanner, executor, _ = make_window()
+    app.preview()
+    wait_idle(app)
+    app.rule_vars['monthly'].set(False)
+    app.rule_vars['minutes'].set(True)
+    app.rule_vars['attendance'].set(True)
+    app.change_rules()
+    assert app._plan is None and not app._selected
+    app.distribute()
+    executor.assert_not_called()
+    app.preview()
+    wait_idle(app)
+    scanner.assert_called_with(app.source_var.get(), ('minutes', 'attendance'), on_progress=ANY)
+    for value in app.rule_vars.values():
+        value.set(False)
+    app.change_rules()
+    assert 'disabled' in app.preview_button.state()
+    assert 'disabled' in app.execute_button.state()
+
+
+def test_live_progress_is_visible_before_execution_returns(make_window, monkeypatch):
+    app, _, executor, plan = make_window()
+    release = threading.Event()
+    progress_sent = threading.Event()
+
+    def run(plan, names, *, on_progress):
+        on_progress(ProgressEvent('moving', 0, 2, '正在分发：月报甲.xlsx', plan.items[0]))
+        on_progress(ProgressEvent('result', 1, 2, '内容校验一致', replace(plan.items[0], status='moved')))
+        progress_sent.set()
+        release.wait(3)
+        return ExecutionResult([replace(item, status='moved') for item in plan.items[:2]], '')
+
+    executor.side_effect = run
+    monkeypatch.setattr('integrations.file_distribution.gui.messagebox.askokcancel', lambda *a, **k: True)
+    app.preview()
+    wait_idle(app)
+    try:
+        app.distribute()
+        assert progress_sent.wait(2)
+        deadline = time.monotonic() + 2
+        while '1/2' not in app.progress_var.get() and time.monotonic() < deadline:
+            app.window.update()
+            time.sleep(0.01)
+        assert app._busy == 'execute'
+        assert app.tree.item('file-0', 'values')[1] == '已分发'
+        assert '1/2' in app.progress_var.get()
+        assert '正在分发：月报甲.xlsx' in app.activity.get('1.0', 'end')
+        assert 'disabled' in app.execute_button.state()
+    finally:
+        release.set()
+    wait_idle(app)
+    assert '已移动 2' in app.progress_var.get()
