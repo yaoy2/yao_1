@@ -65,6 +65,7 @@ TOOLS = [
         "created": "2026_10_04",
         "page": "pages/27_28_newspaper.py",
         "code": "M28",
+        "paused": True,
         "accent": "amber",
         "section": "个人",
     },
@@ -143,7 +144,7 @@ TOOLS = [
     },
     {
         "title": "文件分发",
-        "desc": "月报与系部周例会、考勤的统一规则和使用入口；在 Ding2026 中双击程序，预览后手动分发。",
+        "desc": "月报、系部周例会、考勤和发票的统一分发入口；在 Ding2026 中双击程序，核对内容与去向后分发。",
         "tag": "本地工具",
         "created": "2026_08_31",
         "page": "pages/19_20_ding2026.py",

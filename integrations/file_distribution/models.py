@@ -8,7 +8,7 @@ STATUS_LABELS = {
     "duplicate": "内容重复", "collision": "同名冲突", "changed": "文件已变化",
     "moved": "已分发", "error": "失败", "ignored": "不在范围内",
 }
-MODE_LABELS = {"monthly": "月报分发", "weekly": "纪要考勤分发"}
+MODE_LABELS = {"monthly": "月报分发", "weekly": "纪要考勤分发", "invoice": "发票归档"}
 
 
 @dataclass(frozen=True)

@@ -13,6 +13,7 @@ from typing import Iterable
 import uuid
 
 from .models import Decision, ExecutionResult, Plan, PlanItem
+from .invoices import INVOICE_HINT, classify_invoice
 from .monthly import MONTHLY_HINT, classify_monthly
 from .readers import read_document_text
 from .rules import VERSION
@@ -92,6 +93,10 @@ def _hash_file(path: Path) -> str:
 
 
 def _classify(path: Path, root: Path, mode: str) -> Decision:
+    if INVOICE_HINT.search(path.name):
+        return classify_invoice(path, root)
+    if mode == "invoice":
+        return Decision("ignored")
     if mode == "monthly":
         return classify_monthly(path, root)
     initial = classify_weekly(path.name)
@@ -108,8 +113,13 @@ def _target(root: Path, decision: Decision, filename: str) -> Path:
     relative = Path(decision.relative_dir)
     if not decision.relative_dir or relative.is_absolute() or ".." in relative.parts:
         raise ValueError("归档目标不正确")
-    if relative.parts[0] not in {"月报", "02_学期工作"}:
-        raise ValueError("归档目标不在两项规则内")
+    if decision.kind in {"发票", "发票压缩包"}:
+        if not re.fullmatch(r"07_年度工作档案/(20\d{2})年/财务/\1年发票", relative.as_posix()):
+            raise ValueError("发票目标不是已核对的年度财务发票目录")
+        if not (root / relative).is_dir():
+            raise ValueError("现有发票目录已变化，请重新预览")
+    elif relative.parts[0] not in {"月报", "02_学期工作"}:
+        raise ValueError("归档目标不在本程序规则内")
     target = _normal_path(root / relative / filename, root=root)
     for parent in target.parents:
         if parent == root:
@@ -134,9 +144,9 @@ def _duplicate(target: Path, digest: str, size: int) -> tuple[str, str]:
 
 
 def scan(root: str | Path, mode: str) -> Plan:
-    """No directories, cache, reports or logs are created by a preview."""
-    if mode not in {"monthly", "weekly"}:
-        raise ValueError("请选择月报或纪要考勤")
+    """Preview leaves source/archive directories unchanged; temporary reading copies are discarded."""
+    if mode not in {"monthly", "weekly", "invoice"}:
+        raise ValueError("请选择月报、纪要考勤或发票")
     root = _root(root)
     plan = Plan(str(root), mode, _now(), uuid.uuid4().hex)
     planned_hashes = {}
@@ -144,7 +154,11 @@ def scan(root: str | Path, mode: str) -> Plan:
         if not path.is_file() and not path.is_symlink():
             continue
         plan.scanned_count += 1
-        hint = MONTHLY_HINT.search(path.name) if mode == "monthly" else re.search(r"纪要|例会|考勤", path.name)
+        hint = INVOICE_HINT.search(path.name)
+        if not hint and mode == "monthly":
+            hint = MONTHLY_HINT.search(path.name)
+        elif not hint and mode == "weekly":
+            hint = re.search(r"纪要|例会|考勤", path.name)
         if not hint:
             continue
         item = PlanItem(path.name, str(path))
@@ -256,7 +270,7 @@ def _move_no_replace(source: Path, target: Path, stream=None) -> None:
 def execute(plan: Plan, selected_names: Iterable[str]) -> ExecutionResult:
     """Only selected ready items from this in-memory preview can be moved."""
     root = _root(plan.root)
-    if plan.mode not in {"monthly", "weekly"}:
+    if plan.mode not in {"monthly", "weekly", "invoice"}:
         raise ValueError("预览类别无效，请重新预览")
     selected = set(selected_names)
     if not selected:

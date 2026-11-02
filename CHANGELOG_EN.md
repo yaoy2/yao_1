@@ -5,6 +5,11 @@
 
 This English change log mirrors the project history maintained in `CHANGELOG_ZH-CN.md`. It keeps the same dated structure and preserves the operational notes that matter for later troubleshooting: what changed, why it changed, what failed or detoured, and how the work was verified.
 
+## 2026-11-02
+
+- M20 now recognizes filenames containing `发票` or `dzfp_`, checks invoice contents locally and uses the existing annual finance invoice folder. It supports PDF/OFD text, Windows image OCR and verified ZIP invoice bundles with an invoice index. Uncertain files, conflicting years and duplicates stay in place. The shared desktop program is version 1.1.0.
+- M28 is paused by user request. The hosted page, local collector and Windows installer share the pause state; collection, publication and reader synchronization stop while historical data remains. A normal repository pull cannot resume the project.
+
 ## 2026-09-23
 
 - Rebuilt the English and Chinese project overview around assessment review, notice preparation, and persistent work records. Added a local project illustration, first-use guides, contribution guidance, issue/PR templates, a concrete roadmap, and an explicit licensing-status note.

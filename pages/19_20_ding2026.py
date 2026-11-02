@@ -20,10 +20,10 @@ from integrations.file_distribution.rules import (
 st.set_page_config(page_title="M20 · 文件分发", page_icon="📂", layout="wide")
 render_home_link()
 st.title("M20 · 文件分发")
-st.caption("月报与系部周例会、考勤，共用一套规则，手动预览后分发。")
+st.caption("月报、系部周例会、考勤和发票，共用一套规则，预览后分发。")
 st.markdown(
-    f"在 **Ding2026** 文件夹内双击 **{ENTRY_FILENAME}**，选择 **月报** 或 **纪要、考勤**。"
-    "查看文件去向，勾选需要处理的文件，再点击分发。"
+    f"在 **Ding2026** 文件夹内双击 **{ENTRY_FILENAME}**，选择 **月报**、**纪要考勤** 或 **发票归档**。"
+    "各模式都会顺带识别发票；查看文件去向，勾选需要处理的文件，再点击分发。"
 )
 st.table(RULE_ROWS)
 st.info("本页展示与本地程序共用的规则；文件预览和分发在双击程序中完成。")

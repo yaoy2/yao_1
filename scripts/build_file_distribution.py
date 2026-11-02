@@ -19,17 +19,20 @@ def main() -> None:
     args = parser.parse_args()
     if os.name != "nt":
         raise SystemExit("Windows可执行程序必须在Windows上构建。")
-    work = ROOT / ".tmp" / "m20-pyinstaller"
+    work = ROOT / ".tmp" / "m20-pyinstaller-可删"
     work.mkdir(parents=True, exist_ok=True)
     args.output.mkdir(parents=True, exist_ok=True)
     subprocess.run([
         sys.executable, "-m", "PyInstaller", "--onefile", "--windowed", "--noupx",
         "--name", Path(ENTRY_FILENAME).stem, "--paths", str(ROOT),
         "--distpath", str(args.output), "--workpath", str(work / "work"), "--specpath", str(work),
+        "--add-data", str(ROOT / "integrations" / "file_distribution" / "invoice_ocr.ps1") + os.pathsep + "integrations/file_distribution",
         str(ROOT / "scripts" / "file_distribution.py"),
     ], cwd=ROOT, check=True)
     executable = args.output / ENTRY_FILENAME
-    sources = [*sorted((ROOT / "integrations" / "file_distribution").glob("*.py")), ROOT / "scripts" / "file_distribution.py"]
+    sources = [*sorted(path for path in (ROOT / "integrations" / "file_distribution").iterdir()
+                      if path.suffix in {".py", ".ps1"}), ROOT / "scripts" / "file_distribution.py",
+               ROOT / "scripts" / "build_file_distribution.py"]
     source_hashes = {str(path.relative_to(ROOT)).replace("\\", "/"): hashlib.sha256(path.read_bytes()).hexdigest() for path in sources}
     manifest = {
         "version": VERSION, "entry": ENTRY_FILENAME,

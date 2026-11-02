@@ -44,7 +44,7 @@ The current catalog has **31 entries: Administration 8, Teaching 1, Personal 12,
 
 | Area | Examples | Boundary |
 | --- | --- | --- |
-| Administration | Notice editor, schedule browser, todos, budget ledger, phone transfer, file distribution | M20 shares its rules with the desktop program in Ding2026; preview and manual distribution run on the computer. Other modules may require credentials or a paired receiver. |
+| Administration | Notice editor, schedule browser, todos, budget ledger, phone transfer, file distribution | M20 shares monthly-report, meeting/attendance and invoice rules with the desktop program in Ding2026; verified invoices use an existing annual invoice folder. Other modules may require credentials or a paired receiver. |
 | Teaching | Historical assessment-workbench guide | M16/M17 pages are retired; workflow and data-location guidance is retained. |
 | Personal | Notes, palettes, concept fables, development showcases, PUBG secret-room maps | Features have distinct storage and backup rules. |
 | Archived | Recorder, mail workbench, and grading workflows | Retained for history; not recommended entry points. |

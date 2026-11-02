@@ -39,7 +39,8 @@ def test_module_catalog_matches_homepage_registry():
     for tool in tools:
         row = documented[tool["code"]]
         assert row[1] == sections[tool["section"]]
-        assert row[2] == ("Archived" if tool.get("blocked") else "Current")
+        expected_status = "Archived" if tool.get("blocked") else "Paused" if tool.get("paused") else "Current"
+        assert row[2] == expected_status
         assert f"(../../{tool['page']})" in row[3]
         assert (ROOT / tool["page"]).is_file()
 

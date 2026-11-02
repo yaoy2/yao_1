@@ -28,7 +28,7 @@ class DistributionWindow:
         auto_preview: bool = True,
     ) -> None:
         if mode not in MODE_LABELS:
-            raise ValueError("请选择月报或纪要考勤分发。")
+            raise ValueError("请选择月报、纪要考勤或发票归档。")
         self.window = window
         self._scan_fn = scan_fn
         self._execute_fn = execute_fn
@@ -269,7 +269,7 @@ class DistributionWindow:
         self._selected = {item.name for item in self._items if item.status == "ready"}
         self._render_rows()
         self._update_summary()
-        self.notice_var.set("核对目标文件夹后，可勾选需要处理的文件，再点击“分发已选”。")
+        self.notice_var.set("已自动勾选可分发文件；月报和纪要模式也会核对发票。核对目标后点击“分发已选”。")
         self._update_controls()
 
     def _target_label(self, item: PlanItem) -> str:
