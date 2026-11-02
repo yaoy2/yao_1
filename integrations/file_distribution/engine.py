@@ -16,7 +16,7 @@ from .models import Decision, ExecutionResult, Plan, PlanItem
 from .invoices import INVOICE_HINT, classify_invoice
 from .monthly import MONTHLY_HINT, classify_monthly
 from .readers import read_document_text
-from .rules import VERSION
+from .rules import RELEASE_DATE, VERSION
 from .weekly import classify_weekly
 
 
@@ -284,7 +284,8 @@ def execute(plan: Plan, selected_names: Iterable[str]) -> ExecutionResult:
     lock_path = _normal_path(log_dir / "running.lock", root=root)
     log_path = log_dir / f"{datetime.now():%Y%m%d_%H%M%S}_{uuid.uuid4().hex[:12]}.jsonl"
     with _run_lock(lock_path), log_path.open("x", encoding="utf-8", newline="\n") as log:
-        _write_record(log, "run", version=VERSION, mode=plan.mode, root=str(root), plan_id=plan.plan_id, preview_at=plan.created_at)
+        _write_record(log, "run", version=VERSION, release_date=RELEASE_DATE,
+                      mode=plan.mode, root=str(root), plan_id=plan.plan_id, preview_at=plan.created_at)
         for item in items:
             if item.name not in selected:
                 continue

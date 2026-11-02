@@ -12,6 +12,7 @@ from tkinter import filedialog, messagebox, ttk
 from typing import Callable, Iterable
 
 from .models import ExecutionResult, MODE_LABELS, Plan, PlanItem, STATUS_LABELS
+from .rules import RELEASE_DATE, VERSION
 
 
 class DistributionWindow:
@@ -55,7 +56,7 @@ class DistributionWindow:
             self.window.after_idle(self.preview)
 
     def _build(self) -> None:
-        self.window.title("M20 · 文件分发")
+        self.window.title(f"M20 · 文件分发 {VERSION} · {RELEASE_DATE}")
         width = min(1250, max(1000, self.window.winfo_screenwidth() - 100))
         height = min(760, max(620, self.window.winfo_screenheight() - 100))
         self.window.geometry(f"{width}x{height}")
@@ -82,6 +83,7 @@ class DistributionWindow:
         header = ttk.Frame(frame)
         header.grid(row=0, column=0, sticky="ew", pady=(0, 10))
         ttk.Label(header, text="M20 · 文件分发", style="Title.TLabel").pack(side="left")
+        ttk.Label(header, text=f"v{VERSION} · {RELEASE_DATE}", style="Muted.TLabel").pack(side="left", padx=(12, 0))
         ttk.Button(header, text="查看分发规则", command=self._show_rules).pack(side="right")
 
         source = ttk.Frame(frame)
@@ -403,10 +405,10 @@ class DistributionWindow:
             messagebox.showerror("无法打开目录", str(error), parent=self.window)
 
     def _show_rules(self) -> None:
-        from .rules import USER_GUIDE, VERSION
+        from .rules import USER_GUIDE
 
         guide = tk.Toplevel(self.window)
-        guide.title(f"M20 · 分发规则 {VERSION}")
+        guide.title(f"M20 · 分发规则 {VERSION} · {RELEASE_DATE}")
         guide.geometry("820x580")
         guide.transient(self.window)
         guide.columnconfigure(0, weight=1)

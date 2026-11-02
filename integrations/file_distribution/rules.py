@@ -1,9 +1,10 @@
 """One user-facing rule description for M20 online and its local executable."""
 
-from . import __version__
+from . import __release_date__, __version__
 
 VERSION = __version__
-ENTRY_FILENAME = "文件分发.exe"
+RELEASE_DATE = __release_date__
+ENTRY_FILENAME = f"文件分发_{VERSION}_{RELEASE_DATE.replace('-', '')}.exe"
 RULE_ROWS = [
     {"材料": "校办月报", "目标": "月报/总结月份/校办月报", "判断": "健康学院X月重点工作总结及XX月重点工作计划；核对表内总结期。"},
     {"材料": "学院月报", "目标": "月报/总结月份/学院月报", "判断": "副院长、系主任/部长及副职、管理中心、学工；兼容学院院报和工作总结＋计划。"},
@@ -11,7 +12,8 @@ RULE_ROWS = [
     {"材料": "系部每周考勤", "目标": "02_学期工作/材料所属学期/03_会议_考勤/考勤记录/系部", "判断": "仅三系一部的考勤记录，按材料所属学期归档。"},
     {"材料": "发票", "目标": "07_年度工作档案/开票年度/财务/对应年度发票（现有目录）", "判断": "文件名含发票或dzfp_，再核对票面抬头、号码、日期和金额；说明、清单及无法确认的文件不自动归档。"},
 ]
-USER_GUIDE = """把待分发原文件放在 Ding2026 根目录，双击同层的“文件分发.exe”。
+USER_GUIDE = f"""把待分发原文件放在 Ding2026 根目录，双击同层的“{ENTRY_FILENAME}”。
+当前版本：{VERSION}；更新日期：{RELEASE_DATE}。后续程序沿用“文件分发_版本号_YYYYMMDD.exe”命名。
 选择“月报”“纪要考勤”或“发票归档”，查看预览，勾选可分发文件，再点击分发并确认。
 
 月报按总结期归档：10月总结＋11月计划放入10月；7—8月总结＋9月计划放入07-08月。

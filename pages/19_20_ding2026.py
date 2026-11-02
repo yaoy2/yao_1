@@ -12,6 +12,7 @@ if str(ROOT) not in sys.path:
 from utils.ui_theme import render_home_link
 from integrations.file_distribution.rules import (
     ENTRY_FILENAME,
+    RELEASE_DATE,
     RULE_ROWS,
     USER_GUIDE,
     VERSION,
@@ -41,4 +42,4 @@ st.link_button(
     "使用与维护说明",
     "https://github.com/yaoy2/yao_1/blob/main/integrations/file_distribution/README.md",
 )
-st.caption(f"M20 · 规则与程序版本 {VERSION}")
+st.caption(f"M20 · 规则与程序版本 {VERSION} · 更新日期 {RELEASE_DATE}")

@@ -7,7 +7,7 @@ import sys
 
 from .engine import scan
 from .gui import run_gui
-from .rules import VERSION
+from .rules import ENTRY_FILENAME, RELEASE_DATE, VERSION
 
 
 def default_root() -> Path:
@@ -27,7 +27,8 @@ def main(argv=None) -> int:
         if args.preview_report:
             plan = scan(root, args.mode)
             with args.preview_report.open("x", encoding="utf-8") as output:
-                json.dump({"version": VERSION, **plan.to_dict()}, output, ensure_ascii=False, indent=2)
+                json.dump({"version": VERSION, "release_date": RELEASE_DATE, "entry": ENTRY_FILENAME,
+                           **plan.to_dict()}, output, ensure_ascii=False, indent=2)
             return 0
         run_gui(str(root), args.mode)
         return 0
