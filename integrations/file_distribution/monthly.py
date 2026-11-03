@@ -163,9 +163,12 @@ def _academy_name(profiles: list[Profile], name: str, period: str, extension: st
         raise ValueError("文件名人名与当期实际填写人员不一致，保留原处待核对")
     if len(identities) > len(actual_people):
         raise ValueError("同一人员的当期单位不唯一，保留原处待核对")
-    if len(identities) > 1 or "汇总" in name:
+    summary_name = re.fullmatch(rf"【健康学院】学院月报-{M}(?:-{M})?月-(副院长|系主任管理中心)", Path(name).stem)
+    if summary_name and summary_name[1] != next(iter(groups)):
+        raise ValueError("文件名汇总类别与当期表格不一致，保留原处待核对")
+    if len(identities) > 1 or "汇总" in name or summary_name:
         group = next(iter(groups))
-        return f"【健康学院】学院月报-{group}{extension}", group, "汇总表按报送类别统一命名"
+        return f"【健康学院】学院月报-{period}-{group}{extension}", group, "汇总表按总结月份和报送类别统一命名"
     unit, person = next(iter(identities))
     return f"【健康学院】学院月报-{unit}-{period}-{person}{extension}", unit, "按当期实际填写行核对单位和人名"
 

@@ -258,7 +258,7 @@ class MonthlyClassificationTests(unittest.TestCase):
         self.assert_route(result, "学院月报", "10月")
         self.assertNotIn("提交人", result.relative_dir)
         self.assertNotIn("副院长", result.relative_dir)
-        self.assertEqual(result.target_name, "【健康学院】学院月报-副院长.xlsx")
+        self.assertEqual(result.target_name, "【健康学院】学院月报-10月-副院长.xlsx")
 
     def test_department_single_report_uses_summary_month_and_preserves_extension(self):
         result = self.classify("学院月报-10-11.XLSX", _academy_workbook(group="系/部/中心"))
@@ -314,17 +314,32 @@ class MonthlyClassificationTests(unittest.TestCase):
         result = self.classify("学院月报-10-11.xlsx", workbook)
         self.assertEqual(result.target_name, "【健康学院】学院月报-医学影像系-10月-提交人甲.xlsx")
 
-    def test_department_summary_uses_category_without_month_or_people(self):
+    def test_department_summary_uses_summary_month_before_category_without_people(self):
         workbook = _academy_workbook(group="系/部/中心")
         workbook.active["A4"] = "健康体育部"
         workbook.active["B4"] = "提交人乙"
         workbook.active["D4"] = "完成当期工作。"
         result = self.classify("学院月报-10-11.xlsx", workbook)
-        self.assertEqual(result.target_name, "【健康学院】学院月报-系主任管理中心.xlsx")
+        self.assertEqual(result.target_name, "【健康学院】学院月报-10月-系主任管理中心.xlsx")
 
     def test_explicit_summary_with_one_filled_person_still_uses_summary_name(self):
         result = self.classify("学院月报汇总-10-11.xlsx", _academy_workbook(group="系/部/中心"))
-        self.assertEqual(result.target_name, "【健康学院】学院月报-系主任管理中心.xlsx")
+        self.assertEqual(result.target_name, "【健康学院】学院月报-10月-系主任管理中心.xlsx")
+
+    def test_normalized_summary_name_keeps_one_person_summary_and_selects_current_period(self):
+        for group, category in (("副院长", "副院长"), ("系/部/中心", "系主任管理中心")):
+            with self.subTest(category=category):
+                workbook = _academy_workbook(group=group)
+                _academy_sheet(workbook.create_sheet("历史月报"), summary="9", plan="10", group=group)
+                name = f"【健康学院】学院月报-10月-{category}.xlsx"
+                result = self.classify(name, workbook)
+                self.assert_route(result, "学院月报", "10月")
+                self.assertEqual(result.target_name, name)
+
+    def test_normalized_summary_category_conflict_requires_review(self):
+        result = self.classify("【健康学院】学院月报-10月-副院长.xlsx", _academy_workbook(group="系/部/中心"))
+        self.assertEqual(result.status, "review")
+        self.assertIn("汇总类别", result.reason)
 
     def test_mixed_summary_categories_require_review(self):
         workbook = _academy_workbook()
