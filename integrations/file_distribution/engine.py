@@ -8,6 +8,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shutil
 import stat
 from typing import Callable, Iterable
 import uuid
@@ -19,7 +20,7 @@ from .monthly import MONTHLY_HINT, classify_monthly
 from .readers import read_document_text
 from .rules import RELEASE_DATE, VERSION
 from .school_calendar import CALENDAR_PERIOD
-from .weekly import classify_weekly
+from .weekly import classify_weekly, with_monthly_summary
 
 
 def _now() -> str:
@@ -114,7 +115,7 @@ def _classify(path: Path, root: Path, mode: str | Iterable[str], *, calendar_per
         decision = replace(decision, reason=f"{decision.reason}；{limitation}")
     elif limitation and not text.strip() and decision.status == "ready":
         decision = replace(decision, reason=f"{decision.reason}；正文未提取，依据文件名及校历核对")
-    return decision
+    return with_monthly_summary(decision, path.name, text)
 
 
 def _matches_rules(name: str, rules: Iterable[str]) -> bool:
@@ -164,18 +165,45 @@ def _target(root: Path, decision: Decision, filename: str) -> Path:
     return target
 
 
-def _duplicate(target: Path, digest: str, size: int) -> tuple[str, str]:
+def _destination_state(target: Path, digest: str, size: int) -> tuple[str, str, Path]:
     if target.exists():
         if target.is_file() and not _is_link(target) and target.stat().st_size == size and _hash_file(target) == digest:
-            return "duplicate", "目标已有同名且内容相同的文件；源文件保留原处"
-        return "collision", "目标已有同名文件或目录；不覆盖，源文件保留原处"
+            return "duplicate", "目标已有同名且内容相同的文件；源文件保留原处", target
+        return "collision", "目标已有同名文件或目录；不覆盖，源文件保留原处", target
     if target.parent.is_dir():
         for other in sorted(target.parent.iterdir(), key=lambda p: p.name.casefold()):
             if not other.is_file() or _is_link(other) or other.stat().st_size != size:
                 continue
             if _hash_file(other) == digest:
-                return "duplicate", f"归档目录已有相同内容：{other.name}；源文件保留原处"
-    return "", ""
+                return "duplicate", f"归档目录已有相同内容：{other.name}；源文件保留原处", other
+    return "", "", target
+
+
+def _duplicate(target: Path, digest: str, size: int) -> tuple[str, str]:
+    status, reason, _ = _destination_state(target, digest, size)
+    return status, reason
+
+
+def _summary_target(root: Path, decision: Decision, filename: str) -> Path | None:
+    if not decision.summary_relative_dir:
+        return None
+    return _target(root, replace(decision, relative_dir=decision.summary_relative_dir), filename)
+
+
+def _minute_targets(root: Path, decision: Decision, name: str, digest: str, size: int) -> tuple[Path, Path, str, str, bool, bool]:
+    primary = _target(root, decision, name)
+    summary = _summary_target(root, decision, name)
+    if summary is None:
+        raise ValueError("会议纪要缺少月度汇总目标，请重新预览")
+    first = _destination_state(primary, digest, size)
+    second = _destination_state(summary, digest, size)
+    if any(state[0] == "collision" for state in (first, second)):
+        status, reason = "collision", "原分类或月度汇总目标同名冲突；两处均不写入，源文件保留原处"
+    elif all(state[0] == "duplicate" for state in (first, second)):
+        status, reason = "duplicate", "原分类和月度汇总均已有相同内容；源文件保留原处"
+    else:
+        status, reason = "", ""
+    return first[2], second[2], status, reason, first[0] == "duplicate", second[0] == "duplicate"
 
 
 def scan(root: str | Path, mode: str | Iterable[str], *,
@@ -225,12 +253,20 @@ def scan(root: str | Path, mode: str | Iterable[str], *,
                         raise ValueError("扫描时文件发生变化，请重新预览")
                     if bounds and creation_time_ns(current) != item.creation_time_ns:
                         raise ValueError("扫描时文件创建时间发生变化，请重新预览")
-                    target = _target(root, decision, path.name)
+                    if decision.summary_relative_dir:
+                        target, summary, status, reason, primary_exists, _ = _minute_targets(
+                            root, decision, path.name, item.sha256, item.size)
+                        item.summary_destination = str(summary)
+                        if primary_exists and not status:
+                            item.reason += "；原分类已有相同内容，本次补齐月度副本并保留源文件"
+                    else:
+                        target = _target(root, decision, path.name)
+                        status, reason = _duplicate(target, item.sha256, item.size)
                     item.destination = str(target)
                     if target.name != path.name:
                         item.reason += f"；分发后统一命名为：{target.name}"
-                    status, reason = _duplicate(target, item.sha256, item.size)
-                    key = (str(target.parent).casefold(), item.sha256)
+                    key = (str(target.parent).casefold(), str(Path(item.summary_destination).parent).casefold()
+                           if item.summary_destination else "", item.sha256)
                     if not status and key in planned_hashes:
                         status, reason = "duplicate", f"与本批文件内容相同：{planned_hashes[key]}；先处理该文件，当前源文件保留原处"
                     if status:
@@ -245,7 +281,9 @@ def scan(root: str | Path, mode: str | Iterable[str], *,
     destinations: dict[str, list[PlanItem]] = {}
     for item in plan.items:
         if item.destination and item.sha256 and item.status in {"ready", "duplicate"}:
-            destinations.setdefault(item.destination.casefold(), []).append(item)
+            for destination in (item.destination, item.summary_destination):
+                if destination:
+                    destinations.setdefault(destination.casefold(), []).append(item)
     for group in destinations.values():
         if len({item.sha256 for item in group}) > 1:
             for item in group:
@@ -329,6 +367,26 @@ def _move_no_replace(source: Path, target: Path, stream=None) -> None:
         source.unlink()
 
 
+def _copy_no_replace(stream, target: Path, digest: str) -> None:
+    """Only discard an incomplete file created by this copy; never replace existing content."""
+    created = None
+    try:
+        with target.open("xb") as output:
+            created = os.fstat(output.fileno())
+            stream.seek(0)
+            shutil.copyfileobj(stream, output, 1024 * 1024)
+            output.flush()
+            os.fsync(output.fileno())
+        if _hash_file(target) != digest:
+            raise ValueError("月度汇总副本内容校验失败，源文件保留")
+    except Exception:
+        if created and target.exists():
+            current = target.lstat()
+            if (current.st_dev, current.st_ino) == (created.st_dev, created.st_ino):
+                target.unlink()
+        raise
+
+
 def execute(plan: Plan, selected_names: Iterable[str], *,
             on_progress: Callable[[ProgressEvent], None] | None = None) -> ExecutionResult:
     """Only selected ready items from this in-memory preview can be moved."""
@@ -359,6 +417,7 @@ def execute(plan: Plan, selected_names: Iterable[str], *,
             if item.name not in selected:
                 continue
             moved = False
+            summary_saved = False
             _notify(on_progress, "moving", completed, len(selected), f"正在分发：{item.name}", item)
             try:
                 source = _normal_path(Path(item.source), root=root)
@@ -383,12 +442,18 @@ def execute(plan: Plan, selected_names: Iterable[str], *,
                         item.status, item.reason = "review", "执行前重新核对未通过：" + decision.reason
                         _write_record(log, "result", file=asdict(item))
                         continue
-                    target = _target(root, decision, source.name)
-                    if target != Path(item.destination):
+                    summary = None
+                    primary_exists = summary_exists = False
+                    if decision.summary_relative_dir:
+                        target, summary, status, reason, primary_exists, summary_exists = _minute_targets(
+                            root, decision, source.name, current_digest, info.st_size)
+                    else:
+                        target = _target(root, decision, source.name)
+                        status, reason = _duplicate(target, current_digest, info.st_size)
+                    if target != Path(item.destination) or (str(summary) if summary else "") != item.summary_destination:
                         item.status, item.reason = "changed", "目标与预览不一致，请重新预览"
                         _write_record(log, "result", file=asdict(item))
                         continue
-                    status, reason = _duplicate(target, current_digest, info.st_size)
                     if status:
                         item.status, item.reason = status, reason
                         _write_record(log, "result", file=asdict(item))
@@ -403,21 +468,41 @@ def execute(plan: Plan, selected_names: Iterable[str], *,
                         if bounds and creation_time_ns(locked) != item.creation_time_ns:
                             raise ValueError("执行前文件创建时间已变化，请重新预览")
                         _write_record(log, "planned", file=asdict(item))
-                        target.parent.mkdir(parents=True, exist_ok=True)
                         _target(root, decision, source.name)
-                        _move_no_replace(source, target, move_stream)
-                        moved = True
+                        if summary is not None:
+                            summary.parent.mkdir(parents=True, exist_ok=True)
+                            _summary_target(root, decision, source.name)
+                            _normal_path(summary, root=root)
+                            if not summary_exists:
+                                _copy_no_replace(move_stream, summary, item.sha256)
+                            if _hash_file(summary) != item.sha256:
+                                raise ValueError("月度汇总副本已变化，源文件保留")
+                            summary_saved = True
+                        if not primary_exists:
+                            target.parent.mkdir(parents=True, exist_ok=True)
+                            _target(root, decision, source.name)
+                            _move_no_replace(source, target, move_stream)
+                            moved = True
                         if _hash_file(target) != item.sha256:
                             raise ValueError("已移至预览目标，但内容核验未通过，请根据记录检查目标文件")
-                        item.status = "moved"
-                        item.reason = (f"已分发并统一命名为：{target.name}，内容校验一致" if target.name != item.name
-                                       else "已分发，原文件名保留，内容校验一致")
+                        if summary is not None and _hash_file(summary) != item.sha256:
+                            raise ValueError("原分类已归档，但月度汇总副本发生变化，请检查记录")
+                        item.status = "moved" if moved else "copied"
+                        if summary is not None:
+                            item.reason = ("已分发，原分类和月度汇总两份内容校验一致" if moved
+                                           else "已补齐月度汇总副本，两份内容一致；原分类已有相同内容，源文件保留")
+                        else:
+                            item.reason = (f"已分发并统一命名为：{target.name}，内容校验一致" if target.name != item.name
+                                           else "已分发，原文件名保留，内容校验一致")
             except Exception as exc:
                 item.status = "error"
                 item.reason = ("文件已移动，请检查记录：" if moved else "未移动：") + str(exc)
+                if summary_saved:
+                    item.reason += f"；月度副本已保存于：{item.summary_destination}"
             finally:
                 completed += 1
                 _notify(on_progress, "result", completed, len(selected), item.reason, item)
             _write_record(log, "result", file=asdict(item))
-        _write_record(log, "complete", moved=sum(item.status == "moved" for item in items), selected=len(selected))
+        _write_record(log, "complete", moved=sum(item.status == "moved" for item in items),
+                      copied=sum(item.status == "copied" for item in items), selected=len(selected))
     return ExecutionResult(items, str(log_path))

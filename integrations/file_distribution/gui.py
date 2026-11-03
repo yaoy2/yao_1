@@ -181,7 +181,7 @@ class DistributionWindow:
         horizontal = ttk.Scrollbar(table, orient="horizontal", command=self.tree.xview)
         horizontal.grid(row=1, column=0, sticky="ew")
         self.tree.configure(yscrollcommand=vertical.set, xscrollcommand=horizontal.set)
-        for tag, color in {"ready": "#195C3C", "moved": "#175887", "review": "#8B540B",
+        for tag, color in {"ready": "#195C3C", "moved": "#175887", "copied": "#175887", "review": "#8B540B",
                            "collision": "#8B540B", "error": "#A32929", "changed": "#A32929",
                            "duplicate": "#66717F", "skip": "#66717F"}.items():
             self.tree.tag_configure(tag, foreground=color)
@@ -467,10 +467,13 @@ class DistributionWindow:
         if not item.destination:
             return "—"
         target = Path(item.destination).parent
-        try:
-            return str(target.relative_to(Path(self.source_var.get())))
-        except ValueError:
-            return str(target)
+        labels = []
+        for folder in [target, *([Path(item.summary_destination).parent] if item.summary_destination else [])]:
+            try:
+                labels.append(str(folder.relative_to(Path(self.source_var.get()))))
+            except ValueError:
+                labels.append(str(folder))
+        return "；月度副本：".join(labels)
 
     def _row_values(self, item: PlanItem) -> tuple[str, ...]:
         enabled = item.status == "ready" and not self._consumed
@@ -504,6 +507,8 @@ class DistributionWindow:
                  f"重复或同名 {counts['duplicate'] + counts['collision']}", f"跳过 {counts['skip']}"]
         if self._consumed:
             parts[1] = f"本次已分发 {counts['moved']}"
+            if counts['copied']:
+                parts.append(f"补齐副本 {counts['copied']}")
         if self._plan and self._plan.start_date:
             parts.append(f"日期范围外 {self._plan.date_excluded_count}")
         self.summary_var.set("    ".join(parts))
@@ -555,7 +560,7 @@ class DistributionWindow:
             return
         # A new file with the same name may already be back in the source folder.
         # Completed rows must still reveal the archived file from this run.
-        path = Path(item.destination if item.status == "moved" and item.destination else item.source)
+        path = Path(item.destination if item.status in {"moved", "copied"} and item.destination else item.source)
         if original_folder:
             path = Path(item.source).parent
         try:
@@ -599,9 +604,10 @@ class DistributionWindow:
         if item is not None:
             created = (f"本机创建时间：{datetime.fromtimestamp(item.creation_time_ns / 1_000_000_000):%Y-%m-%d %H:%M:%S}\n"
                        if item.creation_time_ns else "")
+            summary = f"月度汇总副本：{item.summary_destination}\n" if item.summary_destination else ""
             self._set_details(
                 f"文件：{item.name}\n来源：{item.source}\n目标：{item.destination or '尚不能确定'}\n"
-                f"{created}状态：{STATUS_LABELS.get(item.status, item.status)}    说明：{item.reason}"
+                f"{summary}{created}状态：{STATUS_LABELS.get(item.status, item.status)}    说明：{item.reason}"
             )
 
     def distribute(self) -> None:
@@ -615,7 +621,8 @@ class DistributionWindow:
             f"材料目录：{self._plan.root}\n分发规则：{'、'.join(RULE_LABELS[key] for key in selected_rules(self._plan.rules or self._plan.mode))}\n"
             f"{self._date_scope(self._plan)}\n\n"
             "系部纪要、考勤和学院月报按预览名称统一命名；党政联席会纪要保留原名。\n"
-            "文件将移到预览目标，原位置不保留副本。确认后开始分发。", parent=self.window,
+            "会议纪要在原分类和当月汇总目录各存一份；两份均核验后完成。\n"
+            "文件移至预览目标；原分类已有相同内容时仅补齐月度副本，源文件保留。确认后开始分发。", parent=self.window,
         ):
             return
         plan = self._plan
@@ -636,7 +643,7 @@ class DistributionWindow:
         self._render_rows()
         self._update_summary()
         counts = Counter(item.status for item in self._items)
-        summary = (f"分发完成：已移动 {counts['moved']}，失败 {counts['error']}，"
+        summary = (f"分发完成：已移动 {counts['moved']}，补齐副本 {counts['copied']}，失败 {counts['error']}，"
                    f"待核对 {counts['review'] + counts['changed']}，"
                    f"跳过/未处理 {sum(counts[key] for key in ('skip', 'ready', 'duplicate', 'collision'))}")
         self.progress_var.set(summary)

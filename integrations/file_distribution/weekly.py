@@ -1,10 +1,11 @@
 """Classify department minutes and attendance without reading or moving files."""
 
+from dataclasses import replace
 import re
 import unicodedata
 
 from .models import Decision
-from .school_calendar import CALENDAR_PERIOD, WEEK_PATTERN, is_date_heading, naming_week_label, resolve_calendar
+from .school_calendar import CALENDAR_PERIOD, WEEK_PATTERN, filing_month, is_date_heading, naming_week_label, resolve_calendar
 
 
 _DEPARTMENTS = {
@@ -253,3 +254,16 @@ def _classify_party(evidence: list[str], headings: list[str], calendar_period: s
         f"02_学期工作/{period}/03_会议_考勤/党政联席会_系部例会/党政联席会",
         "学院党政联席会PDF统一命名已匹配；" + note,
     )
+
+
+def with_monthly_summary(decision: Decision, name: str, text: str) -> Decision:
+    if decision.status != "ready" or decision.kind not in {"会议纪要", "学院党政联席会纪要"}:
+        return decision
+    filename = re.split(r"[\\/]", name)[-1]
+    title = filename.rsplit(".", 1)[0]
+    month, error = filing_month([title, *_heading_lines(text)], decision.period)
+    if error:
+        return replace(decision, status="review", reason=decision.reason + "；" + error)
+    base, group = decision.relative_dir.rsplit("/", 1)
+    return replace(decision, summary_relative_dir=f"{base}/{month}会议纪要-健康学院/{group}",
+                   reason=decision.reason + f"；原分类和{month}会议纪要汇总各保存一份")

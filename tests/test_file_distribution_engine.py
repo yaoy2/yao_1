@@ -1,6 +1,7 @@
 """Move actual synthetic files; never execute against the user's Ding2026."""
 
 from contextlib import contextmanager
+from datetime import timedelta
 import hashlib
 import json
 import os
@@ -26,7 +27,9 @@ def root(tmp_path):
 
 def write_minutes(root, label="甲", *, name=None, text=None, week=7):
     path = root / (name or f"医学信息工程系2026-2027-1第{week}周会议纪要-{label}.docx")
-    paragraphs = text or ["医学信息工程系会议纪要", f"2026-2027学年第一学期第{week}周",
+    from integrations.file_distribution.school_calendar import WEEK_RANGES
+    meeting_date = WEEK_RANGES[f"第{week}周"][0] + timedelta(days=1)
+    paragraphs = text or ["医学信息工程系会议纪要", f"2026-2027学年第一学期第{week}周", f"会议时间：{meeting_date.isoformat()}",
                           "一、工作安排", f"完成样例事项{label}，记录后续安排。"]
     body = "".join(f"<w:p><w:r><w:t>{escape(value)}</w:t></w:r></w:p>" for value in paragraphs)
     with ZipFile(path, "w", ZIP_DEFLATED) as archive:
@@ -271,7 +274,7 @@ def test_preview_becomes_invalid_after_source_content_or_timestamp_changes(root,
     assert result.moved == 0
 
 
-@pytest.mark.parametrize("same_content,expected", [(True, "duplicate"), (False, "collision")])
+@pytest.mark.parametrize("same_content,expected", [(True, "ready"), (False, "collision")])
 def test_preexisting_target_is_detected_in_preview_and_kept_untouched(root, same_content, expected):
     source = write_minutes(root)
     _, ready = ready_plan(root)
@@ -294,7 +297,7 @@ def test_target_created_after_preview_is_rechecked_before_move(root, same_conten
     target.write_bytes(source.read_bytes() if same_content else b"do not overwrite")
     original_target = target.read_bytes()
     result = engine.execute(plan, [source.name])
-    assert result_item(result, source.name).status == expected
+    assert result_item(result, source.name).status == ('copied' if mode == 'weekly' and same_content else expected)
     assert source.exists()
     assert target.read_bytes() == original_target
     assert result.moved == 0
@@ -310,8 +313,9 @@ def test_different_filename_with_same_content_is_not_duplicated(root):
     before = inventory(root)
     preview = engine.scan(root, "weekly")
     item = next(item for item in preview.items if item.name == source.name)
-    assert item.status == "duplicate"
-    assert existing.name in item.reason
+    assert item.status == "ready"
+    assert Path(item.destination) == existing
+    assert item.summary_destination
     assert inventory(root) == before
 
 

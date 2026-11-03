@@ -419,3 +419,14 @@ def test_preview_shows_original_and_final_names_before_distribution(make_window,
     app.distribute()
     assert '党政联席会纪要保留原名' in confirm.call_args.args[1]
     executor.assert_not_called()
+
+
+def test_minute_preview_shows_both_locations_and_copy_completion(make_window):
+    app, _, _, plan = make_window()
+    item = plan.items[0]
+    item.summary_destination = str(Path(plan.root) / '纪要' / '10月会议纪要-健康学院' / '医学影像系' / item.name)
+    app._show_plan(plan)
+    assert '月度副本' in app.tree.item('file-0', 'values')[4]
+    assert item.summary_destination in app.details.get('1.0', 'end')
+    app._show_result(ExecutionResult([replace(item, status='copied')], ''))
+    assert '补齐副本 1' in app.progress_var.get()

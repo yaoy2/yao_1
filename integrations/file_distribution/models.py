@@ -6,7 +6,7 @@ from dataclasses import asdict, dataclass, field
 STATUS_LABELS = {
     "ready": "可分发", "review": "待核对", "skip": "跳过",
     "duplicate": "内容重复", "collision": "同名冲突", "changed": "文件已变化",
-    "moved": "已分发", "error": "失败", "ignored": "不在范围内",
+    "moved": "已分发", "copied": "已补齐副本", "error": "失败", "ignored": "不在范围内",
 }
 MODE_LABELS = {"monthly": "月报分发", "weekly": "纪要考勤分发", "invoice": "发票归档"}
 RULE_LABELS = {"minutes": "会议纪要", "attendance": "考勤记录", "monthly": "月报", "invoice": "发票"}
@@ -30,6 +30,7 @@ class Decision:
     reason: str = ""
     target_name: str = ""
     week_label: str = ""
+    summary_relative_dir: str = ""
 
 
 @dataclass
@@ -47,6 +48,7 @@ class PlanItem:
     mtime_ns: int = 0
     creation_time_ns: int = 0
     week_label: str = ""
+    summary_destination: str = ""
 
 
 @dataclass
@@ -75,6 +77,10 @@ class ExecutionResult:
     @property
     def moved(self) -> int:
         return sum(item.status == "moved" for item in self.items)
+
+    @property
+    def copied(self) -> int:
+        return sum(item.status == "copied" for item in self.items)
 
 
 @dataclass(frozen=True)

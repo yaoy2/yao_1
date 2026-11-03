@@ -107,10 +107,10 @@ def test_existing_standard_name_is_never_overwritten(tmp_path, same_content):
     target.write_bytes(source.read_bytes() if same_content else b'existing different record')
     before = inventory(tmp_path)
     rescanned = engine.scan(tmp_path, 'weekly')
-    assert rescanned.items[0].status == ('duplicate' if same_content else 'collision')
+    assert rescanned.items[0].status == ('ready' if same_content else 'collision')
     # Even the earlier preview is rechecked at execution time.
     result = engine.execute(plan, [source.name])
     assert result.moved == 0 and source.exists()
     assert target.read_bytes() == (source.read_bytes() if same_content else b'existing different record')
-    assert {key: value for key, value in inventory(tmp_path).items() if key in before and key != '.'} == {
-        key: value for key, value in before.items() if key != '.'}
+    assert {key: value for key, value in inventory(tmp_path).items() if key in before and not value[0]} == {
+        key: value for key, value in before.items() if not value[0]}

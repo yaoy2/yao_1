@@ -88,7 +88,7 @@ def test_cross_week_attendance_and_exam_labels():
 
 
 def test_execution_reuses_preview_calendar_context_and_records_it(tmp_path):
-    source = write_minutes(tmp_path, name='健康体育部第7周会议纪要.docx', text=['健康体育部第7周会议纪要', '一、工作安排'])
+    source = write_minutes(tmp_path, name='健康体育部第4周会议纪要.docx', text=['健康体育部第4周会议纪要', '一、工作安排'])
     assert engine.scan(tmp_path, 'weekly', calendar_period='').items[0].status == 'review'
     plan = engine.scan(tmp_path, 'weekly')
     assert plan.items[0].status == 'ready'

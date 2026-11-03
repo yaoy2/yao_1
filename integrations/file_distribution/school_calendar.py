@@ -130,6 +130,40 @@ def naming_week_label(evidence: list[str], period: str) -> str:
     return f"第{value}周"
 
 
+def filing_month(evidence: list[str], period: str) -> tuple[str, str]:
+    """Resolve one material month, never use download/creation time or today's month."""
+    dates, short_dates, error = _date_evidence(evidence)
+    if error:
+        return "", error
+    for month, day in short_dates:
+        if period != CALENDAR_PERIOD:
+            return "", "材料仅有月日，缺少该学期校历，无法核对月度汇总月份"
+        candidates = []
+        for year in (2026, 2027):
+            try:
+                value = date(year, month, day)
+            except ValueError:
+                continue
+            if TERM_START <= value <= TERM_END:
+                candidates.append(value)
+        if len(candidates) != 1:
+            return "", "材料月日无法据本批校历确定月度汇总月份"
+        dates.extend(candidates)
+    if dates:
+        months = {(value.year, value.month) for value in dates}
+    else:
+        groups, error = _week_evidence(evidence)
+        if error:
+            return "", error
+        weeks = set().union(*groups) if groups else set()
+        if period != CALENDAR_PERIOD or not weeks or weeks - WEEK_RANGES.keys():
+            return "", "缺少材料日期或可对应校历的周次，无法确定月度汇总月份"
+        months = {(endpoint.year, endpoint.month) for week in weeks for endpoint in WEEK_RANGES[week]}
+    if len(months) != 1:
+        return "", "材料日期或校历周跨月，无法确定唯一月度汇总月份，请补充明确会议日期"
+    return f"{next(iter(months))[1]}月", ""
+
+
 def resolve_calendar(evidence: list[str], explicit_period: str, *,
                      calendar_period: str = CALENDAR_PERIOD) -> tuple[str, str, str]:
     """Return period, explanation, error; partial dates/weeks require a batch context."""

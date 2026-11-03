@@ -57,5 +57,8 @@ def test_actual_pdf_move_obeys_minutes_selection_and_preserves_other_files(tmp_p
     assert result.moved == 1
     assert Path(result.items[0].destination).name == source.name
     assert Path(result.items[0].destination).read_bytes() == original
+    summary = Path(result.items[0].summary_destination)
+    assert summary.name == source.name and '10月会议纪要-健康学院' in str(summary)
+    assert summary.read_bytes() == original
     assert word_draft.read_bytes() == b'word draft not selected by this rule'
     assert not source.exists()
