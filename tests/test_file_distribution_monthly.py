@@ -23,7 +23,7 @@ def _academy_sheet(sheet, summary="10", plan="11", year=2026, *, populated=True,
     sheet["C2"] = "工作领域"
     sheet["D2"] = f"{_month_label(summary, year)}工作总结"
     sheet["E2"] = f"{plan}月工作计划"
-    sheet["A3"] = "教学管理"
+    sheet["A3"] = "教学管理" if group == "副院长" else "医学影像系"
     sheet["B3"] = "提交人甲"
     sheet["C3"] = "课程建设"
     if populated:
@@ -253,11 +253,127 @@ class MonthlyClassificationTests(unittest.TestCase):
         workbook.active["B4"] = "提交人乙"
         workbook.active["D4"] = "完成三次学生座谈。"
         workbook.active["E4"] = "组织两次专题培训。"
-        _academy_sheet(workbook.create_sheet("系部月报"), group="系（部）/管理中心/学工")
+        _academy_sheet(workbook.create_sheet("副院长补充"))
         result = self.classify("健康学院学院月报-10-11.xlsx", workbook)
         self.assert_route(result, "学院月报", "10月")
         self.assertNotIn("提交人", result.relative_dir)
         self.assertNotIn("副院长", result.relative_dir)
+        self.assertEqual(result.target_name, "【健康学院】学院月报-副院长.xlsx")
+
+    def test_department_single_report_uses_summary_month_and_preserves_extension(self):
+        result = self.classify("学院月报-10-11.XLSX", _academy_workbook(group="系/部/中心"))
+        self.assert_route(result, "学院月报", "10月")
+        self.assertEqual(result.target_name, "【健康学院】学院月报-医学影像系-10月-提交人甲.XLSX")
+
+    def test_center_report_ignores_unfilled_roster_and_strips_job_title(self):
+        workbook = _academy_workbook(group="系/部/中心")
+        workbook.active["A3"] = "科研管理中心副主任"
+        workbook.active["A4"] = "学生竞赛管理中心主任"
+        workbook.active["B4"] = "提交人乙"
+        workbook.active["D4"] = "待填"
+        result = self.classify("学院月报-10-11.xlsx", workbook)
+        self.assertEqual(result.target_name, "【健康学院】学院月报-科研管理中心-10月-提交人甲.xlsx")
+
+    def test_merged_department_applies_to_actual_filled_person_only(self):
+        workbook = _academy_workbook(group="系/部/中心", populated=False)
+        sheet = workbook.active
+        sheet.merge_cells("A3:A4")
+        sheet["B4"] = "提交人乙"
+        sheet["D4"] = "完成当期工作。"
+        result = self.classify("学院月报-10-11.xlsx", workbook)
+        self.assertEqual(result.target_name, "【健康学院】学院月报-医学影像系-10月-提交人乙.xlsx")
+
+    def test_unmerged_missing_department_is_not_filled_from_previous_person(self):
+        workbook = _academy_workbook(group="系/部/中心", populated=False)
+        workbook.active["B4"] = "提交人乙"
+        workbook.active["D4"] = "完成当期工作。"
+        result = self.classify("学院月报-10-11.xlsx", workbook)
+        self.assertEqual(result.status, "review")
+        self.assertIn("系部/管理中心", result.reason)
+
+    def test_real_deputy_layout_reads_name_from_deputy_column(self):
+        workbook = _academy_workbook()
+        sheet = workbook.active
+        sheet["B2"] = "分管范围"
+        sheet["C2"] = sheet["D2"].value
+        sheet["D2"] = sheet["E2"].value
+        sheet["E2"] = None
+        sheet["A3"] = "提交人甲"
+        sheet["B3"] = "教学管理"
+        sheet["C3"] = "完成两次检查。"
+        sheet["D3"] = "安排下期检查。"
+        result = self.classify("学院月报-10-11.xlsx", workbook)
+        self.assertEqual(result.target_name, "【健康学院】学院月报-副院长-10月-提交人甲.xlsx")
+
+    def test_repeated_rows_for_same_person_are_not_a_summary(self):
+        workbook = _academy_workbook(group="系/部/中心")
+        sheet = workbook.active
+        sheet.merge_cells("A3:A4")
+        sheet.merge_cells("B3:B4")
+        sheet["D4"] = "补充一项当期工作。"
+        result = self.classify("学院月报-10-11.xlsx", workbook)
+        self.assertEqual(result.target_name, "【健康学院】学院月报-医学影像系-10月-提交人甲.xlsx")
+
+    def test_department_summary_uses_category_without_month_or_people(self):
+        workbook = _academy_workbook(group="系/部/中心")
+        workbook.active["A4"] = "健康体育部"
+        workbook.active["B4"] = "提交人乙"
+        workbook.active["D4"] = "完成当期工作。"
+        result = self.classify("学院月报-10-11.xlsx", workbook)
+        self.assertEqual(result.target_name, "【健康学院】学院月报-系主任管理中心.xlsx")
+
+    def test_explicit_summary_with_one_filled_person_still_uses_summary_name(self):
+        result = self.classify("学院月报汇总-10-11.xlsx", _academy_workbook(group="系/部/中心"))
+        self.assertEqual(result.target_name, "【健康学院】学院月报-系主任管理中心.xlsx")
+
+    def test_mixed_summary_categories_require_review(self):
+        workbook = _academy_workbook()
+        _academy_sheet(workbook.create_sheet("系部月报"), group="系/部/中心")
+        result = self.classify("学院月报-10-11.xlsx", workbook)
+        self.assertEqual(result.status, "review")
+        self.assertIn("汇总类别", result.reason)
+
+    def test_missing_person_or_unsafe_unit_requires_review(self):
+        for address, value in (("B3", None), ("B3", "某某"), ("A3", "科研/管理中心")):
+            with self.subTest(address=address, value=value):
+                workbook = _academy_workbook(group="系/部/中心")
+                workbook.active[address] = value
+                result = self.classify("学院月报-10-11.xlsx", workbook)
+                self.assertEqual(result.status, "review")
+                self.assertFalse(result.target_name)
+
+    def test_filename_person_conflict_is_not_silently_renamed(self):
+        workbook = _academy_workbook(group="系/部/中心")
+        workbook.active["B4"] = "提交人乙"
+        result = self.classify("学院月报-提交人乙-10-11.xlsx", workbook)
+        self.assertEqual(result.status, "review")
+        self.assertIn("人员不一致", result.reason)
+
+    def test_personal_filename_with_other_filled_people_is_not_renamed_as_summary(self):
+        workbook = _academy_workbook(group="系/部/中心")
+        workbook.active["A4"] = "健康体育部"
+        workbook.active["B4"] = "提交人乙"
+        workbook.active["D4"] = "另一名人员实际填写。"
+        result = self.classify("学院月报-提交人乙-10-11.xlsx", workbook)
+        self.assertEqual(result.status, "review")
+        self.assertIn("人员不一致", result.reason)
+
+    def test_one_person_with_conflicting_units_is_not_renamed_as_summary(self):
+        workbook = _academy_workbook(group="系/部/中心")
+        workbook.active["A4"] = "健康体育部"
+        workbook.active["B4"] = "提交人甲"
+        workbook.active["D4"] = "同一人另一项工作。"
+        result = self.classify("学院月报-10-11.xlsx", workbook)
+        self.assertEqual(result.status, "review")
+        self.assertIn("单位不唯一", result.reason)
+
+    def test_normalized_combined_summary_name_does_not_select_historical_month(self):
+        workbook = _academy_workbook(group="系/部/中心", summary="7-8", plan="9")
+        _academy_sheet(workbook.create_sheet("7月历史"), summary="7", plan="8", group="系/部/中心")
+        name = "【健康学院】学院月报-医学影像系-07-08月-提交人甲.xlsx"
+        result = self.classify(name, workbook)
+        self.assert_route(result, "学院月报", "07-08月")
+        self.assertEqual(result.target_name, name)
 
     def test_department_management_and_student_affairs_header_is_recognized(self):
         result = self.classify(

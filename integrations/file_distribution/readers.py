@@ -38,6 +38,7 @@ class Sheet:
     name: str
     cells: dict[str, str]
     hidden: bool = False
+    merged_ranges: tuple[str, ...] = ()
 
     def header_cells(self) -> dict[str, str]:
         return {address: text for address, text in self.cells.items() if row_number(address) <= 5}
@@ -72,7 +73,8 @@ def read_workbook(path: Path) -> list[Sheet]:
             if not member:
                 continue
             cells = {}
-            for cell in _xml(archive, member).iter(S + "c"):
+            document = _xml(archive, member)
+            for cell in document.iter(S + "c"):
                 address = cell.get("r", "")
                 if not re.fullmatch(r"[A-Z]+[1-9]\d*", address):
                     continue
@@ -88,7 +90,11 @@ def read_workbook(path: Path) -> list[Sheet]:
                     cells[address] = normalized(value).strip()
                 if len(cells) > MAX_CELLS:
                     raise ValueError("工作表内容过多，保留原处待核对")
-            sheets.append(Sheet(node.get("name", ""), cells, node.get("state", "visible") != "visible"))
+            merged_ranges = tuple(
+                cell.get("ref", "") for cell in document.findall(S + "mergeCells/" + S + "mergeCell")
+                if re.fullmatch(r"[A-Z]+[1-9]\d*:[A-Z]+[1-9]\d*", cell.get("ref", ""))
+            )
+            sheets.append(Sheet(node.get("name", ""), cells, node.get("state", "visible") != "visible", merged_ranges))
         return sheets
 
 

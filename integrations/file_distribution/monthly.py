@@ -43,6 +43,10 @@ def _name_hints(name: str) -> list[tuple[tuple[int, ...], int | None]]:
     if summaries:
         return [(months, plans[0] if len(set(plans)) == 1 else None) for months in summaries]
     stem = Path(_compact(name)).stem
+    # The normalized name explicitly labels the summary month/range, not a summary-plan pair.
+    named_period = re.search(rf"-({M}(?:-{M})?)月-[^-]+$", stem)
+    if named_period:
+        return [(_months(named_period[1]), None)]
     # Historic compact form: 78-9 means July/August summary and September plan.
     if re.search(r"(?<!\d)78-9(?:月)?(?!\d)", stem):
         return [((7, 8), 9)]
@@ -81,12 +85,14 @@ class Profile:
         return {months for kind, months, _ in (self.column_labels if columns else self.labels) if kind == action and months}
 
     def has_data(self) -> bool:
-        for address, text in self.sheet.cells.items():
-            if row_number(address) < 3 or col_number(address) not in self.data_columns:
-                continue
-            if text.strip() and not re.fullmatch(r"(?:请填写|待填写|待填|[-—/\s]|[xX某]){1,12}", text):
-                return True
-        return False
+        return bool(self.data_rows())
+
+    def data_rows(self) -> set[int]:
+        return {
+            row_number(address) for address, text in self.sheet.cells.items()
+            if row_number(address) >= 3 and col_number(address) in self.data_columns
+            and text.strip() and not re.fullmatch(r"(?:请填写|待填写|待填|[-—/\s]|[xX某]){1,12}", text)
+        }
 
 
 def _profile(sheet: Sheet) -> Profile:
@@ -101,6 +107,67 @@ def _profile(sheet: Sheet) -> Profile:
             column_labels.extend(found)
             data_columns.add(col_number(address))
     return Profile(sheet, labels, column_labels, data_columns)
+
+
+def _identity_cell(sheet: Sheet, column: str, row: int) -> str:
+    address = f"{column}{row}"
+    if address in sheet.cells:
+        return _compact(sheet.cells[address])
+    # Fill only genuine merged cells, never carry a different person's unit into an empty row.
+    for merged in sheet.merged_ranges:
+        first, last = merged.split(":")
+        if (col_number(first) <= col_number(address) <= col_number(last)
+                and row_number(first) <= row <= row_number(last)):
+            return _compact(sheet.cells.get(first, ""))
+    return ""
+
+
+def _academy_name(profiles: list[Profile], name: str, period: str, extension: str) -> tuple[str, str, str]:
+    identities, roster, groups = set(), set(), set()
+    for profile in profiles:
+        if not profile.has_data():
+            continue
+        headers = {address.rstrip("0123456789"): _compact(text)
+                   for address, text in profile.sheet.cells.items() if row_number(address) == 2}
+        deputy = "副院长" in headers.values()
+        groups.add("副院长" if deputy else "系主任管理中心")
+        people_columns = [column for column, text in headers.items() if text in {"人员", "姓名", "填报人", "负责人"}]
+        if not people_columns and deputy:
+            people_columns = [column for column, text in headers.items() if text == "副院长"]
+        unit_columns = [column for column, text in headers.items()
+                        if text in {"系/部/中心", "单位", "部门"} or re.search(r"系.*部.*中心|管理中心.*学工", text)]
+        if len(people_columns) != 1 or (not deputy and len(unit_columns) != 1):
+            raise ValueError("未找到唯一的人员/单位列，无法统一命名，保留原处待核对")
+        for row in {row_number(address) for address in profile.sheet.cells if row_number(address) >= 3}:
+            person = _identity_cell(profile.sheet, people_columns[0], row)
+            if person and len(person) <= 32:
+                roster.add(person)
+        for row in profile.data_rows():
+            person = _identity_cell(profile.sheet, people_columns[0], row)
+            unit = "副院长" if deputy else _identity_cell(profile.sheet, unit_columns[0], row)
+            unit = re.sub(r"(?:副主任|主任)$", "", unit)
+            unit = {"健服系": "健康服务与管理系"}.get(unit, unit)
+            if (not re.fullmatch(r"[\u3400-\u9fffA-Za-z·・.]{2,32}", person)
+                    or re.fullmatch(r"(?:请填写|待填写|待填|[xX某]){1,12}", person)
+                    or person in {"人员", "姓名", "负责人", "填报人"}):
+                raise ValueError("当期填写行缺少明确的单人人名，无法统一命名，保留原处待核对")
+            if (not re.fullmatch(r".+(?:系|部|中心)|学工|副院长", unit)
+                    or re.search(r'[<>:"/\\|?*\x00-\x1f]', unit)):
+                raise ValueError("当期填写行缺少明确的系部/管理中心，无法统一命名，保留原处待核对")
+            identities.add((unit, person))
+    if len(groups) != 1:
+        raise ValueError("当期同时包含副院长和系主任管理中心，汇总类别不唯一，保留原处待核对")
+    named_people = {person for person in roster if person in _compact(name)}
+    actual_people = {person for _, person in identities}
+    if named_people and named_people != actual_people:
+        raise ValueError("文件名人名与当期实际填写人员不一致，保留原处待核对")
+    if len(identities) > len(actual_people):
+        raise ValueError("同一人员的当期单位不唯一，保留原处待核对")
+    if len(identities) > 1 or "汇总" in name:
+        group = next(iter(groups))
+        return f"【健康学院】学院月报-{group}{extension}", group, "汇总表按报送类别统一命名"
+    unit, person = next(iter(identities))
+    return f"【健康学院】学院月报-{unit}-{period}-{person}{extension}", unit, "按当期实际填写行核对单位和人名"
 
 
 def _root_year(root: Path) -> int | None:
@@ -224,5 +291,9 @@ def classify_monthly(path: Path, root: Path) -> Decision:
     if re.search(r"模板|模版", name):
         return Decision("review", "学院月报", reason="文件仍带模板标记但已有内容，请核对是否为正式报表")
     period = _period_name(next(iter(summaries)))
-    group = "副院长" if all("副院长" in " ".join(p.sheet.header_cells().values()) for p in selected) else "系部/管理中心/学工"
-    return Decision("ready", "学院月报", period, group, f"月报/{period}/学院月报", "已核对当期总结/计划；整份保存，保留其他历史工作表")
+    try:
+        target_name, group, naming_note = _academy_name(selected, name, period, path.suffix)
+    except ValueError as exc:
+        return Decision("review", "学院月报", reason=str(exc))
+    return Decision("ready", "学院月报", period, group, f"月报/{period}/学院月报",
+                    f"已核对当期总结/计划；{naming_note}；整份保存，保留其他历史工作表", target_name=target_name)

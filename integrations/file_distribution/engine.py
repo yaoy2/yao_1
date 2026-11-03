@@ -135,7 +135,11 @@ def _notify(callback, stage: str, completed: int, total: int, message: str, item
 
 
 def _target(root: Path, decision: Decision, filename: str) -> Path:
-    if decision.kind in {"会议纪要", "考勤记录"} and "党政联席会" not in filename:
+    if decision.kind == "学院月报":
+        if not decision.target_name:
+            raise ValueError("无法确定学院月报统一文件名，请核对单位、月份和人名")
+        filename = decision.target_name
+    elif decision.kind in {"会议纪要", "考勤记录"} and "党政联席会" not in filename:
         if not decision.target_name:
             raise ValueError("无法确定统一文件名，请核对单位和周次")
         filename = decision.target_name

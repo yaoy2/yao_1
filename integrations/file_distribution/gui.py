@@ -614,7 +614,7 @@ class DistributionWindow:
             "确认分发", f"将移动已勾选的 {len(names)} 个文件。\n\n"
             f"材料目录：{self._plan.root}\n分发规则：{'、'.join(RULE_LABELS[key] for key in selected_rules(self._plan.rules or self._plan.mode))}\n"
             f"{self._date_scope(self._plan)}\n\n"
-            "系部纪要、考勤按预览名称统一命名；党政联席会纪要保留原名。\n"
+            "系部纪要、考勤和学院月报按预览名称统一命名；党政联席会纪要保留原名。\n"
             "文件将移到预览目标，原位置不保留副本。确认后开始分发。", parent=self.window,
         ):
             return

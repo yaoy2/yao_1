@@ -54,15 +54,15 @@ def write_minutes(root, label="甲", *, name=None, text=None, week=7):
     return path
 
 
-def write_monthly(root):
-    path = root / "【健康学院】学院月报-副院长-10-11.xlsx"
+def write_monthly(root, *, name=None, content="完成两次课程检查。"):
+    path = root / (name or "【健康学院】学院月报-副院长-10-11.xlsx")
     workbook = Workbook()
     sheet = workbook.active
     sheet.title = "当期月报"
     for address, value in {
         "A1": "健康学院2026年10月工作总结及11月工作计划", "A2": "副院长",
         "B2": "分管范围", "C2": "2026年10月工作总结", "D2": "2026年11月工作计划",
-        "A3": "提交人甲", "B3": "教学管理", "C3": "完成两次课程检查。", "D3": "开展一次课程研讨。",
+        "A3": "提交人甲", "B3": "教学管理", "C3": content, "D3": "开展一次课程研讨。",
     }.items():
         sheet[address] = value
     workbook.save(path)
@@ -133,7 +133,8 @@ def test_real_move_uses_expected_filename_and_preserves_bytes_and_unrelated_mate
     assert result.moved == 1
     assert result_item(result, source.name).status == "moved"
     assert not source.exists()
-    assert target.name == (source.name if mode == 'monthly' else '医学信息工程系-会议纪要-第7周.docx')
+    assert target.name == ('【健康学院】学院月报-副院长-10月-提交人甲.xlsx' if mode == 'monthly'
+                           else '医学信息工程系-会议纪要-第7周.docx')
     assert target.read_bytes() == original
     assert digest(target) == item.sha256
     assert (inventory(previous), digest(other), other.stat().st_mtime_ns) == unrelated_before
@@ -151,6 +152,40 @@ def test_execute_only_moves_selected_ready_item(root):
     assert not first.exists()
     assert second.exists() and unresolved.exists()
     assert result_item(result, second.name).status == "ready"
+
+
+def test_monthly_naming_collision_blocks_all_different_versions(root):
+    first = write_monthly(root, name="学院月报-10-11-版本甲.xlsx")
+    second = write_monthly(root, name="学院月报-10-11-版本乙.xlsx", content="完成另一版本工作。")
+    before = inventory(root)
+    plan = engine.scan(root, "monthly")
+    assert len(plan.items) == 2
+    assert {item.status for item in plan.items} == {"collision"}
+    assert len({item.destination for item in plan.items}) == 1
+    assert all("本批不同内容" in item.reason for item in plan.items)
+    assert first.exists() and second.exists()
+    assert inventory(root) == before
+
+
+def test_monthly_rename_logs_original_and_final_path_without_touching_archive(root):
+    source = write_monthly(root)
+    archive = root / "月报/09月/学院月报"
+    archive.mkdir(parents=True)
+    historic = write_monthly(archive)
+    before_history = inventory(archive)
+    original = source.read_bytes()
+    plan, ready = ready_plan(root, "monthly")
+    item = ready[0]
+    assert "统一命名" in item.reason
+    result = engine.execute(plan, [source.name])
+    assert result.moved == 1
+    assert Path(item.destination).read_bytes() == original
+    planned = next(event["file"] for event in read_events(result) if event["event"] == "planned")
+    assert planned["source"] == str(source)
+    assert Path(planned["destination"]).name == "【健康学院】学院月报-副院长-10月-提交人甲.xlsx"
+    assert planned["sha256"] == digest(Path(item.destination))
+    assert inventory(archive) == before_history
+    assert historic.exists()
 
 
 @pytest.mark.parametrize('rules, expected', [
@@ -250,9 +285,10 @@ def test_preexisting_target_is_detected_in_preview_and_kept_untouched(root, same
 
 
 @pytest.mark.parametrize("same_content,expected", [(True, "duplicate"), (False, "collision")])
-def test_target_created_after_preview_is_rechecked_before_move(root, same_content, expected):
-    source = write_minutes(root)
-    plan, ready = ready_plan(root)
+@pytest.mark.parametrize("mode", ["monthly", "weekly"])
+def test_target_created_after_preview_is_rechecked_before_move(root, same_content, expected, mode):
+    source = write_monthly(root) if mode == "monthly" else write_minutes(root)
+    plan, ready = ready_plan(root, mode)
     target = Path(ready[0].destination)
     target.parent.mkdir(parents=True)
     target.write_bytes(source.read_bytes() if same_content else b"do not overwrite")
