@@ -117,3 +117,11 @@ def test_overview_refreshes_navigation_cached_before_deployment(monkeypatch):
     app = AppTest.from_file(str(ROOT / "pages/project_overview.py"), default_timeout=10).run()
     assert not app.exception
     assert 'href="/project_overview"' in app.sidebar.markdown[0].value
+
+
+def test_overview_refreshes_links_cached_before_deployment(monkeypatch):
+    monkeypatch.delattr(project_overview, "PROJECT_OVERVIEW_VERSION")
+    monkeypatch.setattr(project_overview, "build_project_rows", lambda tools: "old renderer")
+    app = AppTest.from_file(str(ROOT / "pages/project_overview.py"), default_timeout=10).run()
+    assert not app.exception
+    assert 'target="_top"' in _rows(app)

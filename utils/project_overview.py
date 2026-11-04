@@ -10,6 +10,7 @@ from pathlib import Path
 from utils.ui_theme import _streamlit_page_href
 
 
+PROJECT_OVERVIEW_VERSION = 2
 STATUS_LABELS = {"current": "当前入口", "paused": "已暂停", "archived": "已归档"}
 SECTION_LABELS = {"行政": "行政", "教学": "教学", "个人": "个人", "archived": "已归档"}
 UPDATES_PATH = Path(__file__).resolve().parents[1] / "config" / "public_project_updates.json"

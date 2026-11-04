@@ -6,6 +6,13 @@ from pathlib import Path
 
 import streamlit as st
 
+from utils import project_overview, ui_theme
+
+if getattr(ui_theme, "UI_THEME_VERSION", 0) < 3:
+    ui_theme = importlib.reload(ui_theme)
+if getattr(project_overview, "PROJECT_OVERVIEW_VERSION", 0) < 2:
+    project_overview = importlib.reload(project_overview)
+
 from utils.project_overview import (
     SECTION_LABELS,
     STATUS_LABELS,
@@ -15,10 +22,6 @@ from utils.project_overview import (
     load_public_updates,
     project_status,
 )
-from utils import ui_theme
-
-if getattr(ui_theme, "UI_THEME_VERSION", 0) < 3:
-    ui_theme = importlib.reload(ui_theme)
 from utils.ui_theme import _load_homepage_tools, render_home_link
 
 
