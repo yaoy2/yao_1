@@ -1,6 +1,7 @@
 """Public navigation index; reads descriptions, never project business records."""
 
 from collections import Counter
+import importlib
 from pathlib import Path
 
 import streamlit as st
@@ -14,6 +15,10 @@ from utils.project_overview import (
     load_public_updates,
     project_status,
 )
+from utils import ui_theme
+
+if getattr(ui_theme, "UI_THEME_VERSION", 0) < 2:
+    ui_theme = importlib.reload(ui_theme)
 from utils.ui_theme import _load_homepage_tools, render_home_link
 
 

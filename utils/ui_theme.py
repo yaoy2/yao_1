@@ -8,6 +8,7 @@ from urllib.parse import quote
 import streamlit as st
 
 
+UI_THEME_VERSION = 2
 _PINNED_SIDEBAR_CODES = {"M15", "M14", "M08", "M06"}
 
 

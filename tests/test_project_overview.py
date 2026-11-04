@@ -4,7 +4,7 @@ import re
 
 from streamlit.testing.v1 import AppTest
 
-from utils import project_overview
+from utils import project_overview, ui_theme
 from utils.project_overview import (
     build_project_rows,
     build_update_rows,
@@ -108,3 +108,11 @@ def test_homepage_links_to_overview_without_new_module_number():
     html = "\n".join(item.value for item in app.main.markdown)
     assert 'href="/project_overview" target="_self">总览</a>' in html
     assert not any(item["page"] == "pages/project_overview.py" for item in _load_homepage_tools())
+
+
+def test_overview_refreshes_navigation_cached_before_deployment(monkeypatch):
+    monkeypatch.delattr(ui_theme, "UI_THEME_VERSION")
+    monkeypatch.setattr(ui_theme, "render_sidebar_nav", lambda: None)
+    app = AppTest.from_file(str(ROOT / "pages/project_overview.py"), default_timeout=10).run()
+    assert not app.exception
+    assert 'href="/project_overview"' in app.sidebar.markdown[0].value

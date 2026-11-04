@@ -6,7 +6,9 @@ from urllib.parse import quote
 
 import streamlit as st
 
-from utils import home_theme
+from utils import home_theme, ui_theme
+if getattr(ui_theme, "UI_THEME_VERSION", 0) < 2:
+    ui_theme = importlib.reload(ui_theme)
 # Refresh legacy Cloud imports so stylesheet changes become visible immediately.
 if getattr(home_theme, "HOME_THEME_VERSION", 0) < 2:
     home_theme = importlib.reload(home_theme)
