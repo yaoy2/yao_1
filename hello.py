@@ -445,7 +445,7 @@ def _flyout_html(section, tools):
 
 
 def build_nav_html(current_section, tools):
-    cats = []
+    cats = ['<a class="nav-cat" href="/project_overview" target="_self">总览</a>']
     flyouts = []
     for section, _copy in HOME_SECTIONS.items():
         current = " current" if section == current_section else ""

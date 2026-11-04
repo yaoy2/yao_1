@@ -83,7 +83,7 @@ body:has(.apple-home) .brand-mark {
 body:has(.apple-home) .nav-links {
     flex: 1;
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     height: 44px;
     font-size: 12px;
 }
@@ -349,6 +349,9 @@ body:has(.apple-home) .span-4,
 body:has(.apple-home) .span-6 { grid-column: span 2; }
 }
 @media (max-width: 640px) {
+body:has(.apple-home) .global-nav-inner { gap: 4px; width: calc(100% - 16px); }
+body:has(.apple-home) .brand { font-size: 0; gap: 0; }
+body:has(.apple-home) .nav-cat { padding: 0 5px; }
 body:has(.apple-home) .product-tile h1 { font-size: 30px; }
 body:has(.apple-home) .lead-playful { font-size: 20px; }
 body:has(.apple-home) .quote h2 { font-size: 20px; }

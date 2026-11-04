@@ -1,8 +1,12 @@
 # Module catalog / 模块目录
 
-[Project home](../../README.md) · [Repository map](../repository-structure.md) · [Getting started](getting-started.md)
+[Project home](../../README.md) · [Online project overview / 在线项目总览](https://whatsup.streamlit.app/project_overview) · [Repository map](../repository-structure.md) · [Getting started](getting-started.md)
 
 The registry in [hello.py](../../hello.py) is authoritative. There are **31 entries: 21 in current sections and 10 archived**. Some current entries are documentation or read-only showcases; each row states its actual boundary.
+
+The online overview reads the same registry for descriptions, categories, statuses and entry links. Brief public updates are maintained in [public_project_updates.json](../../config/public_project_updates.json); neither the overview nor its update list reads private project inventories or business records. The overview is a navigation page, not an additional numbered module.
+
+在线总览与首页共用项目登记信息，支持关键词、分类和状态筛选。后续增减项目时更新 `hello.py`，重要使用变化在上述 JSON 文件补一条简要记录即可；总览入口不占用新的 M 编号。
 
 | Section | Entries |
 | --- | --- |

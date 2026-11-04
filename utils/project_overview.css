@@ -1,0 +1,63 @@
+.overview-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .4rem 1.1rem;
+    margin: .4rem 0 .8rem;
+    color: var(--colors-ink-muted-48);
+    font-size: .88rem;
+}
+.overview-summary strong { color: var(--colors-ink); }
+.overview-list { border-top: 1px solid var(--colors-hairline); }
+.overview-row, .overview-update {
+    display: grid;
+    grid-template-columns: minmax(230px, 1.1fr) minmax(220px, 1.7fr) auto;
+    align-items: center;
+    gap: .55rem 1.1rem;
+    padding: .75rem .2rem;
+    border-bottom: 1px solid var(--colors-hairline);
+}
+.overview-name {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: .3rem .45rem;
+}
+.overview-name > a { font-weight: 600; }
+.overview-name small {
+    flex-basis: 100%;
+    color: var(--colors-ink-muted-48);
+    font-size: .76rem;
+}
+.overview-code {
+    color: var(--colors-ink-muted-48);
+    font-size: .76rem;
+    font-variant-numeric: tabular-nums;
+}
+.overview-badge {
+    padding: .1rem .4rem;
+    border-radius: var(--rounded-pill);
+    background: var(--colors-canvas-parchment);
+    color: var(--colors-ink-muted-48);
+    font-size: .68rem;
+    white-space: nowrap;
+}
+.overview-current { color: var(--colors-primary); background: var(--colors-primary-soft); }
+.overview-paused { color: var(--colors-warning); background: var(--colors-warning-soft); }
+.overview-row p, .overview-update p {
+    margin: 0;
+    color: var(--colors-ink-muted-48);
+    font-size: .85rem;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+}
+.overview-open, .overview-update > a { font-size: .8rem; white-space: nowrap; }
+.overview-update { grid-template-columns: 100px minmax(0, 1fr) auto; }
+.overview-update time { color: var(--colors-ink-muted-48); font-size: .8rem; }
+.overview-update strong { font-size: .94rem; }
+@media (max-width: 760px) {
+    .overview-row { grid-template-columns: minmax(0, 1fr) auto; }
+    .overview-row p { grid-column: 1 / -1; grid-row: 2; }
+    .overview-row .overview-open { grid-column: 2; grid-row: 1; }
+    .overview-update { grid-template-columns: minmax(0, 1fr) auto; }
+    .overview-update > div { grid-row: 2; grid-column: 1 / -1; }
+}

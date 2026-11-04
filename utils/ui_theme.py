@@ -92,6 +92,10 @@ def render_sidebar_nav() -> None:
     st.sidebar.markdown(
         f"""
         <div class="custom-nav-title"><span class="custom-nav-brand-mark">Y</span>YaoYao 工具箱</div>
+        <a class="custom-nav-item" href="/project_overview" target="_self" title="项目总览">
+          <span class="custom-nav-code">索引</span>
+          <span class="custom-nav-main"><strong>项目总览</strong><em>用途 · 状态 · 简要更新</em></span>
+        </a>
         <div class="custom-nav-section">全部模块</div>
         {nav_html}
         """,
