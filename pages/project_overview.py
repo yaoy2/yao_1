@@ -8,9 +8,9 @@ import streamlit as st
 
 from utils import project_overview, ui_theme
 
-if getattr(ui_theme, "UI_THEME_VERSION", 0) < 3:
+if getattr(ui_theme, "UI_THEME_VERSION", 0) < 4:
     ui_theme = importlib.reload(ui_theme)
-if getattr(project_overview, "PROJECT_OVERVIEW_VERSION", 0) < 2:
+if getattr(project_overview, "PROJECT_OVERVIEW_VERSION", 0) < 3:
     project_overview = importlib.reload(project_overview)
 
 from utils.project_overview import (

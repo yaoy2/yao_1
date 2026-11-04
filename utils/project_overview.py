@@ -10,7 +10,7 @@ from pathlib import Path
 from utils.ui_theme import _streamlit_page_href
 
 
-PROJECT_OVERVIEW_VERSION = 2
+PROJECT_OVERVIEW_VERSION = 3
 STATUS_LABELS = {"current": "当前入口", "paused": "已暂停", "archived": "已归档"}
 SECTION_LABELS = {"行政": "行政", "教学": "教学", "个人": "个人", "archived": "已归档"}
 UPDATES_PATH = Path(__file__).resolve().parents[1] / "config" / "public_project_updates.json"
@@ -43,7 +43,8 @@ def build_project_rows(tools) -> str:
     rows = []
     for tool in tools:
         state = project_status(tool)
-        href = escape(_streamlit_page_href(tool["page"]), quote=True)
+        # Relative paths preserve the hosting prefix, including Cloud's /~/+/ frame.
+        href = escape(_streamlit_page_href(tool["page"]).lstrip("/"), quote=True)
         locked = '<span class="overview-badge">🔒 需密码</span>' if tool.get("locked") else ""
         section = SECTION_LABELS.get(tool.get("section"), "")
         action = "查看说明" if state != "current" else "进入项目"
@@ -51,12 +52,12 @@ def build_project_rows(tools) -> str:
             '<article class="overview-row">'
             '<div class="overview-name">'
             f'<span class="overview-code">{escape(tool["code"])}</span>'
-            f'<a href="{href}" target="_top">{escape(tool["title"])}</a>'
+            f'<a href="{href}" target="_self">{escape(tool["title"])}</a>'
             f'<span class="overview-badge overview-{state}">{STATUS_LABELS[state]}</span>{locked}'
             f'<small>{escape(section)} · {escape(tool.get("tag", ""))}</small>'
             '</div>'
             f'<p>{escape(tool.get("desc", ""))}</p>'
-            f'<a class="overview-open" href="{href}" target="_top">{action} →</a>'
+            f'<a class="overview-open" href="{href}" target="_self">{action} →</a>'
             '</article>'
         )
     return '<div class="overview-list">' + "".join(rows) + '</div>'

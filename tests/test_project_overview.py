@@ -1,6 +1,7 @@
 from datetime import date
 from pathlib import Path
 import re
+from urllib.parse import urljoin
 
 from streamlit.testing.v1 import AppTest
 
@@ -42,8 +43,8 @@ def test_rows_escape_text_and_only_show_public_description_fields():
     html = build_project_rows([tool])
     assert '<img' not in html and '<script>' not in html
     assert "&lt;img" in html and "&lt;script&gt;" in html
-    assert 'href="/sample"' in html and "需密码" in html
-    assert html.count('target="_top"') == 2
+    assert 'href="sample"' in html and "需密码" in html
+    assert html.count('target="_self"') == 2
     assert "已暂停" in html and "查看说明" in html
     assert "DO_NOT_RENDER_PRIVATE_FIELDS" not in html
     tool["blocked"] = True
@@ -80,7 +81,7 @@ def test_overview_page_filters_offline_and_exposes_navigation(monkeypatch):
     app = AppTest.from_file(str(ROOT / "pages/project_overview.py"), default_timeout=10).run()
     assert not app.exception
     assert _rows(app).count('<article class="overview-row">') == len(_load_homepage_tools())
-    assert 'href="/project_overview"' in app.sidebar.markdown[0].value
+    assert 'href="project_overview"' in app.sidebar.markdown[0].value
     app.text_input[0].set_value("m20 月报").run()
     assert not app.exception
     assert _rows(app).count('<article class="overview-row">') == 1
@@ -107,7 +108,7 @@ def test_homepage_links_to_overview_without_new_module_number():
     app = AppTest.from_file(str(ROOT / "hello.py"), default_timeout=10).run()
     assert not app.exception
     html = "\n".join(item.value for item in app.main.markdown)
-    assert 'href="/project_overview" target="_top">总览</a>' in html
+    assert 'href="project_overview" target="_self">总览</a>' in html
     assert not any(item["page"] == "pages/project_overview.py" for item in _load_homepage_tools())
 
 
@@ -116,7 +117,7 @@ def test_overview_refreshes_navigation_cached_before_deployment(monkeypatch):
     monkeypatch.setattr(ui_theme, "render_sidebar_nav", lambda: None)
     app = AppTest.from_file(str(ROOT / "pages/project_overview.py"), default_timeout=10).run()
     assert not app.exception
-    assert 'href="/project_overview"' in app.sidebar.markdown[0].value
+    assert 'href="project_overview"' in app.sidebar.markdown[0].value
 
 
 def test_overview_refreshes_links_cached_before_deployment(monkeypatch):
@@ -124,4 +125,12 @@ def test_overview_refreshes_links_cached_before_deployment(monkeypatch):
     monkeypatch.setattr(project_overview, "build_project_rows", lambda tools: "old renderer")
     app = AppTest.from_file(str(ROOT / "pages/project_overview.py"), default_timeout=10).run()
     assert not app.exception
-    assert 'target="_top"' in _rows(app)
+    assert 'href="20_ding2026" target="_self"' in _rows(app)
+
+
+def test_overview_links_preserve_hosting_prefix():
+    tool = next(item for item in _load_homepage_tools() if item["code"] == "M20")
+    links = re.findall(r'href="([^"]+)"', build_project_rows([tool]))
+    for prefix in ("https://whatsup.streamlit.app/~/+/", "https://example.test/app/", "http://localhost:8501/"):
+        for link in [*links, "project_overview"]:
+            assert urljoin(prefix + "project_overview", link) == prefix + link
