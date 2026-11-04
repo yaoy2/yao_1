@@ -17,7 +17,7 @@ from utils.project_overview import (
 )
 from utils import ui_theme
 
-if getattr(ui_theme, "UI_THEME_VERSION", 0) < 2:
+if getattr(ui_theme, "UI_THEME_VERSION", 0) < 3:
     ui_theme = importlib.reload(ui_theme)
 from utils.ui_theme import _load_homepage_tools, render_home_link
 

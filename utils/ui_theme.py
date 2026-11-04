@@ -8,7 +8,7 @@ from urllib.parse import quote
 import streamlit as st
 
 
-UI_THEME_VERSION = 2
+UI_THEME_VERSION = 3
 _PINNED_SIDEBAR_CODES = {"M15", "M14", "M08", "M06"}
 
 
@@ -93,7 +93,7 @@ def render_sidebar_nav() -> None:
     st.sidebar.markdown(
         f"""
         <div class="custom-nav-title"><span class="custom-nav-brand-mark">Y</span>YaoYao 工具箱</div>
-        <a class="custom-nav-item" href="/project_overview" target="_self" title="项目总览">
+        <a class="custom-nav-item" href="/project_overview" target="_top" title="项目总览">
           <span class="custom-nav-code">索引</span>
           <span class="custom-nav-main"><strong>项目总览</strong><em>用途 · 状态 · 简要更新</em></span>
         </a>

@@ -43,6 +43,7 @@ def test_rows_escape_text_and_only_show_public_description_fields():
     assert '<img' not in html and '<script>' not in html
     assert "&lt;img" in html and "&lt;script&gt;" in html
     assert 'href="/sample"' in html and "需密码" in html
+    assert html.count('target="_top"') == 2
     assert "已暂停" in html and "查看说明" in html
     assert "DO_NOT_RENDER_PRIVATE_FIELDS" not in html
     tool["blocked"] = True
@@ -106,7 +107,7 @@ def test_homepage_links_to_overview_without_new_module_number():
     app = AppTest.from_file(str(ROOT / "hello.py"), default_timeout=10).run()
     assert not app.exception
     html = "\n".join(item.value for item in app.main.markdown)
-    assert 'href="/project_overview" target="_self">总览</a>' in html
+    assert 'href="/project_overview" target="_top">总览</a>' in html
     assert not any(item["page"] == "pages/project_overview.py" for item in _load_homepage_tools())
 
 
