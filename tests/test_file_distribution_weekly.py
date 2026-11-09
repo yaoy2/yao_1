@@ -60,6 +60,29 @@ class WeeklyClassificationTests(unittest.TestCase):
         result = classify_weekly("医学影像系26-27-1第2周考勤情况.pdf", "")
         self.assertEqual(result.status, "ready")
 
+    def test_attendance_images_use_filename_dates_and_preserve_extension(self):
+        for extension in (".jpg", ".JPEG", ".png", ".bmp", ".tif", ".tiff"):
+            with self.subTest(extension=extension):
+                result = classify_weekly(f"医学影像系20261103考勤情况{extension}")
+                self.assertEqual((result.status, result.kind, result.week_label), ("ready", "考勤记录", "第8周"))
+                self.assertEqual(result.target_name, f"考勤表-医学影像系-第8周-20261103{extension}")
+        self.assertEqual(classify_weekly("医学影像系考勤情况.jpg").status, "review")
+        self.assertEqual(classify_weekly("医学影像系第8周会议纪要.jpg").status, "ignored")
+
+    def test_generic_meeting_filename_requires_explicit_minutes_heading(self):
+        filename = "健康学院医学影像系会议2026-2027-1第8周20261104.pdf"
+        self.assertEqual(classify_weekly(filename).status, "review")
+        result = classify_weekly(filename, "健康医疗科技学院\n医学影像系会议纪要\n会议时间：2026年11月3日")
+        self.assertEqual((result.status, result.kind, result.week_label), ("ready", "会议纪要", "第8周"))
+        self.assertNotEqual(classify_weekly(filename, "医学影像系会议议程").status, "ready")
+        self.assertEqual(classify_weekly(filename, "医学信息工程系会议纪要").status, "review")
+        self.assertEqual(classify_weekly(filename, "医学影像系第7周会议纪要").status, "review")
+
+    def test_chinese_year_separator_attendance_pdf_is_already_supported(self):
+        result = classify_weekly("健康服务与管理系2026至2027学年第一学期第八周考勤记录.pdf")
+        self.assertEqual((result.status, result.period, result.department, result.week_label),
+                         ("ready", "2026-2027-1", "健康服务与管理系", "第8周"))
+
     def test_metadata_can_fill_missing_filename_details(self):
         text = "健康医疗科技学院\n医学信息工程系\n2026-2027学年第一学期\n第一周会议纪要\n会议时间：2026年9月16日\n一、工作内容\n其他正文"
         result = classify_weekly("会议纪要20260916.pdf", text)

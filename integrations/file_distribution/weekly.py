@@ -5,7 +5,7 @@ import re
 import unicodedata
 
 from .models import Decision
-from .school_calendar import CALENDAR_PERIOD, WEEK_PATTERN, filing_month, is_date_heading, naming_week_label, resolve_calendar
+from .school_calendar import CALENDAR_PERIOD, WEEK_PATTERN, filing_month, is_date_heading, naming_date_label, naming_week_label, resolve_calendar
 
 
 _DEPARTMENTS = {
@@ -15,6 +15,7 @@ _DEPARTMENTS = {
     "健康体育部": ("健康体育部",),
 }
 _EXTENSIONS = {".doc", ".docx", ".pdf", ".xls", ".xlsx"}
+_ATTENDANCE_IMAGES = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff"}
 _PARTY_FILENAME = re.compile(
     r"^健康(?:医疗科技)?学院党政联席会会议纪要[-_ ]+健康(?:医疗科技)?学院"
     r"20\d{2}-20\d{2}学年(?:度)?第[一二三123]学期(?:教学|小学期)?"
@@ -181,9 +182,11 @@ def classify_weekly(name: str, text: str = "", *, calendar_period: str = CALENDA
     if filename.startswith("~$"):
         return Decision("skip", reason="Office 临时文件")
     extension = "." + filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
-    if extension not in _EXTENSIONS:
-        return Decision("ignored", reason="不属于 Word、PDF 或 Excel 材料")
+    if extension not in _EXTENSIONS | _ATTENDANCE_IMAGES:
+        return Decision("ignored", reason="不属于 Word、PDF、Excel 或考勤图片材料")
     title = filename[:-len(extension)]
+    if extension in _ATTENDANCE_IMAGES and "考勤" not in title:
+        return Decision("ignored", reason="图片仅纳入文件名明确标注考勤的材料")
     headings = _heading_lines(text)
     evidence = [title, *headings]
     if _PARTY_FILENAME.fullmatch(filename):
@@ -197,6 +200,8 @@ def classify_weekly(name: str, text: str = "", *, calendar_period: str = CALENDA
     header_kinds = set().union(*(_kinds(value) for value in headings)) if headings else set()
     kinds = name_kinds | header_kinds
     if not kinds:
+        if "会议" in title:
+            return Decision("review", kind="会议纪要", reason="文件名仅标注会议，需从正文题头确认是系部例会纪要")
         return Decision("ignored", reason="未识别到系部例会纪要或考勤标记")
     if len(kinds) > 1:
         return Decision("review", reason="同时出现纪要和考勤标题，请核对材料类型")
@@ -232,8 +237,10 @@ def classify_weekly(name: str, text: str = "", *, calendar_period: str = CALENDA
     if calendar_note:
         reason += "；" + calendar_note
     original_extension = "." + original_filename.rsplit(".", 1)[-1]
+    attendance_date = naming_date_label(evidence, period) if kind == "考勤记录" else ""
+    date_suffix = f"-{attendance_date}" if attendance_date else ""
     target_name = (f"{department}-会议纪要-{week_label}{original_extension}" if kind == "会议纪要"
-                   else f"考勤表-{department}-{week_label}{original_extension}")
+                   else f"考勤表-{department}-{week_label}{date_suffix}{original_extension}")
     return Decision("ready", kind, period, department, relative_dir, reason,
                     target_name=target_name, week_label=week_label)
 

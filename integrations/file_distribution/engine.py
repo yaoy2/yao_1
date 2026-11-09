@@ -122,7 +122,7 @@ def _matches_rules(name: str, rules: Iterable[str]) -> bool:
     if INVOICE_HINT.search(name):
         return "invoice" in rules
     return bool("monthly" in rules and MONTHLY_HINT.search(name)
-                or "minutes" in rules and re.search(r"纪要|例会", name)
+                or "minutes" in rules and re.search(r"纪要|例会|会议", name)
                 or "attendance" in rules and "考勤" in name)
 
 

@@ -25,15 +25,68 @@ def test_formal_department_names_and_original_extension_are_preserved(unit, expe
     assert result.week_label == '第7周'
 
 
-@pytest.mark.parametrize('hint,text,label', [
-    ('20261028', '', '第7周'), ('', '会议日期：2026年9月21日', '第2周'),
-    ('第六至七周', '考勤日期：2026年10月20日', '第6—7周'),
-    ('第六、八周', '', '第6、8周'), ('考试周', '', '考试周'), ('总结周', '', '总结周'),
+@pytest.mark.parametrize('hint,text,label,date_suffix', [
+    ('20261028', '', '第7周', '-20261028'), ('', '会议日期：2026年9月21日', '第2周', '-20260921'),
+    ('第六至七周', '考勤日期：2026年10月20日', '第6—7周', '-20261020'),
+    ('第六、八周', '', '第6、8周', ''), ('考试周', '', '考试周', ''), ('总结周', '', '总结周', ''),
 ])
-def test_calendar_dates_and_full_multi_week_ranges_supply_naming_label(hint, text, label):
+def test_calendar_dates_and_full_multi_week_ranges_supply_naming_label(hint, text, label, date_suffix):
     result = classify_weekly(f'健康体育部2026-2027-1-{hint}考勤表.PDF', text)
     assert result.status == 'ready', result.reason
-    assert result.target_name == f'考勤表-健康体育部-{label}.PDF'
+    assert result.target_name == f'考勤表-健康体育部-{label}{date_suffix}.PDF'
+
+
+def test_two_dated_attendance_images_in_one_week_both_move_without_losing_bytes(tmp_path):
+    originals = {}
+    for date in ('20261103', '20261106'):
+        path = tmp_path / f'医学影像系{date}考勤情况.JPG'
+        path.write_bytes(f'isolated attendance image {date}'.encode())
+        originals[path.name] = path.read_bytes()
+    assert not engine.scan(tmp_path, ('minutes',)).items
+    plan = engine.scan(tmp_path, ('attendance',))
+    assert len(plan.items) == 2 and all(item.status == 'ready' for item in plan.items)
+    assert {Path(item.destination).name for item in plan.items} == {
+        f'考勤表-医学影像系-第8周-{date}.JPG' for date in ('20261103', '20261106')}
+    assert all('正文未提取' in item.reason and not item.summary_destination for item in plan.items)
+    result = engine.execute(plan, originals)
+    assert result.moved == 2
+    for item in result.items:
+        assert Path(item.destination).read_bytes() == originals[item.name]
+        assert not Path(item.source).exists()
+
+
+def test_generic_meeting_pdf_reads_heading_and_uses_both_minute_targets(tmp_path):
+    name = '健康学院医学影像系会议2026-2027-1第8周20261104.pdf'
+    source = write_invoice(tmp_path, name, '医学影像系会议纪要\n会议日期：2026年11月4日')
+    original = source.read_bytes()
+    assert not engine.scan(tmp_path, ('attendance',)).items
+    plan = engine.scan(tmp_path, ('minutes',))
+    item, = plan.items
+    assert item.status == 'ready' and item.kind == '会议纪要'
+    assert Path(item.destination).name == '医学影像系-会议纪要-第8周.pdf'
+    assert '11月会议纪要-健康学院' in item.summary_destination
+    assert engine.execute(plan, [name]).moved == 1
+    assert Path(item.destination).read_bytes() == Path(item.summary_destination).read_bytes() == original
+
+
+@pytest.mark.parametrize('text', ['', '医学影像系会议议程', '医学影像系第7周会议纪要'])
+def test_generic_meeting_pdf_without_consistent_minutes_heading_stays_put(tmp_path, text):
+    source = write_invoice(tmp_path, '医学影像系会议2026-2027-1第8周20261104.pdf', text)
+    item, = engine.scan(tmp_path, ('minutes',)).items
+    assert item.status != 'ready' and not item.destination and source.exists()
+
+
+@pytest.mark.parametrize('name,text,suffix', [
+    ('医学影像系第8周考勤记录.pdf', '考勤日期：11月3日', '-20261103'),
+    ('医学影像系20261103考勤记录.pdf', '考勤日期：2026年11月3日', '-20261103'),
+    ('医学影像系第8周考勤记录.pdf', '考勤日期：2026年11月3日—2026年11月6日', ''),
+    ('医学影像系第8周考勤记录.pdf', '', ''),
+    ('考勤表-医学影像系-第8周-20261103.JPG', '', '-20261103'),
+])
+def test_only_a_unique_material_date_is_added_to_attendance_name(name, text, suffix):
+    result = classify_weekly(name, text)
+    assert result.status == 'ready'
+    assert result.target_name == f'考勤表-医学影像系-第8周{suffix}{Path(name).suffix}'
 
 
 @pytest.mark.parametrize('name', [

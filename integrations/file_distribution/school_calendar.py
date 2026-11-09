@@ -130,6 +130,25 @@ def naming_week_label(evidence: list[str], period: str) -> str:
     return f"第{value}周"
 
 
+def naming_date_label(evidence: list[str], period: str) -> str:
+    """Keep a single verified attendance date; never invent one for a weekly range."""
+    dates, short_dates, error = _date_evidence(evidence)
+    if error:
+        return ""
+    for month, day in short_dates:
+        if period != CALENDAR_PERIOD:
+            return ""
+        for year in (2026, 2027):
+            try:
+                value = date(year, month, day)
+            except ValueError:
+                continue
+            if TERM_START <= value <= TERM_END:
+                dates.append(value)
+    unique = set(dates)
+    return next(iter(unique)).strftime("%Y%m%d") if len(unique) == 1 else ""
+
+
 def filing_month(evidence: list[str], period: str) -> tuple[str, str]:
     """Resolve one material month, never use download/creation time or today's month."""
     dates, short_dates, error = _date_evidence(evidence)

@@ -125,6 +125,8 @@ def read_document_text(path: Path) -> tuple[str, str]:
             return text[:20_000], ""
         if suffix in {".doc", ".xls"}:
             return "", "旧版Office文件仅按完整文件名判断，缺少信息时请另存为docx/xlsx"
+        if suffix in {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff"}:
+            return "", "考勤图片未提取正文，仅按文件名及校历核对"
         return "", "不支持读取此类型正文"
     except Exception as exc:
         return "", f"无法读取正文（{type(exc).__name__}），未改动原文件"
