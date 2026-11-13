@@ -172,7 +172,7 @@ class TodoDbTest(unittest.TestCase):
         self.assertIn(parent_id, [record["id"] for record in all_records])
         self.assertNotIn(parent_id, [record["id"] for record in list_records])
 
-    def test_display_views_sort_deadlines_descending_without_changing_records(self):
+    def test_display_views_group_by_completion_then_sort_deadlines_without_changing_records(self):
         with tempfile.TemporaryDirectory() as tmpdir, patched_todo_storage(tmpdir) as tmp_path:
             todo_db.init_db()
             for content, due_date, due_time, done in (
@@ -186,6 +186,9 @@ class TodoDbTest(unittest.TestCase):
                 ("下午另一事项", "2026-10-27", "17:00", False),
                 ("往年未办", "2025-11-30", "", False),
                 ("无日期已办", "", "", True),
+                ("上午已办", "2026-10-27", "09:00", True),
+                ("下午已办", "2026-10-27", "17:00", True),
+                ("仅日期已办", "2026-10-27", "", True),
             ):
                 record_id = todo_db.add_todo(content, due_date=due_date, due_time=due_time)
                 if done:
@@ -195,8 +198,9 @@ class TodoDbTest(unittest.TestCase):
 
             for view, expected in {
                 "active": ["年末报送", "下午另一事项", "下午报送", "上午报送", "只有日期", "往年未办", "无日期事项"],
-                "list": ["跨年已办", "年末报送", "下午另一事项", "下午报送", "上午报送", "只有日期", "往年已办", "往年未办", "无日期事项", "无日期已办"],
-                "archived": ["跨年已办", "往年已办", "无日期已办"],
+                "list": ["年末报送", "下午另一事项", "下午报送", "上午报送", "只有日期", "往年未办", "无日期事项",
+                         "跨年已办", "下午已办", "上午已办", "仅日期已办", "往年已办", "无日期已办"],
+                "archived": ["跨年已办", "下午已办", "上午已办", "仅日期已办", "往年已办", "无日期已办"],
             }.items():
                 with self.subTest(view=view):
                     self.assertEqual(expected, [record["content"] for record in todo_db.get_todos(view=view)])
@@ -204,8 +208,24 @@ class TodoDbTest(unittest.TestCase):
                 ["年末报送", "下午报送", "上午报送"],
                 [record["content"] for record in todo_db.get_todos(keyword="报送", view="list")],
             )
+            self.assertEqual(
+                ["年末报送", "往年未办", "跨年已办", "往年已办"],
+                [record["content"] for record in todo_db.get_todos(keyword="年", view="list")],
+            )
             self.assertEqual(before, todo_db.get_todos(view="all"))
             self.assertEqual(backup_before, (tmp_path / "todo_items_backup.md").read_bytes())
+
+    def test_list_reorders_after_completing_and_reopening_a_todo(self):
+        with tempfile.TemporaryDirectory() as tmpdir, patched_todo_storage(tmpdir):
+            todo_db.init_db()
+            undated_id = todo_db.add_todo("无日期待办")
+            dated_id = todo_db.add_todo("远期待办", due_date="2027-01-01")
+
+            self.assertEqual([dated_id, undated_id], [record["id"] for record in todo_db.get_todos(view="list")])
+            todo_db.complete_todo(dated_id)
+            self.assertEqual([undated_id, dated_id], [record["id"] for record in todo_db.get_todos(view="list")])
+            todo_db.reopen_todo(dated_id)
+            self.assertEqual([dated_id, undated_id], [record["id"] for record in todo_db.get_todos(view="list")])
 
     def test_add_todos_from_text_splits_markdown_list_and_skips_heading(self):
         with tempfile.TemporaryDirectory() as tmpdir:

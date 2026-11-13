@@ -302,8 +302,9 @@ def get_todos(keyword=None, view="active"):
     where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
     order_by = "is_archived ASC, datetime(created_at) DESC, id DESC"
     if view != "all":
-        # Display deadlines farthest first; keep the canonical backup/import order.
-        order_by = "due_date DESC, due_time DESC, " + order_by
+        # Group unfinished items first, then deadlines farthest first within each group.
+        # Keep the canonical backup/import order unchanged.
+        order_by = "CASE WHEN status = 'done' THEN 1 ELSE 0 END ASC, due_date DESC, due_time DESC, " + order_by
     rows = conn.execute(
         f"""
         SELECT * FROM todo_items

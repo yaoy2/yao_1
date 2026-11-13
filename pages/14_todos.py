@@ -598,7 +598,7 @@ st.markdown(
     """
     <div>
       <div class="todo-title">✓ 待办清单</div>
-      <div class="todo-subtitle">新增在上，勾选即完成；完成项自动沉到未完成待办下面。</div>
+      <div class="todo-subtitle">未完成在上，已完成在下；各组按截止时间倒序，无截止日期的放在组末。</div>
     </div>
     """,
     unsafe_allow_html=True,
