@@ -16,6 +16,17 @@ from utils.home_theme import apply_home_theme
 
 TOOLS = [
     {
+        "title": "中国通史图读",
+        "desc": "按朝代阅读图文通史。第一卷从西周分封、春秋争霸讲到秦统一六国，配时间线和形势图。",
+        "tag": "历史 · 图文阅读",
+        "created": "2026_11_15",
+        "page": "pages/32_33_chinese_history.py",
+        "code": "M33",
+        "icon": "📚",
+        "accent": "green",
+        "section": "个人",
+    },
+    {
         "title": "倪海厦知识库",
         "desc": "按体系查阅紫微、命卦、易经人间道与阳宅地脉，完整保留规则、条件、例外、专题推导及出处。手动指令更新。",
         "tag": "知识积累 · 全文检索",

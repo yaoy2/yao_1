@@ -2,7 +2,7 @@
 
 [Project home](../../README.md) · [Online project overview / 在线项目总览](https://whatsup.streamlit.app/project_overview) · [Repository map](../repository-structure.md) · [Getting started](getting-started.md)
 
-The registry in [hello.py](../../hello.py) is authoritative. There are **31 entries: 21 in current sections and 10 archived**. Some current entries are documentation or read-only showcases; each row states its actual boundary.
+The registry in [hello.py](../../hello.py) is authoritative. There are 32 entries: 22 in current sections and 10 archived. Some current entries are documentation or read-only showcases; each row states its actual boundary.
 
 The online overview reads the same registry for descriptions, categories, statuses and entry links. Brief public updates are maintained in [public_project_updates.json](../../config/public_project_updates.json); neither the overview nor its update list reads private project inventories or business records. The overview is a navigation page, not an additional numbered module.
 
@@ -12,11 +12,12 @@ The online overview reads the same registry for descriptions, categories, status
 | --- | --- |
 | Administration | 8 |
 | Teaching | 1 |
-| Personal | 12 |
+| Personal | 13 |
 | Archived | 10 |
 
 | ID | Section | Status | Entry point | Behavior and requirements |
 | --- | --- | --- | --- | --- |
+| M33 | Personal | Current | [中国通史图读](../../pages/32_33_chinese_history.py) | Read or download the illustrated first volume, from the Western Zhou to unification under Qin. |
 | M32 | Personal | Current | [倪海厦知识库](../../pages/31_32_nihaixia_knowledge.py) | Reads the repository knowledge library with rules, conditions, exceptions and source references; updates are requested manually. |
 | M31 | Administration | Current | [QQ 归档机器人](../../pages/30_31_qq_archive.py) | Read-only overview of authorized QQ group archiving on L and on-demand DeepSeek Flash summaries. Explains commands, storage, processing and recorded acceptance limits; does not read private group data, hold credentials or control the receiver. |
 | M30 | Administration | Current | [职称评审](../../pages/29_30_title_review.py) | Reads confirmed review requirements, records electronic and paper receipts separately, and saves source-linked preliminary reviews, outstanding questions, and college summaries to the configured private data repository. |
