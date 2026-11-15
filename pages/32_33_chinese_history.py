@@ -1,26 +1,18 @@
 """M33 · 中国通史图读。"""
 
-from pathlib import Path
-
 import streamlit as st
 
+from utils.chinese_history_component import FRONTEND, declare_history_reader
 from utils.ui_theme import render_home_link
 
 
 st.set_page_config(page_title="M33 · 中国通史图读", page_icon="📚", layout="wide")
 render_home_link()
-
-st.title("中国通史图读")
-st.subheader("第一卷　从西周到秦统一六国")
-st.caption("7 页 · 西周分封、春秋争霸、三家分晋、秦灭六国")
-
-pdf_path = Path(__file__).resolve().parents[1] / "assets" / "chinese-history" / "01-zhou-to-qin.pdf"
-pdf = pdf_path.read_bytes()
+declare_history_reader()(key="history_volume_01", default=None)
 st.download_button(
-    "下载本卷 PDF",
-    data=pdf,
-    file_name="从西周到秦统一六国.pdf",
-    mime="application/pdf",
+    "下载本卷 HTML（可离线阅读）",
+    data=(FRONTEND / "index.html").read_bytes(),
+    file_name="从西周到秦统一六国.html",
+    mime="text/html; charset=utf-8",
     on_click="ignore",
 )
-st.pdf(pdf, height=760, key="history_volume_01")

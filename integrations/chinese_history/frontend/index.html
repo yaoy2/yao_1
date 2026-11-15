@@ -1,0 +1,1045 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="中国通史图读第一卷，从商末周初到秦统一六国。可查阅古今地名、互动地图、年表和人物典故。"><title>从西周到秦统一六国 · 中国通史图读</title>
+<style>:root {
+  color-scheme:light;
+  --paper:#faf8f0;
+  --ink:#172f2e;
+  --quiet:#536661;
+  --jade:#174942;
+  --wash:#e7ece2;
+  --faint:#f0f1e7;
+  --line:#cbd2c4;
+  --verm:#98412b;
+  --serif:"Noto Serif CJK SC","Songti SC","STSong","SimSun",serif;
+  --sans:"Noto Sans CJK SC","Microsoft YaHei","PingFang SC",system-ui,sans-serif;
+}
+
+* {
+  box-sizing:border-box;
+}
+
+html {
+  scroll-behavior:auto;
+  scroll-padding-top:15px;
+}
+
+body {
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--sans);
+  line-height:1.65;
+}
+
+a {
+  color:var(--jade);
+  text-underline-offset:.2em;
+}
+
+button,select {
+  font:inherit;
+}
+
+button,a,select,summary {
+  touch-action:manipulation;
+}
+
+a:focus-visible,button:focus-visible,summary:focus-visible,select:focus-visible,[data-note]:focus-visible {
+  outline:3px solid #b05235;
+  outline-offset:3px;
+}
+
+button {
+  cursor:pointer;
+}
+
+h1,h2,h3,p,figure {
+  margin:0;
+}
+
+button,a,summary,select {
+  -webkit-tap-highlight-color:rgba(21,82,75,.12);
+}
+
+[hidden] {
+  display:none!important;
+}
+
+#book {
+  max-width:1190px;
+  margin:0 auto;
+  padding:0 clamp(17px,4vw,58px) 36px;
+}
+
+.mast {
+  padding:15px 0 12px;
+  border-bottom:1px solid var(--ink);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+
+.brand {
+  font-weight:750;
+  letter-spacing:.1em;
+  color:var(--jade);
+  font-size:14px;
+}
+
+.mast-nav {
+  display:flex;
+  gap:18px;
+}
+
+.mast-nav a {
+  font-size:13px;
+  text-decoration:none;
+  color:var(--quiet);
+}
+
+.mast a:hover {
+  text-decoration:underline;
+}
+
+.lead {
+  padding:31px 0 25px;
+  display:grid;
+  grid-template-columns:minmax(0,1.3fr) minmax(270px,.72fr);
+  gap:6%;
+  align-items:center;
+}
+
+.period {
+  color:var(--verm);
+  font-size:13px;
+  font-weight:680;
+  letter-spacing:.09em;
+}
+
+.lead h1 {
+  font:700 clamp(27px,3.5vw,48px)/1.35 var(--serif);
+  letter-spacing:-.035em;
+  margin:6px 0 9px;
+}
+
+.lead p {
+  font-size:14px;
+  color:var(--quiet);
+  max-width:37em;
+}
+
+.chrono-mini {
+  border-left:2px solid var(--line);
+  padding-left:18px;
+  font-size:12px;
+}
+
+.chrono-mini .bars {
+  display:flex;
+  margin:5px 0;
+  gap:2px;
+  height:25px;
+}
+
+.bars span {
+  display:grid;
+  place-items:center;
+  color:var(--jade);
+  background:var(--wash);
+  font-weight:600;
+}
+
+.bars .king {
+  background:var(--jade);
+  color:#fff;
+}
+
+.bars .late {
+  background:#eeded1;
+  color:var(--verm);
+}
+
+.chrono-mini small {
+  color:var(--quiet);
+  font-size:11px;
+}
+
+.chrono-mini a {
+  font-size:12px;
+}
+
+.reading {
+  display:grid;
+  grid-template-columns:187px minmax(0,1fr);
+  gap:clamp(20px,4vw,60px);
+  border-top:1px solid var(--line);
+  padding:24px 0 25px;
+  align-items:start;
+}
+
+.side h2 {
+  font:700 16px/1.5 var(--sans);
+  margin-bottom:10px;
+}
+
+.side ol {
+  list-style:none;
+  margin:0;
+  padding:0;
+}
+
+.side li {
+  margin:0;
+}
+
+.side a {
+  display:grid;
+  gap:1px;
+  border-left:2px solid var(--line);
+  padding:8px 10px 8px 13px;
+  text-decoration:none;
+  line-height:1.5;
+  color:var(--ink);
+  font-size:14px;
+}
+
+.side a small {
+  font-size:11px;
+  color:var(--quiet);
+  letter-spacing:.04em;
+}
+
+.side a:hover {
+  background:var(--faint);
+}
+
+.side a[aria-current=page] {
+  background:var(--wash);
+  border-left-color:var(--verm);
+  color:var(--jade);
+  font-weight:750;
+}
+
+.side .usage {
+  font-size:12px;
+  color:var(--quiet);
+  margin:16px 0 0;
+  line-height:1.7;
+}
+
+.mobile-nav,.touch-hint {
+  display:none;
+}
+
+.side {
+  position:sticky;
+  top:12px;
+}
+
+.stage {
+  min-width:0;
+}
+
+.chapter {
+  scroll-margin-top:8px;
+}
+
+.chapter h2 {
+  font:700 clamp(22px,2.35vw,32px)/1.45 var(--serif);
+  margin:3px 0 16px;
+  color:var(--ink);
+  letter-spacing:-.02em;
+}
+
+.chapter h3 {
+  font:700 19px/1.5 var(--serif);
+  margin:22px 0 7px;
+  color:var(--jade);
+}
+
+.chapter .counter {
+  font-size:12px;
+  color:var(--verm);
+  letter-spacing:.03em;
+  font-weight:680;
+}
+
+.chapter p:not(.refs) {
+  font:400 clamp(16px,1.35vw,18px)/1.9 var(--serif);
+  margin:0 0 11px;
+  overflow-wrap:break-word;
+}
+
+.chapter>p:not(.refs),.chapter details p:not(.refs) {
+  text-indent:2em;
+}
+
+.chapter p strong {
+  font-weight:bold;
+  color:#163b35;
+}
+
+.chapter>ul,.chapter>ol,.chapter details ul,.chapter details ol {
+  padding-left:1.55em;
+  font:400 16px/1.85 var(--serif);
+}
+
+.chapter li+li {
+  margin-top:4px;
+}
+
+.term {
+  border:0;
+  border-bottom:1px dashed var(--verm);
+  background:transparent;
+  border-radius:0;
+  color:var(--jade);
+  font:inherit;
+  line-height:1.25;
+  cursor:help;
+  padding:0 1px;
+  text-indent:0;
+}
+
+.term:hover,.term[aria-expanded=true] {
+  background:#e7ebdd;
+}
+
+.kinship {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+  border-block:1px solid var(--line);
+  margin:17px 0;
+  padding:11px 0;
+}
+
+.kinship span {
+  font-size:12px;
+  color:var(--quiet);
+}
+
+.chapter .kinship p {
+  margin:3px 0 0;
+  font-weight:bold;
+  font-size:17px;
+}
+
+.kinship small {
+  font:500 12px var(--sans);
+  color:var(--quiet);
+  display:inline-block;
+  margin-left:.3em;
+}
+
+.kinship i {
+  color:var(--verm);
+  font:500 16px var(--sans);
+}
+
+details {
+  border-bottom:1px solid var(--line);
+}
+
+.chapter details {
+  background:#f3f3e9;
+  border-left:2px solid #b9c8b6;
+  margin:9px 0;
+}
+
+.chapter details+details {
+  margin-top:-3px;
+}
+
+.chapter details>summary {
+  font-size:15px;
+  font-weight:650;
+  padding:10px 12px;
+  color:var(--jade);
+}
+
+summary {
+  cursor:pointer;
+}
+
+summary::marker {
+  color:var(--verm);
+}
+
+.chapter details[open]>summary {
+  padding-bottom:7px;
+}
+
+.chapter details p:not(.refs) {
+  padding:0 15px 11px;
+  margin:0;
+  font-size:16px;
+  line-height:1.8;
+}
+
+.chapter details h3,.chapter details ul,.chapter details ol {
+  margin-inline:16px;
+}
+
+.chapter a {
+  overflow-wrap:anywhere;
+}
+
+.refs {
+  display:flex;
+  flex-wrap:wrap;
+  gap:3px 12px;
+  color:var(--quiet);
+  font:12px/1.7 var(--sans);
+  border-top:1px solid var(--line);
+  padding-top:12px;
+  margin:20px 0 0;
+}
+
+.refs a {
+  color:var(--quiet);
+}
+
+.chapter table,.chron-table {
+  border-collapse:collapse;
+  font-size:14px;
+  line-height:1.65;
+  width:100%;
+  margin:14px 0;
+}
+
+.chapter th,.chapter td,.chron-table td,.chron-table th {
+  border-bottom:1px solid var(--line);
+  text-align:left;
+  padding:7px 8px;
+  vertical-align:top;
+}
+
+.chapter th,.chron-table th {
+  background:var(--wash);
+  color:var(--jade);
+}
+
+.chapter table th:first-child,.chron-table td:first-child {
+  white-space:nowrap;
+}
+
+.chapter blockquote {
+  border-left:3px solid var(--verm);
+  margin:13px 0;
+  padding:6px 13px;
+  color:var(--quiet);
+}
+
+.chapter svg {
+  display:block;
+}
+
+.chapter figure {
+  margin:16px 0 19px;
+}
+
+.chapter figcaption {
+  font-size:13px;
+  line-height:1.6;
+  color:var(--quiet);
+  margin:5px 0;
+}
+
+.map-scroll {
+  overflow-x:auto;
+  overscroll-behavior-inline:contain;
+  max-width:100%;
+}
+
+.map-scroll svg {
+  width:100%;
+  min-width:485px;
+  height:auto;
+}
+
+.map-scroll [data-note] {
+  cursor:pointer;
+}
+
+.map-scroll [data-note]:hover text,.map-scroll [data-note][aria-expanded=true] text {
+  fill:#9a4129;
+  text-decoration:underline;
+}
+
+.turn {
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  margin-top:24px;
+  padding-top:13px;
+  border-top:1px solid var(--ink);
+}
+
+.turn a {
+  font-size:13px;
+  text-decoration:none;
+}
+
+.turn a:hover {
+  text-decoration:underline;
+}
+
+.turn [rel=next] {
+  margin-left:auto;
+  text-align:right;
+}
+
+.extras {
+  padding-top:10px;
+  border-top:1px solid var(--ink);
+}
+
+.extras>details>summary {
+  font:700 20px/1.55 var(--serif);
+  padding:15px 0;
+}
+
+.extras>details[open] {
+  padding-bottom:15px;
+}
+
+.chron-table time {
+  font-variant-numeric:tabular-nums;
+}
+
+.chron-table a {
+  white-space:nowrap;
+}
+
+.peers {
+  display:grid;
+  grid-template-columns:130px minmax(0,1fr);
+  gap:0 15px;
+  font-size:15px;
+  line-height:1.65;
+  margin:2px 0;
+}
+
+.peers dt,.peers dd {
+  border-bottom:1px solid var(--line);
+  padding:9px 0;
+  margin:0;
+}
+
+.peers dt {
+  font-weight:700;
+  color:var(--jade);
+}
+
+.extras>details>p {
+  font-size:14px;
+  color:var(--quiet);
+  margin:10px 0;
+}
+
+.closing {
+  font-size:12px;
+  color:var(--quiet);
+  padding:14px 0 0;
+}
+
+#note-pop {
+  position:fixed;
+  z-index:50;
+  border:1px solid #9caa99;
+  border-radius:4px;
+  box-shadow:0 6px 20px #263a321c;
+  background:#fffff9;
+  color:var(--ink);
+  max-width:min(330px,calc(100vw - 22px));
+  font:14px/1.7 var(--sans);
+  padding:10px 31px 10px 12px;
+  pointer-events:auto;
+  text-indent:0;
+}
+
+#note-close {
+  position:absolute;
+  top:2px;
+  right:2px;
+  background:transparent;
+  border:0;
+  font-size:20px;
+  color:var(--quiet);
+  width:27px;
+  height:28px;
+  line-height:1;
+}
+
+@media(max-width:810px) {
+  .reading {
+    grid-template-columns:154px 1fr;
+    gap:22px;
+  }
+
+  .lead {
+    grid-template-columns:1.3fr .85fr;
+    gap:24px;
+  }
+
+  .side a {
+    font-size:13px;
+  }
+
+}
+
+@media(max-width:660px) {
+  #book {
+    padding:0 15px 20px;
+  }
+
+  .mast {
+    padding:9px 0;
+  }
+
+  .mast-nav {
+    gap:12px;
+  }
+
+  .mast-nav a {
+    font-size:12px;
+  }
+
+  .lead {
+    display:block;
+    padding:16px 0 13px;
+  }
+
+  .lead h1 {
+    font-size:31px;
+    margin:2px 0 5px;
+  }
+
+  .lead p {
+    font-size:13px;
+  }
+
+  .chrono-mini {
+    display:none;
+  }
+
+  .reading {
+    display:block;
+    padding:11px 0 18px;
+  }
+
+  .side {
+    display:none;
+  }
+
+  .mobile-nav {
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin:0 0 13px;
+  }
+
+  .mobile-nav label {
+    font-size:13px;
+    font-weight:700;
+    color:var(--jade);
+    white-space:nowrap;
+  }
+
+  .touch-hint {
+    display:block;
+    color:var(--quiet);
+    font-size:12px;
+    margin:-5px 0 12px;
+  }
+
+  .mobile-nav select {
+    min-width:0;
+    width:100%;
+    padding:6px 7px;
+    border:1px solid var(--line);
+    background:#f3f4ea;
+    color:var(--ink);
+    font-size:14px;
+  }
+
+  .chapter h2 {
+    margin:2px 0 9px;
+  }
+
+  .chapter p:not(.refs) {
+    line-height:1.82;
+  }
+
+  .chapter details p:not(.refs) {
+    font-size:15px;
+  }
+
+  .kinship {
+    gap:8px;
+  }
+
+  .kinship small {
+    font-size:11px;
+  }
+
+  .chapter .kinship p {
+    font-size:15px;
+  }
+
+  .map-scroll {
+    border-bottom:1px dotted var(--line);
+  }
+
+  .chron-table {
+    font-size:12px;
+  }
+
+  .chron-table th,.chron-table td {
+    padding:7px 4px;
+  }
+
+  .peers {
+    grid-template-columns:78px 1fr;
+    font-size:14px;
+  }
+
+  .refs {
+    font-size:11px;
+  }
+
+}
+
+@media print {
+  .side,.mobile-nav,.mast-nav,.turn,#note-pop {
+    display:none!important;
+  }
+
+  .reading {
+    display:block;
+  }
+
+  .chapter[hidden] {
+    display:block!important;
+    break-before:page;
+  }
+
+  .chapter details:not([open])>*:not(summary) {
+    display:block;
+  }
+
+  .chapter {
+    margin-bottom:20px;
+  }
+
+  .term {
+    border:none;
+  }
+
+  .extras {
+    break-before:page;
+  }
+
+}</style></head>
+<body><div id="book"><header class="mast"><span class="brand">中国通史图读</span><nav class="mast-nav" aria-label="全卷索引"><a href="#chronology">全卷年表</a><a href="#contemporaries">同代人物</a></nav></header>
+<section class="lead"><div><div class="period">第一卷 · 商末至秦初</div><h1>从西周到秦统一六国</h1><p>从帝辛与武王的牧野之战出发，看诸侯怎样受封、争霸、兼并，直到秦将六国旧地纳入郡县。</p></div>
+<div class="chrono-mini" aria-label="时间线示意，各段长度不按比例"><div class="bars"><span class="king" style="flex:3">西周</span><span class="king" style="flex:5">东周</span><span class="late" style="flex:2">周亡</span></div><div class="bars"><span style="flex:3">分封</span><span style="flex:3">春秋</span><span style="flex:4">战国</span></div><small>分期示意 · 周亡在前256年，秦统一在前221年。</small></div></section>
+<div class="reading"><aside class="side"><h2>阅读目录</h2><ol><li><a href="#ch01"><small>商末 · 约前1046年</small>周人克商</a></li>
+<li><a href="#ch02"><small>西周 · 至前770年东迁</small>西周分封</a></li>
+<li><a href="#ch03"><small>春秋 · 前8至前5世纪</small>春秋争霸</a></li>
+<li><a href="#ch04"><small>春秋末至战国前期</small>三家分晋</a></li>
+<li><a href="#ch05"><small>战国中期 · 前4世纪</small>列国变法</a></li>
+<li><a href="#ch06"><small>前316年至前3世纪中叶</small>秦国扩张</a></li>
+<li><a href="#ch07"><small>前256年至前221年</small>秦灭六国</a></li>
+<li><a href="#ch08"><small>前221年前后</small>从秦国到秦朝</a></li></ol><p class="usage">虚线词和地图地名可悬停或点按查看注释。</p></aside>
+<main class="stage"><div class="mobile-nav"><label for="chapter-picker">阅读目录</label><select id="chapter-picker"><option value="ch01">1　周人克商</option>
+<option value="ch02">2　西周分封</option>
+<option value="ch03">3　春秋争霸</option>
+<option value="ch04">4　三家分晋</option>
+<option value="ch05">5　列国变法</option>
+<option value="ch06">6　秦国扩张</option>
+<option value="ch07">7　秦灭六国</option>
+<option value="ch08">8　从秦国到秦朝</option></select></div><p class="touch-hint">点虚线词或地图地名，可查看今址与注释。</p>
+<article class="chapter" id="ch01" data-short="周人克商">
+<div class="counter">第一节 · 商末 · 约前1046年</div><h2 tabindex="-1">帝辛、文王与武王，谁改变了局面？</h2>
+<p>商朝末年，周还是西方的一支势力。晚商王室留下的甲骨和宫殿遗址，今天可以在<button type="button" class="term" data-note="殷墟在今河南省安阳市，遗址分布在洹河两岸。甲骨卜辞、宫殿宗庙和王陵等遗存，证明这里曾是晚商都城。">殷墟</button>（今河南安阳）看到。周人的根基则在<button type="button" class="term" data-note="周原以今陕西宝鸡岐山、扶风交界一带为中心，是周人灭商前的重要活动区域。后来文王经营的丰京、武王经营的镐京都更靠东。">周原</button>（今陕西岐山、扶风一带）。对商王而言，起初的周是西边的一支方国势力；到文王姬昌时，它已能征服邻近的敌对方国，也能争取别的方国与自己结盟。</p>
+<h3>文王把周做大，武王率盟军伐商</h3>
+<p>晚商最后一位王叫<strong>帝辛</strong>，后世通常称他<strong>商纣王</strong>。他在位时商仍能大规模用兵，却要在东南长期作战，统治集团内部也有分歧。与此同时，姬昌向东经营，在丰京（今陕西西安西南、沣河西岸）建立新的中心。商与周的力量在好几代人手中消长，牧野决战才有了前提。</p>
+<div class="kinship"><div><span>商王世系</span><p>帝乙 <i>→</i> 帝辛<small>商纣王</small></p></div><div><span>周王世系</span><p>姬昌<small>周文王</small> <i>→</i> 姬发<small>周武王</small></p></div></div>
+<p>姬昌去世，儿子姬发继位。约公元前1046年，周武王姬发率盟军东进，到<button type="button" class="term" data-note="牧野是商郊的地名，通常定位在今河南新乡与淇县以南一带，具体战场尚有不同考证。图上标的是区域约位。">牧野</button>（今河南新乡一带）。《尚书·牧誓》记下武王在商郊向盟军誓师。接下来的战役以商军溃败告终，帝辛身死，商王朝终结，西周建立。后人讲的<strong>“武王伐纣”</strong>，伐纣的是儿子姬发；父亲姬昌奠定了周出兵的基础。</p>
+<figure class="m33-geo-figure" style="margin:0">
+<div class="m33-geo-scroll" style="overflow-x:auto;overscroll-behavior-x:contain">
+<svg id="west-geo" class="m33-geo-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 292" role="group" aria-labelledby="west-geo-title west-geo-desc" style="display:block;width:100%;min-width:490px;height:auto;font-family:'Microsoft YaHei','PingFang SC','Noto Sans CJK SC',sans-serif">
+<title id="west-geo-title">从商周之际的关中到东方</title><desc id="west-geo-desc">丰、镐在关中，洛邑、牧野与殷位于其东。选中地名可查看今址与历史意义。</desc><style>#west-geo .m33-geo-point:hover .m33-geo-hit,#west-geo .m33-geo-point:focus-visible .m33-geo-hit{stroke:#99432c;fill:#fff;fill-opacity:.08}#west-geo .m33-geo-point:focus-visible{outline:none}</style><rect x="0" y="0" width="760" height="292" fill="#daeae6"/><path fill="#f8f5eb" fill-rule="evenodd" stroke="#aec3b8" stroke-width=".55" d="M0 292 0 0 656.4 0 653.9 2.1 652 3.2 650.4 11.3 650.3 20.3 652.3 23.3 657.5 27.5 665.4 30.9 672.7 31.7 686.7 30 692.5 24.6 692.1 22.3 692.2 19.2 704.6 11.3 711.6 4.3 710.5 2.4 709.1 1.2 710.4 0.4 713.8 0 746.4 0 752.5 5.5 760 6.6 760 53.4 749.1 57.3 745.1 60 742.2 60.7 737.1 58.7 734.1 58.8 733.5 60.2 737.3 64 738.3 66.9 737.9 69.2 735.7 70.2 732.5 68.5 729.6 70.9 728.3 74.9 728.2 84.4 726.3 86.5 720.9 87.7 715.3 90.7 713.2 89.3 712.4 87.6 713 83.2 712.3 81.1 709.7 81.2 705.8 82.5 702.8 85.4 701.8 87.1 705.7 92.7 709.5 93.3 710.4 94.5 707.4 97.2 700 101.3 698.8 104.7 696.6 108 693.5 110.6 691.5 113.3 689 114.7 684.9 116.3 679.9 122.9 676.2 129 671.8 132.1 668.3 142.5 662.2 148.1 659.9 157.1 661.5 162.6 668.3 162.6 671.7 164.5 678.7 171.8 687.1 176.5 695.9 179.2 706.6 185.9 709.6 188.8 720.1 219.5 720.3 223.8 725.3 231.9 730.7 245.9 736.8 258 738 267.6 736 271.9 736 277.6 742.2 282.8 755.9 288.8 758 290.6 759.3 292Z"/><path fill="#e8ecda" fill-rule="evenodd" d="M0 0 0 292 284.8 292 281.4 290.6 273.6 289.2 266.8 286.5 262.3 281 257.8 275.5 237.5 267.2 233 264.5 237.5 261.7 246.5 261.7 253.3 258.9 260 256.2 269 256.2 278.1 256.2 283.7 252.1 282.6 245.2 281.4 238.3 287.1 234.2 314.1 234.2 322 235.5 328.8 238.3 335.6 238.3 352.5 225.9 355.9 219 355.9 210.7 352.5 203.8 345.7 201.1 337.8 199.7 334.4 192.8 331.1 185.9 323.2 184.6 315.3 183.2 314.1 179.1 315.3 172.2 313 163.9 314.1 157 318.7 151.5 322 144.6 325.4 137.7 329.9 137.7 336.7 140.5 345.7 140.5 353.6 139.1 359.3 135 363.8 132.2 369.4 133.6 375 132.2 381.8 129.5 390.8 129.5 397.6 126.7 403.2 122.6 408.9 118.5 412.2 111.6 414.5 103.3 415.6 93.7 415.6 82.6 415.6 71.6 417.9 63.4 421.3 56.5 426.9 30.3 430.3 23.4 432.5 15.2 433.7 5.5 432.2 0ZM202.5 287.9 195.8 285.1 189 282.4 185.6 275.5 189 268.6 196.9 267.2 205.9 267.2 213.8 268.6 217.2 275.5 214.9 283.7 209.3 287.9ZM116.8 260.3 111.2 256.2 112.3 252.1 133.7 247.9 138.2 250.7 137.1 254.8 129.2 256.2 122.5 258.9ZM180 199.7 173.2 197 165.3 195.6 157.4 194.2 150.7 191.5 147.3 187.3 149.5 181.8 156.3 179.1 165.3 179.1 172.1 176.3 177.7 172.2 184.5 169.4 190.1 165.3 195.8 161.2 216.1 152.9 221.7 148.8 227.3 144.6 234.1 141.9 242 140.5 249.9 139.1 255.5 135 260 129.5 264.5 124 267.9 117.1 273.6 112.9 282.6 112.9 291.6 112.9 298.4 110.2 301.7 103.3 305.1 96.4 309.6 90.9 314.1 85.4 317.5 78.5 320.9 77.1 324.3 84 323.2 90.9 318.7 96.4 317.5 103.3 318.7 110.2 316.4 115.7 313 122.6 309.6 129.5 305.1 135 302.9 143.2 304 152.9 305.1 159.8 302.9 165.3 286 177.7 279.2 177.7 272.4 174.9 264.5 173.5 255.5 173.5 246.5 173.5 238.6 174.9 231.8 177.7 226.2 181.8 219.4 184.6 213.8 188.7 209.3 194.2 202.5 197 195.8 199.7 187.9 201.1Z"/><path fill="#dce4cc" fill-rule="evenodd" d="M0 0 0 292 12.7 292 16.5 289.2 21 283.7 24.4 276.8 27.7 270 34.5 267.2 41.3 264.5 45.8 258.9 49.2 252.1 49.2 243.8 46.9 235.5 43.5 228.6 43.5 223.1 48 217.6 52.6 212.1 58.2 208 65 205.2 71.7 202.5 77.4 203.8 84.1 206.6 88.6 209.4 86.4 214.9 81.9 220.4 79.6 225.9 81.9 231.4 86.4 236.9 93.1 239.7 102.2 239.7 107.8 235.5 108.9 225.9 111.2 220.4 115.7 223.1 121.3 227.3 129.2 228.6 156.3 228.6 164.2 230 169.8 234.2 174.3 239.7 180 243.8 184.5 241 185.6 231.4 189 224.5 196.9 223.1 203.6 220.4 210.4 217.6 214.9 214.9 212.7 209.4 205.9 206.6 160.8 206.6 154 203.8 147.3 201.1 139.4 199.7 119.1 191.5 111.2 190.1 104.4 187.3 98.8 183.2 96.5 177.7 98.8 169.4 99.9 159.8 99.9 148.8 102.2 140.5 104.4 132.2 105.5 122.6 112.3 97.8 116.8 92.3 122.5 88.2 124.7 82.6 123.6 75.8 123.6 67.5 129.2 63.4 136 66.1 140.5 66.1 146.1 64.7 152.9 67.5 158.5 71.6 161.9 78.5 165.3 85.4 169.8 90.9 173.2 97.8 178.8 124 182.2 130.8 186.7 133.6 190.1 126.7 189 117.1 186.7 108.8 184.5 100.5 180 95 175.5 89.5 174.3 82.6 177.7 78.5 183.4 74.4 184.5 67.5 180 62 174.3 57.8 175.5 53.7 182.2 51 187.9 46.8 192.4 41.3 195.8 34.4 198 26.2 199.1 16.5 195.8 9.6 187.9 8.3 178.8 8.3 169.8 8.3 161.9 6.9 156.3 5.5 150.7 6.9 142.8 8.3 133.7 8.3 128.1 4.1 127.6 0 103.8 0 103.3 4.1 99.9 11 95.4 16.5 89.8 17.9 83 15.2 75.1 13.8 68.3 16.5 62.7 20.7 59.3 27.5 57.1 33.1 53.7 28.9 50.3 22 44.7 17.9 37.9 15.2 30 13.8 22.1 12.4 16.5 8.3 15.3 1.4 15.7 0ZM85.3 282.4 93.1 283.7 98.8 279.6 96.5 274.1 88.6 272.7 83 276.8ZM121.3 282.4 129.2 283.7 137.1 282.4 137.1 279.6 131.5 275.5 124.7 272.7 119.1 276.8ZM337.8 62 343.5 60.6 348 55.1 352.5 49.6 355.9 42.7 354.7 38.6 349.1 39.9 342.3 42.7 336.7 46.8 334.4 55.1ZM297.2 45.5 301.7 42.7 311.9 22 317.5 17.9 323.2 13.8 327.7 8.3 332.2 2.8 332.9 0 305.9 0 306.3 1.4 306.3 9.6 304 17.9 300.6 24.8 296.1 30.3 293.9 38.6ZM404.4 33.1 408.9 30.3 408.9 24.8 405.5 17.9 401 12.4 395.3 11 390.8 13.8 389.7 20.7 393.1 27.5 398.7 31.7Z"/><path fill="#cbd8bc" fill-rule="evenodd" d="M0 195.1 2.9 195.6 8.6 191.5 8.6 183.2 2.9 179.1 0 178.5Z"/><rect x="0.5" y="0.5" width="759" height="291" fill="none" stroke="#b6c6ba"/><g transform="translate(21 20)" fill="#123f39"><path d="M0 -7L4.2 7 0 5-4.2 7Z"/><text y="23" text-anchor="middle" font-size="12">北</text></g><g role="button" tabindex="0" data-title="周原" data-note="今陕西宝鸡岐山、扶风交界一带。周人在关中西部经营已久，周原是观察灭商前周人势力形成的重要地点。" aria-label="周原。今陕西宝鸡岐山、扶风交界一带。周人在关中西部经营已久，周原是观察灭商前周人势力形成的重要地点。" class="m33-geo-point" fill="#123f39" style="cursor:pointer"><path d="M149.1 173L139.1 158" fill="none" stroke="#123f39" stroke-width="1" opacity=".72"/><path d="M149.1 168l5 5-5 5-5-5z" fill="#f8f5eb" stroke="#123f39" stroke-width="1.7"/><text x="137.1" y="156" text-anchor="end" font-size="18" font-weight="600" paint-order="stroke" stroke="#f8f5eb" stroke-width="3.5" stroke-linejoin="round">周原</text><circle cx="149.1" cy="173" r="9" fill="transparent"/><rect class="m33-geo-hit" x="94.1" y="130" width="50" height="38" rx="5" fill="transparent" stroke="transparent" stroke-width="1.6"/></g><g role="button" tabindex="0" data-title="丰、镐" data-note="今陕西西安西南的沣河两岸。丰在河西，镐在河东，两座王都相距很近，共同构成周人在关中的政治中心。" aria-label="丰、镐。今陕西西安西南的沣河两岸。丰在河西，镐在河东，两座王都相距很近，共同构成周人在关中的政治中心。" class="m33-geo-point" fill="#99432c" style="cursor:pointer"><path d="M190.6 192.3L190.6 202.3" fill="none" stroke="#99432c" stroke-width="1" opacity=".72"/><rect x="186.1" y="187.8" width="9" height="9" fill="#99432c" stroke="#f8f5eb" stroke-width="1.6"/><text x="181.6" y="219.3" text-anchor="middle" font-size="18" font-weight="600" paint-order="stroke" stroke="#f8f5eb" stroke-width="3.5" stroke-linejoin="round">丰、镐</text><circle cx="190.6" cy="192.3" r="9" fill="transparent"/><rect class="m33-geo-hit" x="147.6" y="193.3" width="68" height="38" rx="5" fill="transparent" stroke="transparent" stroke-width="1.6"/></g><g role="button" tabindex="0" data-title="洛邑" data-note="今河南洛阳一带。周人在灭商后营建东方重镇，便于从洛阳盆地经营更靠东的地区。" aria-label="洛邑。今河南洛阳一带。周人在灭商后营建东方重镇，便于从洛阳盆地经营更靠东的地区。" class="m33-geo-point" fill="#99432c" style="cursor:pointer"><path d="M356.5 166.9L344.5 174.9" fill="none" stroke="#99432c" stroke-width="1" opacity=".72"/><rect x="352" y="162.4" width="9" height="9" fill="#99432c" stroke="#f8f5eb" stroke-width="1.6"/><text x="342.5" y="191.9" text-anchor="end" font-size="18" font-weight="600" paint-order="stroke" stroke="#f8f5eb" stroke-width="3.5" stroke-linejoin="round">洛邑</text><circle cx="356.5" cy="166.9" r="9" fill="transparent"/><rect class="m33-geo-hit" x="299.5" y="165.9" width="50" height="38" rx="5" fill="transparent" stroke="transparent" stroke-width="1.6"/></g><g role="button" tabindex="0" data-title="殷（殷墟）" data-note="今河南安阳洹河两岸。宫殿宗庙、王陵和甲骨出自这里，是认识晚商王都和王室活动的重要依据。" aria-label="殷（殷墟）。今河南安阳洹河两岸。宫殿宗庙、王陵和甲骨出自这里，是认识晚商王都和王室活动的重要依据。" class="m33-geo-point" fill="#123f39" style="cursor:pointer"><circle cx="441.3" cy="86.5" r="4.7" fill="#123f39" stroke="#f8f5eb" stroke-width="1.8"/><text x="453.3" y="76.5" text-anchor="start" font-size="18" font-weight="600" paint-order="stroke" stroke="#f8f5eb" stroke-width="3.5" stroke-linejoin="round">殷（殷墟）</text><circle cx="441.3" cy="86.5" r="9" fill="transparent"/><rect class="m33-geo-hit" x="446.3" y="50.5" width="104" height="38" rx="5" fill="transparent" stroke="transparent" stroke-width="1.6"/></g><g role="button" tabindex="0" data-title="牧野（约位）" data-note="今河南新乡一带。周武王军队与商军在牧野交战。虚线圈只示大致方位，古战场具体位置仍有不同考证。" aria-label="牧野（约位）。今河南新乡一带。周武王军队与商军在牧野交战。虚线圈只示大致方位，古战场具体位置仍有不同考证。" class="m33-geo-point" fill="#99432c" style="cursor:pointer"><path d="M434.6 119L450.6 122" fill="none" stroke="#99432c" stroke-width="1" opacity=".72"/><ellipse cx="434.6" cy="119" rx="9" ry="7" fill="#f8f5eb" stroke="#99432c" stroke-dasharray="3 2" stroke-width="1.7"/><text x="452.6" y="139" text-anchor="start" font-size="18" font-weight="600" paint-order="stroke" stroke="#f8f5eb" stroke-width="3.5" stroke-linejoin="round">牧野（约位）</text><circle cx="434.6" cy="119" r="9" fill="transparent"/><rect class="m33-geo-hit" x="445.6" y="113" width="122" height="38" rx="5" fill="transparent" stroke="transparent" stroke-width="1.6"/></g><g role="button" tabindex="0" data-title="晋南" data-note="今山西南部汾河、涑水流域一带。西周晋国的早期遗存集中在这一带，处在关中与中原之间。" aria-label="晋南。今山西南部汾河、涑水流域一带。西周晋国的早期遗存集中在这一带，处在关中与中原之间。" class="m33-geo-point" fill="#123f39" style="cursor:pointer"><path d="M301.5 106.8l5 5-5 5-5-5z" fill="#f8f5eb" stroke="#123f39" stroke-width="1.7"/><text x="293.5" y="103.8" text-anchor="end" font-size="18" font-weight="600" paint-order="stroke" stroke="#f8f5eb" stroke-width="3.5" stroke-linejoin="round">晋南</text><circle cx="301.5" cy="111.8" r="9" fill="transparent"/><rect class="m33-geo-hit" x="250.5" y="77.8" width="50" height="38" rx="5" fill="transparent" stroke="transparent" stroke-width="1.6"/></g><g role="button" tabindex="0" data-title="齐地" data-note="今山东北部一带。西周分封的齐国位于东方，列在图上便于与关中、洛邑对照。" aria-label="齐地。今山东北部一带。西周分封的齐国位于东方，列在图上便于与关中、洛邑对照。" class="m33-geo-point" fill="#123f39" style="cursor:pointer"><path d="M611.8 49.5l5 5-5 5-5-5z" fill="#f8f5eb" stroke="#123f39" stroke-width="1.7"/><text x="620.8" y="46.5" text-anchor="start" font-size="18" font-weight="600" paint-order="stroke" stroke="#f8f5eb" stroke-width="3.5" stroke-linejoin="round">齐地</text><circle cx="611.8" cy="54.5" r="9" fill="transparent"/><rect class="m33-geo-hit" x="613.8" y="20.5" width="50" height="38" rx="5" fill="transparent" stroke="transparent" stroke-width="1.6"/></g><g role="button" tabindex="0" data-title="鲁地" data-note="今山东曲阜一带。鲁国在齐国南面，西周在东方的分封格局由此更容易定位。" aria-label="鲁地。今山东曲阜一带。鲁国在齐国南面，西周在东方的分封格局由此更容易定位。" class="m33-geo-point" fill="#123f39" style="cursor:pointer"><path d="M562.2 112.4l5 5-5 5-5-5z" fill="#f8f5eb" stroke="#123f39" stroke-width="1.7"/><text x="571.2" y="131.4" text-anchor="start" font-size="18" font-weight="600" paint-order="stroke" stroke="#f8f5eb" stroke-width="3.5" stroke-linejoin="round">鲁地</text><circle cx="562.2" cy="117.4" r="9" fill="transparent"/><rect class="m33-geo-hit" x="564.2" y="105.4" width="50" height="38" rx="5" fill="transparent" stroke="transparent" stroke-width="1.6"/></g>
+</svg></div>
+<figcaption class="m33-geo-caption">方块标周王室治所，菱形标区域，虚线圈标牧野的大致方位。 海岸与海拔取自现代地理数据，色阶表示地势高低，图中省略列国疆界。<small class="m33-geo-sources" style="display:block">地名资料见<a href="https://whc.unesco.org/zh/list/1114" target="_blank" rel="noopener noreferrer">殷墟</a> · <a href="https://www.baoji.gov.cn/bmpd/bjskxjsj/ztzl/djgzhjswm/202508/t20250820_1196258.html" target="_blank" rel="noopener noreferrer">周原</a> · <a href="https://qhwh.hbzy.edu.cn/info/1085/1849.htm" target="_blank" rel="noopener noreferrer">牧野地望考</a>。底图采用 <a href="https://www.naturalearthdata.com/downloads/50m-physical-vectors/50m-land/" target="_blank" rel="noopener noreferrer">Natural Earth</a>、<a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noopener noreferrer">Mapzen Terrain Tiles（USGS、NOAA）</a>。</small></figcaption></figure>
+<details><summary>阵前倒戈与鹿台自焚，分别是什么记载？</summary><p>《史记·周本纪》写到商军前队掉转兵器，商军随之溃败。《殷本纪》又记帝辛退往鹿台，自焚而死。司马迁写这些事，距商亡已有约一千年。商朝终结、武王克商，有多种材料相互印证；战场上哪些人倒戈、具体有多少人，现有材料难以确知。</p></details>
+<details><summary>姜太公钓鱼，和武王伐纣有什么关系？</summary><p>太公望又称吕尚，后人常叫他姜子牙。《诗经·大雅·大明》写“师尚父”辅佐武王，场景就在牧野。《史记·齐太公世家》说文王在渭水边遇见垂钓的太公，也列出其他相识经过。后世故事又添入直钩等细节。把人物放回主线，太公先辅佐周人兴起，克商后受封于齐。几百年后春秋争霸的齐国，因而与牧野这一代人接得上。</p></details>
+<details><summary>利簋上的三十二个字，能证实什么？</summary><p><strong>簋</strong>（读 guǐ）是一种盛食器。西周初年一位名叫“利”的人受赏后铸器，把武王征商和甲子日清晨记在器内。这是接近事件发生年代的实物记录。铭文用干支记日；书里的“约前1046年”是现代断代研究采用的纪年。</p></details>
+<p>周武王取代了商王，却不能让东方的城邑一夜之间全听号令。旧贵族、周的盟友、离王都很远的聚落，都需要重新安置。这才有了下一节的周公东征和周初分封。</p>
+<p class="refs">资料 <a href="https://www.chnmuseum.cn/zp/zpml/kgfjp/202108/t20210802_250931.shtml">中国国家博物馆·利簋</a> <a href="https://www.mct.gov.cn/wlbphone/wlbydd/xxfb/qglb/hn/202402/t20240227_951452.html">殷墟遗址</a> <a href="https://www.chinakongzi.org/kzsf/wxxs/mingpian/shiji/200705/t20070524_25243.htm">《史记·周本纪》</a> <a href="https://www.chinakongzi.org/kzsf/wxxs/mingpian/shiji/200705/t20070524_25244.htm">《史记·殷本纪》</a> <a href="https://www.chinakongzi.org/kzsf/wxxs/mingpian/shiji/200705/t20070524_25215.htm">《史记·齐太公世家》</a> <a href="https://ctext.org/book-of-poetry/da-ming/zhs">《诗经·大明》</a></p>
+</article>
+<article class="chapter" id="ch02" data-short="西周分封">
+<div class="counter">第二节 · 西周 · 至前770年东迁</div><h2 tabindex="-1">打下商地以后，周王怎样经营东方？</h2>
+<p>牧野取胜以后，周武王回到西边的王都。原来听命于商王的那些城邑，谁来管？武王让帝辛的儿子武庚留在商人的旧地，又派自己的弟弟管叔、蔡叔等人驻守东方。商人仍有自己的首领，周人则在当地安排了王室成员。武王一死，这套安排便经受了第一次考验。</p>
+<p>继位的成王年幼，他的叔父周公旦辅政。管叔、蔡叔与武庚起兵反周，周公率军东征，平定叛乱。为了让王室能长期经营东方，周人在<button class="term" type="button" data-note="洛邑在今河南洛阳一带，地近伊河、洛河。西周初年这里已是王室在东方经营的中心。">洛邑</button>营建城邑。王室此后就近调度东方事务，不必次次从关中动身。周王又把亲族、功臣等分封到各地。受封者带人就地治理、守卫封国，遇到王室征召，还要出兵。齐在今山东北部，鲁在今山东曲阜一带，晋的早期中心在今山西南部。透过这些分布在各地的封国，周王的命令才有机会传到远方。</p>
+<p>几代人过去，诸侯的子孙在当地继位，有自己的田地、城邑和军队。到西周末年，周幽王更换继承人，引发王室与申侯的冲突。公元前771年，申侯联合犬戎等进攻，幽王被杀。西边的王都难以守住。按通行纪年，次年周平王在诸侯帮助下东迁洛邑，东周开始了。周天子的名号延续下来，可如今连王室自身的安全，也要借助诸侯的兵力。</p>
+<details><summary>一件青铜器里写着怎样的分封？</summary><p>在今江苏镇江出土的宜侯夨簋，是西周早期的一件盛食器。器底铭文记录周王命一位原来受封于虞的侯迁到宜地，同时赐给他土地、城邑、人口和弓箭。对受命的人来说，“去当诸侯”意味着带着具体的资源和人群到当地扎下根。</p></details>
+<details><summary>“烽火戏诸侯”能解释西周为什么灭亡吗？</summary><p>司马迁在《史记·周本纪》里写，幽王为了博褒姒一笑，多次点起报警的烽火。等到敌军真的来了，已没有诸侯出兵，幽王最后死于骊山（今陕西西安临潼一带）。战国竹简《系年》讲同一场危机，却循着另一条线索：太子宜臼逃往母亲的家族，幽王出兵围攻，冲突扩大。两部书写定时都已离事发年代很远。烽火一事缺少同时代材料印证；两种叙述都指向一件事，王室内部的继承争执把诸侯也卷进了战争。</p><p>原文与释读 <a href="https://www.chinakongzi.org/kzsf/wxxs/mingpian/shiji/200705/t20070524_25243.htm">《史记·周本纪》</a> · <a href="https://www.tsinghua.edu.cn/info/1182/117352.htm">清华大学·竹简《系年》</a></p></details>
+<p class="refs">资料 <a href="https://www.chnmuseum.cn/yj/xscg/xslw/201812/t20181224_36458.shtml">中国国家博物馆·西周封邦与东征</a> · <a href="https://www.chnmuseum.cn/zp/zpml/kgfjp/202108/t20210802_250932.shtml">国博藏宜侯夨簋</a> · <a href="https://www.cssn.cn/skgz/202209/t20220916_5521154.shtml">春秋周王共主地位辨</a></p>
+</article>
+<article class="chapter" id="ch03" data-short="春秋争霸">
+<div class="counter">第三节 · 春秋 · 前8至前5世纪</div><h2 tabindex="-1">周天子仍在，齐桓公和晋文公为何能号令诸侯？</h2>
+<p>平王东迁后，诸侯依旧尊周王为天子。可若一个国家遭到攻打，谁能召来几国的军队，谁就有机会主持会盟、定下盟约。最先长期担起这个角色的是东方的齐桓公。他任用管仲整顿齐国，凭借积累的财力和兵力，救援遇袭的诸侯。公元前651年，齐桓公召集诸侯在<button class="term" type="button" data-note="葵丘在今河南东部。这里是齐桓公会盟诸侯的地点，各家对其精确位置有不同说法。">葵丘</button>会盟，周王也派来代表。齐桓公在会盟时主持诸侯事务，示范了春秋霸主可以拥有多大的权力。</p>
+<p>后来，北方的晋与南方的楚争夺中原诸国的支持。夹在两强之间的郑，都城在今河南新郑。它与哪一国结盟，要看谁的大军已到门前，又有谁愿意来援。宋国（都城在今河南商丘一带）受到楚国围攻时，就向晋求救。公元前632年，晋文公联合宋、齐、秦等国的军队，在<button class="term" type="button" data-note="城濮在今鲁西南、豫东北交界一带，古战场的具体位置有不同考证。">城濮</button>击败楚军，随后在<button type="button" class="term" data-note="约在今河南原阳西南一带。城濮是战场，践土是战后会盟之地。">践土</button>与诸侯会盟，受周王册命为诸侯之长。郑与宋的君主仍各自治理本国，霸主的威望就系在他能否兑现盟约、援助盟国上。</p>
+<p>城濮之战过了八十多年，孔子才出生在鲁国（今山东曲阜一带）。他生活的春秋晚期，争权的事已发生在诸侯国内部。鲁国政事常由几家世袭贵族把持，国君也有号令不动他们的时候。孔子一再谈礼，背后有他亲眼见到的难题：天子、诸侯、各国贵族都还保有各自的名位，究竟谁能决定用兵，谁肯听谁的号令？</p>
+<details><summary>“退避三舍”的重耳是谁？</summary><p>重耳就是后来的晋文公。《左传》记载，他即位前流亡楚国，受过楚王礼遇，曾许诺若两国日后在战场相遇，愿先退让。城濮交战前，晋军果然退了三舍。舍是古代行军的路程单位。这段典故发生在春秋晋、楚交锋时。</p></details>
+<details><summary>孔子在鲁国讲学时，吴王和越王在做什么？</summary><p>把目光移到今天的江浙一带：吴以太湖流域为根基，越国的中心在今浙江绍兴一带。孔子在世时，吴王夫差打败越王勾践，勾践退守会稽（今绍兴一带）求和。此后越国恢复生产、积蓄兵力，趁夫差北上争夺霸主地位时进攻吴国。公元前473年越灭吴，距孔子去世已六年。</p><p>“卧薪尝胆”就是从这段经历讲开的。《史记·越王勾践世家》写勾践把苦胆放在座旁，饮食时尝一尝，提醒自己记住会稽败局。司马迁这段话只记了尝胆。后来人们熟悉的四字成语又添上了睡柴薪这一层意思。</p><p>原文与出处 <a href="https://www.chinakongzi.org/kzsf/wxxs/mingpian/shiji/200705/t20070524_25206.htm">《史记·越王勾践世家》</a> · <a href="https://dict.idioms.moe.edu.tw/idiomView.jsp?ID=5352&amp;la=0&amp;webMd=2">《成语典》历代用例</a></p></details>
+<p class="refs">资料 <a href="https://www.chinakongzi.org/kzsf/wxxs/mingpian/shiji/200705/t20070524_25215.htm">《史记·齐太公世家》</a> · <a href="https://ctext.org/chun-qiu-zuo-zhuan/xi-gong-er-shi-ba-nian/zhs">《左传·僖公二十八年》</a> · <a href="https://oss.ly.gov.cn/upload-file/files/20241218/4bf4f3e74241441c9b6f9dc5f46ace8f.pdf">《洛阳市志》大事记</a> · <a href="https://shandong-chorography.org/database/bh/section/22/article/66/">山东地方志·城濮之战</a> · <a href="https://www.dpm.org.cn/lemmas/243277.html">故宫博物院·孔子</a></p>
+</article>
+<article class="chapter" id="ch04" data-short="三家分晋">
+<div class="counter">第四节 · 春秋末至战国前期</div><h2 tabindex="-1">晋国去了哪里，韩、赵、魏又从何而来？</h2>
+<p>春秋地图上的晋是中原大国。翻到战国地图，原来的一大片地方却写着韩、赵、魏。晋君把不少军政事务交给几家世袭贵族，这些家族各有领地、家臣和可以调动的兵力。到了春秋末年，决定晋国命运的争斗，发生在这些家族之间。</p>
+<p>公元前453年，韩、赵、魏三家合力打败晋国的另一强族智氏，瓜分其地。晋君还在，三家却已能分别经营自己的领地。又过了半个世纪，周威烈王在前403年正式承认韩、赵、魏列为诸侯。直到前376年，三家才分完晋国余下的地盘。“三家分晋”在书上只有四个字，当时的人却经历了几代君主，才从一个晋国走到了三个国家。</p>
+<p>东方的齐也经历了权力交替。齐国的君位曾由姜姓一族世代继承，齐桓公就出自这一家。后来，齐国内部的田氏家族逐步控制政事。前386年，周安王承认田和为齐侯。国君一家换了，齐的国号和都城<button class="term" type="button" data-note="临淄故城在今山东淄博市临淄区。姜姓统治时期和田氏掌权后，齐国都曾以此为都。">临淄</button>都沿用下来。这就是“田氏代齐”。晋的变化写在地图上，齐的变化要读国君的家族才能看出来。</p>
+<figure class="m33-geo-figure" style="margin:0">
+<div class="m33-geo-scroll" style="overflow-x:auto;overscroll-behavior-x:contain">
+<svg id="seven-geo" class="m33-geo-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 315" role="group" aria-labelledby="seven-geo-title seven-geo-desc" style="display:block;width:100%;min-width:490px;height:auto;font-family:'Microsoft YaHei','PingFang SC','Noto Sans CJK SC',sans-serif">
+<title id="seven-geo-title">约公元前350年的七国与周王室</title><desc id="seven-geo-desc">左侧为列国方位，右侧放大韩、魏、赵与周王室的都城。选中地名可查看今址与历史意义。</desc><style>#seven-geo .m33-geo-point:hover .m33-geo-hit,#seven-geo .m33-geo-point:focus-visible .m33-geo-hit{stroke:#99432c;fill:#fff;fill-opacity:.08}#seven-geo .m33-geo-point:focus-visible{outline:none}</style><rect x="0" y="0" width="491" height="315" fill="#daeae6"/><path fill="#f8f5eb" fill-rule="evenodd" stroke="#aec3b8" stroke-width=".55" d="M491 174.1 489.6 173.1 489.8 172 491 170.8ZM403 245.5 401.3 246.2 396 244 392.2 241.7 390 238.8 389.7 237.7 392.3 237.9 394.9 238.9 397.1 241.9 401.9 244 402.6 244.6ZM411.8 283.5 406.3 282.3 405.3 281 405.2 279.1 408 279.1 411.6 280.9 412.3 281.8ZM409.3 290.6 406.6 289.2 407 288.3 408.2 288.1 409.1 290.1ZM414 285.3 413.8 286.5 413.3 286.3 412.5 284.2 412.9 283.7 414 283.9ZM465 45.2 463.9 45.9 463.8 44.6 464.7 43.5 465.6 43.4ZM490.9 164.8 490.6 165.4 489.7 165.2 487.5 161.4 488.9 160.2 490.8 162.4ZM0 315 0 0 491 0 491 115.8 491 88.6 490.6 89.3 489.7 89.8 488.4 86.7 486.2 86.6 482.6 83.8 481.1 84.3 480.7 85.5 478.8 88 476.1 90.1 475.2 90.4 474.2 90.3 474.4 89.7 473.3 87.3 466.7 85.1 470.9 82.5 472 82 471.2 81.4 470.3 81.1 466.9 81.5 460.7 80.2 464.4 77.6 464.6 76.1 464.5 74.9 466.4 71.5 468.3 69.6 473.3 66.9 478.3 66.3 470.4 63.4 470.2 61.7 475.3 51.3 474.3 45.4 470.6 44 469 43.8 464.3 41 462.4 39.6 461.6 40.1 461.5 42.3 460.8 42.8 459.6 43.2 459 40.7 457.9 38.8 454.8 37 453.7 35.9 453.7 33.3 452 35.5 448.7 37.6 441.7 38 439.4 36.6 438.6 37.6 438 38.9 436.2 39.4 433.3 39.5 431.7 40.4 430.8 41.4 426.8 41.7 425.4 43.1 422.9 43.6 412.6 49.4 405.4 57.2 404.2 57.6 403 58.6 399.2 58.4 398.3 59.6 399.1 61.2 398.6 61.9 395.9 62.7 391.9 63.3 388.7 65.2 387.9 63.2 387.6 60.5 399.3 55.8 398.2 53 402.1 48.9 391 48.9 391.5 47.3 391.2 45.6 390.8 45 395.9 42.6 395.9 41.5 395.1 39.7 395.9 37.5 401.7 34.8 409.7 24.7 409.9 23.8 411.2 21.2 411.4 20.1 409.4 18.6 408.6 16.5 402.9 12.6 402.4 9.4 400.3 12.5 388.9 11.2 380.7 18.9 374.8 27.9 356.7 36 352.6 39.8 351.2 42 349.9 44.6 349.2 48.4 345.4 53 344.1 54 337 54.1 333.8 55.6 330.3 56.8 327.2 53.7 325 52.9 321.5 53.8 319.8 55.2 316.4 62.2 315.1 66.2 315.2 67.9 317.2 72.9 319.5 75.7 324.5 78.9 335.3 81.1 337.8 80.3 340.5 80.3 343.4 82.4 346.4 90.9 345.3 91.9 344.4 92.3 343.7 96 343.6 100.1 344.6 101.4 346.9 103.3 350.5 104.9 353.8 105.2 360.1 104.5 362.7 102 362.5 101 362.6 99.6 368.2 96 371.3 92.8 370.8 92 370.2 91.4 380.3 87.6 386.4 90.3 389.9 93.4 393.3 93.9 395.7 95.5 398.4 96.9 402 96.9 405.1 97.2 406 96 406.9 95.1 412.7 98.2 415.8 98.2 418.1 97.7 419.4 98.3 417.5 100.4 417.8 103.8 416.3 104.9 414.9 106.6 415.7 107.8 416.5 108.3 416.4 109.6 415.1 110.4 412.7 112.5 411.4 112.5 410.7 112.1 409.1 109.3 406.8 109 404.4 109.3 386.5 118 381.5 117.5 381.2 118.1 383 119.8 383.4 121.1 383.3 122.2 382.3 122.6 380.8 121.9 379.5 122.9 378.9 124.7 378.9 129 378 130 375.6 130.5 373 131.9 372.1 131.2 371.7 130.5 372 128.5 371.7 127.5 370.5 127.6 368.7 128.2 367.4 129.5 366.9 130.3 368.7 132.8 370.4 133 370.8 133.6 369.5 134.8 366.1 136.7 365.6 138.2 364.6 139.7 363.2 140.9 362.3 142.1 361.1 142.7 359.3 143.5 357 146.4 355.3 149.2 353.4 150.6 351.8 155.3 349 157.8 348 161.9 348.7 164.4 351.8 164.4 353.3 165.2 356.5 168.5 360.3 170.7 364.3 171.9 369.1 174.9 370.4 176.2 375.3 192 382.8 207.5 383.3 211.8 382.4 213.8 382.4 216.4 385.2 218.7 391.4 221.4 392.4 222.2 393.6 223.6 393.6 227.7 394.6 229 395.4 229.8 399.1 231.6 400.7 233 402.4 235.3 402.8 237.4 403.1 240.2 401 240.3 399.3 240 392.6 236.3 390.8 236.2 388.4 236.8 384.8 236.1 381.1 232 378.5 230.8 375.6 230.2 365.7 234.4 368.9 235.2 372.1 234 375.1 232.3 379.6 233.2 380.3 234.7 381.1 237.3 389.6 242.1 392.5 245.6 398.9 249.8 401.4 253.7 402.4 256.2 403.3 259.8 393.9 263 391.7 265.2 385.3 268.7 384.1 270.9 383.3 272.9 381.7 273.8 377.8 272.9 374.2 273 370 275.6 369 276.6 372.2 276.5 375.1 275.1 377.9 279.3 383.4 278.6 388.6 275.1 390.6 275.1 392.3 275.6 394.2 277 399.2 283.1 407.5 285.9 395.7 295.5 399.5 294.8 402.1 292.5 403.5 291.9 404.6 292.4 405.1 295.3 404.1 304.2 402.8 304.3 401.5 301.9 400 301.1 398.8 301.6 396.3 301.6 395.3 302.7 394.5 304.3 396 304.6 398.9 307.3 399.2 308.7 398.5 309.6 396.4 309.2 398.9 311.2 398.2 313.3 397.4 314.1 396 314.7 395.8 315ZM461.7 83.9 460.8 85.4 459.9 85.3 459.3 84.8 459.5 83.9Z"/><path fill="#e8ecda" fill-rule="evenodd" d="M0 0 0 315 139 315 139.7 312.5 140.2 308.2 141.7 305 143.7 302.5 146.3 301.9 149.4 303.2 152.4 303.2 161.6 294.5 172.8 293.2 175.4 291.3 176.9 288.2 178.4 285.1 181 283.3 183.5 281.4 183.5 278.9 182 275.8 181 272 180.5 267.7 180.5 262.7 182 259.6 185 258.3 187.6 256.5 188.6 252.7 190.1 249.6 192.7 247.8 194.2 244.7 194.2 240.9 193.2 237.2 191.2 234.7 187.6 234.1 185 232.2 184 228.5 182.5 225.4 179.9 223.5 170.3 220.4 168.2 217.9 166.2 215.4 155 210.4 157 209.2 161.1 209.2 164.1 207.9 167.2 206.7 171.3 206.7 175.4 206.7 177.9 204.8 177.4 201.7 176.9 198.6 179.4 196.7 191.7 196.7 195.2 197.3 198.3 198.6 201.4 198.6 209 193 210.5 189.9 210.5 186.1 209 183 205.9 181.8 202.4 181.2 200.8 178 199.3 174.9 195.7 174.3 192.2 173.7 191.7 171.8 192.2 168.7 191.2 165 191.7 161.9 196.8 153.1 198.8 153.1 201.9 154.4 205.9 154.4 209.5 153.8 212.1 151.9 214.1 150.7 216.6 151.3 219.2 150.7 222.3 149.4 226.3 149.4 234.5 144.4 236 141.3 237 137.6 237.5 123.3 238.6 119.5 240.1 116.4 242.6 104.6 244.2 101.5 245.2 97.7 245.7 93.4 244.7 89.6 239.1 81.6 238.1 77.8 238.1 74.1 243.2 65.4 244.2 61.6 246.7 59.8 250.8 59.8 253.9 58.5 262 53.5 267.1 44.8 275.8 40.5 277.8 38 279.4 34.9 280.9 31.7 281.9 28 282.9 24.3 291.6 19.9 293.1 16.8 294.6 13.7 302.3 8.1 305.3 8.1 307.9 8.7 316.1 5 320.1 5 323.2 3.7 325.7 3.1 332.9 9.3 336.4 10 340.5 10 343.6 8.7 345.6 6.2 347.2 3.1 346.6 0 346.6 0ZM43.8 315 43.3 313.1 40.8 311.3 37.7 310 35.7 307.5 33.6 305 26.5 288.9 24.5 286.4 23.9 283.3 26.5 271.4 31.6 262.7 38.7 256.5 40.8 254 42.8 251.5 44.3 248.4 45.9 245.3 56.1 237.8 59.1 236.6 63.2 236.6 67.3 236.6 69.8 234.7 71.9 232.2 74.4 232.8 77.5 234.1 101.9 234.1 105 235.3 106.5 238.4 108.1 241.5 116.2 246.5 118.3 249 120.8 250.9 130 249.6 133 250.9 135.6 252.7 137.6 255.2 139.7 257.7 140.7 260.2 139.7 262.7 136.6 264 133.5 265.2 131 267.1 128.5 268.9 117.2 285.1 114.7 287 112.1 288.9 110.1 291.3 108.1 293.8 99.9 298.8 96.3 309.4 93.8 311.3 89.7 311.3 85.6 311.3 82.6 312.5 80.5 315 80.5 315ZM286 260.8 288.5 260.2 290.1 257.1 289 254.6 286 254.6 283.4 256.5 283.4 259ZM163.6 231 160.6 229.7 158 227.8 157 225.4 159 224.1 162.6 224.7 165.7 226 167.2 227.8 166.2 230.3ZM141.2 221 138.1 219.8 135.1 218.5 133.5 215.4 135.1 212.3 138.6 211.7 142.7 211.7 146.3 212.3 147.8 215.4 146.8 219.1 144.3 221ZM102.5 208.5 99.9 206.7 100.4 204.8 110.1 202.9 112.1 204.2 111.6 206.1ZM131 181.2 117.7 177.4 116.2 175.6 117.2 173.1 127.4 170.6 138.1 163.7 147.3 160 149.9 158.1 152.4 156.3 162.6 153.8 169.2 146.9 170.8 143.8 173.3 141.9 177.4 141.9 181.5 141.9 184.5 140.7 186.1 137.6 187.6 134.5 193.2 126.4 194.7 125.8 196.3 128.9 195.7 132 193.7 134.5 193.2 137.6 193.7 140.7 192.7 143.2 187.6 151.9 186.6 155.6 187.1 160 187.6 163.1 186.6 165.6 178.9 171.2 175.9 171.2 172.8 170 169.2 169.3 157.5 170 148.8 174.3 146.3 176.2 144.3 178.7 141.2 179.9 138.1 181.2 134.6 181.8ZM491 0 486.9 0 487.9 1.9 490.9 1.9 491 1.8 491 14.3 490.9 14.3 488.4 16.2 486.8 19.3 486.8 23 489.4 24.9 491 24.9ZM314 23.7 316.1 22.4 318.1 19.9 318.6 16.8 317.6 13.1 315.5 10.6 313 11.2 311.5 14.3 311 18.7 312 22.4Z"/><path fill="#dce4cc" fill-rule="evenodd" d="M0 315 28.3 315 27 305.7 25 303.2 23.4 300.1 22.9 295.7 21.4 292.6 13.2 287.6 11.7 284.5 12.2 281.4 24.5 266.4 29.6 257.7 36.7 251.5 38.7 249 40.8 246.5 52 225.4 59.1 219.1 60.6 216 62.2 212.9 65.2 211.7 68.3 210.4 70.3 207.9 71.9 204.8 71.9 201.1 70.8 197.3 69.3 194.2 69.3 191.7 71.4 189.2 73.4 186.8 82.1 182.4 89.7 185.5 85.6 193 86.6 195.5 88.7 198 91.7 199.2 95.8 199.2 98.4 197.3 98.9 193 99.9 190.5 101.9 191.7 104.5 193.6 123.9 194.9 131 201.1 133 199.8 133.5 195.5 135.1 192.4 138.6 191.7 146.8 188 145.8 185.5 142.7 184.3 122.3 184.3 96.8 175.6 94.3 173.7 93.3 171.2 94.3 167.5 94.8 163.1 94.8 158.1 100.4 135.1 102.5 132.6 105 130.7 106 128.2 105.5 125.1 105.5 121.4 108.1 119.5 111.1 120.8 113.2 120.8 115.7 120.1 118.8 121.4 121.3 123.3 127.9 135.1 130.5 146.9 132 150 134.1 151.3 135.6 148.2 135.1 143.8 134.1 140.1 133 136.3 131 133.8 129 131.4 128.5 128.2 130 126.4 132.5 124.5 133 121.4 131 118.9 128.5 117 129 115.2 132 113.9 134.6 112.1 136.6 109.6 138.1 106.5 139.2 102.7 139.7 98.4 138.1 95.2 126.4 94.6 122.8 94 120.3 93.4 110.1 94.6 107.6 92.8 106.5 74.1 104 72.2 101.4 74.1 99.9 77.2 96.3 92.8 94.8 95.9 92.8 98.4 90.2 99 87.2 97.7 83.6 97.1 80.5 98.4 78 100.2 76.5 103.3 75.4 105.8 73.9 104 72.4 100.8 69.8 99 59.6 96.5 57.1 94.6 56.6 91.5 57.6 87.8 56.6 85.3 43.3 81.6 40.8 79.7 38.2 77.8 21.9 72.8 10.7 71.6 7.6 70.3 5.1 68.5 3 66 1.5 62.9 2.5 60.4 6.1 59.8 10.2 59.8 13.2 61 15.8 61.6 22.4 54.8 21.9 52.9 18.3 52.3 15.3 53.5 12.7 54.2 9.7 52.9 7.1 51 5.1 48.6 2 47.3 0 47.3ZM159.5 248.4 163.1 249 167.2 249 170.8 248.4 173.3 246.5 174.3 242.8 173.3 239.1 170.8 237.2 167.7 237.2 165.2 239.1 162.6 240.9 159.5 240.9 156.5 239.7 153.9 237.8 152.4 234.7 150.9 231.6 148.3 229.7 144.8 229.1 133 229.7 131.5 232.8 131.5 237.8 132.5 241.5 134.6 244 137.1 245.9 140.7 246.5 143.7 245.3 151.4 239.7 153.4 240.9 155 244 157 246.5ZM88.2 218.5 91.7 219.1 94.3 217.3 93.3 214.8 89.7 214.2 87.2 216ZM104.5 218.5 108.1 219.1 111.6 218.5 111.6 217.3 109.1 215.4 106 214.2 103.5 216ZM202.4 118.9 204.9 118.3 207 115.8 209 113.3 210.5 110.2 210 108.3 207.5 108.9 204.4 110.2 201.9 112.1 200.8 115.8ZM184 111.4 186.1 110.2 190.6 100.8 193.2 99 195.7 97.1 197.8 94.6 199.8 92.1 200.8 88.4 199.8 84.7 197.8 82.2 195.7 79.7 195.2 76.6 197.8 74.7 200.3 76.6 201.4 80.3 203.9 82.2 207.5 81.6 209 78.4 209.5 74.1 210.5 70.3 212.1 67.2 213.1 63.5 212.6 59.1 210.5 56.7 208 54.8 207 51 208 47.3 216.1 42.3 217.7 39.2 219.2 26.1 217.7 23 214.6 21.8 214.1 19.9 216.1 18.7 218.7 19.3 222.3 19.9 224.8 18.1 224.8 14.3 224.3 11.2 225.3 8.7 235.5 6.2 236.5 3.7 235.5 1.2 234.9 0 263 0 262 1.2 261 3.7 269.7 11.8 272.7 11.8 274.3 8.7 274.8 4.4 276.8 3.1 279.9 4.4 282.4 3.7 285 3.1 287.5 3.7 288.5 1.2 288.9 0 142.7 0 147.8 6.2 149.4 9.3 148.8 12.5 149.4 14.3 151.9 13.7 153.9 11.2 157 10 160.6 10.6 162.6 13.1 165.2 14.9 168.2 16.2 171.3 17.4 175.4 17.4 197.8 10 201.4 10.6 203.9 12.5 204.9 16.2 203.9 19.9 203.4 23 205.9 24.9 208.5 26.8 209.5 30.5 210.5 34.2 210 36.1 208 34.9 206.5 31.7 204.4 30.5 201.4 31.7 198.8 33.6 196.8 36.1 195.2 39.2 196.8 51 196.3 55.4 194.7 58.5 192.2 60.4 189.6 62.3 188.1 65.4 187.1 69.1 185.5 80.9 188.1 91.5 188.1 95.2 182.5 108.3ZM232.4 105.8 234.5 104.6 234.5 102.1 233 99 230.9 96.5 228.4 95.9 226.3 97.1 225.8 100.2 227.4 103.3 229.9 105.2ZM67.8 89 70.8 89 72.4 85.9 72.9 81.6 84.1 60.4 90.7 53.5 91.7 51 90.7 48.6 88.2 47.9 78.5 51 72.4 58.5 70.8 61.6 70.3 66 70.3 71 69.3 74.7 66.8 76.6 64.7 79.1ZM120.8 66.6 122.8 65.4 123.9 61.6 126.4 59.8 130 59.1 130.5 57.3 128.5 54.8 125.9 52.9 123.4 53.5 121.8 52.9 122.3 49.8 122.8 46.7 120.8 45.4 119.3 48.6 119.8 52.9 121.3 56 122.3 58.5 121.3 61 119.8 64.1ZM230.9 64.1 234.5 64.7 237.5 63.5 239.1 60.4 239.1 56.7 238.1 52.9 238.6 49.8 240.6 47.3 242.6 44.8 243.7 41.1 242.1 38 239.1 38 236.5 39.8 227.9 49.2 228.4 52.3 228.4 54.8 226.3 57.3 224.3 59.8 224.8 61.6 227.9 62.9ZM12.7 46.7 15.8 46.7 22.9 40.5 26.5 39.8 30.6 39.8 33.6 38.6 35.2 35.5 37.2 33 40.8 32.4 43.8 33.6 45.9 36.1 48.4 38 51.5 39.2 55 39.8 59.1 39.8 62.2 38.6 63.7 35.5 65.2 32.4 67.8 30.5 70.3 28.6 72.4 26.1 74.4 23.7 85.6 17.4 87.7 14.9 106.7 0 85.6 0 81.6 5 77.5 14.9 74.9 16.8 71.4 17.4 62.7 21.8 60.1 23.7 58.6 26.8 57.1 29.9 55 31.1 52.5 30.5 49.9 28.6 48.4 25.5 46.9 22.4 44.3 20.5 41.8 18.7 39.2 18.1 25.5 26.1 15.3 28.6 13.2 31.1 11.7 34.2 10.7 38 9.7 41.7 10.2 44.8ZM100.4 46.7 104 47.3 108.1 47.3 111.6 46.7 114.2 44.8 114.2 42.3 111.6 40.5 108.6 39.2 101.9 33.6 99.9 34.9 98.9 38.6 98.9 43.6ZM133 46.7 136.6 47.3 140.7 47.3 143.7 46.1 145.8 43.6 148.3 43 150.9 43.6 152.9 42.3 155 39.8 157 37.4 156.5 35.5 153.4 35.5 150.9 36.1 148.8 34.9 146.3 33 142.7 32.4 139.2 33 137.1 35.5 135.6 38.6 133 40.5 131.5 43.6ZM253.4 44.2 256.4 44.2 259.5 43 262 41.1 263.5 38 263 36.1 260.5 36.7 252.8 42.3ZM233 24.3 235.5 23.7 238.1 21.8 240.6 19.9 240.6 17.4 238.1 15.6 235.5 13.7 233.5 13.7 230.9 15.6 229.4 18.7 230.4 22.4ZM12.7 16.8 16.3 17.4 20.4 17.4 23.4 16.2 25.5 13.7 26.5 11.2 24.5 10 20.4 10 16.3 10 13.2 11.2 11.7 14.3ZM251.3 9.3 253.9 8.7 254.9 6.2 253.9 3.7 250.8 2.5 246.7 2.5 244.7 3.7 245.7 6.2 248.3 8.1Z"/><path fill="#cbd8bc" fill-rule="evenodd" d="M0 315 7.1 315 7.1 315 8.7 311.9 8.1 308.8 5.6 306.9 3 305 1.5 301.9 1.5 288.2 3 285.1 9.2 277.6 10.7 274.5 11.7 270.8 14.3 268.9 17.3 267.7 28 250.9 36.7 246.5 37.2 243.4 35.7 240.3 34.7 237.8 35.2 234.7 36.7 231.6 38.2 228.5 41.8 217.9 44.8 216.6 47.4 214.8 46.9 211.7 44.8 209.2 42.8 206.7 42.3 203.6 44.3 201.1 46.9 199.2 42.3 178.7 44.3 177.4 47.4 178.7 51 179.3 53.5 177.4 53.5 173.7 51 171.8 47.4 171.2 45.4 168.7 44.3 165 42.8 161.9 40.8 159.4 38.2 157.5 35.7 158.1 33.6 158.1 27 151.3 23.9 150 20.4 149.4 17.8 147.5 11.7 136.3 12.7 132.6 12.2 129.5 4.6 123.9 1.5 122.6 0 122.4 0 118.7 2 119.5 6.1 119.5 10.2 119.5 13.2 118.3 15.3 115.8 22.9 110.2 26.5 109.6 29 107.7 28.5 104.6 26 102.7 23.4 100.8 13.2 98.4 5.1 88.4 2.5 86.5 0 85.5ZM21.4 315 20.4 313.8 17.8 311.9 15.3 312.5 13.2 315 13.2 315Z"/><rect x="0.5" y="0.5" width="490" height="314" fill="none" stroke="#b6c6ba"/><g transform="translate(21 20)" fill="#123f39"><path d="M0 -7L4.2 7 0 5-4.2 7Z"/><text y="23" text-anchor="middle" font-size="12">北</text></g><rect x="501" y="36" width="259" height="279" fill="#daeae6"/><path fill="#f8f5eb" fill-rule="evenodd" stroke="#aec3b8" stroke-width=".55" d="M501 315 501 36 760 36 760 315Z"/><path fill="#e8ecda" fill-rule="evenodd" d="M501 36 501 315 544.7 315 545.2 314.6 552.7 309.1 557.2 299.9 557.2 288.9 552.7 279.8 543.7 276.1 533.3 274.3 528.8 265.1 524.3 255.9 513.8 254.1 503.4 252.2 501.9 246.7 503.4 237.5 501 228.9 501 222.6 501.9 217.4 507.8 210 512.3 200.8 516.8 191.7 522.8 191.7 531.8 195.3 543.7 195.3 554.2 193.5 561.7 188 567.7 184.3 575.2 186.1 582.6 184.3 591.6 180.6 603.6 180.6 612.6 177 620 171.5 627.5 166 632 156.8 635 145.8 636.5 132.9 636.5 118.2 636.5 103.5 639.5 92.5 644 83.4 647 72.3 648.4 59.5 651.4 48.5 655.9 39.3 656.8 36ZM501 123 501.9 121.9 506.3 112.7 510.8 110.9 515.3 120.1 513.8 129.2 507.8 136.6 506.3 145.8 507.8 154.9 504.9 162.3 501 170.2Z"/><path fill="#dce4cc" fill-rule="evenodd" d="M533.3 90.7 540.8 88.9 546.7 81.5 552.7 74.2 557.2 65 555.7 59.5 548.2 61.3 539.3 65 531.8 70.5 528.8 81.5ZM621.5 52.2 627.5 48.5 627.5 41.1 625 36 602.3 36 606.6 44.8 614 50.3Z"/><path fill="#cbd8bc" fill-rule="evenodd" d=""/><rect x="501.5" y="36.5" width="258" height="278" fill="none" stroke="#b6c6ba"/><rect x="501" width="259" height="36" fill="#143e39"/><text x="516" y="24" fill="#fcfaf3" font-size="17" font-weight="600">中原局部放大</text><rect x="199.8" y="107.8" width="66.3" height="75.2" fill="none" stroke="#576c60" stroke-width="1.2" stroke-dasharray="5 3"/><g role="button" tabindex="0" data-title="秦 · 咸阳" data-note="今陕西咸阳东北、渭河北岸一带。秦以关中平原为根基，向东进入中原，也能向西南经营巴蜀。" aria-label="秦 · 咸阳。今陕西咸阳东北、渭河北岸一带。秦以关中平原为根基，向东进入中原，也能向西南经营巴蜀。" class="m33-geo-point" fill="#123f39" style="cursor:pointer"><circle cx="137.6" cy="172.6" r="4.7" fill="#123f39" stroke="#f8f5eb" stroke-width="1.8"/><text x="125.6" y="187.6" text-anchor="end" font-size="18" font-weight="600" paint-order="stroke" stroke="#f8f5eb" stroke-width="3.5" stroke-linejoin="round">秦 · 咸阳</text><circle cx="137.6" cy="172.6" r="9" fill="transparent"/><rect class="m33-geo-hit" x="35.5" y="161.6" width="97.2" height="38" rx="5" fill="transparent" stroke="transparent" stroke-width="1.6"/></g><g role="button" tabindex="0" data-title="燕 · 蓟" data-note="今北京城区西南一带。燕居列国北方，向南与河北平原相接。" aria-label="燕 · 蓟。今北京城区西南一带。燕居列国北方，向南与河北平原相接。" class="m33-geo-point" fill="#123f39" style="cursor:pointer"><circle cx="290.6" cy="36.6" r="4.7" fill="#123f39" stroke="#f8f5eb" stroke-width="1.8"/><text x="302.6" y="28.6" text-anchor="start" font-size="18" font-weight="600" paint-order="stroke" stroke="#f8f5eb" stroke-width="3.5" stroke-linejoin="round">燕 · 蓟</text><circle cx="290.6" cy="36.6" r="9" fill="transparent"/><rect class="m33-geo-hit" x="295.6" y="2.6" width="79.2" height="38" rx="5" fill="transparent" stroke="transparent" stroke-width="1.6"/></g><g role="button" tabindex="0" data-title="齐 · 临淄" data-note="今山东淄博临淄区。齐都在山东北部，东面接近海滨，与中原诸国隔着平原相望。" aria-label="齐 · 临淄。今山东淄博临淄区。齐都在山东北部，东面接近海滨，与中原诸国隔着平原相望。" class="m33-geo-point" fill="#123f39" style="cursor:pointer"><circle cx="330.7" cy="112.3" r="4.7" fill="#123f39" stroke="#f8f5eb" stroke-width="1.8"/><text x="343.7" y="106.3" text-anchor="start" font-size="18" font-weight="600" paint-order="stroke" stroke="#f8f5eb" stroke-width="3.5" stroke-linejoin="round">齐 · 临淄</text><circle cx="330.7" cy="112.3" r="9" fill="transparent"/><rect class="m33-geo-hit" x="336.7" y="80.3" width="97.2" height="38" rx="5" fill="transparent" stroke="transparent" stroke-width="1.6"/></g><g role="button" tabindex="0" data-title="楚 · 郢" data-note="今湖北荆州一带。此时楚的都城位于江汉平原，北面是争夺中原的通道。" aria-label="楚 · 郢。今湖北荆州一带。此时楚的都城位于江汉平原，北面是争夺中原的通道。" class="m33-geo-point" fill="#123f39" style="cursor:pointer"><circle cx="205.7" cy="271.7" r="4.7" fill="#123f39" stroke="#f8f5eb" stroke-width="1.8"/><text x="217.7" y="286.7" text-anchor="start" font-size="18" font-weight="600" paint-order="stroke" stroke="#f8f5eb" stroke-width="3.5" stroke-linejoin="round">楚 · 郢</text><circle cx="205.7" cy="271.7" r="9" fill="transparent"/><rect class="m33-geo-hit" x="210.7" y="260.7" width="79.2" height="38" rx="5" fill="transparent" stroke="transparent" stroke-width="1.6"/></g><g role="button" tabindex="0" data-title="赵 · 邯郸" data-note="今河北邯郸一带。赵都在太行山东麓，连接华北平原与山西方向，是三晋都城中最靠北的一座。" aria-label="赵 · 邯郸。今河北邯郸一带。赵都在太行山东麓，连接华北平原与山西方向，是三晋都城中最靠北的一座。" class="m33-geo-point" fill="#123f39" style="cursor:pointer"><circle cx="252.2" cy="118.3" r="4.7" fill="#123f39" stroke="#f8f5eb" stroke-width="1.8"/><text x="241.2" y="106.3" text-anchor="end" font-size="18" font-weight="600" paint-order="stroke" stroke="#f8f5eb" stroke-width="3.5" stroke-linejoin="round">赵</text><circle cx="252.2" cy="118.3" r="9" fill="transparent"/><rect class="m33-geo-hit" x="210.2" y="80.3" width="38" height="38" rx="5" fill="transparent" stroke="transparent" stroke-width="1.6"/></g><g role="button" tabindex="0" data-title="赵 · 邯郸" data-note="今河北邯郸一带。赵都在太行山东麓，连接华北平原与山西方向，是三晋都城中最靠北的一座。" aria-label="赵 · 邯郸。今河北邯郸一带。赵都在太行山东麓，连接华北平原与山西方向，是三晋都城中最靠北的一座。" class="m33-geo-point" fill="#123f39" style="cursor:pointer"><circle cx="679.6" cy="88.9" r="4.7" fill="#123f39" stroke="#f8f5eb" stroke-width="1.8"/><text x="667.6" y="83.9" text-anchor="end" font-size="18" font-weight="600" paint-order="stroke" stroke="#f8f5eb" stroke-width="3.5" stroke-linejoin="round">赵 · 邯郸</text><circle cx="679.6" cy="88.9" r="9" fill="transparent"/><rect class="m33-geo-hit" x="577.4" y="57.9" width="97.2" height="38" rx="5" fill="transparent" stroke="transparent" stroke-width="1.6"/></g><g role="button" tabindex="0" data-title="魏 · 大梁" data-note="今河南开封一带。魏国迁都大梁后，政治中心靠近中原东部，位于韩都郑的东北方向。" aria-label="魏 · 大梁。今河南开封一带。魏国迁都大梁后，政治中心靠近中原东部，位于韩都郑的东北方向。" class="m33-geo-point" fill="#123f39" style="cursor:pointer"><circle cx="249.8" cy="163.1" r="4.7" fill="#123f39" stroke="#f8f5eb" stroke-width="1.8"/><text x="262.8" y="168.1" text-anchor="start" font-size="18" font-weight="600" paint-order="stroke" stroke="#f8f5eb" stroke-width="3.5" stroke-linejoin="round">魏</text><circle cx="249.8" cy="163.1" r="9" fill="transparent"/><rect class="m33-geo-hit" x="255.8" y="142.1" width="38" height="38" rx="5" fill="transparent" stroke="transparent" stroke-width="1.6"/></g><g role="button" tabindex="0" data-title="魏 · 大梁" data-note="今河南开封一带。魏国迁都大梁后，政治中心靠近中原东部，位于韩都郑的东北方向。" aria-label="魏 · 大梁。今河南开封一带。魏国迁都大梁后，政治中心靠近中原东部，位于韩都郑的东北方向。" class="m33-geo-point" fill="#123f39" style="cursor:pointer"><path d="M672.4 221L672.4 204" fill="none" stroke="#123f39" stroke-width="1" opacity=".72"/><circle cx="672.4" cy="221" r="4.7" fill="#123f39" stroke="#f8f5eb" stroke-width="1.8"/><text x="679.4" y="202" text-anchor="middle" font-size="18" font-weight="600" paint-order="stroke" stroke="#f8f5eb" stroke-width="3.5" stroke-linejoin="round">魏 · 大梁</text><circle cx="672.4" cy="221" r="9" fill="transparent"/><rect class="m33-geo-hit" x="630.8" y="176" width="97.2" height="38" rx="5" fill="transparent" stroke="transparent" stroke-width="1.6"/></g><g role="button" tabindex="0" data-title="韩 · 郑" data-note="今河南新郑一带。韩灭郑后以此为都。地图上的“郑”指这座城，当时它已是韩国的都城。" aria-label="韩 · 郑。今河南新郑一带。韩灭郑后以此为都。地图上的“郑”指这座城，当时它已是韩国的都城。" class="m33-geo-point" fill="#123f39" style="cursor:pointer"><path d="M237.1 173.1L237.1 189.1" fill="none" stroke="#123f39" stroke-width="1" opacity=".72"/><circle cx="237.1" cy="173.1" r="4.7" fill="#123f39" stroke="#f8f5eb" stroke-width="1.8"/><text x="239.1" y="206.1" text-anchor="middle" font-size="18" font-weight="600" paint-order="stroke" stroke="#f8f5eb" stroke-width="3.5" stroke-linejoin="round">韩</text><circle cx="237.1" cy="173.1" r="9" fill="transparent"/><rect class="m33-geo-hit" x="220.1" y="180.1" width="38" height="38" rx="5" fill="transparent" stroke="transparent" stroke-width="1.6"/></g><g role="button" tabindex="0" data-title="韩 · 郑" data-note="今河南新郑一带。韩灭郑后以此为都。地图上的“郑”指这座城，当时它已是韩国的都城。" aria-label="韩 · 郑。今河南新郑一带。韩灭郑后以此为都。地图上的“郑”指这座城，当时它已是韩国的都城。" class="m33-geo-point" fill="#123f39" style="cursor:pointer"><path d="M635.3 250.4L635.3 264.4" fill="none" stroke="#123f39" stroke-width="1" opacity=".72"/><circle cx="635.3" cy="250.4" r="4.7" fill="#123f39" stroke="#f8f5eb" stroke-width="1.8"/><text x="643.3" y="281.4" text-anchor="middle" font-size="18" font-weight="600" paint-order="stroke" stroke="#f8f5eb" stroke-width="3.5" stroke-linejoin="round">韩 · 郑</text><circle cx="635.3" cy="250.4" r="9" fill="transparent"/><rect class="m33-geo-hit" x="603.7" y="255.4" width="79.2" height="38" rx="5" fill="transparent" stroke="transparent" stroke-width="1.6"/></g><g role="button" tabindex="0" data-title="周 · 洛阳" data-note="今河南洛阳一带。这里标东周王室所在。战国七雄争霸时，周天子仍在，但王室能直接掌握的地域已很有限。" aria-label="周 · 洛阳。今河南洛阳一带。这里标东周王室所在。战国七雄争霸时，周天子仍在，但王室能直接掌握的地域已很有限。" class="m33-geo-point" fill="#99432c" style="cursor:pointer"><rect x="206.3" y="161.8" width="9" height="9" fill="#99432c" stroke="#f8f5eb" stroke-width="1.6"/><text x="195.8" y="171.3" text-anchor="end" font-size="18" font-weight="600" paint-order="stroke" stroke="#f8f5eb" stroke-width="3.5" stroke-linejoin="round">周</text><circle cx="210.8" cy="166.3" r="9" fill="transparent"/><rect class="m33-geo-hit" x="164.8" y="145.3" width="38" height="38" rx="5" fill="transparent" stroke="transparent" stroke-width="1.6"/></g><g role="button" tabindex="0" data-title="周 · 洛阳" data-note="今河南洛阳一带。这里标东周王室所在。战国七雄争霸时，周天子仍在，但王室能直接掌握的地域已很有限。" aria-label="周 · 洛阳。今河南洛阳一带。这里标东周王室所在。战国七雄争霸时，周天子仍在，但王室能直接掌握的地域已很有限。" class="m33-geo-point" fill="#99432c" style="cursor:pointer"><path d="M558.1 230.6L558.1 242.6" fill="none" stroke="#99432c" stroke-width="1" opacity=".72"/><rect x="553.6" y="226.1" width="9" height="9" fill="#99432c" stroke="#f8f5eb" stroke-width="1.6"/><text x="555.1" y="259.6" text-anchor="middle" font-size="18" font-weight="600" paint-order="stroke" stroke="#f8f5eb" stroke-width="3.5" stroke-linejoin="round">周 · 洛阳</text><circle cx="558.1" cy="230.6" r="9" fill="transparent"/><rect class="m33-geo-hit" x="506.5" y="233.6" width="97.2" height="38" rx="5" fill="transparent" stroke="transparent" stroke-width="1.6"/></g>
+</svg></div>
+<figcaption class="m33-geo-caption">各国都城按约公元前350年定位。圆点标诸侯国都，方块标周王城，虚框指向右侧放大图。 海岸与海拔取自现代地理数据，色阶表示地势高低，图中省略列国疆界。<small class="m33-geo-sources" style="display:block">地名资料见统编高中教材《中外历史纲要（上）》第10页“战国形势图”。底图采用 <a href="https://www.naturalearthdata.com/downloads/50m-physical-vectors/50m-land/" target="_blank" rel="noopener noreferrer">Natural Earth</a>、<a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noopener noreferrer">Mapzen Terrain Tiles（USGS、NOAA）</a>。</small></figcaption></figure>
+<p>看战国七雄的位置，先定东西：西面关中（今陕西中部）是秦的根基，东面今山东一带是齐。往北，燕的中心在今北京一带；往南，楚的早期根基在江汉地区（今湖北一带）。韩、赵、魏居于其间，韩国后来以新郑（今河南新郑）为都，赵国以邯郸（今河北邯郸）、魏国以大梁（今河南开封）为都。都城换过位置，边界也反复移动，同一块土地在不同时期可能属于不同的国家。</p>
+<details><summary>七雄之外，还有哪些国家？</summary><p>“七雄”说的是实力突出的七个大国。它们并立时，中原还有鲁、宋、卫等国，今天河北中部还有中山国。把战国理解成大国和小国一起争取生存，就能明白各国为什么要结盟，又为什么会改换立场。</p></details>
+<details><summary>为什么列国竞争的时代也出现了“百家争鸣”？</summary><p>国君想富国、招民、应对邻国，愿意听各地来的士人出主意。士人也能走出家乡，寻找愿意采纳自己主张的国君。齐国在临淄（今山东淄博）招揽学者，来自不同地方的人在<button type="button" class="term" data-note="稷下，在齐国都城临淄的稷门附近，今山东淄博临淄一带。齐国招揽学者在这里讲学、议论政事。">稷下</button>讲学、议论政事，分歧也有了当面辩论的机会。</p><p>他们关心的问题并不相同。《墨子·公输》记载，墨子听说楚国要攻宋，便去见楚王，劝他放弃攻打无辜的邻国。后来，儒家的孟子在魏都大梁（今河南开封）与梁惠王谈政事。魏王忧虑本国的人口为何不见增加，孟子把话题落到农家身上：给百姓留出耕作的时节，饥年也要顾到他们的生计。把这些主张放回当时的处境，“非攻”和“仁政”就各有了它所要回答的问题。</p><p>原文与出处 <a href="https://ctext.org/mozi/gong-shu/zhs">《墨子·公输》</a> · <a href="https://ctext.org/mengzi/liang-hui-wang-i/zhs">《孟子·梁惠王上》</a> · <a href="https://www.ica.org.cn/2024-08/21/c_182786.htm">稷下学宫与列国士人</a></p></details>
+<p class="refs">资料 <a href="https://www.njmuseum.com/zh/newsDetails?id=357252">南京博物院·晋国的兴衰</a> · <a href="https://shandong-chorography.org/database/c34/section/3/article/771/">《临淄区志》齐国王侯世袭表</a> · <a href="https://www.chnmuseum.cn/portals/0/web/zt/gudai/detail3.html">中国国家博物馆·春秋战国时期</a></p>
+</article>
+<article class="chapter" id="ch05" data-short="列国变法">
+<div class="counter">第五节 · 战国中期 · 前4世纪</div><h2 tabindex="-1">战争怎样改变征兵、耕田和用人的办法？</h2>
+<p>三家分晋以后，最先占上风的是魏。魏文侯任用李悝，关心的事很具体：田里怎样多收粮，丰收时怎样避免粮价太低、伤了农户。魏国所在的中原四面都有邻国，既要防备近邻，也要供养出征的军队。此时若从黄河往西看，秦还在和魏争夺<button class="term" type="button" data-note="这里的河西指黄河陕西、山西之间河段的西岸，主要在今陕西东部。甘肃的河西走廊是另一处地方。">河西</button>。战国初年的列国，很难从地图上一眼看出最后谁会赢。</p>
+<p>公元前四世纪中叶，秦孝公招揽人才。商鞅出身<button type="button" class="term" data-note="卫国是西周分封的诸侯国，战国时都城帝丘在今河南濮阳一带。魏国是后来三家分晋形成的强国。两个国名今天都读 wèi。">卫国</button>，曾在魏国任职，后来入秦。孝公支持他推行新法，把国君需要的两样东西同个人的得失连在一起。按《史记》的记载，耕织产出多的人可以免服本人的徭役；士兵在战场上立功，可以照规定取得爵位。宗室要保住原有的特殊身份，也受到军功要求的约束。</p>
+<p>另一项变化发生在乡里。秦把一些乡邑合并为县，设置县令和县丞，由官吏治理地方。田地从哪里到哪里，收来的粮食按什么标准计量，都关系到赋税能否征得上来。到了秦国新都咸阳（今陕西咸阳一带），官府规定的量器可以在外地照着使用。一项颁自国都的法令，就这样进入田间和粮仓。</p>
+<details><summary>深读 · 商鞅、孙膑和“围魏救赵”在同一个时代</summary>
+<p>商鞅在西方推动秦国变法时，中原最有压力的对手仍是魏。魏军围攻赵都邯郸（今河北邯郸），齐国派兵援赵。按《史记·孙子吴起列传》，孙膑建议田忌把兵锋引向魏国都城大梁（今河南开封），魏军回援，在<button type="button" class="term" data-note="桂陵古战场有今河南长垣以西、山东菏泽东北等说法。这里是魏军回援途中与齐军交战之地。">桂陵</button>被齐军击败。后人用“围魏救赵”概括这段经过。把两件事摆到一起，便会看到同一个魏国：东边同齐、赵较量，西边又面对逐渐强起来的秦。</p>
+</details>
+<p class="refs">资料　<a href="https://ih.sass.org.cn/2006/0314/c2380a73674/page.htm">上海社会科学院历史研究所《列国争雄》</a>　<a href="https://www.chinakongzi.org/content/2741_25178.html">《史记·商君列传》</a>　<a href="https://www.chinakongzi.org/content/2741_25181.html">《史记·孙子吴起列传》</a>　<a href="https://www.shanghaimuseum.net/resource/museum_files/show_files/20180903105852824/index.html">上海博物馆·商鞅方升</a></p>
+</article>
+<article class="chapter" id="ch06" data-short="秦国扩张">
+<div class="counter">第六节 · 前316年至前3世纪中叶</div><h2 tabindex="-1">巴蜀的粮食，怎样影响东方的战局？</h2>
+<p>秦孝公去世后，商鞅被处死，秦国仍沿用他推行的许多制度。到了秦惠文王时，国君面对一个新的选择：继续和东边的韩、魏争地，还是先越过南面的群山？公元前316年，秦军取得巴、蜀。巴的中心在今重庆一带，蜀的中心在成都平原。秦原先以关中（今陕西中部）为根据地，现在又有了四川盆地的土地和人口。</p>
+<figure class="m33-geo-figure" style="margin:0">
+<div class="m33-geo-scroll" style="overflow-x:auto;overscroll-behavior-x:contain">
+<svg id="qin-geo" class="m33-geo-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 290" role="group" aria-labelledby="qin-geo-title qin-geo-desc" style="display:block;width:100%;min-width:490px;height:auto;font-family:'Microsoft YaHei','PingFang SC','Noto Sans CJK SC',sans-serif">
+<title id="qin-geo-title">关中、巴蜀与东方列国</title><desc id="qin-geo-desc">关中以南隔山通向汉中和四川盆地，关中以东接近韩魏。选中地名可查看今址与历史意义。</desc><style>#qin-geo .m33-geo-point:hover .m33-geo-hit,#qin-geo .m33-geo-point:focus-visible .m33-geo-hit{stroke:#99432c;fill:#fff;fill-opacity:.08}#qin-geo .m33-geo-point:focus-visible{outline:none}</style><rect x="0" y="0" width="760" height="290" fill="#daeae6"/><path fill="#f8f5eb" fill-rule="evenodd" stroke="#aec3b8" stroke-width=".55" d="M0 290 0 0 731.5 0 730.4 1 725.1 3.8 724.3 6.1 722.7 8.4 720.5 10.1 719.1 12 717.3 13 714.4 14.1 710.8 18.6 708.1 22.9 705 25 702.5 32.2 698.1 36 696.5 42.2 697.7 46 702.5 46 704.9 47.4 710 52.4 716 55.6 722.2 57.5 729.9 62.1 732 64.1 739.5 85.3 739.6 88.2 743.2 93.9 747 103.5 751.4 111.9 752.3 118.5 750.8 121.5 750.8 125.4 755.2 129 760 131 760 156.5 754.7 155.5 748.9 149.3 744.6 147.4 740.1 146.5 729.3 151.8 726.6 151.4 725.8 152 724.5 152.9 729.5 154.1 734.6 152.3 739.4 149.8 746.4 151.1 747.6 153.4 748.7 157.4 760 163.1 760 202.9 755.5 205.3 753.6 208.7 752.3 211.6 749.8 213 743.6 211.7 737.9 211.8 731.3 215.7 729.6 217.4 730.7 217 731.8 216.5 734.7 217.1 739.3 215 743.8 221.5 752.5 220.4 760 215.5 760 290Z"/><path fill="#e8ecda" fill-rule="evenodd" d="M0 0 0 290 366.4 290 366.2 289.2 364.6 283.5 366.2 277.8 367.8 272.1 368.6 265.5 371 260.7 374.2 256.9 378.2 256 383.1 257.9 387.9 257.9 391.9 255 395.1 251.2 398.3 247.4 402.4 244.6 420.1 242.7 424.1 239.8 426.5 235.1 428.9 230.3 432.9 227.5 437 224.6 437 220.8 434.5 216.1 432.9 210.4 432.1 203.7 432.1 196.1 434.5 191.4 439.4 189.5 443.4 186.6 445 180.9 447.4 176.2 451.4 173.3 453.9 168.6 453.9 162.9 452.2 157.2 449 153.4 443.4 152.4 439.4 149.6 437.8 143.9 435.4 139.1 431.3 136.3 416 131.5 412.8 127.7 409.6 123.9 391.9 116.3 395.1 114.4 401.6 114.4 406.4 112.5 411.2 110.6 417.7 110.6 424.1 110.6 428.1 107.8 427.3 103 426.5 98.3 430.5 95.4 449.8 95.4 455.5 96.3 460.3 98.3 465.1 98.3 477.2 89.7 479.6 84.9 479.6 79.2 477.2 74.5 472.4 72.6 466.7 71.6 464.3 66.9 461.9 62.1 456.3 61.2 450.6 60.2 449.8 57.4 450.6 52.6 449 46.9 449.8 42.2 453.1 38.4 455.5 33.6 457.9 28.9 461.1 28.9 465.9 30.8 472.4 30.8 478 29.8 482 27 485.2 25.1 489.3 26 493.3 25.1 498.1 23.2 504.5 23.2 509.4 21.3 513.4 18.4 517.4 15.6 519.8 10.8 521.4 5.1 522.1 0ZM698.1 290 698.4 288.3 694.4 285.4 688 285.4 682.3 286.4 678.3 289.2 678.2 290ZM222 290 221.3 289.2 218.9 284.5 217.3 278.8 215.7 273.1 211.7 270.2 206.9 268.3 203.6 264.5 200.4 260.7 193.2 246.5 191.6 240.8 189.2 236 185.9 232.2 185.1 227.5 189.2 209.4 192.4 205.6 194.8 200.9 197.2 196.1 200.4 192.3 204.5 189.5 208.5 186.6 211.7 182.8 214.9 179 217.3 174.3 219.7 169.5 235.8 158.1 240.7 156.2 247.1 156.2 253.5 156.2 257.5 153.4 260.8 149.6 264.8 150.5 269.6 152.4 308.2 152.4 313.1 154.3 315.5 159.1 317.9 163.8 330.8 171.4 334 175.2 338 178.1 342.8 178.1 347.7 176.2 352.5 176.2 357.3 178.1 361.3 180.9 364.6 184.7 367.8 188.5 369.4 192.3 367.8 196.1 362.9 198 358.1 199.9 354.1 202.8 350.1 205.6 346.9 209.4 343.6 213.2 341.2 218 338.8 222.7 335.6 226.5 332.4 230.3 328.3 233.2 324.3 236 321.1 239.8 317.9 243.6 305 251.2 302.6 256 301 261.7 299.4 267.4 295.4 270.2 288.9 270.2 282.5 270.2 277.7 272.1 268 283.5 256.7 290ZM598.7 193.3 602.7 192.3 605.1 187.6 603.5 183.8 598.7 183.8 594.7 186.6 594.7 190.4ZM405.6 147.7 400.8 145.8 396.7 142.9 395.1 139.1 398.3 137.2 404 138.2 408.8 140.1 411.2 142.9 409.6 146.7ZM370.2 132.5 365.4 130.6 360.5 128.7 358.1 123.9 360.5 119.2 366.2 118.2 372.6 118.2 378.2 119.2 380.6 123.9 379 129.6 375 132.5ZM309 113.5 305 110.6 305.8 107.8 321.1 104.9 324.3 106.8 323.5 109.7ZM354.1 71.6 349.3 69.7 343.6 68.8 338 67.8 333.2 65.9 330.8 63.1 332.4 59.3 337.2 57.4 343.6 57.4 348.5 55.5 352.5 52.6 357.3 50.7 361.3 47.9 365.4 45 379.8 39.3 383.9 36.5 387.9 33.6 392.7 31.7 398.3 30.8 404 29.8 408 27 411.2 23.2 414.4 19.4 416.8 14.6 420.9 11.8 427.3 11.8 433.7 11.8 438.6 9.9 443.7 0 453.4 0 453.1 0.4 452.2 5.1 453.1 9.9 446.6 23.2 443.4 27 441.8 32.7 442.6 39.3 443.4 44.1 441.8 47.9 429.7 56.4 424.9 56.4 420.1 54.5 414.4 53.6 408 53.6 401.6 53.6 395.9 54.5 382.3 61.2 378.2 64 375 67.8 370.2 69.7 365.4 71.6 359.7 72.6Z"/><path fill="#dce4cc" fill-rule="evenodd" d="M199.9 290 198.8 289.2 191.6 275 190.8 268.3 190 261.7 186.8 257.9 184.3 253.1 183.5 246.5 181.1 241.7 168.2 234.1 165.8 229.4 166.6 224.6 185.9 201.8 188.4 197.1 190.8 192.3 194 188.5 197.2 184.7 201.2 181.9 205.3 179 208.5 175.2 211.7 171.4 221.3 152.4 224.6 148.6 227 143.9 229.4 139.1 233.4 136.3 237.4 133.4 240.7 129.6 243.1 124.9 245.5 120.1 250.3 118.2 255.1 116.3 258.4 112.5 260.8 107.8 260.8 102.1 259.2 96.3 256.7 91.6 256.7 87.8 260 84 263.2 80.2 267.2 77.3 272 75.4 276.9 73.5 280.9 74.5 285.7 76.4 288.9 78.3 282.5 89.7 284.1 93.5 287.3 97.3 292.1 99.2 298.6 99.2 302.6 96.3 303.4 89.7 305 85.9 308.2 87.8 312.3 90.6 317.9 91.6 337.2 91.6 342.8 92.5 354.1 102.1 357.3 100.2 358.1 93.5 360.5 88.7 366.2 87.8 379 82.1 377.4 78.3 372.6 76.4 340.4 76.4 335.6 74.5 330.8 72.6 325.1 71.6 310.6 65.9 305 65 300.2 63.1 296.2 60.2 294.6 56.4 296.2 50.7 297 44.1 297 36.5 298.6 30.8 300.2 25.1 301 18.4 305.8 1.3 306.9 0 348.6 0 349.3 1.3 350.9 7 351.7 13.7 353.3 19.4 355.7 24.1 358.9 26 361.3 21.3 360.5 14.6 358.9 8.9 357.3 3.2 354.6 0 0 0 0 290ZM399.1 174.3 404.8 175.2 411.2 175.2 416.8 174.3 420.9 171.4 422.5 165.7 420.9 160 416.8 157.2 412 157.2 408 160 404 162.9 399.1 162.9 394.3 161 390.3 158.1 387.9 153.4 385.5 148.6 381.4 145.8 375.8 144.8 369.4 144.8 362.9 144.8 357.3 145.8 354.9 150.5 354.9 158.1 356.5 163.8 359.7 167.6 363.7 170.5 369.4 171.4 374.2 169.5 386.3 161 389.5 162.9 391.9 167.6 395.1 171.4ZM286.5 128.7 292.1 129.6 296.2 126.8 294.6 123 288.9 122 284.9 124.9ZM312.3 128.7 317.9 129.6 323.5 128.7 323.5 126.8 319.5 123.9 314.7 122 310.6 124.9Z"/><path fill="#cbd8bc" fill-rule="evenodd" d="M140.7 290 141.7 286.4 144.9 282.6 148.9 279.7 152.2 279.7 155.4 279.7 158.6 275.9 161 271.2 160.2 266.4 156.2 263.6 152.2 260.7 149.7 256 148.9 249.3 148.9 241.7 149.7 235.1 152.2 230.3 161.8 218.9 164.2 214.2 165.8 208.5 169.9 205.6 174.7 203.7 177.9 199.9 180.3 195.2 182.7 190.4 185.9 186.6 189.2 182.8 191.6 178.1 195.6 175.2 201.2 174.3 205.3 171.4 206.1 166.7 203.6 161.9 202 158.1 202.8 153.4 205.3 148.6 207.7 143.9 209.3 138.2 210.9 132.5 213.3 127.7 218.1 125.8 222.2 123 221.3 118.2 218.1 114.4 214.9 110.6 214.1 105.9 217.3 102.1 221.3 99.2 221.3 95.4 218.9 90.6 217.3 84.9 214.1 67.8 217.3 65.9 222.2 67.8 227.8 68.8 231.8 65.9 231.8 60.2 227.8 57.4 222.2 56.4 218.9 52.6 217.3 46.9 214.9 42.2 211.7 38.4 207.7 35.5 203.6 36.5 200.4 36.5 197.2 32.7 194 28.9 190 26 185.1 24.1 179.5 23.2 175.5 20.3 173.1 15.6 170.7 10.8 167.4 7 165.8 3.2 166.7 0 0 0 0 290ZM172.4 290 174.7 287.3 177.9 287.3 180.2 290 183.6 290 184.3 283.5 182.7 277.8 179.5 274 175.5 271.2 171.5 272.1 168.2 275.9 165.8 280.7 166.6 285.4 166.6 289.2 166 290Z"/><rect x="0.5" y="0.5" width="759" height="289" fill="none" stroke="#b6c6ba"/><g transform="translate(21 20)" fill="#123f39"><path d="M0 -7L4.2 7 0 5-4.2 7Z"/><text y="23" text-anchor="middle" font-size="12">北</text></g><g role="button" tabindex="0" data-title="咸阳" data-note="今陕西咸阳东北、渭河北岸一带。秦以关中平原为根基，向东进入中原，也能向西南经营巴蜀。" aria-label="咸阳。今陕西咸阳东北、渭河北岸一带。秦以关中平原为根基，向东进入中原，也能向西南经营巴蜀。" class="m33-geo-point" fill="#99432c" style="cursor:pointer"><rect x="360.1" y="54" width="9" height="9" fill="#99432c" stroke="#f8f5eb" stroke-width="1.6"/><text x="374.6" y="51.5" text-anchor="start" font-size="18" font-weight="600" paint-order="stroke" stroke="#f8f5eb" stroke-width="3.5" stroke-linejoin="round">咸阳</text><circle cx="364.6" cy="58.5" r="9" fill="transparent"/><rect class="m33-geo-hit" x="367.6" y="25.5" width="50" height="38" rx="5" fill="transparent" stroke="transparent" stroke-width="1.6"/></g><g role="button" tabindex="0" data-title="关中" data-note="今陕西中部渭河平原及其周边。这里在秦岭以北，是秦在北方的农业与政治中心。" aria-label="关中。今陕西中部渭河平原及其周边。这里在秦岭以北，是秦在北方的农业与政治中心。" class="m33-geo-point" fill="#123f39" style="cursor:pointer"><path d="M343.6 63.1L328.6 53.1" fill="none" stroke="#123f39" stroke-width="1" opacity=".72"/><path d="M343.6 58.1l5 5-5 5-5-5z" fill="#f8f5eb" stroke="#123f39" stroke-width="1.7"/><text x="326.6" y="51.1" text-anchor="end" font-size="18" font-weight="600" paint-order="stroke" stroke="#f8f5eb" stroke-width="3.5" stroke-linejoin="round">关中</text><circle cx="343.6" cy="63.1" r="9" fill="transparent"/><rect class="m33-geo-hit" x="283.6" y="25.1" width="50" height="38" rx="5" fill="transparent" stroke="transparent" stroke-width="1.6"/></g><g role="button" tabindex="0" data-title="秦岭" data-note="今陕西中南部的东西向山地。它隔开北面的关中平原和南面的汉江谷地，解释了两地往来为何依靠山间通道。" aria-label="秦岭。今陕西中南部的东西向山地。它隔开北面的关中平原和南面的汉江谷地，解释了两地往来为何依靠山间通道。" class="m33-geo-point" fill="#123f39" style="cursor:pointer"><path d="M340.4 83.9l5 5-5 5-5-5z" fill="#f8f5eb" stroke="#123f39" stroke-width="1.7"/><text x="355.4" y="99.9" text-anchor="start" font-size="18" font-weight="600" paint-order="stroke" stroke="#f8f5eb" stroke-width="3.5" stroke-linejoin="round">秦岭</text><circle cx="340.4" cy="88.9" r="9" fill="transparent"/><rect class="m33-geo-hit" x="348.4" y="73.9" width="50" height="38" rx="5" fill="transparent" stroke="transparent" stroke-width="1.6"/></g><g role="button" tabindex="0" data-title="汉中盆地" data-note="今陕西汉中市一带，位于秦岭与巴山之间。这里标示地形上的汉中盆地，便于辨认关中与四川盆地之间的山间谷地。" aria-label="汉中盆地。今陕西汉中市一带，位于秦岭与巴山之间。这里标示地形上的汉中盆地，便于辨认关中与四川盆地之间的山间谷地。" class="m33-geo-point" fill="#123f39" style="cursor:pointer"><path d="M305.7 104.5l5 5-5 5-5-5z" fill="#f8f5eb" stroke="#123f39" stroke-width="1.7"/><text x="293.7" y="124.5" text-anchor="end" font-size="18" font-weight="600" paint-order="stroke" stroke="#f8f5eb" stroke-width="3.5" stroke-linejoin="round">汉中盆地</text><circle cx="305.7" cy="109.5" r="9" fill="transparent"/><rect class="m33-geo-hit" x="214.7" y="98.5" width="86" height="38" rx="5" fill="transparent" stroke="transparent" stroke-width="1.6"/></g><g role="button" tabindex="0" data-title="蜀地" data-note="今四川成都平原及其周边。秦在前316年攻取蜀地，获得了西南一片可耕作的平原。" aria-label="蜀地。今四川成都平原及其周边。秦在前316年攻取蜀地，获得了西南一片可耕作的平原。" class="m33-geo-point" fill="#123f39" style="cursor:pointer"><path d="M211.7 195.7l5 5-5 5-5-5z" fill="#f8f5eb" stroke="#123f39" stroke-width="1.7"/><text x="225.7" y="193.7" text-anchor="start" font-size="18" font-weight="600" paint-order="stroke" stroke="#f8f5eb" stroke-width="3.5" stroke-linejoin="round">蜀地</text><circle cx="211.7" cy="200.7" r="9" fill="transparent"/><rect class="m33-geo-hit" x="218.7" y="167.7" width="50" height="38" rx="5" fill="transparent" stroke="transparent" stroke-width="1.6"/></g><g role="button" tabindex="0" data-title="巴地" data-note="今重庆及川东一带。巴地沿长江上游展开，与成都平原分处四川盆地东部和西部。" aria-label="巴地。今重庆及川东一带。巴地沿长江上游展开，与成都平原分处四川盆地东部和西部。" class="m33-geo-point" fill="#123f39" style="cursor:pointer"><path d="M290.2 237.9l5 5-5 5-5-5z" fill="#f8f5eb" stroke="#123f39" stroke-width="1.7"/><text x="302.2" y="254.9" text-anchor="start" font-size="18" font-weight="600" paint-order="stroke" stroke="#f8f5eb" stroke-width="3.5" stroke-linejoin="round">巴地</text><circle cx="290.2" cy="242.9" r="9" fill="transparent"/><rect class="m33-geo-hit" x="295.2" y="228.9" width="50" height="38" rx="5" fill="transparent" stroke="transparent" stroke-width="1.6"/></g><g role="button" tabindex="0" data-title="韩 · 郑" data-note="今河南新郑一带。韩灭郑后以此为都。地图上的“郑”指这座城，当时它已是韩国的都城。" aria-label="韩 · 郑。今河南新郑一带。韩灭郑后以此为都。地图上的“郑”指这座城，当时它已是韩国的都城。" class="m33-geo-point" fill="#123f39" style="cursor:pointer"><path d="M521.6 59.3L517.6 65.3" fill="none" stroke="#123f39" stroke-width="1" opacity=".72"/><circle cx="521.6" cy="59.3" r="4.7" fill="#123f39" stroke="#f8f5eb" stroke-width="1.8"/><text x="515.6" y="82.3" text-anchor="end" font-size="18" font-weight="600" paint-order="stroke" stroke="#f8f5eb" stroke-width="3.5" stroke-linejoin="round">韩 · 郑</text><circle cx="521.6" cy="59.3" r="9" fill="transparent"/><rect class="m33-geo-hit" x="443.4" y="56.3" width="79.2" height="38" rx="5" fill="transparent" stroke="transparent" stroke-width="1.6"/></g><g role="button" tabindex="0" data-title="魏 · 大梁" data-note="今河南开封一带。魏国迁都大梁后，政治中心靠近中原东部，位于韩都郑的东北方向。" aria-label="魏 · 大梁。今河南开封一带。魏国迁都大梁后，政治中心靠近中原东部，位于韩都郑的东北方向。" class="m33-geo-point" fill="#123f39" style="cursor:pointer"><circle cx="541.6" cy="44.1" r="4.7" fill="#123f39" stroke="#f8f5eb" stroke-width="1.8"/><text x="556.6" y="40.1" text-anchor="start" font-size="18" font-weight="600" paint-order="stroke" stroke="#f8f5eb" stroke-width="3.5" stroke-linejoin="round">魏 · 大梁</text><circle cx="541.6" cy="44.1" r="9" fill="transparent"/><rect class="m33-geo-hit" x="549.6" y="14.1" width="97.2" height="38" rx="5" fill="transparent" stroke="transparent" stroke-width="1.6"/></g>
+</svg></div>
+<figcaption class="m33-geo-caption">前316年，秦向西南取得巴、蜀。菱形标示区域，圆点标韩、魏都城，方块标秦都。 海岸与海拔取自现代地理数据，色阶表示地势高低，图中省略列国疆界。<small class="m33-geo-sources" style="display:block">地名资料见<a href="https://dfz.cq.gov.cn/zqlswh/rwby_417819/202311/t20231102_12510077.html" target="_blank" rel="noopener noreferrer">秦取巴蜀</a> · <a href="https://hzdqw.hanzhong.gov.cn/hzdfz/xzlsh/202601/b6c123a50d484b8dbfee7c7551b7fb2f.shtml" target="_blank" rel="noopener noreferrer">汉中先秦地理</a>。底图采用 <a href="https://www.naturalearthdata.com/downloads/50m-physical-vectors/50m-land/" target="_blank" rel="noopener noreferrer">Natural Earth</a>、<a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noopener noreferrer">Mapzen Terrain Tiles（USGS、NOAA）</a>。</small></figcaption></figure>
+<p>土地得来，粮食还要种得出来。战国后期，秦的蜀郡郡守李冰主持修建都江堰（今四川都江堰市）。岷江从山口进入成都平原，雨季可能冲淹农田，距离河道较远的田地又需要灌溉。工程把水分流，引一部分进入平原，同时让多余的水量排走。根基较稳的粮区逐渐形成，秦在东面用兵时，也有了从巴蜀筹粮的条件。</p>
+<p>面对扩张的秦，东方各国有时联合出兵，有时又各自与秦讲和。时人所谓<button class="term" type="button" data-note="合纵泛指列国联合，常见的是联合抗秦。连横指一些诸侯分别与强国结盟，战国后期常指与秦结盟。列国会随利益重新选择盟友。">合纵、连横</button>，可以从这些不断变化的盟约去理解。前260年，秦、赵因争夺上党（今山西东南部）在长平（今山西高平一带）决战，赵军遭到重创。但随后秦军围攻赵都邯郸，魏、楚出兵援赵，秦军退去。长平改变了双方的强弱，赵国仍然又存在了三十多年。</p>
+<details><summary>深读 · 长平之战怎样成了“纸上谈兵”的来历？</summary>
+<p>《史记·廉颇蔺相如列传》记载，赵将赵括熟读兵法，谈论用兵，连父亲赵奢也难以驳倒他。到长平接替廉颇后，赵括率领的军队被围，粮道断绝，最终兵败。后世把只会谈道理、欠缺实际应对本领叫“纸上谈兵”。四个字概括的是人物形象。把眼光放回战国，赵国接收上党、秦国长期经营的兵粮和两国的援军处境，都是这场大战的背景。</p>
+</details>
+<p class="refs">资料　<a href="https://www.chinakongzi.org/content/2741_25242.html">《史记·秦本纪》</a>　<a href="https://slj.yq.gov.cn/12684/202603/t20260302_2176376.html">阳泉市水利局·都江堰水利工程</a>　<a href="https://www.edb.gov.hk/attachment/sc/curriculum-development/kla/pshe/references-and-resources/chinese-history/war1_sc.pdf">香港教育局·长平之战</a>　<a href="https://www.chinakongzi.org/content/2741_25165.html">《史记·廉颇蔺相如列传》</a></p>
+</article>
+<article class="chapter" id="ch07" data-short="秦灭六国">
+<div class="counter">第七节 · 前256年至前221年</div><h2 tabindex="-1">周亡后的三十五年，六国怎样走到尽头？</h2>
+<p>前256年，周赧王去世，周王世系至此结束。当时在位的秦王是秦昭襄王。后来称始皇帝的嬴政已经出生，还是个幼童。秦的东面，韩、赵、魏、楚、燕、齐各有国君、军队和都城。周王室在洛阳一带失去最后的立足之地，列国之间的战争却又延续了35年。</p>
+<p>等到嬴政长成、掌握秦国朝政，多代秦王已经把疆土推到中原。秦灭六国的最后十年，先从过去瓜分晋国的三国开始。前230年，秦将内史腾灭韩，俘韩王安，在韩地设置<button type="button" class="term" data-note="秦设颍川郡，郡治在阳翟（今河南禹州）。郡下辖多个县，是秦接管韩地的办法之一。">颍川郡</button>。前228年，秦军拿下邯郸，赵王被俘。赵公子嘉带一部分人逃往代地（今河北蔚县一带），自立为王。前225年，秦将王贲引水灌魏都大梁（今河南开封），城墙损坏，魏王请降。</p>
+<p>接着是南方与北方。楚国疆域广大，秦军第一次大举攻楚受挫，嬴政重新起用老将王翦，楚在前223年灭亡。燕王在秦军逼近后逃到辽东（今辽宁东部一带），到前222年被俘。同年，秦又灭了代地的赵国余部。于是只剩齐。齐军原来守在西部边境，前221年，王贲却从燕地向南进军，齐王建降秦。这一年，嬴政采用了“皇帝”的称号。</p>
+<details><summary>深读 · 荆轲刺秦时，嬴政是什么身份？</summary>
+<p>是秦王。前227年，赵都邯郸已经失守，秦军进逼燕国。燕太子丹派荆轲入秦，荆轲在咸阳宫行刺失败。此时距离秦灭齐、嬴政称皇帝还有六年。《史记·刺客列传》叙述荆轲出发、在<button type="button" class="term" data-note="今河北保定易县一带的河流，当时属于燕地。易水送别发生在荆轲赴秦之前。">易水</button>送别和入宫的经过。把这段放回时间线，燕太子丹的急迫就有了来由：南面的赵国已经挡不住秦，他担心秦军接下来就到燕国。</p>
+</details>
+<p class="refs">资料　<a href="https://www.locpg.gov.cn/zggq/2014-01/04/c_125956418.htm">中国历史纪年简表</a>　<a href="https://www.chinakongzi.org/content/2741_25241.html">《史记·秦始皇本纪》</a>　<a href="https://www.chinakongzi.org/content/2741_25160.html">《史记·刺客列传》</a>　<a href="https://tgaz.fudan.edu.cn/tgaz/placename/hvd_82453">复旦历史地理数据库·颍川郡</a>　<a href="https://chiculture.org.hk/sites/mainsite/files/2021-04/0105_qinshihuang_yuanwen_cn_7.pdf">中国文化研究院·秦始皇大事年表</a></p>
+</article>
+<article class="chapter" id="ch08" data-short="从秦国到秦朝">
+<div class="counter">第八节 · 前221年前后</div><h2 tabindex="-1">怎样让六国旧地用同一把尺、接到同一道命令？</h2>
+<p>前221年以后，从齐、楚等旧地征收的粮食，要能在秦的账本上互相核对。过去各国都有自己的量器，盛粮的器具叫法不同，容量和进位也有差异。上海博物馆藏着一件小小的青铜方升，器侧铭文规定了一升的容量。制造它的时间是前344年，下令监制它的是秦孝公时的商鞅。这个秦国的一升，最初只管得到自己的疆域。</p>
+<p>123年后，同一只方升的底部又刻上了一道诏令。秦始皇命丞相明确并统一有差异的计量标准。商鞅制定的容量标准，如今推行到东方六国的旧地。对要交粮的人、负责验收的县吏、在市场交易的商人来说，量一升到底有多少，都有了同一套依据。商鞅和秦始皇隔着几代人，这件一直沿用的量器把两个时代接在了一起。</p>
+<p>秦还把郡县制推广到统一后的疆域。周初，受封诸侯和家族世代经营地方。秦廷则任免地方主要官员，由郡辖县，县再办理乡里的户口、赋役、案件等事务。今天湖南龙山里耶出土的一批秦代文书，来自洞庭郡迁陵县。县中曾登记居民、上报农田灾情，官吏也要记下公文何时送达、由谁接收。秦王政二十五年（前222年）的文书已经留在这里。秦军还在其他地方作战时，旧楚地的这个县已经有人在办这些事。</p>
+<details><summary>深读 · 一枚封检上的七个字</summary>
+<p>迁陵县送给洞庭郡的一枚木质封检写着“迁陵以邮行洞庭”。官吏把写好的公文捆扎封好，在外面的木板上标出来处、去向和递送办法，再由专人传送。封检留给今天的证据很具体：我们知道这件公文从哪个县发出、交给哪个郡，也知道县和郡之间已经有固定的邮传往来。</p>
+</details>
+<p>从周武王灭商到秦王嬴政称帝，八百多年过去了。治理远方的办法从分封诸侯走到任官治县。秦朝寿命很短，后来汉朝仍继续使用郡县、律令和文书行政。秦留下的制度，比秦朝本身延续得久。</p>
+<p class="refs">资料　<a href="https://www.shanghaimuseum.net/resource/museum_files/show_files/20180903105852824/index.html">上海博物馆·商鞅方升</a>　<a href="https://www.chnmuseum.cn/portals/0/web/zt/20190806liye/">中国国家博物馆·里耶秦简展</a>　<a href="https://www.chnmuseum.cn/Portals/0/web/zt/20170916qhwm/pc/index.html">中国国家博物馆·秦汉文明</a></p>
+</article>
+<nav class="turn" aria-label="前后章节"><a rel="prev" href="#ch01" hidden></a><a rel="next" href="#ch02">下一节 · 西周分封</a></nav></main></div>
+<section class="extras" aria-label="全卷对照"><details id="chronology"><summary>全卷年表</summary><p>下列纪年均为公元前。点击章名回到事件发生的地方。</p><table class="chron-table"><thead><tr><th>时间</th><th>局面怎样改变</th><th>章节</th></tr></thead><tbody>
+<tr><td>约前1046年</td><td>武王在牧野击败商军，商亡，周建立。</td><td><a href="#ch01">周人克商</a></td></tr>
+<tr><td>西周初年</td><td>周公东征、营建洛邑，周王把亲族和功臣分封到各地。</td><td><a href="#ch02">西周分封</a></td></tr>
+<tr><td>前771、前770年</td><td>周幽王身亡，次年周平王东迁洛邑，东周开始。</td><td><a href="#ch02">西周分封</a></td></tr>
+<tr><td>前651年</td><td>齐桓公主持葵丘会盟，周襄王派代表赴会。</td><td><a href="#ch03">春秋争霸</a></td></tr>
+<tr><td>前632年</td><td>晋文公在城濮击败楚军，随后会盟践土。</td><td><a href="#ch03">春秋争霸</a></td></tr>
+<tr><td>约前551至前479年</td><td>孔子生活在春秋晚期的鲁国。</td><td><a href="#ch03">春秋争霸</a></td></tr>
+<tr><td>前475年</td><td>本卷采用的战国起点。列国政治的转变横跨几代人。</td><td><a href="#ch04">三家分晋</a></td></tr>
+<tr><td>前453年</td><td>韩、赵、魏三家合力击败智氏，晋君仍在。</td><td><a href="#ch04">三家分晋</a></td></tr>
+<tr><td>前403年</td><td>周威烈王正式承认韩、赵、魏三家为诸侯。</td><td><a href="#ch04">三家分晋</a></td></tr>
+<tr><td>前386年</td><td>周王承认田和为齐侯，齐国国名沿用，统治家族更换。</td><td><a href="#ch04">三家分晋</a></td></tr>
+<tr><td>前376年</td><td>韩、赵、魏分掉晋君最后的领地。</td><td><a href="#ch04">三家分晋</a></td></tr>
+<tr><td>前4世纪中叶</td><td>秦孝公用商鞅变法，同一时期齐、魏也在交锋。</td><td><a href="#ch05">列国变法</a></td></tr>
+<tr><td>前344年</td><td>商鞅方升铸成，记下秦国的一升有多大。</td><td><a href="#ch08">从秦国到秦朝</a></td></tr>
+<tr><td>前316年</td><td>秦取巴蜀，四川盆地成为新的农业腹地。</td><td><a href="#ch06">秦国扩张</a></td></tr>
+<tr><td>前260年</td><td>秦在长平重创赵军，赵仍保有国都邯郸。</td><td><a href="#ch06">秦国扩张</a></td></tr>
+<tr><td>前256年</td><td>周赧王去世，周王世系终结。六国仍各有君主。</td><td><a href="#ch07">秦灭六国</a></td></tr>
+<tr><td>前230、前228年</td><td>秦先灭韩，继而攻下赵都邯郸。</td><td><a href="#ch07">秦灭六国</a></td></tr>
+<tr><td>前227年</td><td>荆轲入秦，行刺秦王嬴政失败。</td><td><a href="#ch07">秦灭六国</a></td></tr>
+<tr><td>前225、前223年</td><td>魏、楚相继灭亡。</td><td><a href="#ch07">秦灭六国</a></td></tr>
+<tr><td>前222年</td><td>秦灭燕，代地的赵国余部同年灭亡。</td><td><a href="#ch07">秦灭六国</a></td></tr>
+<tr><td>前221年</td><td>齐王降秦。嬴政称皇帝，秦朝将郡县和度量衡制度推行到六国旧地。</td><td><a href="#ch08">从秦国到秦朝</a></td></tr>
+</tbody></table></details>
+<details id="contemporaries"><summary>哪些人物活在同一个时代？</summary><dl class="peers"><dt>商末周初</dt><dd>帝辛与周武王在牧野交战。文王是武王的父亲，伐商之前已去世。太公望辅佐周，周公旦是武王的弟弟。 <a href="#ch01">回到本节</a></dd>
+<dt>春秋前中期</dt><dd>齐桓公与管仲同处一代。齐国主持葵丘会盟十九年后，晋文公在城濮击败楚军。 <a href="#ch03">回到本节</a></dd>
+<dt>春秋晚期</dt><dd>孔子生活在鲁国，他的晚年与吴、越交锋的年代重叠。孔子出生时，晋文公已经去世。 <a href="#ch03">回到本节</a></dd>
+<dt>战国中期</dt><dd>商鞅在秦孝公治下变法时，东方有魏惠王、齐威王，也有参与齐魏交锋的孙膑。“围魏救赵”的历史背景就在这一时期。 <a href="#ch05">回到本节</a></dd>
+<dt>战国晚期</dt><dd>长平之战时在位的是秦昭襄王。到荆轲入秦，秦王已是嬴政；他要在六年后才称皇帝。 <a href="#ch07">回到本节</a></dd></dl></details></section>
+<p class="closing">各章末附史料出处。地图标出大致位置，古地名与现代行政区的范围并不完全重合。</p></div>
+<div id="note-pop" hidden><span id="note-body" role="tooltip"></span><button id="note-close" type="button" aria-label="关闭注释">×</button></div>
+<script>(() => {
+  'use strict';
+  const book = document.getElementById('book');
+  const chapters = Array.from(document.querySelectorAll('.chapter'));
+  const picker = document.getElementById('chapter-picker');
+  const previous = document.querySelector('[rel="prev"]');
+  const next = document.querySelector('[rel="next"]');
+  const pop = document.getElementById('note-pop');
+  const noteBody = document.getElementById('note-body');
+  const closeButton = document.getElementById('note-close');
+  let anchor = null;
+  let pinned = false;
+  let hideTimer = 0;
+  let current = '';
+  let lastHeight = 0;
+  let heightFrame = 0;
+
+  function post(type, data) {
+    if (window.parent !== window) window.parent.postMessage({isStreamlitMessage:true, type, ...data}, '*');
+  }
+  function measure() {
+    if (heightFrame) return;
+    heightFrame = requestAnimationFrame(() => {
+      heightFrame = 0;
+      const height = Math.ceil(book.getBoundingClientRect().height + 3);
+      if (height !== lastHeight) {
+        lastHeight = height;
+        post('streamlit:setFrameHeight', {height});
+      }
+    });
+  }
+  function hideNote() {
+    clearTimeout(hideTimer);
+    if (anchor) {
+      anchor.removeAttribute('aria-describedby');
+      anchor.setAttribute('aria-expanded','false');
+    }
+    anchor=null; pinned=false; pop.hidden=true;
+  }
+  function placeNote() {
+    if (!anchor || pop.hidden) return;
+    const r=anchor.getBoundingClientRect(), box=pop.getBoundingClientRect();
+    const w=document.documentElement.clientWidth, h=window.innerHeight;
+    const left=Math.min(Math.max(10,r.left + Math.min(r.width/2,90) - box.width/2), w-box.width-10);
+    const below = r.bottom + 6;
+    pop.style.left = Math.max(6,left) + 'px';
+    pop.style.top = Math.max(4,below+box.height<=h || r.top<box.height+10 ? Math.min(below,h-box.height-4) : r.top-box.height-6) + 'px';
+  }
+  function showNote(target, pin=false) {
+    clearTimeout(hideTimer);
+    if (anchor!==target) hideNote();
+    anchor=target; pinned=pin;
+    noteBody.textContent=target.dataset.note;
+    target.setAttribute('aria-expanded','true');
+    target.setAttribute('aria-describedby','note-body');
+    pop.hidden=false; placeNote();
+  }
+  function deferHide() {
+    clearTimeout(hideTimer);
+    if (!pinned) hideTimer=setTimeout(hideNote,180);
+  }
+  document.querySelectorAll('[data-note]').forEach(el => {
+    el.setAttribute('aria-expanded','false');
+    el.setAttribute('aria-controls','note-pop');
+    el.addEventListener('pointerenter',event=>{
+      if (event.pointerType!=='touch' && !pinned) showNote(el);
+    });
+    el.addEventListener('pointerleave',deferHide);
+    el.addEventListener('focus',()=>{if (!pinned || anchor!==el) showNote(el);});
+    el.addEventListener('blur',()=>{if (!pinned) deferHide();});
+    el.addEventListener('click',event=>{
+      event.preventDefault();
+      if (anchor===el && pinned) hideNote(); else showNote(el,true);
+    });
+    if (el.tagName.toLowerCase()!=='button') el.addEventListener('keydown',event=>{
+      if (event.key==='Enter' || event.key===' ') {
+        event.preventDefault();
+        if (anchor===el && pinned) hideNote(); else showNote(el,true);
+      }
+    });
+  });
+  pop.addEventListener('pointerenter',()=>clearTimeout(hideTimer));
+  pop.addEventListener('pointerleave',deferHide);
+  closeButton.addEventListener('click',()=>{const original=anchor;if(original)original.focus({preventScroll:true});hideNote();});
+  document.addEventListener('pointerdown',event=>{if(!pop.contains(event.target) && !event.target.closest('[data-note]')) hideNote();});
+  document.addEventListener('keydown',event=>{if(event.key==='Escape') hideNote();});
+  document.addEventListener('focusin',event=>{if(anchor && !pop.contains(event.target) && !event.target.closest('[data-note]')) hideNote();});
+  window.addEventListener('scroll',placeNote,{capture:true,passive:true});
+
+  function setChapter(id, scroll) {
+    const index=chapters.findIndex(item=>item.id===id);
+    if(index<0) return;
+    hideNote(); current=id; picker.value=id;
+    chapters.forEach(item=>{item.hidden=item.id!==id;});
+    document.querySelectorAll('.side a').forEach(link=>{
+      if(link.hash==='#'+id) link.setAttribute('aria-current','page');
+      else link.removeAttribute('aria-current');
+    });
+    [[previous,index-1,'上一节'],[next,index+1,'下一节']].forEach(([link,n,prefix])=>{
+      const dest=chapters[n]; link.hidden=!dest;
+      if(dest){link.href='#'+dest.id;link.textContent=prefix+' · '+dest.dataset.short;}
+    });
+    if(scroll){
+      const title=chapters[index].querySelector('h2');
+      title.focus({preventScroll:true});
+      title.scrollIntoView({block:'start'});
+    }
+    measure();
+  }
+  function openTarget(id,scroll=true) {
+    const item=document.getElementById(id);
+    if(item && item.matches('.extras>details')){
+      hideNote();item.open=true;measure();
+      if(scroll) item.querySelector('summary').scrollIntoView({block:'start'});
+    }else if(item && item.classList.contains('chapter')) setChapter(id,scroll);
+  }
+  function navigate(id){
+    if(window.location.hash!=='#'+id){
+      try {history.pushState(null,'','#'+id);} catch(e){location.hash=id;}
+    }
+    openTarget(id);
+  }
+  function route(){
+    const id=location.hash.slice(1);
+    if(!document.getElementById(id))setChapter('ch01',true);
+    else openTarget(id);
+  }
+  picker.addEventListener('change',()=>navigate(picker.value));
+  document.addEventListener('click',event=>{
+    const link=event.target.closest('a[href^="#"]');
+    if(!link || link.hasAttribute('data-note') || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const id=link.hash.slice(1);
+    if(!document.getElementById(id))return;
+    event.preventDefault();navigate(id);
+  });
+  window.addEventListener('hashchange',route);
+  window.addEventListener('popstate',route);
+  document.querySelectorAll('a[href^="https://"]').forEach(link=>{link.target='_blank';link.rel='noopener noreferrer';});
+  window.addEventListener('message',event=>{
+    if(event.source===window.parent && event.data?.type==='streamlit:render'){lastHeight=0;measure();}
+  });
+  document.addEventListener('toggle',measure,true);
+  window.addEventListener('resize',()=>{measure();placeNote();});
+  if(window.ResizeObserver)new ResizeObserver(measure).observe(book);
+  const initial=location.hash.slice(1);
+  setChapter(/^ch0[1-8]$/.test(initial)?initial:'ch01',false);
+  if(initial && !/^ch0[1-8]$/.test(initial))openTarget(initial,true);
+  post('streamlit:componentReady',{apiVersion:1});
+  measure();
+})();</script></body></html>

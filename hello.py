@@ -17,7 +17,7 @@ from utils.home_theme import apply_home_theme
 TOOLS = [
     {
         "title": "中国通史图读",
-        "desc": "按朝代阅读图文通史。第一卷从西周分封、春秋争霸讲到秦统一六国，配时间线和形势图。",
+        "desc": "从武王伐纣读到秦统一六国，沿时间线阅读，点地图查古今地名，展开典故与史料。",
         "tag": "历史 · 图文阅读",
         "created": "2026_11_15",
         "page": "pages/32_33_chinese_history.py",
