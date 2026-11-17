@@ -62,6 +62,7 @@ data/newspaper_daily.json
 data/newspaper_reader.json
 data/title_review_rules.json
 data/title_review_cases.json
+data/work_guides.json
 data/grade_workbench/
 data/qq_robot_archive/
 115-ai-organizer/.env

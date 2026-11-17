@@ -73,7 +73,11 @@ class HomePageTest(unittest.TestCase):
         by_code = {tool["code"]: tool for tool in tools}
         codes = [tool["code"] for tool in tools]
 
-        self.assertEqual(["M33", "M32", "M31", "M30", "M29", "M28", "M27", "M26", "M25", "M23", "M22", "M21", "M20", "M19", "M18"], codes[:15])
+        self.assertEqual(["M34", "M33", "M32", "M31", "M30", "M29", "M28", "M27", "M26", "M25", "M23", "M22", "M21", "M20", "M19", "M18"], codes[:16])
+        self.assertEqual("pages/33_34_work_guides.py", by_code["M34"]["page"])
+        self.assertEqual("工作导航", by_code["M34"]["title"])
+        self.assertTrue(by_code["M34"]["locked"])
+        self.assertEqual("行政", by_code["M34"]["section"])
         self.assertEqual("pages/32_33_chinese_history.py", by_code["M33"]["page"])
         self.assertEqual("中国通史图读", by_code["M33"]["title"])
         self.assertEqual("pages/31_32_nihaixia_knowledge.py", by_code["M32"]["page"])
@@ -114,7 +118,7 @@ class HomePageTest(unittest.TestCase):
         blocked_codes = {tool["code"] for tool in tools if tool.get("blocked")}
         self.assertEqual({"M01", "M02", "M03", "M04", "M05", "M11", "M13", "M16", "M17", "M24"}, blocked_codes)
         self.assertEqual("M01", tools[-1]["code"])
-        self.assertEqual(32, len(tools))
+        self.assertEqual(33, len(tools))
 
     def test_homepage_sections_match_approved_apple_nav(self):
         _page_source, namespace = load_homepage_bits()
@@ -147,7 +151,7 @@ class HomePageTest(unittest.TestCase):
         admin_codes = [tool["code"] for tool in namespace["tools_for_section"](tools, "行政")]
         teaching_codes = [tool["code"] for tool in namespace["tools_for_section"](tools, "教学")]
         archived_codes = [tool["code"] for tool in namespace["tools_for_section"](tools, "archived")]
-        self.assertEqual(["M31", "M30", "M25", "M20", "M15", "M14", "M08", "M06"], admin_codes)
+        self.assertEqual(["M34", "M31", "M30", "M25", "M20", "M15", "M14", "M08", "M06"], admin_codes)
         self.assertEqual(["M18"], teaching_codes)
         personal_codes = [tool["code"] for tool in namespace["tools_for_section"](tools, "个人")]
         self.assertEqual(["M33", "M32"], personal_codes[:2])
@@ -190,7 +194,7 @@ class HomePageTest(unittest.TestCase):
         page1_codes = [tool["code"] for tool in homepage_pages[0]]
         page2_codes = [tool["code"] for tool in homepage_pages[1]]
 
-        self.assertEqual(["M33", "M32", "M31", "M30", "M29", "M28", "M27", "M26", "M25", "M23"], codes[:10])
+        self.assertEqual(["M34", "M33", "M32", "M31", "M30", "M29", "M28", "M27", "M26", "M25", "M23"], codes[:11])
         self.assertEqual(codes[codes.index("M06") : codes.index("M06") + 6], ["M06", "M24", "M17", "M16", "M13", "M11"])
         self.assertTrue(tools[codes.index("M16")]["blocked"])
         self.assertTrue(tools[codes.index("M17")]["blocked"])
@@ -201,10 +205,10 @@ class HomePageTest(unittest.TestCase):
         self.assertNotIn("M13", page1_codes)
         self.assertNotIn("M16", page2_codes)
         self.assertNotIn("M17", page2_codes)
-        self.assertEqual(["M33", "M32", "M31", "M30", "M29", "M28", "M27", "M26", "M25"], page1_codes)
-        self.assertEqual(["M23", "M22", "M21", "M20", "M19", "M18", "M15", "M14", "M10"], page2_codes)
-        self.assertEqual(["M09", "M08", "M07", "M06", "M24", "M17", "M16", "M13", "M11"], [tool["code"] for tool in homepage_pages[2]])
-        self.assertEqual(["M05", "M04", "M03", "M02", "M01"], [tool["code"] for tool in homepage_pages[3]])
+        self.assertEqual(["M34", "M33", "M32", "M31", "M30", "M29", "M28", "M27", "M26"], page1_codes)
+        self.assertEqual(["M25", "M23", "M22", "M21", "M20", "M19", "M18", "M15", "M14"], page2_codes)
+        self.assertEqual(["M10", "M09", "M08", "M07", "M06", "M24", "M17", "M16", "M13"], [tool["code"] for tool in homepage_pages[2]])
+        self.assertEqual(["M11", "M05", "M04", "M03", "M02", "M01"], [tool["code"] for tool in homepage_pages[3]])
         self.assertEqual(4, len(homepage_pages))
 
     def test_retired_grading_tools_show_crosses_in_homepage_entries(self):

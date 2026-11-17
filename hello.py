@@ -16,6 +16,18 @@ from utils.home_theme import apply_home_theme
 
 TOOLS = [
     {
+        "title": "工作导航",
+        "desc": "按工作查阅办理地图、对接单位、要求与踩坑提醒，自行维护指南、流程节点和历年办理记录。",
+        "tag": "工作指南 · 流程 · 历年记录",
+        "created": "2026_11_17",
+        "page": "pages/33_34_work_guides.py",
+        "code": "M34",
+        "icon": "🧭",
+        "accent": "green",
+        "locked": True,
+        "section": "行政",
+    },
+    {
         "title": "中国通史图读",
         "desc": "从武王伐纣读到秦统一六国，沿时间线阅读，点地图查古今地名，展开典故与史料。",
         "tag": "历史 · 图文阅读",

@@ -10,6 +10,7 @@ MANAGED_FILES = (
     "data/schedule_cache.json", "data/schedule_metadata.json", "data/teacher_category_cache.json",
     "data/todo_items_backup.md", "data/web_memos_backup.md",
     "data/title_review_rules.json", "data/title_review_cases.json",
+    "data/work_guides.json",
 )
 
 
@@ -44,6 +45,9 @@ def validate_backup(repo_path, content):
             raise ValueError("备份金额无效，已停止同步。")
         return records
     data = json.loads(content, parse_constant=lambda value: (_ for _ in ()).throw(ValueError("JSON 含无效数值")))
+    if repo_path == "data/work_guides.json":
+        from utils.work_guides import validate_document
+        return validate_document(data)
     if repo_path in {"data/title_review_rules.json", "data/title_review_cases.json"}:
         from utils.title_review import validate_document
         return validate_document(data, repo_path)
@@ -72,6 +76,9 @@ def validate_backup(repo_path, content):
 
 
 def would_drop_records(repo_path, before, after):
+    if repo_path == "data/work_guides.json":
+        from utils.work_guides import retained_ids
+        return not retained_ids(before) <= retained_ids(after)
     if repo_path == "data/title_review_cases.json":
         return not {case["id"] for case in before["cases"]} <= {case["id"] for case in after["cases"]}
     if repo_path == "data/title_review_rules.json":
