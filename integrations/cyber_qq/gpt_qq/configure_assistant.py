@@ -114,7 +114,7 @@ def configure(root: Path) -> dict:
     result = asyncio.run(apply_database_config(root, receipt))
     receipt.update({"group_assistant_profile_id": result["profile_id"],
                     "group_assistant_owner_only": True, "daughter_persona_enabled": True,
-                    "group_assistant_version": "1.0.0"})
+                    "group_assistant_version": "1.1.0"})
     receipt_path.write_text(json.dumps(receipt, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     result["backup"] = str(backup)
     return result

@@ -1,4 +1,4 @@
-"""AstrBot adapter: private chats remain on the existing owner-only profile."""
+"""Group records and explicitly scoped tutoring; private chats keep their profile."""
 from __future__ import annotations
 
 import asyncio
@@ -14,7 +14,7 @@ from astrbot.api.star import Context, Star, register
 
 from .engine import (
     DISABLE_COMMANDS, ENABLE_COMMANDS, GROUP_SYSTEM_PROMPT, HELP_COMMANDS,
-    STATUS_COMMANDS, GroupStore, analysis_prompt, command_text, message_text,
+    STATUS_COMMANDS, POLITICS_TUTOR_PROMPT, GroupStore, analysis_prompt, command_text, message_text,
     query_window, valid_id,
 )
 
@@ -49,14 +49,15 @@ class GroupScope(filter.CustomFilter):
         try:
             data = read_message(event)
             owner_request = data["sender_id"] == _active.owner and data["addressed"]
-            if not _active.store.enabled(data["group_id"]) and not owner_request:
+            tutor_request = data["group_id"] in _active.tutor_groups and data["addressed"]
+            if not _active.store.enabled(data["group_id"]) and not owner_request and not tutor_request:
                 event.stop_event()
                 return False
             event.set_extra("cyber_g_message", data)
             # Keep original text/markers above; only explicitly requested current
             # images need preprocessing. Ordinary record collection does no download.
             keep = {"Plain", "At"}
-            if owner_request:
+            if owner_request or tutor_request:
                 keep.add("Image")
             event.message_obj.message = [p for p in event.get_messages() if p.type in keep]
             return True
@@ -66,7 +67,7 @@ class GroupScope(filter.CustomFilter):
             return False
 
 
-@register("cyber_g_assistant", "Codex", "按群记录，只响应主人整理与分析", "1.0.0")
+@register("cyber_g_assistant", "Codex", "主人群记录整理，指定学习群考研政治答疑", "1.1.0")
 class CyberGAssistant(Star):
     def __init__(self, context: Context):
         super().__init__(context)
@@ -78,6 +79,13 @@ class CyberGAssistant(Star):
         if self.owner == self.bot:
             raise ValueError("Owner and bot must be different accounts")
         self.store = GroupStore(runtime / "group_assistant/records.sqlite3")
+        roles_path = runtime / "group_assistant/roles.json"
+        roles = json.loads(roles_path.read_text(encoding="utf-8-sig")) if roles_path.exists() else {}
+        tutor_groups = roles.get("politics_tutor_groups", [])
+        if not isinstance(tutor_groups, list):
+            raise ValueError("politics_tutor_groups must be a list of group IDs")
+        self.tutor_groups = {valid_id(group) for group in tutor_groups}
+        self.tutor_sent: dict[str, None] = {}
         self.locks: dict[str, asyncio.Lock] = {}
         global _active
         _active = self
@@ -92,6 +100,16 @@ class CyberGAssistant(Star):
         group = data["group_id"]
         owner_request = data["sender_id"] == self.owner and data["addressed"]
         query = data["query"]
+        if group in self.tutor_groups and data["addressed"]:
+            if query in STATUS_COMMANDS | HELP_COMMANDS:
+                await event.send(event.plain_result(
+                    "我是乖小屁，本群的考研政治指导教师。@我或说“小屁，题目”即可提问，支持文字和当前题目图片。"
+                    "我会给出答案、考点和解题思路；题干不全时会请你补充。最新时政或大纲需提供年份及可靠材料。"
+                    "答题不要求开启群记录。"))
+                return
+            if query not in ENABLE_COMMANDS | DISABLE_COMMANDS:
+                await self.answer_politics(event, data)
+                return
         if owner_request and query in ENABLE_COMMANDS:
             changed = await asyncio.to_thread(self.store.set_enabled, group, True)
             await event.send(event.plain_result(
@@ -161,6 +179,39 @@ class CyberGAssistant(Star):
                 logger.error("小屁群分析失败：%s", type(exc).__name__)
                 if await asyncio.to_thread(self.store.enabled, group):
                     await event.send(event.plain_result("消息记录已保留，但这次分析暂未完成，请稍后重试。"))
+
+    async def answer_politics(self, event: AstrMessageEvent, data: dict):
+        group = data["group_id"]
+        if not data["message_id"]:
+            return
+        request_id = f"{group}:{data['message_id']}"
+        if request_id in self.tutor_sent:
+            return
+        images = [p.file or p.url for p in event.get_messages() if p.type == "Image" and (p.file or p.url)]
+        if not data["query"] and not images:
+            await event.send(event.plain_result("请发来考研政治的题干、选项或清晰的题目图片，我会逐项讲解。"))
+            return
+        lock = self.locks.setdefault(group, asyncio.Lock())
+        if lock.locked():
+            await event.send(event.plain_result("上一道题还在讲解中，请等我回复后再提问。"))
+            return
+        async with lock:
+            try:
+                response = await self.context.llm_generate(
+                    chat_provider_id="gpt-qq-model",
+                    prompt=json.dumps({"question": data["query"] or "请解答图片中的考研政治题目。"}, ensure_ascii=False),
+                    system_prompt=POLITICS_TUTOR_PROMPT, contexts=[], tools=None,
+                    image_urls=images or None, request_max_retries=1)
+                answer = (response.completion_text or "").strip()
+                if not answer:
+                    raise ValueError("Empty tutor response")
+                await event.send(event.plain_result(answer))
+                self.tutor_sent[request_id] = None
+                if len(self.tutor_sent) > 256:
+                    self.tutor_sent.pop(next(iter(self.tutor_sent)))
+            except Exception as exc:
+                logger.error("小屁考研政治答题失败：%s", type(exc).__name__)
+                await event.send(event.plain_result("这道题暂未完成解答，请稍后重试；文字题请保留完整题干和选项。"))
 
     async def terminate(self):
         global _active

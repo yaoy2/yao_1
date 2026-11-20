@@ -1,8 +1,8 @@
 name: cyber_g_assistant
 display_name: 小屁群助手
-desc: 由主人按群启停记录，只响应主人，整理本群文字、纪要和待办。
+desc: 由主人按群启停记录与整理；本机明确指定的学习群支持成员主动询问考研政治。
 author: Codex
-version: 1.0.0
+version: 1.1.0
 repo: https://github.com/yaoy2/yao_1
 support_platforms:
   - aiocqhttp

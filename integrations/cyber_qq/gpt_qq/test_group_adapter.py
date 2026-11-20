@@ -147,6 +147,64 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(event.is_stopped())
         self.context.llm_generate.assert_not_awaited()
 
+    async def test_tutor_member_question_without_recording_is_scoped_and_deduplicated(self):
+        self.plugin.tutor_groups = {"10000001"}
+        event = self.event("实践与认识的关系是什么？", sender="99999999")
+        await self.deliver(event)
+        call = self.context.llm_generate.await_args.kwargs
+        self.assertIn("考研政治指导教师", call["system_prompt"])
+        self.assertEqual(json.loads(call["prompt"]), {"question": "实践与认识的关系是什么？"})
+        self.assertEqual(call["contexts"], [])
+        self.assertIsNone(call["tools"])
+        self.assertFalse(self.plugin.store.enabled("10000001"))
+        self.assertEqual(self.plugin.store.snapshot("10000001", Window(0, 9999999999, "all"))["included_count"], 0)
+        event.send.assert_awaited_once()
+        await self.deliver(self.event("实践与认识的关系是什么？", sender="99999999"))
+        self.context.llm_generate.assert_awaited_once()
+        await self.deliver(self.event("考研题", sender="99999999", group="10000002", mid="2"))
+        self.context.llm_generate.assert_awaited_once()
+
+    async def test_tutor_only_downloads_images_for_addressed_questions(self):
+        self.plugin.tutor_groups = {"10000001"}
+        ordinary = self.event("普通聊天", sender="99999999", image=True, at=False)
+        await self.deliver(ordinary)
+        self.assertTrue(ordinary.is_stopped())
+        self.context.llm_generate.assert_not_awaited()
+        question = self.event("", sender="99999999", image=True, mid="2")
+        await self.deliver(question)
+        self.assertIn("Image", [p.type for p in question.get_messages()])
+        self.assertEqual(self.context.llm_generate.await_args.kwargs["image_urls"], ["https://example.invalid/test.png"])
+
+    async def test_tutor_name_trigger_and_recording_controls_remain_owner_only(self):
+        self.plugin.tutor_groups = {"10000001"}
+        stranger = self.event("开始记录", sender="99999999")
+        await self.deliver(stranger)
+        stranger.send.assert_not_awaited()
+        self.assertFalse(self.plugin.store.enabled("10000001"))
+        self.context.llm_generate.assert_not_awaited()
+        await self.deliver(self.event("小屁，解释矛盾的普遍性", sender="99999999", at=False, mid="2"))
+        self.context.llm_generate.assert_awaited_once()
+        await self.deliver(self.event("开始记录", mid="3"))
+        self.assertTrue(self.plugin.store.enabled("10000001"))
+        await self.deliver(self.event("停止记录", mid="4"))
+        self.assertFalse(self.plugin.store.enabled("10000001"))
+
+    async def test_tutor_failure_allows_retry(self):
+        self.plugin.tutor_groups = {"10000001"}
+        self.context.llm_generate.side_effect = [RuntimeError("test failure"), SimpleNamespace(completion_text="解答")]
+        await self.deliver(self.event("解释考点", sender="99999999"))
+        self.assertEqual(self.plugin.tutor_sent, {})
+        await self.deliver(self.event("解释考点", sender="99999999"))
+        self.assertEqual(self.context.llm_generate.await_count, 2)
+        self.assertIn("10000001:1", self.plugin.tutor_sent)
+
+    async def test_tutor_groups_loaded_from_local_roles_file(self):
+        roles = Path(self.temp.name) / "group_assistant/roles.json"
+        roles.write_text(json.dumps({"politics_tutor_groups": ["10000001"]}), encoding="utf-8")
+        plugin = self.adapter.CyberGAssistant(self.context)
+        self.addAsyncCleanup(plugin.terminate)
+        self.assertEqual(plugin.tutor_groups, {"10000001"})
+
     async def test_real_waking_stage_activates_plain_group_records(self):
         from astrbot.core.pipeline.waking_check.stage import WakingCheckStage
         from astrbot.core.star.session_plugin_manager import SessionPluginManager
