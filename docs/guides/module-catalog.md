@@ -17,7 +17,7 @@ The online overview reads the same registry for descriptions, categories, status
 
 | ID | Section | Status | Entry point | Behavior and requirements |
 | --- | --- | --- | --- | --- |
-| M33 | Personal | Current | [中国通史图读](../../pages/32_33_chinese_history.py) | Read or download the interactive HTML volume on the fall of Shang through Qin unification, with annotated maps, chapter links, and expandable source notes. |
+| M33 | Personal | Current | [中国通史图读](../../pages/32_33_chinese_history.py) | Read or download two interactive HTML volumes, from the fall of Shang through Qin unification and the Chu–Han struggle to the founding of Han, with annotated maps, a story index, and expandable source notes. |
 | M32 | Personal | Current | [倪海厦知识库](../../pages/31_32_nihaixia_knowledge.py) | Reads the repository knowledge library with rules, conditions, exceptions and source references; updates are requested manually. |
 | M31 | Administration | Current | [QQ 归档机器人](../../pages/30_31_qq_archive.py) | Read-only overview of authorized QQ group archiving on L and on-demand DeepSeek Flash summaries. Explains commands, storage, processing and recorded acceptance limits; does not read private group data, hold credentials or control the receiver. |
 | M30 | Administration | Current | [职称评审](../../pages/29_30_title_review.py) | Reads confirmed review requirements, records electronic and paper receipts separately, and saves source-linked preliminary reviews, outstanding questions, and college summaries to the configured private data repository. |
