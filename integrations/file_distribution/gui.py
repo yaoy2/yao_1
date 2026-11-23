@@ -220,7 +220,9 @@ class DistributionWindow:
         ttk.Label(footer, textvariable=self.notice_var, style="Muted.TLabel").grid(row=0, column=0, sticky="w")
         ttk.Label(footer, textvariable=self.log_var, style="Muted.TLabel").grid(row=1, column=0, sticky="w")
         self.log_button = ttk.Button(footer, text="打开记录目录", command=self.open_log_folder)
-        self.log_button.grid(row=0, column=1, rowspan=2, padx=(10, 0))
+        self.retry_ding_button = ttk.Button(footer, text="补同步钉钉", command=self.retry_ding)
+        self.retry_ding_button.grid(row=0, column=1, rowspan=2, padx=(10, 0))
+        self.log_button.grid(row=0, column=2, rowspan=2, padx=(10, 0))
         self._update_controls()
 
     def _update_controls(self) -> None:
@@ -240,6 +242,7 @@ class DistributionWindow:
             state="normal" if selectable and self._selected else "disabled",
         )
         self.log_button.configure(state="normal" if self._log_path and idle else "disabled")
+        self.retry_ding_button.configure(state="normal" if idle else "disabled")
 
     def _invalidate(self) -> None:
         self.file_menu.unpost()
@@ -410,6 +413,8 @@ class DistributionWindow:
                                              str(error), parent=self.window)
                 elif operation == "scan":
                     self._show_plan(value)
+                elif operation == "ding":
+                    self._show_ding_result(value)
                 else:
                     self._show_result(value)
                 if self._close_when_done:
@@ -426,7 +431,7 @@ class DistributionWindow:
         self._selected = {item.name for item in self._items if item.status == "ready" and not item.manual_selection}
         self._render_rows()
         self._update_summary()
-        self.notice_var.set(self._date_scope(plan) + "。请核对目标；疑似新闻需逐项勾选。")
+        self.notice_var.set(self._date_scope(plan) + "。请核对目标，存疑材料需逐项勾选。")
         self.progress.configure(maximum=1, value=1)
         self.progress_var.set("预览完成，等待点击分发")
         self._append_activity(self._date_scope(plan) + "；" + self.summary_var.get())
@@ -482,7 +487,8 @@ class DistributionWindow:
         if self._consumed and item.status == "ready":
             label = "未处理"
         new_name = Path(item.destination).name if item.destination else "—"
-        return (checked if enabled else "", label, item.name, new_name, self._target_label(item), item.reason)
+        note = f"{item.reason}；{item.ding_reason}" if item.ding_reason else item.reason
+        return (checked if enabled else "", label, item.name, new_name, self._target_label(item), note)
 
     def _render_rows(self) -> None:
         self.tree.delete(*self.tree.get_children())
@@ -507,7 +513,7 @@ class DistributionWindow:
                  f"可分发 {counts['ready'] - manual}", f"待核对 {pending}",
                  f"重复或同名 {counts['duplicate'] + counts['collision']}", f"跳过 {counts['skip']}"]
         if manual and not self._consumed:
-            parts.append(f"疑似新闻 {manual}")
+            parts.append(f"需逐项确认 {manual}")
         if self._consumed:
             parts[1] = f"本次已分发 {counts['moved']}"
             if counts['copied']:
@@ -608,9 +614,12 @@ class DistributionWindow:
             created = (f"本机创建时间：{datetime.fromtimestamp(item.creation_time_ns / 1_000_000_000):%Y-%m-%d %H:%M:%S}\n"
                        if item.creation_time_ns else "")
             summary = f"月度汇总副本：{item.summary_destination}\n" if item.summary_destination else ""
+            dispatch = (f"文号：{item.document_number}\n标题：{item.document_title}\n发文时间：{item.document_date or '待核对'}\n"
+                        if item.document_number else "")
+            ding = f"\n钉钉：{item.ding_reason}" if item.ding_reason else ""
             self._set_details(
                 f"{'文件夹' if item.is_directory else '文件'}：{item.name}\n来源：{item.source}\n目标：{item.destination or '尚不能确定'}\n"
-                f"{summary}{created}状态：{STATUS_LABELS.get(item.status, item.status)}    说明：{item.reason}"
+                f"{summary}{created}{dispatch}状态：{STATUS_LABELS.get(item.status, item.status)}    说明：{item.reason}{ding}"
             )
 
     def distribute(self) -> None:
@@ -619,13 +628,16 @@ class DistributionWindow:
         names = [item.name for item in self._items if item.status == "ready" and item.name in self._selected]
         if not names:
             return
+        ding = ("\n2026 年学院发文归档后，将向钉钉「健康学院行政 / 发文-2026」同步文号、标题、可核实的发文时间及 PDF 附件。"
+                if any(item.name in names and item.document_number and item.period == "2026" for item in self._items) else "")
         if not messagebox.askokcancel(
             "确认分发", f"将分发已勾选的 {len(names)} 项材料。\n\n"
             f"材料目录：{self._plan.root}\n分发规则：{'、'.join(RULE_LABELS[key] for key in selected_rules(self._plan.rules or self._plan.mode))}\n"
             f"{self._date_scope(self._plan)}\n\n"
             "系部纪要、考勤和学院月报按预览名称统一命名；党政联席会纪要保留原名。\n"
             "会议纪要在原分类和当月汇总目录各存一份；两份均核验后完成。\n"
-            "文件移至预览目标；原分类已有相同内容时仅补齐月度副本，源文件保留。确认后开始分发。", parent=self.window,
+            "文件移至预览目标；原分类已有相同内容时仅补齐月度副本，源文件保留。确认后开始分发。"
+            + ding, parent=self.window,
         ):
             return
         plan = self._plan
@@ -649,10 +661,37 @@ class DistributionWindow:
         summary = (f"分发完成：已移动 {counts['moved']}，补齐副本 {counts['copied']}，失败 {counts['error']}，"
                    f"待核对 {counts['review'] + counts['changed']}，"
                    f"跳过/未处理 {sum(counts[key] for key in ('skip', 'ready', 'duplicate', 'collision'))}")
+        if any(item.ding_status for item in result.items):
+            summary += "。" + self._ding_summary(result)
         self.progress_var.set(summary)
         self.progress.configure(maximum=1, value=1)
         self._append_activity(summary)
         self.notice_var.set("本次分发已结束。需要继续处理时，请先重新预览。")
+        self._update_controls()
+
+    @staticmethod
+    def _ding_summary(result: ExecutionResult) -> str:
+        counts = Counter(item.ding_status for item in result.items)
+        return f"钉钉已核对 {counts['synced']} 项，待补同步 {counts['pending']} 项"
+
+    def retry_ding(self) -> None:
+        from .engine import retry_dispatch_sync
+
+        if self._busy or self._closed or not self.source_var.get():
+            return
+        root = self.source_var.get()
+        if not messagebox.askokcancel("补同步钉钉", "核对本目录已确认归档的 2026 年发文，并向「健康学院行政 / 发文-2026」补齐待同步记录和 PDF。", parent=self.window):
+            return
+        self._start_job("ding", lambda progress: retry_dispatch_sync(root, on_progress=progress))
+
+    def _show_ding_result(self, result: ExecutionResult) -> None:
+        summary = self._ding_summary(result) if result.items else "当前目录没有待补同步的学院发文"
+        self.progress_var.set(summary)
+        self.notice_var.set(summary)
+        self._append_activity(summary)
+        if result.log_path:
+            self._log_path = result.log_path
+            self.log_var.set(f"分发记录：{Path(result.log_path).name}")
         self._update_controls()
 
     def open_log_folder(self) -> None:

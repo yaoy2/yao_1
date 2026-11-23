@@ -12,22 +12,32 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from integrations.file_distribution.rules import ENTRY_FILENAME, RELEASE_DATE, USER_GUIDE, VERSION
+from integrations.file_distribution.dingtalk_dispatch import TARGET_FILE, target_ids
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, default=ROOT / "outputs" / "m20-file-distribution")
+    parser.add_argument("--ding-target", type=Path, help="本机钉钉数据表链接文本，只打包到个人 EXE")
     args = parser.parse_args()
     if os.name != "nt":
         raise SystemExit("Windows可执行程序必须在Windows上构建。")
     work = ROOT / ".tmp" / "m20-pyinstaller-可删"
     work.mkdir(parents=True, exist_ok=True)
     args.output.mkdir(parents=True, exist_ok=True)
+    extra_files = []
+    if args.ding_target:
+        url = args.ding_target.read_text(encoding="utf-8-sig").strip()
+        target_ids(url)
+        binding = work / TARGET_FILE
+        binding.write_text(url, encoding="utf-8")
+        extra_files += ["--add-data", str(binding) + os.pathsep + "integrations/file_distribution"]
     subprocess.run([
         sys.executable, "-m", "PyInstaller", "--onefile", "--windowed", "--noupx",
         "--name", Path(ENTRY_FILENAME).stem, "--paths", str(ROOT),
         "--distpath", str(args.output), "--workpath", str(work / "work"), "--specpath", str(work),
         "--add-data", str(ROOT / "integrations" / "file_distribution" / "invoice_ocr.ps1") + os.pathsep + "integrations/file_distribution",
+        *extra_files,
         str(ROOT / "scripts" / "file_distribution.py"),
     ], cwd=ROOT, check=True)
     executable = args.output / ENTRY_FILENAME

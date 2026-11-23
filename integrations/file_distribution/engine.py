@@ -14,6 +14,8 @@ from typing import Callable, Iterable
 import uuid
 
 from .models import Decision, ExecutionResult, Plan, PlanItem, ProgressEvent, selected_rules
+from .dispatch import DISPATCH_ARCHIVE, DISPATCH_KIND, classify_dispatch, dispatch_number, is_dispatch_named
+from .dingtalk_dispatch import DingTalkError, DingTalkRegister, REGISTER_YEAR
 from .file_dates import creation_date_bounds, creation_time_ns, validate_start_date
 from .invoices import INVOICE_HINT, classify_invoice
 from .monthly import MONTHLY_HINT, classify_monthly
@@ -98,6 +100,12 @@ def _hash_file(path: Path) -> str:
 
 def _classify(path: Path, root: Path, mode: str | Iterable[str], *, calendar_period: str = CALENDAR_PERIOD) -> Decision:
     rules = selected_rules(mode)
+    if "dispatch" in rules and path.suffix.lower() == ".pdf":
+        decision = classify_dispatch(path)
+        if decision.status != "ignored":
+            return decision
+    if is_dispatch_named(path.stem):
+        return Decision("ignored")
     if INVOICE_HINT.search(path.name):
         return classify_invoice(path, root) if "invoice" in rules else Decision("ignored")
     if "monthly" in rules and MONTHLY_HINT.search(path.name):
@@ -129,6 +137,8 @@ def _classify(path: Path, root: Path, mode: str | Iterable[str], *, calendar_per
 
 
 def _matches_rules(name: str, rules: Iterable[str]) -> bool:
+    if "dispatch" in rules and Path(name).suffix.lower() == ".pdf":
+        return True
     if INVOICE_HINT.search(name):
         return "invoice" in rules
     return bool("monthly" in rules and MONTHLY_HINT.search(name)
@@ -154,6 +164,8 @@ def _target(root: Path, decision: Decision, filename: str) -> Path:
         if not decision.target_name:
             raise ValueError("无法确定统一文件名，请核对单位和周次")
         filename = decision.target_name
+    elif decision.kind == DISPATCH_KIND and decision.target_name:
+        filename = decision.target_name
     if (not filename or Path(filename).name != filename or re.search(r'[<>:"/\\|?*\x00-\x1f]', filename)):
         raise ValueError("归档文件名无效")
     relative = Path(decision.relative_dir)
@@ -167,6 +179,9 @@ def _target(root: Path, decision: Decision, filename: str) -> Path:
     elif decision.kind == "学院新闻":
         if relative != Path(NEWS_DIRECTORY):
             raise ValueError("新闻目标不是当前学期新闻目录")
+    elif decision.kind == DISPATCH_KIND:
+        if not re.fullmatch(r"20\d{2}", decision.period) or relative != Path(DISPATCH_ARCHIVE.format(year=decision.period)):
+            raise ValueError("发文目标与文号年份不一致")
     elif relative.parts[0] not in {"月报", "02_学期工作"}:
         raise ValueError("归档目标不在本程序规则内")
     target = _normal_path(root / relative / filename, root=root)
@@ -195,6 +210,15 @@ def _destination_state(target: Path, digest: str, size: int) -> tuple[str, str, 
 def _duplicate(target: Path, digest: str, size: int) -> tuple[str, str]:
     status, reason, _ = _destination_state(target, digest, size)
     return status, reason
+
+
+def _dispatch_duplicate(target: Path, number: str, digest: str, size: int) -> tuple[str, str]:
+    if target.parent.is_dir():
+        for other in target.parent.iterdir():
+            if other.suffix.lower() == ".pdf" and dispatch_number(other.stem) == number:
+                if _is_link(other) or not other.is_file() or other.stat().st_size != size or _hash_file(other) != digest:
+                    return "collision", f"归档目录已有同文号不同版本：{other.name}"
+    return _duplicate(target, digest, size)
 
 
 def _signature(info: os.stat_result) -> tuple[int, ...]:
@@ -335,6 +359,9 @@ def scan(root: str | Path, mode: str | Iterable[str], *,
                 item.status, item.kind, item.period = decision.status, decision.kind, decision.period
                 item.department, item.reason = decision.department, decision.reason
                 item.manual_selection = decision.manual_selection
+                item.document_number = decision.document_number
+                item.document_title = decision.document_title
+                item.document_date = decision.document_date
                 item.week_label = decision.week_label
                 item.size, item.mtime_ns = before.st_size, before.st_mtime_ns
                 if decision.status == "ready":
@@ -355,8 +382,12 @@ def scan(root: str | Path, mode: str | Iterable[str], *,
                             item.reason += "；原分类已有相同内容，本次补齐月度副本并保留源文件"
                     else:
                         target = _target(root, decision, path.name)
-                        status, reason = (_news_folder_duplicate(target, item.sha256, members) if is_directory
-                                          else _duplicate(target, item.sha256, item.size))
+                        if is_directory:
+                            status, reason = _news_folder_duplicate(target, item.sha256, members)
+                        elif item.document_number:
+                            status, reason = _dispatch_duplicate(target, item.document_number, item.sha256, item.size)
+                        else:
+                            status, reason = _duplicate(target, item.sha256, item.size)
                     item.destination = str(target)
                     if target.name != path.name:
                         item.reason += f"；分发后统一命名为：{target.name}"
@@ -374,7 +405,10 @@ def scan(root: str | Path, mode: str | Iterable[str], *,
         plan.items.append(item)
         _notify(on_progress, "scan", index, len(paths), f"已核对：{path.name}", item)
     destinations: dict[str, list[PlanItem]] = {}
+    document_numbers: dict[str, list[PlanItem]] = {}
     for item in plan.items:
+        if item.document_number and item.sha256:
+            document_numbers.setdefault(item.document_number, []).append(item)
         if item.destination and item.sha256 and item.status in {"ready", "duplicate"}:
             for destination in (item.destination, item.summary_destination):
                 if destination:
@@ -384,6 +418,11 @@ def scan(root: str | Path, mode: str | Iterable[str], *,
             for item in group:
                 item.status = "collision"
                 item.reason = f"本批不同内容将同名为：{Path(item.destination).name}；请核对版本，源文件保留原处"
+                _notify(on_progress, "scan", len(paths), len(paths), item.reason, item)
+    for number, group in document_numbers.items():
+        if len({item.sha256 for item in group}) > 1:
+            for item in group:
+                item.status, item.reason = "collision", f"本批有多份 {number}，内容不同，请核对正式版本"
                 _notify(on_progress, "scan", len(paths), len(paths), item.reason, item)
     _notify(on_progress, "scan", len(paths), len(paths), "预览完成")
     return plan
@@ -554,6 +593,72 @@ def _execute_news_folder(root: Path, source: Path, item: PlanItem, bounds, log) 
     item.status, item.reason = "moved", "已整包分发，目录结构、文件名和内容校验一致"
 
 
+def _log_path(root: Path) -> tuple[Path, Path]:
+    directory = _normal_path(root / "98_系统" / "文件分发记录", root=root)
+    return directory, directory / f"{datetime.now():%Y%m%d_%H%M%S}_{uuid.uuid4().hex[:12]}.jsonl"
+
+
+def _sync_dispatches(root: Path, items: list[PlanItem], log, on_progress) -> None:
+    register = None
+    connection_error = ""
+    for index, item in enumerate(items, 1):
+        _notify(on_progress, "ding_sync", index - 1, len(items), f"正在核对钉钉文号：{item.document_number}")
+        try:
+            destination = root / DISPATCH_ARCHIVE.format(year=REGISTER_YEAR) / Path(item.destination).name
+            destination = _normal_path(destination, root=root)
+            if not destination.is_file() or _hash_file(destination) != item.sha256:
+                raise DingTalkError("本地归档 PDF 缺失或已变化，待核对")
+            if register is None and not connection_error:
+                try:
+                    register = DingTalkRegister.connect()
+                except (DingTalkError, OSError) as exc:
+                    connection_error = str(exc) if isinstance(exc, DingTalkError) else "无法读取钉钉连接配置"
+            if connection_error:
+                raise DingTalkError(connection_error)
+            item.ding_reason = register.register(item, destination)
+            item.ding_status = "synced"
+        except (DingTalkError, OSError, ValueError) as exc:
+            item.ding_status = "pending"
+            item.ding_reason = str(exc) if isinstance(exc, DingTalkError) else "归档或钉钉响应未能核验，可补同步"
+        _write_record(log, "ding_result", file=asdict(item))
+        _notify(on_progress, "ding_sync", index, len(items), item.ding_reason, item)
+
+
+def retry_dispatch_sync(root: str | Path, *, on_progress=None) -> ExecutionResult:
+    """Replay only 2026 dispatches already confirmed for distribution."""
+    root = _root(root)
+    directory, log_path = _log_path(root)
+    if not directory.is_dir():
+        return ExecutionResult([], "")
+    with _run_lock(_normal_path(directory / "running.lock", root=root)):
+        pending = {}
+        completed = set()
+        for file in sorted(directory.glob("*.jsonl")):
+            with _normal_path(file, root=root).open(encoding="utf-8") as source:
+                for line in source:
+                    try:
+                        entry = json.loads(line)
+                    except ValueError:
+                        continue
+                    details = entry.get("file", {})
+                    if (entry.get("event") not in {"planned", "ding_result"}
+                            or details.get("kind") != DISPATCH_KIND or details.get("period") != REGISTER_YEAR):
+                        continue
+                    key = (details["document_number"], details["sha256"])
+                    if details.get("ding_status") == "synced":
+                        completed.add(key)
+                    else:
+                        # A crash may occur after move but before the `result` event is written.
+                        pending[key] = PlanItem(**details)
+        items = [item for key, item in pending.items() if key not in completed]
+        if not items:
+            return ExecutionResult([], "")
+        with log_path.open("x", encoding="utf-8", newline="\n") as log:
+            _write_record(log, "ding_retry", version=VERSION, root=str(root))
+            _sync_dispatches(root, items, log, on_progress)
+    return ExecutionResult(items, str(log_path))
+
+
 def execute(plan: Plan, selected_names: Iterable[str], *,
             on_progress: Callable[[ProgressEvent], None] | None = None) -> ExecutionResult:
     """Only selected ready items from this in-memory preview can be moved."""
@@ -569,10 +674,9 @@ def execute(plan: Plan, selected_names: Iterable[str], *,
     by_name = {item.name: item for item in items}
     if len(by_name) != len(items) or not selected.issubset(by_name) or any(by_name[name].status != "ready" for name in selected):
         raise ValueError("只能分发本次预览中勾选的可分发文件，请重新预览")
-    log_dir = _normal_path(root / "98_系统" / "文件分发记录", root=root)
+    log_dir, log_path = _log_path(root)
     log_dir.mkdir(parents=True, exist_ok=True)
     lock_path = _normal_path(log_dir / "running.lock", root=root)
-    log_path = log_dir / f"{datetime.now():%Y%m%d_%H%M%S}_{uuid.uuid4().hex[:12]}.jsonl"
     with _run_lock(lock_path), log_path.open("x", encoding="utf-8", newline="\n") as log:
         _write_record(log, "run", version=VERSION, release_date=RELEASE_DATE,
                       mode=plan.mode, rules=list(rules), calendar_period=plan.calendar_period,
@@ -622,7 +726,15 @@ def execute(plan: Plan, selected_names: Iterable[str], *,
                             root, decision, source.name, current_digest, info.st_size)
                     else:
                         target = _target(root, decision, source.name)
-                        status, reason = _duplicate(target, current_digest, info.st_size)
+                        if decision.kind == DISPATCH_KIND:
+                            expected_fields = (item.document_number, item.document_title, item.document_date)
+                            if (decision.document_number, decision.document_title, decision.document_date) != expected_fields:
+                                item.status, item.reason = "changed", "发文登记信息与预览不一致，请重新预览"
+                                _write_record(log, "result", file=asdict(item))
+                                continue
+                            status, reason = _dispatch_duplicate(target, decision.document_number, current_digest, info.st_size)
+                        else:
+                            status, reason = _duplicate(target, current_digest, info.st_size)
                     if target != Path(item.destination) or (str(summary) if summary else "") != item.summary_destination:
                         item.status, item.reason = "changed", "目标与预览不一致，请重新预览"
                         _write_record(log, "result", file=asdict(item))
@@ -676,6 +788,9 @@ def execute(plan: Plan, selected_names: Iterable[str], *,
                 completed += 1
                 _notify(on_progress, "result", completed, len(selected), item.reason, item)
             _write_record(log, "result", file=asdict(item))
+        dispatches = [item for item in items if item.name in selected and item.status == "moved"
+                      and item.kind == DISPATCH_KIND and item.period == REGISTER_YEAR]
+        _sync_dispatches(root, dispatches, log, on_progress)
         _write_record(log, "complete", moved=sum(item.status == "moved" for item in items),
                       copied=sum(item.status == "copied" for item in items), selected=len(selected))
     return ExecutionResult(items, str(log_path))
