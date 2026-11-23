@@ -1,4 +1,4 @@
-"""Local distribution of monthly reports, department records and verified invoices."""
+"""Local distribution of college materials."""
 
-__version__ = "1.7.2"
-__release_date__ = "2026-11-09"
+__version__ = "1.8.0"
+__release_date__ = "2026-11-23"

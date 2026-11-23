@@ -8,9 +8,9 @@ STATUS_LABELS = {
     "duplicate": "内容重复", "collision": "同名冲突", "changed": "文件已变化",
     "moved": "已分发", "copied": "已补齐副本", "error": "失败", "ignored": "不在范围内",
 }
-MODE_LABELS = {"monthly": "月报分发", "weekly": "纪要考勤分发", "invoice": "发票归档"}
-RULE_LABELS = {"minutes": "会议纪要", "attendance": "考勤记录", "monthly": "月报", "invoice": "发票"}
-MODE_RULES = {"monthly": ("monthly",), "weekly": ("minutes", "attendance"), "invoice": ("invoice",)}
+MODE_LABELS = {"monthly": "月报分发", "weekly": "纪要考勤分发", "invoice": "发票归档", "news": "学院新闻"}
+RULE_LABELS = {"minutes": "会议纪要", "attendance": "考勤记录", "monthly": "月报", "invoice": "发票", "news": "学院新闻"}
+MODE_RULES = {"monthly": ("monthly",), "weekly": ("minutes", "attendance"), "invoice": ("invoice",), "news": ("news",)}
 
 
 def selected_rules(selection) -> tuple[str, ...]:
@@ -31,6 +31,7 @@ class Decision:
     target_name: str = ""
     week_label: str = ""
     summary_relative_dir: str = ""
+    manual_selection: bool = False
 
 
 @dataclass
@@ -49,6 +50,8 @@ class PlanItem:
     creation_time_ns: int = 0
     week_label: str = ""
     summary_destination: str = ""
+    is_directory: bool = False
+    manual_selection: bool = False
 
 
 @dataclass

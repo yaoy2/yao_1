@@ -90,6 +90,20 @@ def test_preview_never_executes_and_only_ready_rows_can_be_selected(make_window)
     assert app._selected == {"月报甲.xlsx", "月报乙.xlsx"}
 
 
+def test_possible_news_requires_individual_selection(make_window):
+    app, _, _, plan = make_window()
+    item = plan.items[1]
+    item.manual_selection = True
+    item.kind = "学院新闻"
+    app._show_plan(plan)
+    assert app._selected == {plan.items[0].name}
+    assert app.tree.item("file-1", "values")[1] == "请确认"
+    app.select_all()
+    assert app._selected == {plan.items[0].name}
+    app._toggle("file-1")
+    assert item.name in app._selected
+
+
 def test_cancel_confirmation_preserves_preview_and_never_executes(make_window, monkeypatch):
     app, _, executor, _ = make_window()
     app.preview()

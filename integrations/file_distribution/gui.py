@@ -423,10 +423,10 @@ class DistributionWindow:
         self._plan = plan
         self._items = list(plan.items)
         self._consumed = False
-        self._selected = {item.name for item in self._items if item.status == "ready"}
+        self._selected = {item.name for item in self._items if item.status == "ready" and not item.manual_selection}
         self._render_rows()
         self._update_summary()
-        self.notice_var.set(self._date_scope(plan) + "。已勾选可分发文件；核对目标后点击“分发已选”。")
+        self.notice_var.set(self._date_scope(plan) + "。请核对目标；疑似新闻需逐项勾选。")
         self.progress.configure(maximum=1, value=1)
         self.progress_var.set("预览完成，等待点击分发")
         self._append_activity(self._date_scope(plan) + "；" + self.summary_var.get())
@@ -478,7 +478,7 @@ class DistributionWindow:
     def _row_values(self, item: PlanItem) -> tuple[str, ...]:
         enabled = item.status == "ready" and not self._consumed
         checked = "☑" if item.name in self._selected else "☐"
-        label = STATUS_LABELS.get(item.status, item.status)
+        label = ("请确认" if enabled and item.manual_selection else STATUS_LABELS.get(item.status, item.status))
         if self._consumed and item.status == "ready":
             label = "未处理"
         new_name = Path(item.destination).name if item.destination else "—"
@@ -502,9 +502,12 @@ class DistributionWindow:
     def _update_summary(self) -> None:
         counts = Counter(item.status for item in self._items)
         pending = sum(counts[status] for status in ("review", "changed", "error"))
-        parts = [f"扫描 {self._plan.scanned_count if self._plan else 0} 个文件",
-                 f"可分发 {counts['ready']}", f"待核对 {pending}",
+        manual = sum(item.status == "ready" and item.manual_selection for item in self._items)
+        parts = [f"扫描 {self._plan.scanned_count if self._plan else 0} 项",
+                 f"可分发 {counts['ready'] - manual}", f"待核对 {pending}",
                  f"重复或同名 {counts['duplicate'] + counts['collision']}", f"跳过 {counts['skip']}"]
+        if manual and not self._consumed:
+            parts.append(f"疑似新闻 {manual}")
         if self._consumed:
             parts[1] = f"本次已分发 {counts['moved']}"
             if counts['copied']:
@@ -564,7 +567,7 @@ class DistributionWindow:
         if original_folder:
             path = Path(item.source).parent
         try:
-            select_file = not original_folder and path.is_file()
+            select_file = not original_folder and (path.is_file() or item.is_directory and path.is_dir())
             folder = path.parent if not original_folder else path
             if not folder.is_dir():
                 raise FileNotFoundError(f"文件夹已不存在：{folder}\n请重新预览核对文件位置。")
@@ -584,7 +587,7 @@ class DistributionWindow:
 
     def select_all(self) -> None:
         if not self._busy and not self._consumed and self._plan is not None:
-            self._selected = {item.name for item in self._items if item.status == "ready"}
+            self._selected.update(item.name for item in self._items if item.status == "ready" and not item.manual_selection)
             self._refresh_checks()
 
     def clear_selection(self) -> None:
@@ -606,7 +609,7 @@ class DistributionWindow:
                        if item.creation_time_ns else "")
             summary = f"月度汇总副本：{item.summary_destination}\n" if item.summary_destination else ""
             self._set_details(
-                f"文件：{item.name}\n来源：{item.source}\n目标：{item.destination or '尚不能确定'}\n"
+                f"{'文件夹' if item.is_directory else '文件'}：{item.name}\n来源：{item.source}\n目标：{item.destination or '尚不能确定'}\n"
                 f"{summary}{created}状态：{STATUS_LABELS.get(item.status, item.status)}    说明：{item.reason}"
             )
 
@@ -617,7 +620,7 @@ class DistributionWindow:
         if not names:
             return
         if not messagebox.askokcancel(
-            "确认分发", f"将移动已勾选的 {len(names)} 个文件。\n\n"
+            "确认分发", f"将分发已勾选的 {len(names)} 项材料。\n\n"
             f"材料目录：{self._plan.root}\n分发规则：{'、'.join(RULE_LABELS[key] for key in selected_rules(self._plan.rules or self._plan.mode))}\n"
             f"{self._date_scope(self._plan)}\n\n"
             "系部纪要、考勤和学院月报按预览名称统一命名；党政联席会纪要保留原名。\n"
@@ -630,7 +633,7 @@ class DistributionWindow:
         self.progress.configure(maximum=len(names), value=0)
         self.progress_var.set(f"0/{len(names)}  准备分发")
         self.tabs.select(0)
-        self._append_activity(f"开始分发 {len(names)} 个文件")
+        self._append_activity(f"开始分发 {len(names)} 项材料")
         self.notice_var.set("正在分发并核验文件，请等待结果。")
         self._start_job("execute", lambda progress: self._execute_fn(plan, names, on_progress=progress))
 

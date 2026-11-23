@@ -17,6 +17,7 @@ from .models import Decision, ExecutionResult, Plan, PlanItem, ProgressEvent, se
 from .file_dates import creation_date_bounds, creation_time_ns, validate_start_date
 from .invoices import INVOICE_HINT, classify_invoice
 from .monthly import MONTHLY_HINT, classify_monthly
+from .news import NEWS_DIRECTORY, classify_news_file, classify_news_folder, is_news_directory_name, is_news_word
 from .readers import read_document_text
 from .rules import RELEASE_DATE, VERSION
 from .school_calendar import CALENDAR_PERIOD
@@ -101,6 +102,15 @@ def _classify(path: Path, root: Path, mode: str | Iterable[str], *, calendar_per
         return classify_invoice(path, root) if "invoice" in rules else Decision("ignored")
     if "monthly" in rules and MONTHLY_HINT.search(path.name):
         return classify_monthly(path, root)
+    if "news" in rules and is_news_word(path):
+        news = classify_news_file(path)
+        if news.status != "ignored":
+            # Clear weekly evidence takes precedence over an article candidate.
+            if not _matches_rules(path.name, ("minutes", "attendance")):
+                return news
+            weekly = classify_weekly(path.name, read_document_text(path)[0], calendar_period=calendar_period)
+            if weekly.status != "ready":
+                return news
     if not _matches_rules(path.name, rules):
         return Decision("ignored")
     initial = classify_weekly(path.name, calendar_period=calendar_period)
@@ -154,6 +164,9 @@ def _target(root: Path, decision: Decision, filename: str) -> Path:
             raise ValueError("发票目标不是已核对的年度财务发票目录")
         if not (root / relative).is_dir():
             raise ValueError("现有发票目录已变化，请重新预览")
+    elif decision.kind == "学院新闻":
+        if relative != Path(NEWS_DIRECTORY):
+            raise ValueError("新闻目标不是当前学期新闻目录")
     elif relative.parts[0] not in {"月报", "02_学期工作"}:
         raise ValueError("归档目标不在本程序规则内")
     target = _normal_path(root / relative / filename, root=root)
@@ -182,6 +195,74 @@ def _destination_state(target: Path, digest: str, size: int) -> tuple[str, str, 
 def _duplicate(target: Path, digest: str, size: int) -> tuple[str, str]:
     status, reason, _ = _destination_state(target, digest, size)
     return status, reason
+
+
+def _signature(info: os.stat_result) -> tuple[int, ...]:
+    return info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns
+
+
+def _folder_members(folder: Path) -> dict[str, os.stat_result]:
+    members = {}
+    pending = [folder]
+    while pending:
+        parent = _normal_path(pending.pop(), root=folder)
+        for path in parent.iterdir():
+            info = path.lstat()
+            if _is_link(path) or not (stat.S_ISDIR(info.st_mode) or stat.S_ISREG(info.st_mode)):
+                raise ValueError("新闻文件夹含链接或特殊文件，请核对后重新预览")
+            members[path.relative_to(folder).as_posix()] = info
+            if stat.S_ISDIR(info.st_mode):
+                pending.append(path)
+    return members
+
+
+def _folder_layout(members: dict[str, os.stat_result]) -> list[tuple[str, int | None]]:
+    return [(name, None if stat.S_ISDIR(info.st_mode) else info.st_size) for name, info in sorted(members.items())]
+
+
+def _confirm_folder_members(folder: Path, members: dict[str, os.stat_result]) -> None:
+    current = _folder_members(folder)
+    if current.keys() != members.keys() or any(_signature(info) != _signature(current[name]) for name, info in members.items()):
+        raise ValueError("新闻文件夹内容已变化，请重新预览")
+
+
+def _folder_digest(folder: Path, members: dict[str, os.stat_result]) -> tuple[str, int]:
+    entries = []
+    size = 0
+    for name, length in _folder_layout(members):
+        digest = None
+        if length is not None:
+            with _read_locked(_normal_path(folder / name, root=folder)) as stream:
+                if _signature(os.fstat(stream.fileno())) != _signature(members[name]):
+                    raise ValueError("新闻文件夹内容已变化，请重新预览")
+                digest = _hash_stream(stream)
+            size += length
+        entries.append((name, length, digest))
+    _confirm_folder_members(folder, members)
+    data = json.dumps(entries, ensure_ascii=True, separators=(",", ":")).encode("ascii")
+    return hashlib.sha256(data).hexdigest(), size
+
+
+def _news_folder_duplicate(target: Path, digest: str, members: dict[str, os.stat_result]) -> tuple[str, str]:
+    layout = _folder_layout(members)
+    if target.exists():
+        if target.is_dir():
+            existing = _folder_members(target)
+            if _folder_layout(existing) == layout and _folder_digest(target, existing)[0] == digest:
+                return "duplicate", "目标已有同名且内容相同的新闻文件夹；原件保留原处"
+        return "collision", "目标已有同名文件或目录；新闻原件保留原处"
+    if target.parent.is_dir():
+        for other in sorted(target.parent.iterdir(), key=lambda path: path.name.casefold()):
+            if not other.is_dir() or _is_link(other):
+                continue
+            try:
+                existing = _folder_members(other)
+                if _folder_layout(existing) == layout and _folder_digest(other, existing)[0] == digest:
+                    return "duplicate", f"新闻目录已有相同整包内容：{other.name}；原件保留原处"
+            except (OSError, ValueError):
+                # An unrelated archive may be offline or contain a link.
+                continue
+    return "", ""
 
 
 def _summary_target(root: Path, decision: Decision, filename: str) -> Path | None:
@@ -222,35 +303,48 @@ def scan(root: str | Path, mode: str | Iterable[str], *,
     plan = Plan(str(root), mode if isinstance(mode, str) else "selected", _now(), uuid.uuid4().hex,
                 rules=list(rules), calendar_period=calendar_period, start_date=start_date, end_time=end_time)
     planned_hashes = {}
-    paths = sorted((path for path in root.iterdir() if path.is_file() or path.is_symlink()),
+    paths = sorted((path for path in root.iterdir() if path.is_file() or path.is_symlink()
+                    or ("news" in rules and path.is_dir() and is_news_directory_name(path.name))),
                    key=lambda p: p.name.casefold())
     for index, path in enumerate(paths, 1):
         plan.scanned_count += 1
-        if not _matches_rules(path.name, rules):
+        is_directory = path.is_dir()
+        if not (is_directory and "news" in rules or not is_directory and (
+                _matches_rules(path.name, rules) or "news" in rules and is_news_word(path))):
             continue
         _notify(on_progress, "scan", index - 1, len(paths), f"正在核对：{path.name}")
-        item = PlanItem(path.name, str(path))
+        item = PlanItem(path.name, str(path), is_directory=is_directory)
         try:
             _normal_path(path, root=root)
-            with _read_locked(path) as stream:
-                before = os.fstat(stream.fileno())
+            with _preview_source(path, is_directory) as (before, stream):
                 if bounds:
                     item.creation_time_ns = creation_time_ns(before)
                     if not bounds[0] <= item.creation_time_ns <= bounds[1]:
                         plan.date_excluded_count += 1
                         continue
-                decision = _classify(path, root, rules, calendar_period=calendar_period)
+                members = {}
+                if is_directory:
+                    if not any(is_news_word(child) and (child.is_file() or _is_link(child)) for child in path.iterdir()):
+                        continue
+                    members = _folder_members(path)
+                    decision = _classify_news_folder(path, members)
+                else:
+                    decision = _classify(path, root, rules, calendar_period=calendar_period)
                 if decision.status == "ignored":
                     continue
                 item.status, item.kind, item.period = decision.status, decision.kind, decision.period
                 item.department, item.reason = decision.department, decision.reason
+                item.manual_selection = decision.manual_selection
                 item.week_label = decision.week_label
                 item.size, item.mtime_ns = before.st_size, before.st_mtime_ns
                 if decision.status == "ready":
-                    item.sha256 = _hash_stream(stream)
+                    if is_directory:
+                        item.sha256, item.size = _folder_digest(path, members)
+                    else:
+                        item.sha256 = _hash_stream(stream)
                     current = path.stat()
-                    if (current.st_dev, current.st_ino, current.st_size, current.st_mtime_ns) != (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns):
-                        raise ValueError("扫描时文件发生变化，请重新预览")
+                    if _signature(current) != _signature(before):
+                        raise ValueError("扫描时材料发生变化，请重新预览")
                     if bounds and creation_time_ns(current) != item.creation_time_ns:
                         raise ValueError("扫描时文件创建时间发生变化，请重新预览")
                     if decision.summary_relative_dir:
@@ -261,7 +355,8 @@ def scan(root: str | Path, mode: str | Iterable[str], *,
                             item.reason += "；原分类已有相同内容，本次补齐月度副本并保留源文件"
                     else:
                         target = _target(root, decision, path.name)
-                        status, reason = _duplicate(target, item.sha256, item.size)
+                        status, reason = (_news_folder_duplicate(target, item.sha256, members) if is_directory
+                                          else _duplicate(target, item.sha256, item.size))
                     item.destination = str(target)
                     if target.name != path.name:
                         item.reason += f"；分发后统一命名为：{target.name}"
@@ -292,6 +387,20 @@ def scan(root: str | Path, mode: str | Iterable[str], *,
                 _notify(on_progress, "scan", len(paths), len(paths), item.reason, item)
     _notify(on_progress, "scan", len(paths), len(paths), "预览完成")
     return plan
+
+
+@contextmanager
+def _preview_source(path: Path, is_directory: bool):
+    if is_directory:
+        yield path.stat(), None
+    else:
+        with _read_locked(path) as stream:
+            yield os.fstat(stream.fileno()), stream
+
+
+def _classify_news_folder(path: Path, members: dict[str, os.stat_result]) -> Decision:
+    files = [path / name for name, info in members.items() if stat.S_ISREG(info.st_mode)]
+    return classify_news_folder(path, files)
 
 
 @contextmanager
@@ -387,6 +496,64 @@ def _copy_no_replace(stream, target: Path, digest: str) -> None:
         raise
 
 
+def _move_directory_no_replace(source: Path, target: Path) -> None:
+    if os.name == "nt":
+        os.rename(source, target)  # Windows rename fails if the target already exists.
+        return
+    import ctypes
+    import sys
+
+    libc = ctypes.CDLL(None, use_errno=True)
+    if sys.platform == "darwin":
+        result = libc.renamex_np(os.fsencode(source), os.fsencode(target), 4)  # RENAME_EXCL
+    elif hasattr(libc, "renameat2"):
+        result = libc.renameat2(-100, os.fsencode(source), -100, os.fsencode(target), 1)  # RENAME_NOREPLACE
+    else:
+        raise OSError("当前系统无法安全移动整个文件夹")
+    if result:
+        raise OSError(ctypes.get_errno(), os.strerror(ctypes.get_errno()), str(target))
+
+
+def _execute_news_folder(root: Path, source: Path, item: PlanItem, bounds, log) -> None:
+    before = source.stat()
+    if bounds and (creation_time_ns(before) != item.creation_time_ns
+                   or not bounds[0] <= item.creation_time_ns <= bounds[1]):
+        item.status, item.reason = "changed", "文件夹创建时间或筛选范围已变化，请重新预览"
+        return
+    members = _folder_members(source)
+    digest, size = _folder_digest(source, members)
+    if (size, before.st_mtime_ns, digest) != (item.size, item.mtime_ns, item.sha256):
+        item.status, item.reason = "changed", "预览后新闻文件夹已变化，请重新预览"
+        return
+    decision = _classify_news_folder(source, members)
+    if decision.status != "ready":
+        item.status, item.reason = "review", "执行前重新核对未通过，请重新预览"
+        return
+    target = _target(root, decision, source.name)
+    if target != Path(item.destination) or item.summary_destination:
+        item.status, item.reason = "changed", "目标与预览不一致，请重新预览"
+        return
+    status, reason = _news_folder_duplicate(target, digest, members)
+    if status:
+        item.status, item.reason = status, reason
+        return
+    _write_record(log, "planned", file=asdict(item))
+    target.parent.mkdir(exist_ok=True)
+    _target(root, decision, source.name)
+    _normal_path(source, root=root)
+    _confirm_folder_members(source, members)
+    if _signature(source.stat()) != _signature(before):
+        raise ValueError("执行前新闻文件夹已变化，请重新预览")
+    _move_directory_no_replace(source, target)
+    try:
+        if _folder_digest(target, _folder_members(target)) != (digest, size):
+            raise ValueError("归档目标内容与预览不同")
+    except (OSError, ValueError) as exc:
+        item.status, item.reason = "error", f"文件夹已整包移至目标，请检查归档和记录：{exc}"
+        return
+    item.status, item.reason = "moved", "已整包分发，目录结构、文件名和内容校验一致"
+
+
 def execute(plan: Plan, selected_names: Iterable[str], *,
             on_progress: Callable[[ProgressEvent], None] | None = None) -> ExecutionResult:
     """Only selected ready items from this in-memory preview can be moved."""
@@ -421,8 +588,14 @@ def execute(plan: Plan, selected_names: Iterable[str], *,
             _notify(on_progress, "moving", completed, len(selected), f"正在分发：{item.name}", item)
             try:
                 source = _normal_path(Path(item.source), root=root)
-                if source.parent != root or source.name != item.name or not source.is_file():
-                    item.status, item.reason = "changed", "源文件已不在根目录，请重新预览"
+                valid_source = ("news" in rules and is_news_directory_name(source.name) and source.is_dir()
+                                if item.is_directory else source.is_file())
+                if source.parent != root or source.name != item.name or not valid_source:
+                    item.status, item.reason = "changed", "源材料已不在根目录，请重新预览"
+                    _write_record(log, "result", file=asdict(item))
+                    continue
+                if item.is_directory:
+                    _execute_news_folder(root, source, item, bounds, log)
                     _write_record(log, "result", file=asdict(item))
                     continue
                 with _read_locked(source) as stream:
